@@ -1,0 +1,41 @@
+# Deploy edge proxy for Firebase Hosting (europe-west1 → africa-south1 Cloud Run).
+# Usage:
+#   gcloud builds submit --config cloudbuild-hosting-proxy.yaml \
+#     --project=tenderbriefing-34679 --region=europe-west1
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/tenderbriefing/tenderbriefing-hosting-proxy:$BUILD_ID
+      - -f
+      - hosting-proxy/Dockerfile
+      - hosting-proxy
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/tenderbriefing/tenderbriefing-hosting-proxy:$BUILD_ID
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - tenderbriefing-hosting-proxy
+      - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/tenderbriefing/tenderbriefing-hosting-proxy:$BUILD_ID
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --project=${PROJECT_ID}
+      - --set-env-vars=UPSTREAM_URL=https://tenderbriefing-xzgs5uw5ta-bq.a.run.app
+
+substitutions:
+  _REGION: europe-west1
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/tenderbriefing/tenderbriefing-hosting-proxy:$BUILD_ID

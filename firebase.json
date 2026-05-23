@@ -1,13 +1,14 @@
 {
   "hosting": {
     "site": "tenderbriefing-34679",
+    "public": "public",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "**",
         "run": {
-          "serviceId": "tenderbriefing",
-          "region": "africa-south1"
+          "serviceId": "tenderbriefing-hosting-proxy",
+          "region": "europe-west1"
         }
       }
     ],
