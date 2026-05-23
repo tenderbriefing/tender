@@ -1,0 +1,49 @@
+# Google Cloud Build — deploy TenderBriefing to Cloud Run
+# Usage: gcloud builds submit --config cloudbuild.yaml --project tenderbriefing-34679 --region=africa-south1
+# Note: BUILD_ID is always set; SHORT_SHA is only set for Git-triggered builds.
+
+substitutions:
+  _SERVICE: tenderbriefing
+  _REGION: africa-south1
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/tenderbriefing/${_SERVICE}:$BUILD_ID
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/tenderbriefing/${_SERVICE}:latest
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/tenderbriefing/${_SERVICE}
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/tenderbriefing/${_SERVICE}:$BUILD_ID
+      - --region=${_REGION}
+      - --platform=managed
+      - --port=8080
+      - --memory=1Gi
+      - --cpu=1
+      - --timeout=300
+      - --min-instances=0
+      - --max-instances=3
+      - --allow-unauthenticated
+      - --set-env-vars=STORAGE_ADAPTER=firestore,FIREBASE_PROJECT_ID=tenderbriefing-34679,NODE_ENV=production,NEXT_PUBLIC_SITE_URL=https://www.tenderbriefing.co.za
+      - --set-secrets=SYNC_SECRET=tenderbriefing-sync-secret:latest,FIREBASE_SERVICE_ACCOUNT_JSON=tenderbriefing-firebase-sa:latest
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/tenderbriefing/${_SERVICE}:$BUILD_ID
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/tenderbriefing/${_SERVICE}:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
