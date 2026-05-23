@@ -28,14 +28,18 @@ class AnalyticsService {
   private isInitialized: boolean = false
 
   constructor() {
-    this.measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-1GXKBNS6PG'
+    this.measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ''
+  }
+
+  isConfigured(): boolean {
+    return this.measurementId.length > 0
   }
 
   /**
    * Initialize Google Analytics
    */
   initialize(): void {
-    if (typeof window === 'undefined' || this.isInitialized) {
+    if (typeof window === 'undefined' || this.isInitialized || !this.measurementId) {
       return
     }
 
@@ -142,12 +146,36 @@ class AnalyticsService {
    */
   trackTenderView(tenderId: string, tenderTitle: string): void {
     this.trackEvent({
-      action: 'view_tender',
-      category: 'tender',
+      action: 'tender_viewed',
+      category: 'procurement',
       label: tenderTitle,
       custom_parameters: {
         tender_id: tenderId,
       },
+    })
+  }
+
+  trackAttendanceRequested(requestId: string, tenderId: string): void {
+    this.trackEvent({
+      action: 'attendance_requested',
+      category: 'procurement',
+      custom_parameters: { request_id: requestId, tender_id: tenderId },
+    })
+  }
+
+  trackAgentAccepted(requestId: string, agentId: string): void {
+    this.trackEvent({
+      action: 'agent_accepted',
+      category: 'procurement',
+      custom_parameters: { request_id: requestId, agent_id: agentId },
+    })
+  }
+
+  trackReportUploaded(requestId: string, reportId: string): void {
+    this.trackEvent({
+      action: 'report_uploaded',
+      category: 'procurement',
+      custom_parameters: { request_id: requestId, report_id: reportId },
     })
   }
 

@@ -46,6 +46,13 @@ export const metadata: Metadata = {
   alternates: {
     canonical: siteUrl,
   },
+  ...(process.env.GOOGLE_SITE_VERIFICATION
+    ? {
+        verification: {
+          google: process.env.GOOGLE_SITE_VERIFICATION,
+        },
+      }
+    : {}),
 }
 
 export const viewport: Viewport = {

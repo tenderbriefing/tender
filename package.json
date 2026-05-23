@@ -18,7 +18,8 @@
     "sync:firestore": "node scripts/run-sync-firestore.js",
     "verify:firestore-collections": "node scripts/verify-firestore-collections.js",
     "smoke:production": "node scripts/production-smoke-test.js",
-    "smoke:production:rest": "node scripts/production-smoke-rest.js"
+    "smoke:production:rest": "node scripts/production-smoke-rest.js",
+    "test:integrations": "node scripts/test-integrations-health.js"
   },
   "dependencies": {
     "@google-cloud/secret-manager": "^6.1.0",
