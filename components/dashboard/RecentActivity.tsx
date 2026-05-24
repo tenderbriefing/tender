@@ -9,6 +9,7 @@ import {
   DocumentTextIcon,
 } from '@heroicons/react/24/outline'
 import { authFetch } from '@/lib/api/authenticatedFetch'
+import { useAuth } from '@/components/providers/AuthProvider'
 
 interface RecentActivityProps {
   userType?: 'sme' | 'youth-agent' | 'admin'
@@ -62,13 +63,20 @@ function iconForType(type: string) {
 }
 
 const RecentActivity = ({ userType }: RecentActivityProps) => {
+  const { user } = useAuth()
   const [activities, setActivities] = useState<ActivityDisplay[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!user) {
+      setLoading(true)
+      return
+    }
+
     let cancelled = false
 
     const fetchActivities = async () => {
+      setLoading(true)
       try {
         const response = await authFetch('/api/dashboard/activities')
         const contentType = response.headers.get('content-type') || ''
@@ -106,7 +114,7 @@ const RecentActivity = ({ userType }: RecentActivityProps) => {
     return () => {
       cancelled = true
     }
-  }, [userType])
+  }, [userType, user])
 
   const getStatusColor = (status: string) => {
     switch (status) {
