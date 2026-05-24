@@ -24,11 +24,15 @@ function createAttendanceRequest(payload) {
   return {
     id: `req-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     tenderId: payload.tenderId,
+    tenderNumber: payload.tenderNumber || '',
     tenderTitle: payload.tenderTitle || '',
     smeId: payload.smeId,
     smeName: payload.smeName || '',
     smeCompany: payload.smeCompany || '',
+    smeEmail: payload.smeEmail || '',
+    smePhone: payload.smePhone || '',
     province: payload.province || '',
+    department: payload.department || '',
     briefingVenue: payload.briefingVenue || '',
     briefingDate: payload.briefingDate || '',
     briefingTime: payload.briefingTime || '',
@@ -37,15 +41,31 @@ function createAttendanceRequest(payload) {
     assignedAgentId: null,
     agentName: null,
     acceptedAt: null,
-    paymentStatus: 'pending',
+    paymentStatus: payload.paymentStatus || 'not_required',
+    quotedFee: payload.quotedFee ?? null,
+    currency: payload.currency || 'ZAR',
+    paymentProvider: payload.paymentProvider || 'none',
     agentReliabilityScore: null,
     radiusKm: payload.radiusKm || DEFAULT_RADIUS_KM,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     notes: payload.notes || '',
+    responsibilityAcknowledged: payload.responsibilityAcknowledged === true,
     notifiedAgents: [],
     declines: [],
   }
+}
+
+const ACTIVE_REQUEST_STATUSES = new Set(['pending', 'assigned', 'accepted'])
+
+async function findActiveRequestForSmeTender(smeId, tenderId) {
+  const storage = getStorage()
+  const requests = await storage.getAttendanceRequests({ smeId })
+  return requests.find(
+    (r) =>
+      r.tenderId === tenderId &&
+      ACTIVE_REQUEST_STATUSES.has(normalizeStatus(r.status))
+  )
 }
 
 function scoreAgent(agent, request) {
@@ -90,6 +110,13 @@ async function getRequestById(requestId) {
 
 async function createRequest(payload, agents = []) {
   const storage = getStorage()
+  const existing = await findActiveRequestForSmeTender(payload.smeId, payload.tenderId)
+  if (existing) {
+    throw new Error(
+      `An active attendance request already exists for this tender (${existing.id})`
+    )
+  }
+
   const request = createAttendanceRequest(payload)
 
   const nearby = findNearbyAgents(agents, request)
@@ -157,6 +184,11 @@ async function declineRequest(requestId, agentId, reason = '') {
   request.updatedAt = new Date().toISOString()
 
   await storage.saveAttendanceRequest(request)
+  await notificationService.notify('agent_declined_briefing', {
+    ...request,
+    declinedAgentId: agentId,
+    declineReason: reason,
+  })
   await auditLogService.logEvent({
     type: 'agent_decline',
     entityId: request.id,
@@ -195,7 +227,16 @@ async function submitBriefingReport(payload) {
     audioUrl: payload.audioUrl || '',
     attendanceProofUrl: payload.attendanceProofUrl || '',
     documentUrls: payload.documentUrls || [],
+    photoUrls: payload.photoUrls || [],
     notes: payload.notes || '',
+    attendanceConfirmed: payload.attendanceConfirmed === true,
+    arrivalTime: payload.arrivalTime || '',
+    briefingStartedTime: payload.briefingStartedTime || '',
+    keyInstructions: payload.keyInstructions || '',
+    submissionRequirements: payload.submissionRequirements || '',
+    documentsCollected: payload.documentsCollected || '',
+    questionsAsked: payload.questionsAsked || '',
+    risksClarifications: payload.risksClarifications || '',
     status: 'submitted',
     createdAt: new Date().toISOString(),
   }
@@ -208,6 +249,10 @@ async function submitBriefingReport(payload) {
     request.reportId = report.id
     request.updatedAt = new Date().toISOString()
     await storage.saveAttendanceRequest(request)
+    await notificationService.notify('attendance_request_completed', {
+      ...request,
+      reportId: report.id,
+    })
     await notificationService.notify('briefing_report_submitted', {
       ...request,
       reportId: report.id,
@@ -229,6 +274,7 @@ module.exports = {
   haversineKm,
   findNearbyAgents,
   getRequestById,
+  findActiveRequestForSmeTender,
   createRequest,
   acceptRequest,
   assignRequestToAgent,

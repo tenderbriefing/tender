@@ -13,7 +13,7 @@ import { SA_PROVINCES } from '@/lib/procurement/provinces'
 import { ClipboardList, Users, Building2 } from 'lucide-react'
 import OperationalIntelligencePanel from '@/components/procurement/OperationalIntelligencePanel'
 import { useOperationalIntelligence } from '@/hooks/useOperationalIntelligence'
-import AgentTrustIndicators from '@/components/operations/AgentTrustIndicators'
+import RequestStatusTimeline from '@/components/operations/RequestStatusTimeline'
 
 type Tab = 'pending' | 'assigned' | 'completed' | 'declined'
 
@@ -35,6 +35,10 @@ export default function OperationsDashboard() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('pending')
   const [provinceFilter, setProvinceFilter] = useState('')
+  const [departmentFilter, setDepartmentFilter] = useState('')
+  const [agentFilter, setAgentFilter] = useState('')
+  const [smeFilter, setSmeFilter] = useState('')
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
   const [assigningId, setAssigningId] = useState<string | null>(null)
   const [selectedAgent, setSelectedAgent] = useState<Record<string, string>>({})
 
@@ -63,9 +67,30 @@ export default function OperationsDashboard() {
   }, [load])
 
   const filteredRequests = useMemo(() => {
-    if (!provinceFilter) return requests
-    return requests.filter((r) => r.province === provinceFilter)
-  }, [requests, provinceFilter])
+    return requests.filter((r) => {
+      if (provinceFilter && r.province !== provinceFilter) return false
+      if (departmentFilter && (r.tender?.department || r.department) !== departmentFilter)
+        return false
+      if (agentFilter && r.assignedAgentId !== agentFilter && r.agentId !== agentFilter)
+        return false
+      if (smeFilter && r.smeId !== smeFilter) return false
+      return true
+    })
+  }, [requests, provinceFilter, departmentFilter, agentFilter, smeFilter])
+
+  const departments = useMemo(() => {
+    const set = new Set<string>()
+    for (const r of requests) {
+      const d = r.tender?.department || r.department
+      if (d) set.add(d)
+    }
+    return Array.from(set).sort()
+  }, [requests])
+
+  const selectedRequest = useMemo(
+    () => requests.find((r) => r.id === selectedRequestId) || null,
+    [requests, selectedRequestId]
+  )
 
   const buckets = useMemo(() => {
     const pending = filteredRequests.filter((r) => r.status === 'pending')
@@ -76,6 +101,14 @@ export default function OperationsDashboard() {
     const declined = filteredRequests.filter((r) => (r.declines?.length || 0) > 0)
     return { pending, assigned, completed, declined }
   }, [filteredRequests])
+
+  const smeOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const r of requests) {
+      map.set(r.smeId, r.smeCompany || r.smeName || r.smeId)
+    }
+    return Array.from(map.entries())
+  }, [requests])
 
   const smeActivity = useMemo(() => {
     const map = new Map<string, { name: string; requests: number }>()
@@ -333,46 +366,159 @@ export default function OperationsDashboard() {
                   </option>
                 ))}
               </select>
+              <select
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+              >
+                <option value="">All departments</option>
+                {departments.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                value={agentFilter}
+                onChange={(e) => setAgentFilter(e.target.value)}
+              >
+                <option value="">All agents</option>
+                {agents.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.displayName || a.email}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                value={smeFilter}
+                onChange={(e) => setSmeFilter(e.target.value)}
+              >
+                <option value="">All SMEs</option>
+                {smeOptions.map(([id, name]) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {selectedRequest && (
+              <section className="mt-6 rounded-xl border border-brand-200 bg-brand-50/40 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="font-bold text-slate-900">Request detail</h3>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRequestId(null)}
+                    className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+                  >
+                    Close
+                  </button>
+                </div>
+                <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-slate-500">Request ID</dt>
+                    <dd className="font-mono font-semibold">{selectedRequest.id}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Status</dt>
+                    <dd className="capitalize font-semibold">{selectedRequest.status}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">SME</dt>
+                    <dd>{selectedRequest.smeCompany || selectedRequest.smeName}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Tender number</dt>
+                    <dd className="font-mono">
+                      {selectedRequest.tender?.tenderNumber || '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Department</dt>
+                    <dd>
+                      {selectedRequest.tender?.department || selectedRequest.department || '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Province</dt>
+                    <dd>{selectedRequest.province || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Briefing date</dt>
+                    <dd>
+                      {selectedRequest.briefingDate ||
+                        selectedRequest.tender?.briefingDate ||
+                        '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Assigned agent</dt>
+                    <dd>{selectedRequest.agentName || 'Unassigned'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Report</dt>
+                    <dd>{selectedRequest.reportId ? 'Submitted' : 'Pending'}</dd>
+                  </div>
+                </dl>
+                <div className="mt-4">
+                  <RequestStatusTimeline
+                    request={selectedRequest}
+                    hasReport={Boolean(selectedRequest.reportId)}
+                  />
+                </div>
+              </section>
+            )}
 
             <div className="mt-6 space-y-4">
               {activeList.length === 0 ? (
                 <p className="text-sm text-slate-500">No requests in this category.</p>
               ) : (
                 activeList.map((req) => (
-                  <AttendanceRequestCard
-                    key={req.id}
-                    request={req}
-                    showDeclined={tab === 'declined'}
-                    actions={
-                      req.status === 'pending' ? (
-                        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
-                          <select
-                            className="min-h-[44px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                            value={selectedAgent[req.id] || ''}
-                            onChange={(e) =>
-                              setSelectedAgent((s) => ({ ...s, [req.id]: e.target.value }))
-                            }
-                          >
-                            <option value="">Manual Agent Assignment…</option>
-                            {agents.map((a) => (
-                              <option key={a.id} value={a.id}>
-                                {a.displayName || a.email} — {a.province || 'ZA'}
-                              </option>
-                            ))}
-                          </select>
+                  <div key={req.id} className="space-y-2">
+                    <AttendanceRequestCard
+                      request={req}
+                      showDeclined={tab === 'declined'}
+                      actions={
+                        <div className="flex w-full flex-col gap-2">
                           <button
                             type="button"
-                            disabled={assigningId === req.id}
-                            onClick={() => manualAssign(req.id)}
-                            className="min-h-[44px] rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+                            onClick={() => setSelectedRequestId(req.id)}
+                            className="min-h-[44px] rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                           >
-                            Assign Youth Agent
+                            View request detail
                           </button>
+                          {req.status === 'pending' ? (
+                            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+                              <select
+                                className="min-h-[44px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                value={selectedAgent[req.id] || ''}
+                                onChange={(e) =>
+                                  setSelectedAgent((s) => ({ ...s, [req.id]: e.target.value }))
+                                }
+                              >
+                                <option value="">Manual Agent Assignment…</option>
+                                {agents.map((a) => (
+                                  <option key={a.id} value={a.id}>
+                                    {a.displayName || a.email} — {a.province || 'ZA'}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                disabled={assigningId === req.id}
+                                onClick={() => manualAssign(req.id)}
+                                className="min-h-[44px] rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+                              >
+                                Assign Youth Agent
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
-                      ) : undefined
-                    }
-                  />
+                      }
+                    />
+                  </div>
                 ))
               )}
             </div>

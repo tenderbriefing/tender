@@ -74,8 +74,7 @@ export default function SmeProcurementWorkspace() {
 
   if (!data) return null
 
-  const emptyHint =
-    'Save tenders from the opportunities list once tracking is enabled. Your workspace is ready in Firestore.'
+  const emptyHint = 'Save or track tenders from any tender detail page to build your procurement workspace.'
 
   return (
     <div className="space-y-6">

@@ -90,10 +90,15 @@ async function uploadBriefingProof({ requestId, fileName, buffer, contentType })
       metadata: { contentType: contentType || 'application/octet-stream' },
       resumable: false,
     })
+    const [signedUrl] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+    })
     return {
       ok: true,
       path: objectPath,
       bucket: bucket.name,
+      url: signedUrl,
     }
   } catch (error) {
     return {

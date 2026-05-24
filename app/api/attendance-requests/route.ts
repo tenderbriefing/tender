@@ -84,18 +84,26 @@ export async function POST(request: NextRequest) {
     const result = await agentService.createRequest(
       {
         tenderId: body.tenderId,
+        tenderNumber: tender?.tenderNumber,
         tenderTitle: tender?.title || body.tenderTitle,
+        department: tender?.department,
         smeId: user.uid,
         smeName: user.displayName || body.smeName,
         smeCompany: user.companyName || body.smeCompany,
+        smeEmail: user.email,
+        smePhone: body.smePhone,
         province: tender?.province || body.province,
         briefingVenue: tender?.briefingVenue || body.briefingVenue,
         briefingDate: tender?.briefingDate || body.briefingDate,
         briefingTime: tender?.briefingTime || body.briefingTime,
         notes: body.notes,
+        responsibilityAcknowledged: body.responsibilityAcknowledged === true,
         latitude: body.latitude,
         longitude: body.longitude,
         radiusKm: body.radiusKm,
+        paymentStatus: 'not_required',
+        paymentProvider: 'none',
+        currency: 'ZAR',
       },
       agents
     )

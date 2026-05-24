@@ -89,6 +89,26 @@ service cloud.firestore {
       allow write: if isAdmin() || (isSme() && request.auth.uid == smeId);
     }
 
+  match /smeWorkspace/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId && isSme();
+
+      match /savedTenders/{tenderId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId && isSme();
+      }
+
+      match /trackedTenders/{tenderId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId && isSme();
+      }
+
+      match /watchedDepartments/{departmentId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId && isSme();
+      }
+
+      match /watchedProvinces/{provinceId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId && isSme();
+      }
+    }
+
     // Legacy collections (TenderConnect)
     match /tenders/{tenderId} {
       allow read: if isAuthenticated();

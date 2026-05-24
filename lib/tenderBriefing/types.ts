@@ -103,7 +103,15 @@ export interface AttendanceRequest {
   agentName?: string | null
   acceptedAt?: string | null
   assignedByAdmin?: boolean
-  paymentStatus?: string
+  paymentStatus?: 'pending' | 'not_required' | 'paid' | 'failed'
+  quotedFee?: number | null
+  currency?: string
+  paymentProvider?: 'yoco' | 'manual' | 'none'
+  tenderNumber?: string
+  department?: string
+  smeEmail?: string
+  smePhone?: string
+  responsibilityAcknowledged?: boolean
   agentReliabilityScore?: number | null
   radiusKm?: number
   createdAt: string
@@ -126,12 +134,23 @@ export interface BriefingReport {
   notes?: string
   status: string
   createdAt: string
+  attendanceConfirmed?: boolean
+  arrivalTime?: string
+  briefingStartedTime?: string
+  keyInstructions?: string
+  submissionRequirements?: string
+  documentsCollected?: string
+  questionsAsked?: string
+  risksClarifications?: string
+  photoUrls?: string[]
 }
 
 export interface OperationsNotification {
   id: string
   eventType: string
   userId?: string | null
+  title?: string
+  message?: string
   data?: Record<string, unknown>
   read: boolean
   createdAt: string

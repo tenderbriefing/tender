@@ -25,6 +25,14 @@ function categoryLabel(eventType?: string) {
       return 'Report uploaded'
     case 'sme_requested_attendance':
       return 'Attendance request'
+    case 'sme_saved_tender':
+      return 'Tender saved'
+    case 'sme_tracked_tender':
+      return 'Tender tracked'
+    case 'agent_declined_briefing':
+      return 'Agent declined'
+    case 'attendance_request_completed':
+      return 'Request completed'
     case 'tender_closing_soon':
       return 'Closing soon'
     case 'new_briefing_found':

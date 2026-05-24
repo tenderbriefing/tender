@@ -86,6 +86,15 @@ export async function POST(request: NextRequest) {
       attendanceProofUrl: body.attendanceProofUrl,
       audioUrl: body.audioUrl,
       documentUrls,
+      photoUrls: body.photoUrls || [],
+      attendanceConfirmed: body.attendanceConfirmed === true,
+      arrivalTime: body.arrivalTime,
+      briefingStartedTime: body.briefingStartedTime,
+      keyInstructions: body.keyInstructions,
+      submissionRequirements: body.submissionRequirements,
+      documentsCollected: body.documentsCollected,
+      questionsAsked: body.questionsAsked,
+      risksClarifications: body.risksClarifications,
     })
 
     return NextResponse.json({ success: true, data: report })
