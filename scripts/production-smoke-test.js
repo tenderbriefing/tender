@@ -216,7 +216,10 @@ async function main() {
   if (!requestId) {
     throw new Error(createRes.json.error || 'Create request failed — no request id')
   }
-  if (!createRes.json.success && createRes.json.code !== 'YOCO_NOT_CONFIGURED') {
+  const yocoNotConfiguredOnCreate =
+    createRes.json.data?.payment?.code === 'YOCO_NOT_CONFIGURED' ||
+    createRes.json.code === 'YOCO_NOT_CONFIGURED'
+  if (!createRes.json.success && !yocoNotConfiguredOnCreate && !requestId) {
     throw new Error(createRes.json.error || 'Create request failed')
   }
   report.attendanceRequestId = requestId

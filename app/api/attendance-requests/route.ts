@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_SITE_URL ||
       'https://www.tenderbriefing.co.za'
 
-    const paymentService = require('../../../../backend/services/payments/attendancePaymentService')
+    const paymentService = require('../../../backend/services/payments/attendancePaymentService')
     const checkout = await paymentService.createCheckoutForExistingRequest(
       result.request.id,
       user.uid,
@@ -123,14 +123,33 @@ export async function POST(request: NextRequest) {
     )
 
     if (!checkout.ok) {
+      const code =
+        checkout.configured === false ? 'YOCO_NOT_CONFIGURED' : 'CHECKOUT_FAILED'
+      const payment = {
+        required: true,
+        configured: checkout.configured !== false,
+        code,
+        message: checkout.error || 'Yoco is not configured',
+      }
+      // Request is saved; return success so SME can view pending payment + retry
+      if (code === 'YOCO_NOT_CONFIGURED') {
+        return NextResponse.json({
+          success: true,
+          data: {
+            request: result.request,
+            nearbyAgents: [],
+            payment,
+          },
+        })
+      }
       return NextResponse.json(
         {
           success: false,
-          error: checkout.error || 'Yoco is not configured',
-          code: checkout.configured === false ? 'YOCO_NOT_CONFIGURED' : 'CHECKOUT_FAILED',
-          data: { request: result.request },
+          error: checkout.error || 'Payment checkout failed',
+          code,
+          data: { request: result.request, payment },
         },
-        { status: checkout.configured === false ? 503 : 400 }
+        { status: 400 }
       )
     }
 

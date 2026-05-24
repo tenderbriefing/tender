@@ -59,16 +59,29 @@ export default function RequestYouthAgentPage() {
       })
       const json = await res.json()
       if (!json.success) {
-        if (json.code === 'YOCO_NOT_CONFIGURED') {
-          throw new Error(
+        if (json.code === 'YOCO_NOT_CONFIGURED' && json.data?.request?.id) {
+          toast.error(
             json.error ||
-              'Online payments are not configured yet. Please contact support or try again later.'
+              'Your request was saved. Online payment is not active yet — you can pay from My Attendance Requests when Yoco is enabled.'
           )
+          router.push(`/sme/requests/${json.data.request.id}`)
+          return
         }
         throw new Error(json.error)
       }
 
-      const redirectUrl = json.data?.payment?.redirectUrl
+      const payment = json.data?.payment
+      if (payment?.code === 'YOCO_NOT_CONFIGURED') {
+        const requestId = json.data?.request?.id
+        toast.error(
+          payment.message ||
+            'Your request was saved. Online payment is not active yet — use Pay with Yoco on the request when available.'
+        )
+        router.push(requestId ? `/sme/requests/${requestId}` : '/sme/requests')
+        return
+      }
+
+      const redirectUrl = payment?.redirectUrl
       if (redirectUrl) {
         toast.success('Redirecting to secure Yoco checkout…')
         window.location.href = redirectUrl

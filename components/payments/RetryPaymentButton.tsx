@@ -22,6 +22,12 @@ export default function RetryPaymentButton({
       })
       const json = await res.json()
       if (!json.success) {
+        if (json.code === 'YOCO_NOT_CONFIGURED') {
+          throw new Error(
+            json.error ||
+              'Online payments are not configured yet. Your request stays pending until payment is enabled.'
+          )
+        }
         throw new Error(json.error || 'Could not start payment')
       }
       const url = json.data?.redirectUrl
