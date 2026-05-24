@@ -106,3 +106,15 @@ export function DeclinedBadge() {
     <span className={`${base} bg-red-50 text-red-800 border-red-200`}>Declined</span>
   )
 }
+
+export function ReliableAgentBadge() {
+  return (
+    <span className={`${base} bg-green-50 text-green-900 border-green-300`}>Reliable Agent</span>
+  )
+}
+
+export function NewAgentBadge() {
+  return (
+    <span className={`${base} bg-blue-50 text-blue-900 border-blue-200`}>New Agent</span>
+  )
+}

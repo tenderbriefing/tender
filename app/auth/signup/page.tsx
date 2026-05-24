@@ -152,6 +152,7 @@ export default function SignUpPage() {
             <label className="block text-sm font-semibold text-slate-700">Company name</label>
             <input
               name="companyName"
+              autoComplete="organization"
               value={formData.companyName}
               onChange={(e) => setFormData((p) => ({ ...p, companyName: e.target.value }))}
               className={`mt-1 ${inputClass}`}
@@ -168,6 +169,7 @@ export default function SignUpPage() {
           </label>
           <input
             name="displayName"
+            autoComplete="name"
             value={formData.displayName}
             onChange={(e) => setFormData((p) => ({ ...p, displayName: e.target.value }))}
             className={`mt-1 ${inputClass}`}
@@ -181,6 +183,8 @@ export default function SignUpPage() {
           <label className="block text-sm font-semibold text-slate-700">Email</label>
           <input
             type="email"
+            name="email"
+            autoComplete="email"
             value={formData.email}
             onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
             className={`mt-1 ${inputClass}`}
@@ -192,6 +196,8 @@ export default function SignUpPage() {
           <label className="block text-sm font-semibold text-slate-700">Phone</label>
           <input
             type="tel"
+            name="phoneNumber"
+            autoComplete="tel"
             value={formData.phoneNumber}
             onChange={(e) => setFormData((p) => ({ ...p, phoneNumber: e.target.value }))}
             className={`mt-1 ${inputClass}`}
@@ -223,6 +229,8 @@ export default function SignUpPage() {
             <div>
               <label className="block text-sm font-semibold text-slate-700">City / town</label>
               <input
+                name="city"
+                autoComplete="address-level2"
                 value={formData.city}
                 onChange={(e) => setFormData((p) => ({ ...p, city: e.target.value }))}
                 className={`mt-1 ${inputClass}`}
@@ -296,6 +304,8 @@ export default function SignUpPage() {
           <label className="block text-sm font-semibold text-slate-700">Password</label>
           <input
             type="password"
+            name="password"
+            autoComplete="new-password"
             value={formData.password}
             onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
             className={`mt-1 ${inputClass}`}
@@ -307,6 +317,8 @@ export default function SignUpPage() {
           <label className="block text-sm font-semibold text-slate-700">Confirm password</label>
           <input
             type="password"
+            name="confirmPassword"
+            autoComplete="new-password"
             value={formData.confirmPassword}
             onChange={(e) => setFormData((p) => ({ ...p, confirmPassword: e.target.value }))}
             className={`mt-1 ${inputClass}`}

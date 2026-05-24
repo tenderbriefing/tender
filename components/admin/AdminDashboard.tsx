@@ -8,6 +8,8 @@ import { useTenderBriefingsPolling } from '@/hooks/useTenderBriefingsPolling'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { SyncHealthBadge } from '@/components/procurement/StatusBadges'
 import type { AdminDashboardStats } from '@/lib/tenderBriefing/types'
+import OperationalIntelligencePanel from '@/components/procurement/OperationalIntelligencePanel'
+import { useOperationalIntelligence } from '@/hooks/useOperationalIntelligence'
 import {
   ArrowPathIcon,
   ChartBarIcon,
@@ -56,6 +58,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const { data: intelligence, loading: intelligenceLoading } = useOperationalIntelligence(15000)
 
   const syncState = stats?.syncStatus || syncStatus
   const isRunning = Boolean(syncing || syncState?.isRunning)
@@ -130,6 +133,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8">
+      <OperationalIntelligencePanel data={intelligence} loading={intelligenceLoading} />
+
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm font-semibold text-brand-700 uppercase tracking-wide">

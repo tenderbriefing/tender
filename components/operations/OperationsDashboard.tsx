@@ -11,7 +11,9 @@ import type { EnrichedAttendanceRequest } from '@/lib/tenderBriefing/enrichment'
 import { SyncHealthBadge } from '@/components/procurement/StatusBadges'
 import { SA_PROVINCES } from '@/lib/procurement/provinces'
 import { ClipboardList, Users, Building2 } from 'lucide-react'
-import ProcurementInsights from '@/components/procurement/ProcurementInsights'
+import OperationalIntelligencePanel from '@/components/procurement/OperationalIntelligencePanel'
+import { useOperationalIntelligence } from '@/hooks/useOperationalIntelligence'
+import AgentTrustIndicators from '@/components/operations/AgentTrustIndicators'
 
 type Tab = 'pending' | 'assigned' | 'completed' | 'declined'
 
@@ -26,6 +28,7 @@ interface YouthAgent {
 }
 
 export default function OperationsDashboard() {
+  const { data: intelligence, loading: intelligenceLoading } = useOperationalIntelligence(30000)
   const [requests, setRequests] = useState<EnrichedAttendanceRequest[]>([])
   const [syncHealth, setSyncHealth] = useState<string>('unknown')
   const [agents, setAgents] = useState<YouthAgent[]>([])
@@ -171,6 +174,8 @@ export default function OperationsDashboard() {
 
   return (
     <div className="space-y-8">
+      <OperationalIntelligencePanel data={intelligence} loading={intelligenceLoading} />
+
       <div>
         <p className="text-sm font-semibold text-brand-700 uppercase tracking-wide">
           Procurement operations
@@ -202,8 +207,6 @@ export default function OperationsDashboard() {
           </div>
         ))}
       </div>
-
-      <ProcurementInsights />
 
       {!noActivity && (
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -306,17 +309,13 @@ export default function OperationsDashboard() {
 
           <section>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+              <div className="procurement-tabs flex flex-wrap gap-2">
                 {tabs.map((t) => (
                   <button
                     key={t.key}
                     type="button"
                     onClick={() => setTab(t.key)}
-                    className={`rounded-lg px-3 py-2 text-xs font-semibold sm:text-sm transition ${
-                      tab === t.key
-                        ? 'bg-brand-600 text-white'
-                        : 'text-slate-600 hover:bg-slate-100'
-                    }`}
+                    className={`procurement-tab ${tab === t.key ? 'procurement-tab-active' : 'hover:bg-slate-50'}`}
                   >
                     {t.label} ({t.count})
                   </button>

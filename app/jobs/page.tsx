@@ -9,6 +9,8 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import AttendanceRequestCard from '@/components/operations/AttendanceRequestCard'
 import AgentTrustIndicators from '@/components/operations/AgentTrustIndicators'
 import ProcurementEmptyState from '@/components/operations/ProcurementEmptyState'
+import ProcurementPageHeader from '@/components/procurement/ProcurementPageHeader'
+import { TrustStrip } from '@/components/procurement/TrustDisclaimer'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { authFetch } from '@/lib/api/authenticatedFetch'
 import { toast } from 'react-hot-toast'
@@ -65,7 +67,7 @@ export default function AgentJobsPage() {
       })
       const json = await res.json()
       if (!json.success) throw new Error(json.error)
-      toast.success('Briefing assigned to you')
+      toast.success('Briefing assignment accepted')
       load()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not accept')
@@ -92,81 +94,46 @@ export default function AgentJobsPage() {
     }
   }
 
-  const actionBtn =
+  const primaryBtn =
     'min-h-[44px] flex-1 sm:flex-none inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold'
+  const secondaryBtn =
+    'min-h-[44px] flex-1 sm:flex-none inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50'
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="procurement-shell">
       <Header />
-
-      <div className="border-b border-brand-100 bg-gradient-to-br from-brand-600 to-brand-800 text-white">
-        <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-          <p className="text-sm font-medium text-brand-100">Youth Agent Operations</p>
-          <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Available Briefing Assignments</h1>
-          <p className="mt-3 max-w-2xl text-brand-100">
-            Let&apos;s make money by attending meetings. Accept compulsory briefing sessions,
-            submit attendance proof, and deliver Briefing Reports for SMEs.
-          </p>
+      <div className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-5xl px-4 py-2 sm:px-6">
+          <TrustStrip />
         </div>
       </div>
-
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      <ProcurementPageHeader
+        maxWidthClass="max-w-5xl"
+        kicker="Youth Agent operations"
+        title="Briefing assignments"
+        description="Accept compulsory briefing sessions on behalf of SMEs, attend the site meeting, and submit a Briefing Report with attendance proof."
+        breadcrumb={{ label: 'Agent dashboard', href: '/agent/dashboard' }}
+      />
+      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <AgentTrustIndicators profile={userProfile} />
 
         {loading ? (
-          <div className="flex justify-center py-16">
+          <div className="flex justify-center py-16" role="status" aria-label="Loading assignments">
             <LoadingSpinner size="lg" />
           </div>
         ) : (
           <div className="mt-8 space-y-10">
-            <section>
-              <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-                <ClipboardList className="h-5 w-5 text-brand-600" />
-                My Assigned Briefings ({assigned.length})
-              </h2>
-              {assigned.length === 0 ? (
-                <div className="mt-4">
-                  <ProcurementEmptyState
-                    icon={Briefcase}
-                    title="No assigned briefings"
-                    description="When you accept an assignment it will appear here with briefing venue and date details."
-                    actionLabel="View available assignments"
-                    actionHref="#available"
-                  />
-                </div>
-              ) : (
-                <div className="mt-4 space-y-4">
-                  {assigned.map((req) => (
-                    <AttendanceRequestCard
-                      key={req.id}
-                      request={req}
-                      actions={
-                        <>
-                          <Link
-                            href={`/briefing-reports/upload?requestId=${req.id}&tenderId=${req.tenderId}`}
-                            className={`${actionBtn} bg-brand-600 text-white hover:bg-brand-700`}
-                          >
-                            Submit Briefing Report
-                          </Link>
-                        </>
-                      }
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-
             <section id="available">
-              <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-                <Briefcase className="h-5 w-5 text-brand-600" />
-                Available Briefing Assignments ({available.length})
+              <h2 className="procurement-section-title flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-brand-600" aria-hidden />
+                Available assignments ({available.length})
               </h2>
               {available.length === 0 ? (
                 <div className="mt-4">
                   <ProcurementEmptyState
                     icon={Briefcase}
                     title="No briefing assignments available"
-                    description="No briefing assignments are currently available. New assignments will appear here when SMEs request attendance."
+                    description="New assignments appear when SMEs request Youth Agent attendance for compulsory briefing sessions."
                   />
                 </div>
               ) : (
@@ -182,15 +149,15 @@ export default function AgentJobsPage() {
                             type="button"
                             disabled={acting === req.id}
                             onClick={() => accept(req.id)}
-                            className={`${actionBtn} bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50`}
+                            className={`${primaryBtn} bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50`}
                           >
-                            Accept Assignment
+                            Accept assignment
                           </button>
                           <button
                             type="button"
                             disabled={acting === req.id}
                             onClick={() => decline(req.id)}
-                            className={`${actionBtn} border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 disabled:opacity-50`}
+                            className={`${secondaryBtn} disabled:opacity-50`}
                           >
                             Decline
                           </button>
@@ -202,17 +169,52 @@ export default function AgentJobsPage() {
               )}
             </section>
 
+            <section id="assigned">
+              <h2 className="procurement-section-title flex items-center gap-2">
+                <ClipboardList className="h-5 w-5 text-brand-600" aria-hidden />
+                My assigned briefings ({assigned.length})
+              </h2>
+              {assigned.length === 0 ? (
+                <div className="mt-4">
+                  <ProcurementEmptyState
+                    icon={ClipboardList}
+                    title="No assigned briefings"
+                    description="Accepted assignments appear here with briefing venue, date, and submission actions."
+                    actionLabel="View available assignments"
+                    actionHref="#available"
+                  />
+                </div>
+              ) : (
+                <div className="mt-4 space-y-4">
+                  {assigned.map((req) => (
+                    <AttendanceRequestCard
+                      key={req.id}
+                      request={req}
+                      actions={
+                        <Link
+                          href={`/briefing-reports/upload?requestId=${req.id}&tenderId=${req.tenderId}`}
+                          className={`${primaryBtn} bg-brand-600 text-white hover:bg-brand-700`}
+                        >
+                          Submit briefing report
+                        </Link>
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+
             <section>
-              <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-                <FileText className="h-5 w-5 text-brand-600" />
-                Completed Briefing Reports ({completed.length})
+              <h2 className="procurement-section-title flex items-center gap-2">
+                <FileText className="h-5 w-5 text-brand-600" aria-hidden />
+                Completed briefing reports ({completed.length})
               </h2>
               {completed.length === 0 ? (
                 <div className="mt-4">
                   <ProcurementEmptyState
                     icon={FileText}
                     title="No completed reports yet"
-                    description="Completed briefing reports will appear here after assigned Youth Agents submit attendance notes."
+                    description="Submitted briefing reports appear here after you complete an assigned session."
                   />
                 </div>
               ) : (

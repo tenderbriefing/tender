@@ -195,6 +195,8 @@ export default function ProcurementFiltersPanel({
         type="button"
         className="lg:hidden flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800"
         onClick={() => setMobileOpen(!mobileOpen)}
+        aria-expanded={mobileOpen}
+        aria-controls="procurement-filters-panel"
       >
         <span className="inline-flex items-center gap-2">
           <Filter className="h-4 w-4" />
@@ -227,12 +229,13 @@ export default function ProcurementFiltersPanel({
       )}
 
       <aside
+        id="procurement-filters-panel"
         className={`${
           mobileOpen ? 'block' : 'hidden'
         } lg:block lg:sticky lg:top-24 rounded-xl border border-slate-200 bg-white p-4 shadow-sm`}
       >
         <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700 mb-4">
-          Refine opportunities
+          Search &amp; filter opportunities
         </h2>
         {panel}
       </aside>

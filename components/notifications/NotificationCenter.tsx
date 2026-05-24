@@ -6,6 +6,17 @@ import { Bell } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useNotificationsInbox } from '@/hooks/useNotificationsInbox'
 
+function notificationHref(n: { eventType?: string; data?: Record<string, unknown> }) {
+  const data = n.data || {}
+  if (data.requestId) return `/sme/requests/${data.requestId}`
+  if (data.tenderId) return `/tenders/${data.tenderId}`
+  if (n.eventType === 'briefing_report_submitted' && data.requestId) {
+    return `/briefing-reports/upload?requestId=${data.requestId}`
+  }
+  if (n.eventType?.includes('sync') && n.eventType?.includes('fail')) return '/admin/integrations'
+  return '/notifications'
+}
+
 function categoryLabel(eventType?: string) {
   switch (eventType) {
     case 'agent_accepted_briefing':
@@ -83,17 +94,22 @@ export default function NotificationCenter() {
               <p className="p-4 text-sm text-slate-500">No notifications yet.</p>
             ) : (
               <ul>
-                {items.map((n) => (
+                {items.map((n) => {
+                  const href = notificationHref(n)
+                  return (
                   <li
                     key={n.id}
                     className={`border-b border-slate-50 px-4 py-3 text-sm ${
                       n.read ? 'bg-white' : 'bg-brand-50/40'
                     }`}
                   >
-                    <button
-                      type="button"
-                      className="w-full text-left"
-                      onClick={() => !n.read && markRead(n.id)}
+                    <Link
+                      href={href}
+                      className="block w-full text-left"
+                      onClick={() => {
+                        if (!n.read) markRead(n.id)
+                        setOpen(false)
+                      }}
                     >
                       <span className="text-xs font-semibold uppercase text-brand-700">
                         {categoryLabel(n.eventType)}
@@ -111,9 +127,10 @@ export default function NotificationCenter() {
                           {new Date(n.createdAt).toLocaleString('en-ZA')}
                         </p>
                       )}
-                    </button>
+                    </Link>
                   </li>
-                ))}
+                  )
+                })}
               </ul>
             )}
           </div>

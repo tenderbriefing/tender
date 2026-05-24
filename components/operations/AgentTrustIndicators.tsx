@@ -1,18 +1,20 @@
 'use client'
 
 import type { UserProfile } from '@/lib/auth'
-import { AgentVerificationBadge } from '@/components/procurement/StatusBadges'
+import {
+  AgentVerificationBadge,
+  NewAgentBadge,
+  ReliableAgentBadge,
+} from '@/components/procurement/StatusBadges'
+import {
+  agentTrustDefaults,
+  computeAttendanceRate,
+  isNewAgent,
+  isReliableAgent,
+} from '@/lib/procurement/agentReputation'
 import { Shield, Star, CheckCircle, XCircle } from 'lucide-react'
 
-export function agentTrustDefaults(profile: UserProfile | null) {
-  return {
-    verificationStatus: profile?.verificationStatus ?? 'pending',
-    reliabilityScore: profile?.reliabilityScore ?? 100,
-    completedBriefingCount: profile?.completedBriefingCount ?? 0,
-    acceptedBriefingCount: profile?.acceptedBriefingCount ?? 0,
-    missedBriefingCount: profile?.missedBriefingCount ?? 0,
-  }
-}
+export { agentTrustDefaults }
 
 export default function AgentTrustIndicators({
   profile,
@@ -22,11 +24,14 @@ export default function AgentTrustIndicators({
   compact?: boolean
 }) {
   const trust = agentTrustDefaults(profile)
+  const attendanceRate = computeAttendanceRate(trust)
 
   if (compact) {
     return (
       <div className="flex flex-wrap items-center gap-2">
         <AgentVerificationBadge status={trust.verificationStatus} />
+        {isNewAgent(trust) && <NewAgentBadge />}
+        {isReliableAgent(trust) && <ReliableAgentBadge />}
         <span className="text-xs font-medium text-slate-600">
           Reliability {trust.reliabilityScore}%
         </span>
@@ -40,30 +45,23 @@ export default function AgentTrustIndicators({
         <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">
           Agent reliability
         </h2>
-        <AgentVerificationBadge status={trust.verificationStatus} />
+        <div className="flex flex-wrap gap-2">
+          <AgentVerificationBadge status={trust.verificationStatus} />
+          {isNewAgent(trust) && <NewAgentBadge />}
+          {isReliableAgent(trust) && <ReliableAgentBadge />}
+        </div>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat
-          icon={Star}
-          label="Reliability Score"
-          value={`${trust.reliabilityScore}%`}
-        />
-        <Stat
-          icon={CheckCircle}
-          label="Completed Briefings"
-          value={trust.completedBriefingCount}
-        />
-        <Stat
-          icon={Shield}
-          label="Accepted Briefings"
-          value={trust.acceptedBriefingCount}
-        />
-        <Stat
-          icon={XCircle}
-          label="Missed Briefings"
-          value={trust.missedBriefingCount}
-        />
+        <Stat icon={Star} label="Reliability Score" value={`${trust.reliabilityScore}%`} />
+        <Stat icon={CheckCircle} label="Completed Briefings" value={trust.completedBriefingCount} />
+        <Stat icon={Shield} label="Accepted Briefings" value={trust.acceptedBriefingCount} />
+        <Stat icon={XCircle} label="Missed Briefings" value={trust.missedBriefingCount} />
       </div>
+      {attendanceRate !== null && (
+        <p className="mt-3 text-sm text-slate-600">
+          Attendance rate: <span className="font-semibold text-slate-900">{attendanceRate}%</span>
+        </p>
+      )}
     </section>
   )
 }
@@ -80,7 +78,7 @@ function Stat({
   return (
     <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
       <Icon className="h-4 w-4 text-brand-600" aria-hidden />
-      <p className="mt-2 text-xl font-bold text-slate-900">{value}</p>
+      <p className="mt-2 text-xl font-bold tabular-nums text-slate-900">{value}</p>
       <p className="text-xs font-medium text-slate-600">{label}</p>
     </div>
   )

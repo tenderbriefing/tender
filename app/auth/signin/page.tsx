@@ -63,6 +63,7 @@ export default function SignInPage() {
             type="email"
             id="email"
             name="email"
+            autoComplete="email"
             value={formData.email}
             onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
             className={`mt-1 ${inputClass} ${errors.email ? 'border-red-400' : ''}`}
@@ -79,6 +80,7 @@ export default function SignInPage() {
             type="password"
             id="password"
             name="password"
+            autoComplete="current-password"
             value={formData.password}
             onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
             className={`mt-1 ${inputClass} ${errors.password ? 'border-red-400' : ''}`}

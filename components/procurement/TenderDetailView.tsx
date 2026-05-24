@@ -12,7 +12,7 @@ import {
 } from '@/lib/procurement/dates'
 import { BriefingSessionBlock, CompulsoryBriefingBadge } from './CompulsoryBriefingBadge'
 import { ProcurementDisclaimer } from './TrustDisclaimer'
-import { Printer } from 'lucide-react'
+import { Printer, Share2 } from 'lucide-react'
 import TenderDocumentsSection from './TenderDocumentsSection'
 
 interface TenderDetailViewProps {
@@ -47,7 +47,15 @@ export default function TenderDetailView({ tender }: TenderDetailViewProps) {
   }
 
   return (
-    <div className="print:bg-white">
+    <div className="procurement-print-detail print:bg-white">
+      <div className="print-only-header mb-6 hidden border-b-2 border-brand-700 pb-4 print:block">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+          TenderBriefing — procurement notice
+        </p>
+        <p className="mt-2 font-mono text-sm font-bold text-slate-900">{tender.tenderNumber}</p>
+        <h1 className="mt-1 text-xl font-bold text-slate-900">{tender.title}</h1>
+        <p className="mt-1 text-sm text-slate-700">{tender.department}</p>
+      </div>
       <div className="mb-6 flex flex-col gap-4 print:hidden sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Link
@@ -67,14 +75,42 @@ export default function TenderDetailView({ tender }: TenderDetailViewProps) {
             </div>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          <Printer className="h-4 w-4" />
-          Print
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <Printer className="h-4 w-4" aria-hidden />
+            Print notice
+          </button>
+          {'share' in navigator && typeof navigator.share === 'function' && (
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.share({
+                  title: tender.title,
+                  text: `Tender ${tender.tenderNumber || ''} — ${tender.department || 'Government'}`,
+                  url: window.location.href,
+                })
+              }}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <Share2 className="h-4 w-4" aria-hidden />
+              Share
+            </button>
+          )}
+          {tender.detailUrl && (
+            <a
+              href={tender.detailUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-[44px] items-center rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200"
+            >
+              Official tender notice
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Briefing prominence */}

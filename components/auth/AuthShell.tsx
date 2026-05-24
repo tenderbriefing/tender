@@ -22,7 +22,7 @@ export default function AuthShell({
           </span>
         </Link>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="rounded-xl border border-slate-200 border-l-4 border-l-brand-600 bg-white p-8 shadow-sm">
           <div className="mb-6 text-center">
             <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
             <p className="mt-2 text-sm text-slate-600">{subtitle}</p>

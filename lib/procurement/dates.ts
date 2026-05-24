@@ -44,6 +44,17 @@ export function isBriefingThisWeek(briefingDate?: string | null): boolean {
   return d >= start && d <= end
 }
 
+export function isBriefingToday(briefingDate?: string | null): boolean {
+  const d = parseProcurementDate(briefingDate)
+  if (!d) return false
+  const now = new Date()
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  )
+}
+
 export function countdownLabel(targetDate?: string | null): string | null {
   const days = daysUntil(targetDate)
   if (days === null) return null

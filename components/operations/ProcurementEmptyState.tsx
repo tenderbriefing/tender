@@ -17,7 +17,7 @@ export default function ProcurementEmptyState({
   icon: Icon,
 }: ProcurementEmptyStateProps) {
   return (
-    <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 px-6 py-12 text-center">
       {Icon && <Icon className="mx-auto h-10 w-10 text-slate-300" aria-hidden />}
       <h3 className="mt-3 text-base font-semibold text-slate-900">{title}</h3>
       <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">{description}</p>

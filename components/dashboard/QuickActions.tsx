@@ -1,11 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { 
-  PlusIcon, 
-  MagnifyingGlassIcon, 
+import {
+  MagnifyingGlassIcon,
+  ClipboardDocumentListIcon,
   DocumentTextIcon,
-  UserGroupIcon
+  UserGroupIcon,
 } from '@heroicons/react/24/outline'
 
 interface QuickActionsProps {
@@ -17,91 +17,83 @@ const QuickActions = ({ userType }: QuickActionsProps) => {
     {
       icon: MagnifyingGlassIcon,
       title: 'Tender Opportunities',
-      description: 'Browse official procurement listings',
+      description: 'Browse official government procurement listings',
       href: '/tenders',
-      color: 'bg-blue-500'
     },
     {
-      icon: PlusIcon,
-      title: 'My Requests',
-      description: 'Track Youth Agent attendance requests',
+      icon: ClipboardDocumentListIcon,
+      title: 'Attendance Requests',
+      description: 'Track Youth Agent briefing attendance',
       href: '/sme/requests',
-      color: 'bg-green-500'
     },
     {
       icon: DocumentTextIcon,
       title: 'Compulsory Briefings',
       description: 'Filter tenders requiring briefing attendance',
       href: '/tenders',
-      color: 'bg-purple-500'
     },
     {
       icon: UserGroupIcon,
-      title: 'Dashboard',
-      description: 'SME overview and alerts',
+      title: 'Procurement Dashboard',
+      description: 'SME overview and briefing alerts',
       href: '/sme/dashboard',
-      color: 'bg-orange-500'
-    }
+    },
   ]
 
   const youthAgentActions = [
     {
       icon: MagnifyingGlassIcon,
-      title: 'Available Jobs',
-      description: 'Browse available briefing jobs',
+      title: 'Briefing Assignments',
+      description: 'Available and assigned briefing sessions',
       href: '/jobs',
-      color: 'bg-blue-500'
     },
     {
       icon: DocumentTextIcon,
-      title: 'Submit Report',
-      description: 'Upload briefing notes and proof',
+      title: 'Submit Briefing Report',
+      description: 'Upload attendance notes and proof',
       href: '/briefing-reports/upload',
-      color: 'bg-green-500'
     },
     {
       icon: UserGroupIcon,
       title: 'Agent Dashboard',
-      description: 'Reliability and opportunity summary',
+      description: 'Reliability and assignment summary',
       href: '/agent/dashboard',
-      color: 'bg-purple-500'
     },
     {
-      icon: PlusIcon,
+      icon: ClipboardDocumentListIcon,
       title: 'Update Profile',
-      description: 'Location and availability for matching',
+      description: 'Province and service radius for matching',
       href: '/profile',
-      color: 'bg-orange-500'
-    }
+    },
   ]
 
   const actions = userType === 'sme' ? smeActions : youthAgentActions
 
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {actions.map((action, index) => (
+    <section aria-labelledby="quick-actions-heading">
+      <h2 id="quick-actions-heading" className="mb-4 text-lg font-bold text-slate-900">
+        Quick actions
+      </h2>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {actions.map((action) => (
           <Link
-            key={index}
+            key={action.title}
             href={action.href}
-            className="card hover:shadow-lg transition-shadow duration-200 group"
+            className="group flex gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-brand-200 hover:shadow-md"
           >
-            <div className="flex items-center mb-3">
-              <div className={`${action.color} rounded-lg p-3 mr-4 group-hover:scale-110 transition-transform duration-200`}>
-                <action.icon className="h-6 w-6 text-white" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 group-hover:bg-brand-100">
+              <action.icon className="h-5 w-5" aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-slate-900 group-hover:text-brand-700">
                 {action.title}
               </h3>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600">{action.description}</p>
             </div>
-            <p className="text-gray-600 text-sm">
-              {action.description}
-            </p>
           </Link>
         ))}
       </div>
-    </div>
+    </section>
   )
 }
 

@@ -6,6 +6,8 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import OperationsDashboard from '@/components/operations/OperationsDashboard'
+import ProcurementPageHeader from '@/components/procurement/ProcurementPageHeader'
+import { TrustStrip } from '@/components/procurement/TrustDisclaimer'
 import { useAuth } from '@/components/providers/AuthProvider'
 
 export default function AdminOperationsPage() {
@@ -21,7 +23,7 @@ export default function AdminOperationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -30,8 +32,19 @@ export default function AdminOperationsPage() {
   if (!user || userProfile?.userType !== 'admin') return null
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="procurement-shell">
       <Header />
+      <div className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+          <TrustStrip />
+        </div>
+      </div>
+      <ProcurementPageHeader
+        kicker="Administration"
+        title="Operations centre"
+        description="Monitor attendance requests, agent assignments, briefing reports, and procurement sync activity across the platform."
+        breadcrumb={{ label: 'Admin dashboard', href: '/admin/dashboard' }}
+      />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <OperationsDashboard />
       </main>
