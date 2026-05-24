@@ -98,6 +98,8 @@ Add:
 
 Keep: `localhost`, `tenderbriefing-34679.firebaseapp.com`, `tenderbriefing-34679.web.app`, Cloud Run hostname if used for testing.
 
+**Auth signup errors:** If you see `auth/api-key-not-valid`, production was built without valid Firebase web config (Docker excludes `.env.local`). Ensure `lib/firebase-config.ts` contains the real public web app values from Firebase Console → Project settings → Your apps, then redeploy with `cloudbuild.yaml`. If you see `auth/unauthorized-domain`, add the domain above.
+
 ---
 
 ## SEO / env
