@@ -38,6 +38,8 @@ Cloud Run region `africa-south1` is not supported.
 
 Production remains in `africa-south1`. The proxy (`hosting-proxy/server.js`) forwards all requests to the production `*.run.app` URL. See `cloudbuild-hosting-proxy.yaml`.
 
+**Important:** Do not deploy `public/index.html`. Firebase Hosting serves exact-match static files *before* Cloud Run rewrites, so a root `index.html` blocks the proxy and shows the placeholder page instead of the app.
+
 ---
 
 ## Verification (run on your Mac)

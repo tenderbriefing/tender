@@ -2,7 +2,7 @@
   "hosting": {
     "site": "tenderbriefing-34679",
     "public": "public",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "index.html", "README.md"],
     "rewrites": [
       {
         "source": "**",
