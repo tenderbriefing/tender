@@ -1,62 +1,129 @@
+'use client'
+
 import { useState, useEffect } from 'react'
-import { 
-  ClockIcon, 
-  CheckCircleIcon, 
+import Link from 'next/link'
+import {
+  ClockIcon,
+  CheckCircleIcon,
   ExclamationTriangleIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline'
+import { authFetch } from '@/lib/api/authenticatedFetch'
 
 interface RecentActivityProps {
   userType?: 'sme' | 'youth-agent' | 'admin'
 }
 
-interface Activity {
+interface ActivityItem {
   id: string
   type: string
   title: string
   description: string
-  time: string
+  createdAt: string
+  href?: string
   status: string
-  icon: any
+}
+
+type ActivityDisplay = ActivityItem & {
+  time: string
+  icon: typeof DocumentTextIcon
+}
+
+function formatActivityTime(iso: string) {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const diffMs = Date.now() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays < 7) return `${diffDays}d ago`
+  return date.toLocaleDateString()
+}
+
+function iconForType(type: string) {
+  switch (type) {
+    case 'briefing_report_submitted':
+    case 'report_submitted':
+    case 'briefing_accepted':
+    case 'briefing_assigned':
+    case 'tender_saved':
+    case 'tender_tracked':
+    case 'sync_completed':
+      return CheckCircleIcon
+    case 'briefing_declined':
+    case 'agent_declined_briefing':
+      return ExclamationTriangleIcon
+    default:
+      return DocumentTextIcon
+  }
 }
 
 const RecentActivity = ({ userType }: RecentActivityProps) => {
-  const [activities, setActivities] = useState<Activity[]>([])
+  const [activities, setActivities] = useState<ActivityDisplay[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
+
     const fetchActivities = async () => {
       try {
-        // Fetch real activities from API
-        const response = await fetch('/api/dashboard/activities')
-        const data = await response.json()
-        
-        if (data.success) {
-          setActivities(data.activities)
-        } else {
-          setActivities([])
+        const response = await authFetch('/api/dashboard/activities')
+        const contentType = response.headers.get('content-type') || ''
+
+        if (!response.ok || !contentType.includes('application/json')) {
+          if (!cancelled) setActivities([])
+          return
         }
-      } catch (error) {
-        console.error('Error fetching activities:', error)
-        setActivities([])
+
+        const payload = await response.json()
+        const rows: ActivityItem[] =
+          payload?.success && Array.isArray(payload.data)
+            ? payload.data
+            : Array.isArray(payload.activities)
+              ? payload.activities
+              : []
+
+        if (!cancelled) {
+          setActivities(
+            rows.map((row) => ({
+              ...row,
+              time: formatActivityTime(row.createdAt),
+              icon: iconForType(row.type),
+            }))
+          )
+        }
+      } catch {
+        if (!cancelled) setActivities([])
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     fetchActivities()
+    return () => {
+      cancelled = true
+    }
   }, [userType])
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
       case 'approved':
+      case 'saved':
+      case 'tracked':
         return 'text-green-600 bg-green-100'
       case 'pending':
       case 'available':
         return 'text-yellow-600 bg-yellow-100'
       case 'in_progress':
+      case 'assigned':
+      case 'accepted':
         return 'text-blue-600 bg-blue-100'
+      case 'declined':
+        return 'text-red-600 bg-red-100'
       default:
         return 'text-gray-600 bg-gray-100'
     }
@@ -69,57 +136,68 @@ const RecentActivity = ({ userType }: RecentActivityProps) => {
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-start space-x-4 pb-4 border-b border-gray-200 last:border-b-0 last:pb-0 animate-pulse">
+              <div
+                key={i}
+                className="flex items-start space-x-4 pb-4 border-b border-gray-200 last:border-b-0 last:pb-0 animate-pulse"
+              >
                 <div className="flex-shrink-0">
-                  <div className="bg-gray-200 rounded-full p-2 h-9 w-9"></div>
+                  <div className="bg-gray-200 rounded-full p-2 h-9 w-9" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-1"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-1" />
+                  <div className="h-3 bg-gray-200 rounded w-1/4" />
                 </div>
               </div>
             ))}
           </div>
         ) : activities.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-500">No recent activity. Activity will appear here as you use the platform.</p>
+            <ClockIcon className="mx-auto h-8 w-8 text-gray-300 mb-2" />
+            <p className="text-gray-500">
+              No recent activity. Activity will appear here as you use the platform.
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {activities.map((activity) => (
-              <div key={activity.id} className="flex items-start space-x-4 pb-4 border-b border-gray-200 last:border-b-0 last:pb-0">
-                <div className="flex-shrink-0">
-                  <div className="bg-primary-100 rounded-full p-2">
-                    <activity.icon className="h-5 w-5 text-primary-600" />
+            {activities.map((activity) => {
+              const Icon = activity.icon
+              const titleNode = activity.href ? (
+                <Link
+                  href={activity.href}
+                  className="text-sm font-medium text-gray-900 hover:text-brand-700"
+                >
+                  {activity.title}
+                </Link>
+              ) : (
+                <h3 className="text-sm font-medium text-gray-900">{activity.title}</h3>
+              )
+
+              return (
+                <div
+                  key={activity.id}
+                  className="flex items-start space-x-4 pb-4 border-b border-gray-200 last:border-b-0 last:pb-0"
+                >
+                  <div className="flex-shrink-0">
+                    <div className="bg-primary-100 rounded-full p-2">
+                      <Icon className="h-5 w-5 text-primary-600" />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      {titleNode}
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${getStatusColor(activity.status)}`}
+                      >
+                        {activity.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
+                    <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
                   </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium text-gray-900">
-                      {activity.title}
-                    </h3>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(activity.status)}`}>
-                      {activity.status.replace('_', ' ')}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {activity.description}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {activity.time}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        
-        {!loading && activities.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-              View all activity →
-            </button>
+              )
+            })}
           </div>
         )}
       </div>

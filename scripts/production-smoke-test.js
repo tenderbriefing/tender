@@ -13,7 +13,10 @@ const AGENT_EMAIL = 'ops-smoke-agent@tenderbriefing.co.za'
 const TEST_PASSWORD = process.env.SMOKE_TEST_PASSWORD || 'TenderBriefing_Smoke2026!'
 
 const { getFirebaseAdmin } = require('../backend/config/firebaseAdmin')
-const { sanitizeFirestoreData } = require('../backend/utils/sanitizeFirestoreData')
+const {
+  ensureSmokeRoleProfiles,
+  cleanupOrphanQaUser,
+} = require('./smoke-test-profiles')
 
 async function fetchJson(url, options = {}) {
   const res = await fetch(url, options)
@@ -66,27 +69,21 @@ async function ensureUser({ email, password, displayName, userType, extra = {} }
     uid = created.uid
   }
 
-  const profile = sanitizeFirestoreData({
+  await ensureSmokeRoleProfiles(db, {
     uid,
     email,
     displayName,
     userType,
-    phoneNumber: '+27000000000',
-    location: extra.location || 'Gauteng',
-    province: extra.location || 'Gauteng',
-    rating: userType === 'youth-agent' ? 4 : undefined,
-    availability: userType === 'youth-agent' ? 'available' : undefined,
-    verified: true,
-    missedMeetings: 0,
-    categories: userType === 'sme' ? extra.categories || ['General'] : [],
-    companyName: userType === 'sme' ? extra.companyName || 'Smoke Test SME (Pty) Ltd' : '',
-    skills: userType === 'youth-agent' ? extra.skills || [] : [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    ...extra,
+    extra: {
+      province: extra.location || extra.province || 'Gauteng',
+      companyName: extra.companyName || 'Smoke Test SME (Pty) Ltd',
+      contactPerson: displayName,
+      categories: extra.categories || ['information-technology'],
+      city: extra.city || 'Johannesburg',
+      ...extra,
+    },
   })
 
-  await db.collection('users').doc(uid).set(profile, { merge: true })
   return { uid, email, displayName, userType }
 }
 
@@ -120,6 +117,7 @@ async function main() {
   }
 
   const admin = getFirebaseAdmin()
+  report.orphanCleanup = await cleanupOrphanQaUser(admin)
   report.collectionsBefore = {
     attendanceRequests: await countCollection('attendanceRequests'),
     briefingReports: await countCollection('briefingReports'),
@@ -285,6 +283,28 @@ async function main() {
     status: reportsByReq.status,
     success: reportsByReq.json.success,
   })
+
+  const activitiesRes = await fetchJson(`${PROD_BASE}/api/dashboard/activities`, {
+    headers: smeHeaders,
+  })
+  report.apiSteps.push({
+    step: 'GET /api/dashboard/activities',
+    status: activitiesRes.status,
+    success: activitiesRes.json.success,
+    activityCount: Array.isArray(activitiesRes.json.data)
+      ? activitiesRes.json.data.length
+      : 0,
+    contentTypeJson:
+      typeof activitiesRes.json.success === 'boolean' &&
+      !activitiesRes.json.raw,
+  })
+  if (
+    activitiesRes.status !== 200 ||
+    !activitiesRes.json.success ||
+    activitiesRes.json.raw
+  ) {
+    report.bugs.push('GET /api/dashboard/activities did not return JSON success payload')
+  }
 
   report.collectionsAfter = {
     attendanceRequests: await countCollection('attendanceRequests'),

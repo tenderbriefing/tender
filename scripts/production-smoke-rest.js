@@ -4,7 +4,7 @@
  * No service account required. Does not log passwords.
  */
 const PROD = 'https://tenderbriefing-xzgs5uw5ta-bq.a.run.app'
-const API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'YOUR_FIREBASE_API_KEY'
+const API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDk_QBzmOXJfdl4PPqycoKtecGu0ioCRuY'
 const SME_EMAIL = 'ops-smoke-sme@tenderbriefing.co.za'
 const AGENT_EMAIL = 'ops-smoke-agent@tenderbriefing.co.za'
 const PASSWORD = process.env.SMOKE_TEST_PASSWORD || 'TenderBriefing_Smoke2026!'
@@ -147,12 +147,16 @@ async function main() {
     uid: smeAuth.localId,
     email: SME_EMAIL,
     displayName: 'Smoke Test SME',
+    role: 'sme',
     userType: 'sme',
     companyName: 'Smoke Test SME Pty Ltd',
+    contactPerson: 'Smoke Test SME',
     phoneNumber: '+27123456789',
+    province: 'Gauteng',
     location: 'Gauteng',
-    categories: ['construction'],
-    skills: [],
+    categories: ['information-technology'],
+    sectors: ['information-technology'],
+    csdNumber: '',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   })
@@ -161,11 +165,20 @@ async function main() {
     uid: agentAuth.localId,
     email: AGENT_EMAIL,
     displayName: 'Smoke Test Agent',
+    role: 'youth-agent',
     userType: 'youth-agent',
     phoneNumber: '+27123456789',
-    location: 'Gauteng',
-    categories: [],
-    skills: [],
+    province: 'Gauteng',
+    city: 'Johannesburg',
+    location: 'Johannesburg, Gauteng',
+    availabilityRadiusKm: 25,
+    transportAvailable: true,
+    preferredServiceAreas: ['Gauteng'],
+    verificationStatus: 'verified',
+    reliabilityScore: 100,
+    completedBriefingCount: 0,
+    acceptedBriefingCount: 0,
+    missedBriefingCount: 0,
     rating: 4,
     availability: 'available',
     createdAt: new Date().toISOString(),
