@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { signIn, getUserProfile } from '@/lib/auth'
+import { getAuthErrorMessage, normalizeAuthEmail } from '@/lib/auth/errors'
 import { dashboardPathForRole } from '@/lib/auth/redirects'
 import { toast } from 'react-hot-toast'
 import AuthShell from '@/components/auth/AuthShell'
@@ -36,14 +37,17 @@ export default function SignInPage() {
 
     setLoading(true)
     try {
-      const { user } = await signIn(formData.email, formData.password)
+      const { user } = await signIn(normalizeAuthEmail(formData.email), formData.password)
       const profile = await getUserProfile(user.uid)
+      if (!profile?.userType) {
+        toast.error('Profile not found. Contact support or complete registration again.')
+        return
+      }
       toast.success('Signed in successfully')
       if (redirectTo) router.push(redirectTo)
-      else router.push(dashboardPathForRole(profile?.userType))
+      else router.push(dashboardPathForRole(profile.userType))
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to sign in'
-      toast.error(message)
+      toast.error(getAuthErrorMessage(error, 'Failed to sign in. Please try again.'))
     } finally {
       setLoading(false)
     }

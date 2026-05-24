@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { signUp } from '@/lib/auth'
+import { getAuthErrorMessage, normalizeAuthEmail } from '@/lib/auth/errors'
 import { dashboardPathForRole } from '@/lib/auth/redirects'
 import { SA_PROVINCES } from '@/lib/procurement/provinces'
 import { toast } from 'react-hot-toast'
@@ -80,7 +81,7 @@ export default function SignUpPage() {
             categories: formData.categories,
             sectors: formData.categories,
             provincesOfInterest: [formData.province],
-            csdNumber: formData.csdNumber || undefined,
+            ...(formData.csdNumber ? { csdNumber: formData.csdNumber.trim() } : {}),
           }
         : {
             phoneNumber: formData.phoneNumber,
@@ -100,9 +101,9 @@ export default function SignUpPage() {
           }
 
       await signUp(
-        formData.email,
+        normalizeAuthEmail(formData.email),
         formData.password,
-        formData.displayName,
+        formData.displayName.trim(),
         formData.userType,
         additionalData
       )
@@ -110,7 +111,7 @@ export default function SignUpPage() {
       toast.success('Registration complete')
       router.push(dashboardPathForRole(formData.userType))
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : 'Registration failed')
+      toast.error(getAuthErrorMessage(error, 'Registration failed. Please try again.'))
     } finally {
       setLoading(false)
     }

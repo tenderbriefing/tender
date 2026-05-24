@@ -216,7 +216,9 @@ const ProfilePage = () => {
               <div className="mt-6 space-y-4">
                 <div className="flex items-center text-sm text-gray-600">
                   <CalendarIcon className="h-4 w-4 mr-3" />
-                  <span>Joined {userProfile.createdAt.toLocaleDateString()}</span>
+                  <span>
+                    Joined {new Date(userProfile.createdAt).toLocaleDateString('en-ZA')}
+                  </span>
                 </div>
                 {userProfile.userType === 'sme' && (
                   <div className="flex items-center text-sm text-gray-600">
