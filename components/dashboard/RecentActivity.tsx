@@ -8,7 +8,6 @@ import {
   ExclamationTriangleIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline'
-import { authFetch } from '@/lib/api/authenticatedFetch'
 import { useAuth } from '@/components/providers/AuthProvider'
 
 interface RecentActivityProps {
@@ -78,7 +77,13 @@ const RecentActivity = ({ userType }: RecentActivityProps) => {
     const fetchActivities = async () => {
       setLoading(true)
       try {
-        const response = await authFetch('/api/dashboard/activities')
+        const token = await user.getIdToken()
+        const response = await fetch('/api/dashboard/activities', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        })
         const contentType = response.headers.get('content-type') || ''
 
         if (!response.ok || !contentType.includes('application/json')) {
