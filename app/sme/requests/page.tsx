@@ -110,6 +110,7 @@ export default function SmeRequestsPage() {
                 key={req.id}
                 request={req}
                 detailHref={`/sme/requests/${req.id}`}
+                showPaymentRetry
               />
             ))}
           </div>

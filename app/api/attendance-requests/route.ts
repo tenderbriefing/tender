@@ -43,6 +43,11 @@ export async function GET(request: NextRequest) {
       return forbiddenResponse()
     }
 
+    const paymentStatus = searchParams.get('paymentStatus')
+    if (paymentStatus) {
+      requests = requests.filter((r) => r.paymentStatus === paymentStatus)
+    }
+
     const { enrichAttendanceRequests } = await import('@/lib/backend/enrichAttendanceRequests')
     const enriched = await enrichAttendanceRequests(requests)
 
@@ -101,14 +106,48 @@ export async function POST(request: NextRequest) {
         latitude: body.latitude,
         longitude: body.longitude,
         radiusKm: body.radiusKm,
-        paymentStatus: 'not_required',
-        paymentProvider: 'none',
-        currency: 'ZAR',
       },
       agents
     )
 
-    return NextResponse.json({ success: true, data: result })
+    const origin =
+      request.headers.get('origin') ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      'https://www.tenderbriefing.co.za'
+
+    const paymentService = require('../../../../backend/services/payments/attendancePaymentService')
+    const checkout = await paymentService.createCheckoutForExistingRequest(
+      result.request.id,
+      user.uid,
+      origin
+    )
+
+    if (!checkout.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: checkout.error || 'Yoco is not configured',
+          code: checkout.configured === false ? 'YOCO_NOT_CONFIGURED' : 'CHECKOUT_FAILED',
+          data: { request: result.request },
+        },
+        { status: checkout.configured === false ? 503 : 400 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        request: checkout.request,
+        nearbyAgents: [],
+        payment: {
+          required: true,
+          redirectUrl: checkout.redirectUrl,
+          checkoutId: checkout.checkoutId,
+          amountCents: paymentService.ATTENDANCE_FEE_CENTS,
+          currency: 'ZAR',
+        },
+      },
+    })
   } catch (error) {
     return NextResponse.json(
       {

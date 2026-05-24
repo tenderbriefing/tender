@@ -9,29 +9,45 @@ export async function POST(request: NextRequest) {
       rawBody: string,
       signature: string | null
     ) => { ok: boolean; skipped?: boolean; reason?: string }
-    handleWebhookPayload: (body: unknown) => { ok: boolean }
   }>('yoco')
 
   const rawBody = await request.text()
   const signature =
     request.headers.get('x-yoco-signature') ||
-    request.headers.get('yoco-signature')
+    request.headers.get('yoco-signature') ||
+    request.headers.get('webhook-signature')
 
   const verified = yoco.verifyWebhookSignature(rawBody, signature)
   if (!verified.ok && !verified.skipped) {
+    console.warn('[yoco webhook] signature verification failed')
     return NextResponse.json(
       { ok: false, error: verified.reason || 'Unauthorized' },
       { status: 401 }
     )
   }
 
-  let body: unknown = {}
+  if (verified.skipped) {
+    console.warn(
+      '[yoco webhook] YOCO_WEBHOOK_SECRET not configured — processing with checkout status guard only'
+    )
+  }
+
+  let body: Record<string, unknown> = {}
   try {
     body = rawBody ? JSON.parse(rawBody) : {}
   } catch {
     return NextResponse.json({ ok: false, error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const result = yoco.handleWebhookPayload(body)
-  return NextResponse.json(result)
+  try {
+    const paymentService = require('../../../../backend/services/payments/attendancePaymentService')
+    const result = await paymentService.processWebhookEvent(body)
+    return NextResponse.json({ ok: true, ...result })
+  } catch (error) {
+    console.error('[yoco webhook] handler error:', error instanceof Error ? error.message : error)
+    return NextResponse.json(
+      { ok: false, error: 'Webhook processing failed' },
+      { status: 500 }
+    )
+  }
 }

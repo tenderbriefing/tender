@@ -11,6 +11,7 @@ import { authFetch } from '@/lib/api/authenticatedFetch'
 import { formatProcurementDateTime } from '@/lib/procurement/dates'
 import { toast } from 'react-hot-toast'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
+import { ATTENDANCE_FEE_LABEL } from '@/lib/payments/attendanceFee'
 
 export default function RequestYouthAgentPage() {
   const { id } = useParams<{ id: string }>()
@@ -57,7 +58,23 @@ export default function RequestYouthAgentPage() {
         }),
       })
       const json = await res.json()
-      if (!json.success) throw new Error(json.error)
+      if (!json.success) {
+        if (json.code === 'YOCO_NOT_CONFIGURED') {
+          throw new Error(
+            json.error ||
+              'Online payments are not configured yet. Please contact support or try again later.'
+          )
+        }
+        throw new Error(json.error)
+      }
+
+      const redirectUrl = json.data?.payment?.redirectUrl
+      if (redirectUrl) {
+        toast.success('Redirecting to secure Yoco checkout…')
+        window.location.href = redirectUrl
+        return
+      }
+
       const requestId = json.data?.request?.id
       toast.success('Attendance request submitted')
       router.push(
@@ -136,8 +153,10 @@ export default function RequestYouthAgentPage() {
           <div className="rounded-lg border border-brand-100 bg-brand-50 p-4 text-sm text-slate-700">
             <p className="font-semibold text-slate-900">Attendance support fee</p>
             <p className="mt-1">
-              Attendance support fee will be confirmed before payment. Payment is not required to
-              submit this request.
+              A one-time fee of <strong>{ATTENDANCE_FEE_LABEL}</strong> applies for Youth Agent
+              briefing attendance support. You will be redirected to Yoco secure checkout after
+              submitting this form. Your request is only visible to agents after payment is
+              confirmed.
             </p>
           </div>
 
@@ -170,7 +189,7 @@ export default function RequestYouthAgentPage() {
             disabled={submitting || !acknowledged}
             className="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 disabled:opacity-50"
           >
-            {submitting ? 'Submitting…' : 'Submit attendance request'}
+            {submitting ? 'Submitting…' : `Continue to pay ${ATTENDANCE_FEE_LABEL}`}
           </button>
         </form>
       </main>

@@ -99,6 +99,20 @@ async function getDoc(collection, id) {
   return doc.exists ? { id: doc.id, ...doc.data() } : null
 }
 
+/** Test-only: simulate successful Yoco payment without calling live checkout. */
+async function markRequestPaidForSmoke(requestId) {
+  const admin = getFirebaseAdmin()
+  const now = new Date().toISOString()
+  await admin.firestore().collection('attendanceRequests').doc(requestId).update({
+    paymentStatus: 'paid',
+    paymentProvider: 'yoco',
+    paymentAmount: 24900,
+    currency: 'ZAR',
+    paidAt: now,
+    updatedAt: now,
+  })
+}
+
 async function main() {
   const report = {
     productionUrl: PROD_BASE,
@@ -165,7 +179,17 @@ async function main() {
   if (!compulsory.length) {
     throw new Error('No compulsory briefing tenders in production')
   }
-  const tender = compulsory[0]
+
+  const existingReqRes = await fetchJson(`${PROD_BASE}/api/attendance-requests`, {
+    headers: smeHeaders,
+  })
+  const activeTenderIds = new Set(
+    (existingReqRes.json.data || [])
+      .filter((r) => ['pending', 'assigned', 'accepted'].includes(r.status))
+      .map((r) => r.tenderId)
+  )
+  const tender =
+    compulsory.find((t) => !activeTenderIds.has(t.id)) || compulsory[0]
   report.tender = {
     id: tender.id,
     title: tender.title,
@@ -187,31 +211,100 @@ async function main() {
     status: createRes.status,
     success: createRes.json.success,
   })
-  if (!createRes.json.success) {
+  const requestId =
+    createRes.json.data?.request?.id || createRes.json.data?.requestId
+  if (!requestId) {
+    throw new Error(createRes.json.error || 'Create request failed — no request id')
+  }
+  if (!createRes.json.success && createRes.json.code !== 'YOCO_NOT_CONFIGURED') {
     throw new Error(createRes.json.error || 'Create request failed')
   }
-
-  const requestId = createRes.json.data?.request?.id
   report.attendanceRequestId = requestId
-  report.statusTimeline.push({ at: 'create', status: createRes.json.data?.request?.status || 'pending' })
+  report.yocoConfigured = createRes.json.success === true
+  report.statusTimeline.push({
+    at: 'create',
+    status: createRes.json.data?.request?.status || 'pending',
+    paymentStatus: createRes.json.data?.request?.paymentStatus,
+  })
 
   let reqDoc = await getDoc('attendanceRequests', requestId)
   if (!reqDoc || reqDoc.status !== 'pending') {
     report.bugs.push('attendanceRequests doc missing or not pending after create')
   }
+  if (reqDoc?.paymentStatus !== 'pending' && reqDoc?.paymentStatus !== 'not_required') {
+    report.bugs.push(`Expected paymentStatus pending after create, got ${reqDoc?.paymentStatus}`)
+  }
 
-  // Agent accepts
-  const acceptRes = await fetchJson(
+  // Unpaid request must not appear in agent opportunities
+  const oppsBefore = await fetchJson(
+    `${PROD_BASE}/api/attendance-requests?opportunities=true`,
+    { headers: agentHeaders }
+  )
+  report.apiSteps.push({
+    step: 'GET /api/attendance-requests?opportunities=true (unpaid)',
+    status: oppsBefore.status,
+    success: oppsBefore.json.success,
+  })
+  const oppsIdsBefore = (oppsBefore.json.data || []).map((r) => r.id)
+  if (reqDoc?.paymentStatus === 'pending' && oppsIdsBefore.includes(requestId)) {
+    report.bugs.push('Unpaid request visible to agent in opportunities list')
+  }
+
+  // Agent cannot accept until paid
+  const acceptBlocked = await fetchJson(
     `${PROD_BASE}/api/attendance-requests/${requestId}/accept`,
     { method: 'POST', headers: agentHeaders }
   )
   report.apiSteps.push({
-    step: 'POST /api/attendance-requests/:id/accept',
-    status: acceptRes.status,
-    success: acceptRes.json.success,
+    step: 'POST accept (expect block when unpaid)',
+    status: acceptBlocked.status,
+    success: acceptBlocked.json.success,
   })
-  if (!acceptRes.json.success) {
-    throw new Error(acceptRes.json.error || 'Accept failed')
+  let skipAccept = false
+  if (
+    reqDoc?.paymentStatus === 'pending' &&
+    acceptBlocked.json.success &&
+    acceptBlocked.status === 200
+  ) {
+    report.bugs.push('Agent accepted unpaid request — payment gate failed (deploy payment build)')
+    reqDoc = await getDoc('attendanceRequests', requestId)
+    if (reqDoc?.status === 'assigned' || reqDoc?.status === 'accepted') {
+      skipAccept = true
+    }
+  }
+
+  if (reqDoc?.paymentStatus === 'pending') {
+    await markRequestPaidForSmoke(requestId)
+    report.statusTimeline.push({ at: 'mark_paid_smoke', paymentStatus: 'paid' })
+    reqDoc = await getDoc('attendanceRequests', requestId)
+  }
+
+  if (reqDoc?.status === 'assigned' || reqDoc?.status === 'accepted') {
+    skipAccept = true
+  }
+
+  // Agent accepts (after payment on current build)
+  let acceptRes
+  if (skipAccept) {
+    acceptRes = { status: 200, json: { success: true } }
+    report.apiSteps.push({
+      step: 'POST /api/attendance-requests/:id/accept',
+      skipped: true,
+      reason: 'already assigned',
+    })
+  } else {
+    acceptRes = await fetchJson(
+      `${PROD_BASE}/api/attendance-requests/${requestId}/accept`,
+      { method: 'POST', headers: agentHeaders }
+    )
+    report.apiSteps.push({
+      step: 'POST /api/attendance-requests/:id/accept',
+      status: acceptRes.status,
+      success: acceptRes.json.success,
+    })
+    if (!acceptRes.json.success) {
+      throw new Error(acceptRes.json.error || 'Accept failed')
+    }
   }
 
   reqDoc = await getDoc('attendanceRequests', requestId)

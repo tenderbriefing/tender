@@ -15,6 +15,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { authFetch } from '@/lib/api/authenticatedFetch'
 import type { BriefingReport } from '@/lib/tenderBriefing/types'
 import { ExternalLink } from 'lucide-react'
+import AttendancePaymentSummary from '@/components/payments/AttendancePaymentSummary'
 
 export default function SmeRequestDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -98,6 +99,10 @@ export default function SmeRequestDetailPage() {
         <h1 className="mt-1 text-2xl font-bold text-slate-900">
           {tender?.title || request.tenderTitle}
         </h1>
+
+        <div className="mt-6">
+          <AttendancePaymentSummary request={request} showRetry />
+        </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-5">
           <section className="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

@@ -105,18 +105,25 @@ curl -sS http://localhost:3000/api/integrations/health | jq '.summary,.integrati
 
 ## 5. Yoco Payments
 
-**Purpose:** Checkout for premium features / agent bookings (future billing flows).
+**Purpose:** R249.00 ZAR attendance support fee when an SME requests Youth Agent attendance at a compulsory briefing. Requests stay hidden from agents until `paymentStatus` is `paid`.
 
 | Item | Value |
 |------|--------|
-| **Env** | `YOCO_SECRET_KEY`, `YOCO_WEBHOOK_SECRET` |
+| **Env** | `YOCO_SECRET_KEY`, `YOCO_WEBHOOK_SECRET`, `NEXT_PUBLIC_ATTENDANCE_FEE_CENTS` (default `24900`), `NEXT_PUBLIC_ATTENDANCE_FEE_LABEL` (default `R249.00`) |
 | **Secret Manager** | `yoco-secret-key`, `yoco-webhook-secret` |
-| **Service** | `backend/services/integrations/yocoService.js` |
-| **Webhook** | `POST /api/webhooks/yoco` |
+| **Service** | `backend/services/integrations/yocoService.js`, `backend/services/payments/attendancePaymentService.js` |
+| **API** | `POST /api/payments/yoco/create-checkout`, `POST /api/payments/yoco/confirm` |
+| **Webhook** | `POST /api/webhooks/yoco` → `https://www.tenderbriefing.co.za/api/webhooks/yoco` |
 
-**Credentials:** [Yoco Dashboard](https://www.yoco.com/) → Developers → API keys.
+**Credentials:** [Yoco Dashboard](https://www.yoco.com/) → Developers → API keys (test or live).
 
-**Methods:** `createCheckout()`, webhook signature verification
+**Flow:** SME submits request → `paymentStatus: pending` → redirect to Yoco hosted checkout → webhook or return URL sets `paid` → agents notified.
+
+**Full setup:** [YOCO_PAYMENTS_SETUP.md](./YOCO_PAYMENTS_SETUP.md)
+
+**Methods:** `createCheckout()`, `getCheckout()`, webhook signature verification
+
+If `YOCO_SECRET_KEY` is missing, checkout APIs return `503` with `YOCO_NOT_CONFIGURED` (app does not crash).
 
 ---
 

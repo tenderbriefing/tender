@@ -14,6 +14,7 @@ import { ClipboardList, Users, Building2 } from 'lucide-react'
 import OperationalIntelligencePanel from '@/components/procurement/OperationalIntelligencePanel'
 import { useOperationalIntelligence } from '@/hooks/useOperationalIntelligence'
 import RequestStatusTimeline from '@/components/operations/RequestStatusTimeline'
+import { formatAttendanceFeeZar } from '@/lib/payments/attendanceFee'
 
 type Tab = 'pending' | 'assigned' | 'completed' | 'declined'
 
@@ -38,6 +39,7 @@ export default function OperationsDashboard() {
   const [departmentFilter, setDepartmentFilter] = useState('')
   const [agentFilter, setAgentFilter] = useState('')
   const [smeFilter, setSmeFilter] = useState('')
+  const [paymentFilter, setPaymentFilter] = useState('')
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
   const [assigningId, setAssigningId] = useState<string | null>(null)
   const [selectedAgent, setSelectedAgent] = useState<Record<string, string>>({})
@@ -74,9 +76,32 @@ export default function OperationsDashboard() {
       if (agentFilter && r.assignedAgentId !== agentFilter && r.agentId !== agentFilter)
         return false
       if (smeFilter && r.smeId !== smeFilter) return false
+      if (paymentFilter && r.paymentStatus !== paymentFilter) return false
       return true
     })
-  }, [requests, provinceFilter, departmentFilter, agentFilter, smeFilter])
+  }, [requests, provinceFilter, departmentFilter, agentFilter, smeFilter, paymentFilter])
+
+  const paymentMetrics = useMemo(() => {
+    const unpaid = requests.filter(
+      (r) =>
+        r.paymentStatus === 'pending' ||
+        r.paymentStatus === 'failed' ||
+        r.paymentStatus === 'cancelled'
+    )
+    const paid = requests.filter((r) => r.paymentStatus === 'paid')
+    const fee = (r: EnrichedAttendanceRequest) => r.paymentAmount ?? 24900
+    const revenueCents = paid.reduce((sum, r) => sum + fee(r), 0)
+    const today = new Date().toISOString().slice(0, 10)
+    const dailyRevenueCents = paid
+      .filter((r) => r.paidAt && String(r.paidAt).startsWith(today))
+      .reduce((sum, r) => sum + fee(r), 0)
+    return {
+      unpaidCount: unpaid.length,
+      paidCount: paid.length,
+      revenueCents,
+      dailyRevenueCents,
+    }
+  }, [requests])
 
   const departments = useMemo(() => {
     const set = new Set<string>()
@@ -193,6 +218,16 @@ export default function OperationsDashboard() {
     { label: 'Completed', value: buckets.completed.length },
     { label: 'Youth Agents', value: agents.length },
     { label: 'SME requests', value: requests.length },
+    { label: 'Unpaid', value: paymentMetrics.unpaidCount },
+    { label: 'Paid', value: paymentMetrics.paidCount },
+    {
+      label: 'Revenue',
+      value: formatAttendanceFeeZar(paymentMetrics.revenueCents),
+    },
+    {
+      label: 'Today',
+      value: formatAttendanceFeeZar(paymentMetrics.dailyRevenueCents),
+    },
   ]
 
   if (loading) {
@@ -229,7 +264,7 @@ export default function OperationsDashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9">
         {quickStats.map((s) => (
           <div
             key={s.label}
@@ -401,6 +436,20 @@ export default function OperationsDashboard() {
                     {name}
                   </option>
                 ))}
+              </select>
+              <select
+                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                value={paymentFilter}
+                onChange={(e) => setPaymentFilter(e.target.value)}
+                aria-label="Filter by payment status"
+              >
+                <option value="">All payments</option>
+                <option value="pending">Payment pending</option>
+                <option value="paid">Paid</option>
+                <option value="failed">Failed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="refunded">Refunded</option>
+                <option value="not_required">Legacy (not required)</option>
               </select>
             </div>
 

@@ -26,12 +26,22 @@ function getStatus() {
   })
 }
 
+/**
+ * Create a Yoco hosted checkout session.
+ * @param {object} params
+ * @param {number} params.amount - Amount in cents (e.g. 24900 = R249.00)
+ * @param {string} [params.currency]
+ * @param {string} params.successUrl
+ * @param {string} params.cancelUrl
+ * @param {string} [params.failureUrl]
+ * @param {Record<string, string>} [params.metadata] - Yoco requires string values
+ */
 async function createCheckout({
-  amountInCents,
+  amount,
   currency = 'ZAR',
-  externalId,
   successUrl,
   cancelUrl,
+  failureUrl,
   metadata = {},
 }) {
   const secretKey = env('YOCO_SECRET_KEY')
@@ -39,12 +49,22 @@ async function createCheckout({
     return { ok: false, skipped: true, reason: 'YOCO_SECRET_KEY not configured' }
   }
 
+  const stringMetadata = {}
+  for (const [key, value] of Object.entries(metadata)) {
+    if (value !== undefined && value !== null) {
+      stringMetadata[key] = String(value)
+    }
+  }
+
   const payload = {
-    amount: amountInCents,
+    amount,
     currency,
-    metadata: { externalId, ...metadata },
-    successUrl,
-    cancelUrl,
+    metadata: stringMetadata,
+    successRedirectUrl: successUrl,
+    cancelRedirectUrl: cancelUrl,
+  }
+  if (failureUrl) {
+    payload.failureRedirectUrl = failureUrl
   }
 
   try {
@@ -58,11 +78,38 @@ async function createCheckout({
     })
     const data = await response.json().catch(() => ({}))
     if (!response.ok) {
-      return { ok: false, error: data.message || `Yoco HTTP ${response.status}` }
+      return { ok: false, error: data.message || data.error || `Yoco HTTP ${response.status}` }
     }
     return { ok: true, checkout: data }
   } catch (error) {
     return { ok: false, error: error.message || 'Yoco checkout failed' }
+  }
+}
+
+async function getCheckout(checkoutId) {
+  const secretKey = env('YOCO_SECRET_KEY')
+  if (!secretKey) {
+    return { ok: false, skipped: true, reason: 'YOCO_SECRET_KEY not configured' }
+  }
+  if (!checkoutId) {
+    return { ok: false, error: 'checkoutId required' }
+  }
+
+  try {
+    const response = await fetch(`${YOCO_API_BASE}/checkouts/${checkoutId}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        'Content-Type': 'application/json',
+      },
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      return { ok: false, error: data.message || `Yoco HTTP ${response.status}` }
+    }
+    return { ok: true, checkout: data }
+  } catch (error) {
+    return { ok: false, error: error.message || 'Yoco get checkout failed' }
   }
 }
 
@@ -75,10 +122,7 @@ function verifyWebhookSignature(rawBody, signatureHeader) {
     return { ok: false, reason: 'Missing signature header' }
   }
 
-  const expected = crypto
-    .createHmac('sha256', secret)
-    .update(rawBody)
-    .digest('hex')
+  const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex')
 
   const provided = String(signatureHeader).replace(/^sha256=/, '')
   let valid = false
@@ -98,6 +142,7 @@ function handleWebhookPayload(body) {
     ok: true,
     received: true,
     type: body?.type || body?.event || 'unknown',
+    payload: body,
   }
 }
 
@@ -110,6 +155,7 @@ module.exports = {
   getConfig,
   getStatus,
   createCheckout,
+  getCheckout,
   verifyWebhookSignature,
   handleWebhookPayload,
   healthCheck,

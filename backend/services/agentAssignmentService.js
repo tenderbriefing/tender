@@ -1,6 +1,11 @@
 const { getStorage } = require('./storageAdapter')
 const auditLogService = require('./auditLogService')
 const notificationService = require('./notificationService')
+const {
+  defaultPaymentFields,
+  isPaidForAgents,
+  notifyAgentsAfterPayment,
+} = require('./payments/attendancePaymentService')
 
 const DEFAULT_RADIUS_KM = 50
 
@@ -21,8 +26,25 @@ function normalizeStatus(status) {
 }
 
 function createAttendanceRequest(payload) {
+  const id = `req-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const paymentDefaults =
+    payload.paymentStatus === 'not_required'
+      ? {
+          paymentStatus: 'not_required',
+          paymentProvider: payload.paymentProvider || 'none',
+          paymentAmount: payload.paymentAmount ?? null,
+          quotedFee: payload.quotedFee ?? null,
+          currency: payload.currency || 'ZAR',
+          paymentReference: payload.paymentReference || null,
+          yocoCheckoutId: null,
+          yocoRedirectUrl: null,
+          paidAt: null,
+          paymentFailureReason: null,
+        }
+      : defaultPaymentFields(id)
+
   return {
-    id: `req-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id,
     tenderId: payload.tenderId,
     tenderNumber: payload.tenderNumber || '',
     tenderTitle: payload.tenderTitle || '',
@@ -41,10 +63,9 @@ function createAttendanceRequest(payload) {
     assignedAgentId: null,
     agentName: null,
     acceptedAt: null,
-    paymentStatus: payload.paymentStatus || 'not_required',
-    quotedFee: payload.quotedFee ?? null,
-    currency: payload.currency || 'ZAR',
-    paymentProvider: payload.paymentProvider || 'none',
+    ...paymentDefaults,
+    ...payload,
+    id,
     agentReliabilityScore: null,
     radiusKm: payload.radiusKm || DEFAULT_RADIUS_KM,
     createdAt: new Date().toISOString(),
@@ -123,7 +144,11 @@ async function createRequest(payload, agents = []) {
   request.notifiedAgents = nearby.slice(0, 10).map((a) => a.id)
 
   await storage.saveAttendanceRequest(request)
-  await notificationService.notify('sme_requested_attendance', request)
+
+  if (isPaidForAgents(request.paymentStatus)) {
+    await notificationService.notify('sme_requested_attendance', request)
+  }
+
   await auditLogService.logEvent({
     type: 'sme_request',
     entityId: request.id,
@@ -139,6 +164,9 @@ async function assignRequestToAgent(requestId, agent, { byAdmin = false } = {}) 
   const request = await getRequestById(requestId)
 
   if (!request) throw new Error('Attendance request not found')
+  if (!byAdmin && !isPaidForAgents(request.paymentStatus)) {
+    throw new Error('Attendance fee must be paid before an agent can accept this request')
+  }
   if (request.status !== 'pending') {
     throw new Error(`Request already ${request.status}`)
   }
@@ -206,6 +234,7 @@ async function listOpportunitiesForAgent(agentId, agentProvince = '') {
     .map((r) => ({ ...r, status: normalizeStatus(r.status) }))
     .filter((r) => {
       if (r.status === 'pending') {
+        if (!isPaidForAgents(r.paymentStatus)) return false
         if (r.notifiedAgents?.includes(agentId)) return true
         if (agentProvince && r.province && r.province === agentProvince) return true
         return true
@@ -281,4 +310,6 @@ module.exports = {
   declineRequest,
   listOpportunitiesForAgent,
   submitBriefingReport,
+  isPaidForAgents,
+  notifyAgentsAfterPayment,
 }

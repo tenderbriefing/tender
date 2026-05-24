@@ -142,7 +142,9 @@ async function getAttendanceRequests(filters = {}) {
     const agentId = filters.availableForAgent
     items = items.filter((r) => {
       const status = r.status === 'accepted' ? 'assigned' : r.status
-      if (status === 'pending') return true
+      const paid =
+        r.paymentStatus === 'paid' || r.paymentStatus === 'not_required'
+      if (status === 'pending') return paid
       if (status === 'assigned' && (r.assignedAgentId === agentId || r.agentId === agentId)) {
         return true
       }

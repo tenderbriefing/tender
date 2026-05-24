@@ -5,6 +5,7 @@ import type { EnrichedAttendanceRequest } from '@/lib/tenderBriefing/enrichment'
 import { tenderLabelFromRequest, departmentFromRequest } from '@/lib/tenderBriefing/enrichment'
 import RequestStatusBadge from './RequestStatusBadge'
 import { DeclinedBadge } from '@/components/procurement/StatusBadges'
+import AttendancePaymentSummary from '@/components/payments/AttendancePaymentSummary'
 import {
   countdownLabel,
   formatProcurementDateTime,
@@ -16,6 +17,7 @@ interface AttendanceRequestCardProps {
   actions?: React.ReactNode
   detailHref?: string
   showDeclined?: boolean
+  showPaymentRetry?: boolean
 }
 
 export default function AttendanceRequestCard({
@@ -23,6 +25,7 @@ export default function AttendanceRequestCard({
   actions,
   detailHref,
   showDeclined,
+  showPaymentRetry = false,
 }: AttendanceRequestCardProps) {
   const tenderNumber = tenderLabelFromRequest(request)
   const department = departmentFromRequest(request)
@@ -98,6 +101,10 @@ export default function AttendanceRequestCard({
           {request.smeCompany && (
             <p className="mt-1 text-xs text-slate-500">SME: {request.smeCompany}</p>
           )}
+
+          <div className="mt-3">
+            <AttendancePaymentSummary request={request} showRetry={showPaymentRetry} />
+          </div>
         </div>
 
         {detailHref && (

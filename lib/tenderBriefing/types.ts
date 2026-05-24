@@ -103,10 +103,22 @@ export interface AttendanceRequest {
   agentName?: string | null
   acceptedAt?: string | null
   assignedByAdmin?: boolean
-  paymentStatus?: 'pending' | 'not_required' | 'paid' | 'failed'
+  paymentStatus?:
+    | 'pending'
+    | 'paid'
+    | 'failed'
+    | 'cancelled'
+    | 'refunded'
+    | 'not_required'
+  paymentAmount?: number | null
   quotedFee?: number | null
   currency?: string
   paymentProvider?: 'yoco' | 'manual' | 'none'
+  paymentReference?: string | null
+  yocoCheckoutId?: string | null
+  yocoRedirectUrl?: string | null
+  paidAt?: string | null
+  paymentFailureReason?: string | null
   tenderNumber?: string
   department?: string
   smeEmail?: string
