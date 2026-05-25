@@ -27,6 +27,7 @@
     "command-center:qa": "node scripts/command-center-qa.js",
     "pilot:qa": "node scripts/pilot-qa.js",
     "ai-ops:qa": "node scripts/ai-ops-qa.js",
+    "field-validation:qa": "node scripts/field-validation-qa.js",
     "smoke:production:rest": "node scripts/production-smoke-rest.js",
     "test:integrations": "node scripts/test-integrations-health.js"
   },
