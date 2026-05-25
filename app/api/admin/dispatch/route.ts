@@ -11,10 +11,12 @@ export async function GET(request: NextRequest) {
     const aiOps = require('../../../../backend/services/aiOpsExecutiveService')
     const liveDispatchTracking = require('../../../../backend/services/fieldOperations/liveDispatchTrackingService')
     const commandCenter = require('../../../../backend/services/commandCenterService')
-    const [ext, active, cc] = await Promise.all([
+    const mobileField = require('../../../../backend/services/mobile/mobileFieldService')
+    const [ext, active, cc, liveField] = await Promise.all([
       aiOps.getAiOpsExtension(),
       liveDispatchTracking.getActiveBriefings(),
       commandCenter.getCommandCenterPayload(),
+      mobileField.getLiveFieldMap(),
     ])
     return NextResponse.json({
       success: true,
@@ -24,6 +26,7 @@ export async function GET(request: NextRequest) {
         dispatchCongestion: ext.dispatchCongestion,
         agentHeatmap: ext.agentHeatmap,
         nationalField: ext.nationalField,
+        liveFieldMap: liveField,
       },
     })
   } catch (error) {

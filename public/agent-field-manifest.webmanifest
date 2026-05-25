@@ -1,0 +1,18 @@
+{
+  "name": "TenderBriefing Field",
+  "short_name": "TB Field",
+  "description": "Youth agent field operations — dispatch, GPS, reports",
+  "start_url": "/agent/mobile/dispatch",
+  "scope": "/agent/mobile/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#16a34a",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

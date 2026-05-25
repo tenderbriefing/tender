@@ -3,16 +3,21 @@ import { verifyApiUser, unauthorizedResponse } from '@/lib/auth/verifyApiUser'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const user = await verifyApiUser(request.headers.get('authorization'), ['youth-agent', 'admin'])
   if (!user) return unauthorizedResponse('Agent sign-in required')
   try {
     const field = require('../../../../../backend/services/mobile/mobileFieldService')
-    const data = await field.getMobileDispatchBoard(user.uid)
+    const body = await request.json()
+    const data = await field.startSession(user.uid, {
+      platform: body.platform,
+      userAgent: body.userAgent,
+      online: body.online,
+    })
     return NextResponse.json({ success: true, data })
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Dispatch failed' },
+      { success: false, error: error instanceof Error ? error.message : 'Session failed' },
       { status: 500 }
     )
   }

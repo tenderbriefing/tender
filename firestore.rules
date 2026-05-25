@@ -253,5 +253,27 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isYouthAgent() || isAdmin();
     }
+
+    match /mobileSessions/{sessionId} {
+      allow read: if isAdmin() || (isYouthAgent() && resource.data.agentId == request.auth.uid);
+      allow create: if isYouthAgent() && request.resource.data.agentId == request.auth.uid;
+      allow update: if isAdmin() || (isYouthAgent() && resource.data.agentId == request.auth.uid);
+    }
+
+    match /mobileSyncQueue/{itemId} {
+      allow read: if isAdmin() || (isYouthAgent() && resource.data.agentId == request.auth.uid);
+      allow create: if isYouthAgent() && request.resource.data.agentId == request.auth.uid;
+      allow update: if isAdmin() || (isYouthAgent() && resource.data.agentId == request.auth.uid);
+    }
+
+    match /mobileTelemetry/{eventId} {
+      allow read: if isAdmin() || (isYouthAgent() && resource.data.agentId == request.auth.uid);
+      allow create: if isYouthAgent() && request.resource.data.agentId == request.auth.uid;
+    }
+
+    match /agentLocationPings/{pingId} {
+      allow read: if isAdmin() || (isYouthAgent() && resource.data.agentId == request.auth.uid);
+      allow create: if isYouthAgent() && request.resource.data.agentId == request.auth.uid;
+    }
   }
 }

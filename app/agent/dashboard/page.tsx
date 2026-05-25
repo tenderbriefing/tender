@@ -69,6 +69,20 @@ export default function AgentDashboardPage() {
             </Link>
           </div>
 
+          <div className="rounded-2xl border border-brand-200 bg-brand-50/40 p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900">Field app (PWA)</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Install the mobile field app for live dispatch, GPS check-in, uploads, and offline sync.
+            </p>
+            <Link
+              href="/agent/mobile/dispatch"
+              className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+            >
+              Open field app
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
           <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-2 text-brand-700">
               <MapPin className="h-5 w-5" />
