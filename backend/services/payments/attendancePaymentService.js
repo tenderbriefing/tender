@@ -1,6 +1,6 @@
 const { getStorage } = require('../storageAdapter')
 const yocoService = require('../integrations/yocoService')
-const notificationService = require('../notificationService')
+const workflowAutomationService = require('../workflowAutomationService')
 const auditLogService = require('../auditLogService')
 const { sanitizeFirestoreData } = require('../../utils/sanitizeFirestoreData')
 
@@ -98,7 +98,11 @@ async function createYocoCheckoutForRequest(request, baseUrl) {
 }
 
 async function notifyAgentsAfterPayment(request) {
-  await notificationService.notify('sme_requested_attendance', request)
+  await workflowAutomationService.dispatchWorkflowEvent('attendance_requested', {
+    ...request,
+    id: request.id,
+    requestId: request.id,
+  })
 }
 
 async function markRequestPaid(requestId, { checkoutId, source = 'webhook' } = {}) {
@@ -123,8 +127,11 @@ async function markRequestPaid(requestId, { checkoutId, source = 'webhook' } = {
     paymentFailureReason: null,
   })
 
-  await notificationService.notify('payment_confirmed', updated)
-  await notifyAgentsAfterPayment(updated)
+  await workflowAutomationService.dispatchWorkflowEvent('request_paid', {
+    ...updated,
+    id: requestId,
+    requestId,
+  })
   await auditLogService.logEvent({
     type: 'payment_confirmed',
     entityId: requestId,
@@ -144,6 +151,7 @@ async function markRequestFailed(requestId, reason = 'Payment failed') {
     paymentFailureReason: reason,
   })
 
+  const notificationService = require('../notificationService')
   await notificationService.notify('payment_failed', { ...updated, failureReason: reason })
   await auditLogService.logEvent({
     type: 'payment_failed',

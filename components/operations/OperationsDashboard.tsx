@@ -14,6 +14,7 @@ import { ClipboardList, Users, Building2 } from 'lucide-react'
 import OperationalIntelligencePanel from '@/components/procurement/OperationalIntelligencePanel'
 import { useOperationalIntelligence } from '@/hooks/useOperationalIntelligence'
 import RequestStatusTimeline from '@/components/operations/RequestStatusTimeline'
+import WorkflowOperationsPanel from '@/components/operations/WorkflowOperationsPanel'
 import { formatAttendanceFeeZar } from '@/lib/payments/attendanceFee'
 
 type Tab = 'pending' | 'assigned' | 'completed' | 'declined'
@@ -325,6 +326,8 @@ export default function OperationsDashboard() {
           )}
         </section>
       )}
+
+      <WorkflowOperationsPanel />
 
       {!noActivity && (
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

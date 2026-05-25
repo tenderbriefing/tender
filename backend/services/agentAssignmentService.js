@@ -1,6 +1,6 @@
 const { getStorage } = require('./storageAdapter')
 const auditLogService = require('./auditLogService')
-const notificationService = require('./notificationService')
+const workflowAutomationService = require('./workflowAutomationService')
 const {
   defaultPaymentFields,
   isPaidForAgents,
@@ -146,7 +146,11 @@ async function createRequest(payload, agents = []) {
   await storage.saveAttendanceRequest(request)
 
   if (isPaidForAgents(request.paymentStatus)) {
-    await notificationService.notify('sme_requested_attendance', request)
+    await workflowAutomationService.dispatchWorkflowEvent('attendance_requested', {
+      ...request,
+      id: request.id,
+      requestId: request.id,
+    })
   }
 
   await auditLogService.logEvent({
@@ -182,7 +186,11 @@ async function assignRequestToAgent(requestId, agent, { byAdmin = false } = {}) 
   if (byAdmin) request.assignedByAdmin = true
 
   await storage.saveAttendanceRequest(request)
-  await notificationService.notify('agent_accepted_briefing', request)
+  await workflowAutomationService.dispatchWorkflowEvent('request_accepted', {
+    ...request,
+    id: request.id,
+    requestId: request.id,
+  })
   await auditLogService.logEvent({
     type: byAdmin ? 'admin_assign_agent' : 'agent_acceptance',
     entityId: request.id,
@@ -212,6 +220,7 @@ async function declineRequest(requestId, agentId, reason = '') {
   request.updatedAt = new Date().toISOString()
 
   await storage.saveAttendanceRequest(request)
+  const notificationService = require('./notificationService')
   await notificationService.notify('agent_declined_briefing', {
     ...request,
     declinedAgentId: agentId,
@@ -278,12 +287,10 @@ async function submitBriefingReport(payload) {
     request.reportId = report.id
     request.updatedAt = new Date().toISOString()
     await storage.saveAttendanceRequest(request)
-    await notificationService.notify('attendance_request_completed', {
+    await workflowAutomationService.dispatchWorkflowEvent('report_uploaded', {
       ...request,
-      reportId: report.id,
-    })
-    await notificationService.notify('briefing_report_submitted', {
-      ...request,
+      id: request.id,
+      requestId: request.id,
       reportId: report.id,
     })
   }

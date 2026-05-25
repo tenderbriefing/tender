@@ -79,6 +79,11 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid;
     }
 
+    match /workflowEvents/{eventId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     match /agents/{agentId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin() || (isYouthAgent() && request.auth.uid == agentId);

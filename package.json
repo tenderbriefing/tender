@@ -23,6 +23,7 @@
     "qa:whatsapp": "WHATSAPP_QA_MODE=production-api node scripts/whatsapp-operational-qa.js",
     "qa:whatsapp:production": "WHATSAPP_QA_MODE=production-api node scripts/whatsapp-operational-qa.js",
     "qa:ensure-admin": "node scripts/ensure-ops-smoke-admin.js",
+    "workflow:qa": "node scripts/workflow-qa.js",
     "smoke:production:rest": "node scripts/production-smoke-rest.js",
     "test:integrations": "node scripts/test-integrations-health.js"
   },

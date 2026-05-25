@@ -21,6 +21,12 @@ const WHATSAPP_TEMPLATES = {
     'Reminder: Tender briefing starts in 2 hours ({{tenderNumber}}).',
   agent_payment_confirmed:
     'Payment confirmed — a paid TenderBriefing request is now available near {{province}}.',
+  agent_briefing_missed:
+    'TenderBriefing: you were marked absent for briefing {{tenderNumber}}. Contact support if incorrect.',
+  admin_briefing_missed:
+    'TenderBriefing: agent missed briefing for {{tenderNumber}} (request {{requestId}}).',
+  sme_report_with_pdf:
+    'Briefing report for {{tenderNumber}} is ready. Download: {{pdfUrl}}',
   admin_payment_failed:
     'TenderBriefing: payment failed for request {{requestId}} ({{tenderNumber}}).',
   admin_report_uploaded:
@@ -148,6 +154,13 @@ function resolveRecipients(eventType, data) {
       }
       break
     case 'payment_confirmed':
+      if (data.smeId) recipients.add(data.smeId)
+      if (Array.isArray(data.notifiedAgents)) {
+        for (const agentId of data.notifiedAgents) {
+          if (agentId) recipients.add(agentId)
+        }
+      }
+      break
     case 'payment_failed':
       if (data.smeId) recipients.add(data.smeId)
       break
@@ -165,6 +178,13 @@ function resolveRecipients(eventType, data) {
       if (data.smeId) recipients.add(data.smeId)
       if (data.assignedAgentId) recipients.add(data.assignedAgentId)
       if (data.agentId) recipients.add(data.agentId)
+      break
+    case 'briefing_missed':
+      if (data.smeId) recipients.add(data.smeId)
+      if (data.assignedAgentId) recipients.add(data.assignedAgentId)
+      break
+    case 'tender_closing_soon':
+      if (data.smeId) recipients.add(data.smeId)
       break
     default:
       if (data.smeId) recipients.add(data.smeId)
@@ -285,8 +305,31 @@ async function processWhatsAppForEvent(eventType, data) {
   }
 
   switch (eventType) {
+    case 'payment_confirmed':
     case 'sme_requested_attendance':
-      if (data.smeId) {
+      if (Array.isArray(data.notifiedAgents)) {
+        for (const agentId of data.notifiedAgents) {
+          await enqueue({
+            type: 'agent_new_opportunity',
+            recipientRole: 'youth-agent',
+            recipientId: agentId,
+            message: renderTemplate('agent_new_opportunity', { province }),
+            metadata: { eventType, requestId },
+            idempotencyKey: `agent_opp:${agentId}:${requestId}:${eventType}`,
+          })
+          if (eventType === 'payment_confirmed') {
+            await enqueue({
+              type: 'agent_payment_confirmed',
+              recipientRole: 'youth-agent',
+              recipientId: agentId,
+              message: renderTemplate('agent_payment_confirmed', { province }),
+              metadata: { eventType, requestId },
+              idempotencyKey: `agent_paid_opp:${agentId}:${requestId}`,
+            })
+          }
+        }
+      }
+      if (eventType === 'sme_requested_attendance' && data.smeId) {
         await enqueue({
           type: 'sme_attendance_submitted',
           recipientRole: 'sme',
@@ -295,21 +338,6 @@ async function processWhatsAppForEvent(eventType, data) {
           metadata: { eventType, requestId, tenderId: data.tenderId },
           idempotencyKey: `sme_submitted:${data.smeId}:${requestId}`,
         })
-      }
-      break
-
-    case 'payment_confirmed':
-      if (Array.isArray(data.notifiedAgents)) {
-        for (const agentId of data.notifiedAgents) {
-          await enqueue({
-            type: 'agent_payment_confirmed',
-            recipientRole: 'youth-agent',
-            recipientId: agentId,
-            message: renderTemplate('agent_payment_confirmed', { province }),
-            metadata: { eventType, requestId },
-            idempotencyKey: `agent_paid_opp:${agentId}:${requestId}`,
-          })
-        }
       }
       break
 
@@ -338,12 +366,18 @@ async function processWhatsAppForEvent(eventType, data) {
 
     case 'briefing_report_submitted':
       if (data.smeId) {
+        const reportMsg = data.pdfSummaryUrl
+          ? renderTemplate('sme_report_with_pdf', {
+              tenderNumber,
+              pdfUrl: data.pdfSummaryUrl,
+            })
+          : renderTemplate('sme_report_uploaded', { tenderNumber })
         await enqueue({
           type: 'sme_report_uploaded',
           recipientRole: 'sme',
           recipientId: data.smeId,
-          message: renderTemplate('sme_report_uploaded', { tenderNumber }),
-          metadata: { eventType, requestId, reportId: data.reportId },
+          message: reportMsg,
+          metadata: { eventType, requestId, reportId: data.reportId, pdfSummaryUrl: data.pdfSummaryUrl },
           idempotencyKey: `sme_report:${data.smeId}:${requestId}`,
         })
       }
@@ -451,6 +485,7 @@ async function notify(eventType, data) {
         await dispatch('whatsapp', { template: eventType, data })
       )
       break
+    case 'briefing_missed':
     case 'agent_accepted_briefing':
     case 'agent_declined_briefing':
     case 'sme_requested_attendance':
@@ -458,6 +493,7 @@ async function notify(eventType, data) {
     case 'sme_tracked_tender':
     case 'briefing_report_submitted':
     case 'attendance_request_completed':
+    case 'briefing_missed':
     case 'payment_confirmed':
     case 'payment_failed':
       notifications.push(
@@ -531,4 +567,5 @@ module.exports = {
   processWhatsAppForEvent,
   renderTemplate,
   resolveUserPhone,
+  notificationCopy,
 }
