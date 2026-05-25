@@ -13,17 +13,22 @@ export async function POST(request: NextRequest) {
     if (!user) return unauthorizedResponse('Admin sign-in required')
 
     const body = await request.json()
-    const phone = body.phone || body.to
+    const rawPhone = body.to || body.phone
     const message =
       body.message ||
       'TenderBriefing test: WhatsApp notifications are configured correctly.'
 
-    if (!phone) {
+    if (!rawPhone) {
       return NextResponse.json(
-        { success: false, error: 'phone is required (E.164, e.g. +27821234567)' },
+        {
+          success: false,
+          error: 'to or phone is required (E.164 or whatsapp:+27821234567)',
+        },
         { status: 400 }
       )
     }
+
+    const phone = String(rawPhone).replace(/^whatsapp:/i, '').trim()
 
     const whatsappService = require('../../../../backend/services/whatsappService')
     const validated = whatsappService.validateWhatsAppNumber(phone)
@@ -65,8 +70,10 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         sid: result.sid,
+        logId: result.log?.id || null,
         sentAt: result.log?.sentAt || new Date().toISOString(),
         status: result.log?.status || 'sent',
+        channel: 'whatsapp',
       },
     })
   } catch (error) {
