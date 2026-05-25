@@ -132,7 +132,7 @@ export default function AdminDashboard() {
   const syncFailed = apiHealth === 'unhealthy' || apiHealth === 'failed'
 
   return (
-    <motion-safe className="space-y-8">
+    <div className="space-y-8">
       <OperationalIntelligencePanel data={intelligence} loading={intelligenceLoading} />
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
