@@ -77,6 +77,10 @@ export async function POST(request: NextRequest) {
       ? await storage.getTenderBriefingById(body.tenderId)
       : null
 
+    if (tender?.visibility === 'private' && tender.ownerUid !== user.uid) {
+      return forbiddenResponse('This private RFQ belongs to another SME')
+    }
+
     const agents = await users.getYouthAgents()
 
     await users.upsertSmeProfile({

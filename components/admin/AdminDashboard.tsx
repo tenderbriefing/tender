@@ -177,6 +177,12 @@ export default function AdminDashboard() {
             Procurement intel
           </Link>
           <Link
+            href="/admin/procurement-inbox"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-900 hover:bg-violet-100"
+          >
+            RFQ inbox
+          </Link>
+          <Link
             href="/admin/finance"
             className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
           >

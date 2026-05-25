@@ -6,6 +6,7 @@ import {
   ClipboardDocumentListIcon,
   DocumentTextIcon,
   UserGroupIcon,
+  InboxArrowDownIcon,
 } from '@heroicons/react/24/outline'
 
 interface QuickActionsProps {
@@ -19,6 +20,12 @@ const QuickActions = ({ userType }: QuickActionsProps) => {
       title: 'Tender Opportunities',
       description: 'Browse official government procurement listings',
       href: '/tenders',
+    },
+    {
+      icon: InboxArrowDownIcon,
+      title: 'RFQ Inbox',
+      description: 'Forward RFQs to rfq@tenderbriefing.co.za or paste here',
+      href: '/sme/rfq-inbox',
     },
     {
       icon: ClipboardDocumentListIcon,

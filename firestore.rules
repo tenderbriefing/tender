@@ -35,7 +35,11 @@ service cloud.firestore {
 
     // TenderBriefing platform — procurement intelligence
     match /tenderBriefings/{tenderId} {
-      allow read: if isAuthenticated() && (isSme() || isYouthAgent() || isAdmin());
+      allow read: if isAuthenticated() && (
+        isAdmin()
+        || !('visibility' in resource.data) || resource.data.visibility != 'private'
+        || (isSme() && resource.data.ownerUid == request.auth.uid)
+      );
       allow write: if isAdmin();
     }
 
@@ -297,8 +301,12 @@ service cloud.firestore {
     }
 
     match /ingestedProcurementEmails/{emailId} {
-      allow read: if isAdmin();
-      allow write: if false;
+      allow read: if isAdmin()
+        || (isSme() && resource.data.forwardedByUid == request.auth.uid);
+      allow create: if isAdmin()
+        || (isSme() && request.resource.data.forwardedByUid == request.auth.uid);
+      allow update: if isAdmin()
+        || (isSme() && resource.data.forwardedByUid == request.auth.uid);
     }
   }
 }

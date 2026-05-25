@@ -77,6 +77,11 @@ export interface TenderBriefing {
   calendarEvents: CalendarEvent[]
   history: TenderBriefingHistoryEntry[]
   source: string
+  visibility?: 'public' | 'private'
+  ownerUid?: string
+  originalEmailId?: string
+  dispatchEligible?: boolean
+  privateRfq?: boolean
   lastSyncedAt: string
   scrapedAt: string
   contentHash?: string

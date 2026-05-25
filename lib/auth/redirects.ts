@@ -32,6 +32,7 @@ export const ADMIN_NAV = [
   { name: 'Dispatch', href: '/admin/dispatch' },
   { name: 'AI Insights', href: '/admin/ai-insights' },
   { name: 'Procurement Intel', href: '/admin/procurement-intelligence' },
+  { name: 'RFQ Inbox', href: '/admin/procurement-inbox' },
   { name: 'Pilot', href: '/admin/pilot' },
 ] as const
 

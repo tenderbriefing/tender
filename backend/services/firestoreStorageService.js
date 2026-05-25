@@ -23,6 +23,17 @@ function docToObject(doc) {
 function applyTenderFilters(items, filters = {}) {
   let result = items
 
+  if (filters.ownerUid) {
+    result = result.filter(
+      (t) =>
+        t.visibility !== 'private' ||
+        t.ownerUid === filters.ownerUid ||
+        filters.includePrivate === true
+    )
+  } else if (!filters.includePrivate) {
+    result = result.filter((t) => t.visibility !== 'private')
+  }
+
   if (filters.compulsoryOnly) {
     result = result.filter((t) => t.briefingCompulsory === true)
   }

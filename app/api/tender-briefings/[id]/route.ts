@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { backend } from '@/lib/backend/loadServices'
+import { verifyApiUser, unauthorizedResponse, forbiddenResponse } from '@/lib/auth/verifyApiUser'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -16,6 +17,15 @@ export async function GET(
         { success: false, error: 'Tender briefing not found' },
         { status: 404 }
       )
+    }
+
+    if (tender.visibility === 'private') {
+      const user = await verifyApiUser(request.headers.get('authorization'))
+      if (!user) return unauthorizedResponse()
+      const allowed =
+        user.userType === 'admin' ||
+        (user.userType === 'sme' && tender.ownerUid === user.uid)
+      if (!allowed) return forbiddenResponse('Private RFQ not accessible')
     }
 
     return NextResponse.json({ success: true, data: tender })
