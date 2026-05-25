@@ -171,6 +171,12 @@ export default function AdminDashboard() {
             AI insights
           </Link>
           <Link
+            href="/admin/procurement-intelligence"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-900 hover:bg-brand-100"
+          >
+            Procurement intel
+          </Link>
+          <Link
             href="/admin/finance"
             className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
           >

@@ -494,6 +494,7 @@ async function runScheduledAutomation(jobName = 'all') {
           'retry_failed_whatsapp',
           'sla_escalations',
           'smart_dispatch',
+          'smart_procurement_ingestion',
         ]
       : [jobName]
 
@@ -517,6 +518,13 @@ async function runScheduledAutomation(jobName = 'all') {
       case 'smart_dispatch': {
         const liveDispatchService = require('./liveDispatchService')
         results[job] = await liveDispatchService.runSmartDispatchAutomation()
+        break
+      }
+      case 'smart_procurement_ingestion': {
+        const aggregation = require('./procurement/procurementAggregationService')
+        results[job] = await aggregation.runSmartProcurementIngestion({
+          includeEtenders: false,
+        })
         break
       }
       default:

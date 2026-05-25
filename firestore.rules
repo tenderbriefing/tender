@@ -275,5 +275,30 @@ service cloud.firestore {
       allow read: if isAdmin() || (isYouthAgent() && resource.data.agentId == request.auth.uid);
       allow create: if isYouthAgent() && request.resource.data.agentId == request.auth.uid;
     }
+
+    match /procurementSources/{sourceId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /aiProcurementExtraction/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /procurementGraphMetrics/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /procurementSourceLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /ingestedProcurementEmails/{emailId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
   }
 }

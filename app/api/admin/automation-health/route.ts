@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
           'retry_failed_whatsapp',
           'sla_escalations',
           'smart_dispatch',
+          'smart_procurement_ingestion',
         ],
         checkedAt: new Date().toISOString(),
       },

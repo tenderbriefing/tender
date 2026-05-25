@@ -31,6 +31,7 @@
     "field-validation:qa": "node scripts/field-validation-qa.js",
     "mobile-field-qa": "node scripts/mobile-field-qa.js",
     "mobile:agent:qa": "node scripts/mobile-agent-native-qa.js && cd mobile-agent-app && npm run typecheck",
+    "procurement-intelligence:qa": "node scripts/procurement-intelligence-qa.js",
     "smoke:production:rest": "node scripts/production-smoke-rest.js",
     "test:integrations": "node scripts/test-integrations-health.js"
   },
@@ -52,6 +53,7 @@
     "googleapis": "^160.0.0",
     "lucide-react": "^0.294.0",
     "next": "14.0.4",
+    "pdf-parse": "^1.1.4",
     "postcss": "^8",
     "puppeteer-core": "^24.22.0",
     "react": "^18",

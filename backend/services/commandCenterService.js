@@ -136,9 +136,24 @@ async function getCommandCenterPayload() {
     aiOps = null
   }
 
+  let procurementIntelligence = null
+  try {
+    const pi = require('./procurementIntelligenceService')
+    const dash = await pi.getDashboardPayload()
+    procurementIntelligence = {
+      sourcesEnabled: dash.sourceRegistry?.enabled,
+      sourcesTotal: dash.sourceRegistry?.total,
+      tendersBySource: dash.tendersBySource,
+      compulsoryRate: dash.briefingDensity?.compulsoryRate,
+    }
+  } catch {
+    procurementIntelligence = null
+  }
+
   return {
     generatedAt: new Date().toISOString(),
     aiOps,
+    procurementIntelligence,
     dispatchBoard,
     pendingQueue: pendingQueue.map((r) => ({
       id: r.id,
