@@ -29,15 +29,15 @@ export const AGENT_NAV = [
 export const ADMIN_NAV = [
   { name: 'Dashboard', href: '/admin/dashboard' },
   { name: 'Operations', href: '/admin/operations' },
-  { name: 'Agents', href: '/admin/dashboard' },
-  { name: 'SMEs', href: '/admin/dashboard' },
+  { name: 'Executive', href: '/admin/executive' },
+  { name: 'Pilot', href: '/admin/pilot' },
   { name: 'Sync Status', href: '/admin/dashboard' },
 ] as const
 
 export const PUBLIC_NAV = [
   { name: 'Home', href: '/' },
   { name: 'Tender Opportunities', href: '/tenders' },
-  { name: 'How It Works', href: '/#how-it-works' },
-  { name: 'About', href: '/about' },
-  { name: 'Contact', href: '/contact' },
+  { name: 'How It Works', href: '/how-it-works' },
+  { name: 'Pricing', href: '/pricing' },
+  { name: 'Support', href: '/support' },
 ] as const

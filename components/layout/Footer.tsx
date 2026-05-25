@@ -40,8 +40,18 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/#how-it-works" className="hover:text-brand-400 transition">
+                <Link href="/how-it-works" className="hover:text-brand-400 transition">
                   How It Works
+                </Link>
+              </li>
+              <li>
+                <Link href="/pricing" className="hover:text-brand-400 transition">
+                  Pricing
+                </Link>
+              </li>
+              <li>
+                <Link href="/support" className="hover:text-brand-400 transition">
+                  Support
                 </Link>
               </li>
             </ul>
@@ -58,13 +68,18 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="hover:text-brand-400 transition">
-                  Pricing
+                <Link href="/contact" className="hover:text-brand-400 transition">
+                  Contact
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="hover:text-brand-400 transition">
-                  Contact
+                <Link href="/terms" className="hover:text-brand-400 transition">
+                  Terms
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="hover:text-brand-400 transition">
+                  Privacy
                 </Link>
               </li>
             </ul>

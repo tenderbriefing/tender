@@ -60,6 +60,22 @@ export interface UserProfile {
 
   provincesOfInterest?: string[];
 
+  preferredDepartments?: string[];
+
+  tenderInterests?: string;
+
+  whatsAppNumber?: string;
+
+  onboardingCompleted?: boolean;
+
+  onboardingCompletedAt?: string;
+
+  idVerificationNote?: string;
+
+  codeOfConductAccepted?: boolean;
+
+  codeOfConductAcceptedAt?: string;
+
   availabilityRadiusKm?: number;
 
   transportAvailable?: boolean;
@@ -134,6 +150,16 @@ async function writeRoleProfile(uid: string, userType: UserProfile['userType'], 
 
         csdNumber: profile.csdNumber || '',
 
+        preferredDepartments: profile.preferredDepartments || [],
+
+        tenderInterests: profile.tenderInterests || '',
+
+        whatsAppNumber: profile.whatsAppNumber || profile.phoneNumber || '',
+
+        onboardingCompleted: profile.onboardingCompleted === true,
+
+        onboardingCompletedAt: profile.onboardingCompletedAt || '',
+
         userType: 'sme',
 
         createdAt: profile.createdAt,
@@ -183,6 +209,16 @@ async function writeRoleProfile(uid: string, userType: UserProfile['userType'], 
         transportAvailable: profile.transportAvailable !== false,
 
         preferredServiceAreas: profile.preferredServiceAreas || [],
+
+        whatsAppNumber: profile.whatsAppNumber || profile.phoneNumber || '',
+
+        idVerificationNote: profile.idVerificationNote || '',
+
+        codeOfConductAccepted: profile.codeOfConductAccepted === true,
+
+        onboardingCompleted: profile.onboardingCompleted === true,
+
+        onboardingCompletedAt: profile.onboardingCompletedAt || '',
 
         verificationStatus: profile.verificationStatus || 'pending',
 

@@ -1,6 +1,8 @@
 import { Suspense } from 'react'
 import Hero from '@/components/home/Hero'
+import LaunchTrustStrip from '@/components/home/LaunchTrustStrip'
 import AudienceSections from '@/components/home/AudienceSections'
+import LaunchConversionSection from '@/components/home/LaunchConversionSection'
 import WhyTenderBriefing from '@/components/home/WhyTenderBriefing'
 import PlatformFeatures from '@/components/home/PlatformFeatures'
 import AttendanceProcess from '@/components/home/AttendanceProcess'
@@ -18,7 +20,9 @@ export default function Home() {
       <main>
         <Suspense fallback={<LoadingSpinner />}>
           <Hero />
+          <LaunchTrustStrip />
           <AudienceSections />
+          <LaunchConversionSection />
           <WhyTenderBriefing />
           <PlatformFeatures />
           <AttendanceProcess />

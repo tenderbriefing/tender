@@ -46,8 +46,8 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl lg:leading-[1.1]"
           >
-            Find Compulsory{' '}
-            <span className="text-brand-600">Tender Briefings</span> Faster
+            South Africa&apos;s{' '}
+            <span className="text-brand-600">Procurement Command Center</span>
           </motion.h1>
 
           <motion.p
@@ -56,8 +56,8 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mx-auto mt-6 max-w-3xl text-lg text-slate-600 sm:text-xl leading-relaxed"
           >
-            TenderBriefing helps South African SMEs track official tender opportunities
-            that require briefing sessions, site meetings, and compulsory attendance.
+            Discover compulsory tender briefings, request Youth Agent attendance support,
+            and receive structured briefing reports — so your team can focus on winning bids.
           </motion.p>
 
           <motion.p
@@ -66,8 +66,8 @@ export default function Hero() {
             transition={{ delay: 0.35 }}
             className="mt-4 text-base text-slate-500"
           >
-            Built on official procurement data, TenderBriefing makes it easier to identify,
-            monitor, and act on tender briefings before deadlines are missed.
+            Free tender discovery for SMEs. Verified agents nationwide. Official procurement
+            data refreshed every 15 minutes.
           </motion.p>
 
           <motion.div
@@ -93,17 +93,23 @@ export default function Hero() {
             ) : (
               <>
                 <Link
-                  href="/tenders"
+                  href="/sme/onboarding"
                   className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-brand-600 px-8 py-4 text-base font-semibold text-white shadow-soft transition hover:bg-brand-700"
                 >
-                  View Tender Opportunities
+                  I&apos;m an SME — Start pilot
                   <ArrowRight className="h-5 w-5" />
                 </Link>
                 <Link
-                  href="/auth/signup?type=sme"
+                  href="/agent/onboarding"
                   className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-8 py-4 text-base font-semibold text-slate-800 transition hover:border-brand-300 hover:bg-brand-50"
                 >
-                  Request Attendance Support
+                  I&apos;m a Youth Agent
+                </Link>
+                <Link
+                  href="/tenders"
+                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold text-brand-700 hover:underline"
+                >
+                  Browse tenders
                 </Link>
               </>
             )}

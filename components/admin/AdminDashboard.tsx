@@ -159,6 +159,12 @@ export default function AdminDashboard() {
             Executive
           </Link>
           <Link
+            href="/admin/pilot"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-900 hover:bg-emerald-100"
+          >
+            Pilot launch
+          </Link>
+          <Link
             href="/admin/integrations"
             className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
           >

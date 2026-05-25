@@ -40,17 +40,17 @@ export default function FinalCTA() {
             ) : (
               <>
                 <Link
-                  href="/tenders"
+                  href="/sme/onboarding"
                   className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 font-semibold text-brand-800 shadow-lg transition hover:bg-brand-50"
                 >
-                  View Tender Opportunities
+                  SME — Start pilot
                   <ArrowRight className="h-5 w-5" />
                 </Link>
                 <Link
-                  href="/auth/role-selection"
+                  href="/agent/onboarding"
                   className="inline-flex items-center gap-2 rounded-xl border-2 border-white/40 px-8 py-4 font-semibold text-white transition hover:bg-white/10"
                 >
-                  Request Attendance Support
+                  Youth Agent — Join
                 </Link>
               </>
             )}
