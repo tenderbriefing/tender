@@ -76,14 +76,14 @@ export default function LaunchConversionSection() {
               </p>
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                 <Link
-                  href="/sme/onboarding"
+                  href="/pilot/sme"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3 font-semibold text-white hover:bg-brand-700"
                 >
                   <Building2 className="h-5 w-5" />
                   SME — Start pilot
                 </Link>
                 <Link
-                  href="/agent/onboarding"
+                  href="/pilot/agent"
                   className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-brand-200 bg-white px-6 py-3 font-semibold text-brand-800 hover:bg-brand-50"
                 >
                   <Users className="h-5 w-5" />

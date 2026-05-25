@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
   if (!user) return unauthorizedResponse('Admin sign-in required')
 
   try {
-    const pilotLaunch = require('../../../../backend/services/pilotLaunchService')
-    const data = await pilotLaunch.getPilotLaunchMetrics()
+    const pilotAnalytics = require('../../../../backend/services/pilotAnalyticsService')
+    const data = await pilotAnalytics.getPilotDashboard()
     return NextResponse.json({ success: true, data })
   } catch (error) {
     return NextResponse.json(

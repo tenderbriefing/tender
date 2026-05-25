@@ -1,8 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { auth } from '@/lib/firebase'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import PilotTasksPanel from '@/components/admin/PilotTasksPanel'
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -10,12 +12,12 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline'
 
-interface PilotMetrics {
+interface PilotDashboard {
   capturedAt: string
   targets: { smes: number; agents: number; briefingRequests: number }
   progress: {
-    smes: { current: number; onboarded: number; target: number; pct: number }
-    agents: { current: number; onboarded: number; target: number; pct: number }
+    smes: { current: number; onboarded: number; target: number; pct: number; onboardedPct?: number }
+    agents: { current: number; onboarded: number; target: number; pct: number; onboardedPct?: number }
     briefingRequests: { current: number; target: number; pct: number }
   }
   operations: {
@@ -30,6 +32,33 @@ interface PilotMetrics {
       failed: number
       pending: number
       healthPct: number | null
+    }
+  }
+  crm?: {
+    leadsByStatus: Record<string, number>
+    leadConversionPct: number | null
+    outreachSent: number
+    outreachTotal: number
+    openTasks: number
+    feedbackAvgRating: number | null
+    verifiedAgents?: number
+  }
+  enhanced?: {
+    onboardedSmes: number
+    onboardedAgents: number
+    onboardingPctSme: number | null
+    onboardingPctAgent: number | null
+    verifiedAgents: number
+    completedBriefings: number
+    slaBreachCount: number
+    whatsappDeliverySuccess: number | null
+    conversionFunnel: {
+      leadsTotal: number
+      leadsOnboarded: number
+      requestsTotal: number
+      requestsPaid: number
+      requestsCompleted: number
+      paymentConversionPct: number | null
     }
   }
   pilotReady: boolean
@@ -52,8 +81,17 @@ function ProgressBar({ pct, label }: { pct: number; label: string }) {
   )
 }
 
+function Metric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-xs font-medium text-slate-500">{label}</p>
+      <p className="mt-1 text-xl font-bold text-slate-900">{value}</p>
+    </div>
+  )
+}
+
 export default function PilotLaunchPanel() {
-  const [data, setData] = useState<PilotMetrics | null>(null)
+  const [data, setData] = useState<PilotDashboard | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -100,30 +138,41 @@ export default function PilotLaunchPanel() {
     )
   }
 
+  const e = data.enhanced
+  const funnel = e?.conversionFunnel
+
   return (
     <div className="space-y-8">
-      <div
-        className={`flex items-start gap-4 rounded-2xl border p-6 ${
-          data.pilotReady
-            ? 'border-emerald-200 bg-emerald-50'
-            : 'border-amber-200 bg-amber-50'
-        }`}
-      >
-        {data.pilotReady ? (
-          <CheckCircleIcon className="h-8 w-8 shrink-0 text-emerald-600" />
-        ) : (
-          <RocketLaunchIcon className="h-8 w-8 shrink-0 text-amber-600" />
-        )}
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">
-            {data.pilotReady ? 'Pilot targets met' : 'Pilot launch in progress'}
-          </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Targets: {data.targets.smes} SMEs · {data.targets.agents} Youth Agents ·{' '}
-            {data.targets.briefingRequests} briefing requests. Updated{' '}
-            {new Date(data.capturedAt).toLocaleString('en-ZA')}.
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div
+          className={`flex flex-1 items-start gap-4 rounded-2xl border p-6 ${
+            data.pilotReady
+              ? 'border-emerald-200 bg-emerald-50'
+              : 'border-amber-200 bg-amber-50'
+          }`}
+        >
+          {data.pilotReady ? (
+            <CheckCircleIcon className="h-8 w-8 shrink-0 text-emerald-600" />
+          ) : (
+            <RocketLaunchIcon className="h-8 w-8 shrink-0 text-amber-600" />
+          )}
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">
+              {data.pilotReady ? 'Pilot targets met' : 'Controlled pilot in progress'}
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Targets: {data.targets.smes} SMEs · {data.targets.agents} agents ·{' '}
+              {data.targets.briefingRequests} requests · Updated{' '}
+              {new Date(data.capturedAt).toLocaleString('en-ZA')}
+            </p>
+          </div>
         </div>
+        <Link
+          href="/admin/pilot/leads"
+          className="rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-700"
+        >
+          Manage leads →
+        </Link>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -140,10 +189,11 @@ export default function PilotLaunchPanel() {
             </span>
           </p>
           <p className="mt-1 text-sm text-slate-500">
-            {data.progress.smes.onboarded} completed onboarding
+            {e?.onboardedSmes ?? data.progress.smes.onboarded} onboarding complete (
+            {e?.onboardingPctSme ?? '—'}%)
           </p>
           <div className="mt-4">
-            <ProgressBar pct={data.progress.smes.pct} label="Registration progress" />
+            <ProgressBar pct={data.progress.smes.pct} label="Registration" />
           </div>
         </div>
 
@@ -160,10 +210,11 @@ export default function PilotLaunchPanel() {
             </span>
           </p>
           <p className="mt-1 text-sm text-slate-500">
-            {data.progress.agents.onboarded} completed onboarding
+            {e?.onboardedAgents ?? data.progress.agents.onboarded} onboarded ·{' '}
+            {e?.verifiedAgents ?? 0} verified
           </p>
           <div className="mt-4">
-            <ProgressBar pct={data.progress.agents.pct} label="Registration progress" />
+            <ProgressBar pct={data.progress.agents.pct} label="Registration" />
           </div>
         </div>
 
@@ -185,58 +236,117 @@ export default function PilotLaunchPanel() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: 'Active requests', value: data.operations.activeRequests },
-          { label: 'Completed requests', value: data.operations.completedRequests },
-          { label: 'Reports uploaded', value: data.operations.completedReports },
-          { label: 'Paid requests', value: data.operations.paidRequests },
-        ].map((item) => (
-          <div
-            key={item.label}
-            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
-          >
-            <p className="text-sm text-slate-500">{item.label}</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">{item.value}</p>
-          </div>
-        ))}
+      <div>
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Operations
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Metric label="Active requests" value={data.operations.activeRequests} />
+          <Metric
+            label="Completed briefings"
+            value={e?.completedBriefings ?? data.operations.completedReports}
+          />
+          <Metric
+            label="Dispatch success"
+            value={
+              data.operations.dispatchSuccessRate != null
+                ? `${data.operations.dispatchSuccessRate}%`
+                : '—'
+            }
+          />
+          <Metric
+            label="WhatsApp delivery"
+            value={
+              e?.whatsappDeliverySuccess != null
+                ? `${e.whatsappDeliverySuccess}%`
+                : data.operations.whatsapp.healthPct != null
+                  ? `${data.operations.whatsapp.healthPct}%`
+                  : '—'
+            }
+          />
+          <Metric label="SLA breaches (recent)" value={e?.slaBreachCount ?? 0} />
+          <Metric label="CRM leads" value={funnel?.leadsTotal ?? 0} />
+          <Metric
+            label="Lead → onboarded"
+            value={
+              data.crm?.leadConversionPct != null ? `${data.crm.leadConversionPct}%` : '—'
+            }
+          />
+          <Metric label="Open pilot tasks" value={data.crm?.openTasks ?? 0} />
+        </div>
       </div>
+
+      {funnel && (
+        <div className="rounded-xl border border-slate-200 bg-white p-6">
+          <h3 className="font-semibold text-slate-900">Conversion funnel</h3>
+          <div className="mt-4 grid gap-4 sm:grid-cols-5 text-center text-sm">
+            {[
+              ['Leads', funnel.leadsTotal],
+              ['Onboarded leads', funnel.leadsOnboarded],
+              ['Registered SMEs', funnel.requestsTotal > 0 ? e?.onboardedSmes : data.progress.smes.current],
+              ['Paid requests', funnel.requestsPaid],
+              ['Completed', funnel.requestsCompleted],
+            ].map(([label, val]) => (
+              <div key={String(label)} className="rounded-lg bg-slate-50 py-3">
+                <p className="text-2xl font-bold text-brand-700">{val as number}</p>
+                <p className="text-slate-600">{label as string}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-center text-sm text-slate-500">
+            Payment conversion: {funnel.paymentConversionPct ?? '—'}% · Feedback avg:{' '}
+            {data.crm?.feedbackAvgRating ?? '—'} / 5 · Outreach sent:{' '}
+            {data.crm?.outreachSent ?? 0}
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-slate-200 bg-white p-6">
-          <h3 className="font-semibold text-slate-900">Dispatch success</h3>
-          <p className="mt-2 text-3xl font-bold text-brand-700">
-            {data.operations.dispatchSuccessRate != null
-              ? `${data.operations.dispatchSuccessRate}%`
-              : '—'}
-          </p>
-          <p className="mt-1 text-sm text-slate-500">
-            Paid requests with agent assignment or acceptance
-          </p>
+          <h3 className="font-semibold text-slate-900">WhatsApp</h3>
+          {data.operations.whatsapp.configured ? (
+            <p className="mt-2 text-sm text-slate-600">
+              Sent {data.operations.whatsapp.sent} · Failed {data.operations.whatsapp.failed} ·
+              Pending {data.operations.whatsapp.pending}
+            </p>
+          ) : (
+            <p className="mt-2 inline-flex items-center gap-1 text-sm text-amber-700">
+              <ExclamationTriangleIcon className="h-4 w-4" />
+              Twilio not configured — copy outreach from leads manager
+            </p>
+          )}
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-6">
-          <h3 className="font-semibold text-slate-900">WhatsApp notification health</h3>
-          <p className="mt-2 text-3xl font-bold text-brand-700">
-            {data.operations.whatsapp.healthPct != null
-              ? `${data.operations.whatsapp.healthPct}%`
-              : '—'}
-          </p>
-          <p className="mt-1 text-sm text-slate-500">
-            {data.operations.whatsapp.configured ? (
-              <>
-                Sent {data.operations.whatsapp.sent} · Failed{' '}
-                {data.operations.whatsapp.failed} · Pending{' '}
-                {data.operations.whatsapp.pending}
-              </>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-amber-700">
-                <ExclamationTriangleIcon className="h-4 w-4" />
-                Twilio not configured on server
-              </span>
+          <h3 className="font-semibold text-slate-900">Lead pipeline</h3>
+          <ul className="mt-2 space-y-1 text-sm text-slate-600">
+            {Object.entries(data.crm?.leadsByStatus || {}).map(([k, v]) => (
+              <li key={k}>
+                {k}: {v}
+              </li>
+            ))}
+            {!Object.keys(data.crm?.leadsByStatus || {}).length && (
+              <li>No CRM leads yet — add leads to track outreach.</li>
             )}
-          </p>
+          </ul>
         </div>
       </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Link
+          href="/pilot/sme"
+          className="rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm font-semibold text-brand-800 hover:bg-brand-100"
+        >
+          Public SME pilot landing →
+        </Link>
+        <Link
+          href="/pilot/agent"
+          className="rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm font-semibold text-brand-800 hover:bg-brand-100"
+        >
+          Public agent pilot landing →
+        </Link>
+      </div>
+
+      <PilotTasksPanel />
     </div>
   )
 }

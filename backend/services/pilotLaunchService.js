@@ -132,4 +132,5 @@ async function getPilotLaunchMetrics() {
 module.exports = {
   TARGETS,
   getPilotLaunchMetrics,
+  countOnboarded,
 }

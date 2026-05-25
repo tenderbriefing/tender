@@ -25,6 +25,7 @@
     "qa:ensure-admin": "node scripts/ensure-ops-smoke-admin.js",
     "workflow:qa": "node scripts/workflow-qa.js",
     "command-center:qa": "node scripts/command-center-qa.js",
+    "pilot:qa": "node scripts/pilot-qa.js",
     "smoke:production:rest": "node scripts/production-smoke-rest.js",
     "test:integrations": "node scripts/test-integrations-health.js"
   },

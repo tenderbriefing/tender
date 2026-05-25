@@ -109,6 +109,23 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /pilotLeads/{leadId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /pilotOutreach/{outreachId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /pilotTasks/{taskId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /pilotFeedback/{feedbackId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+    }
+
     match /agents/{agentId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin() || (isYouthAgent() && request.auth.uid == agentId);
