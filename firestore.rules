@@ -84,6 +84,31 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /dispatchEvents/{eventId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /executiveMetrics/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /slaBreaches/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /agentPerformanceSnapshots/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /workflowFailures/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     match /agents/{agentId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin() || (isYouthAgent() && request.auth.uid == agentId);

@@ -1,6 +1,7 @@
 const { getStorage } = require('./storageAdapter')
 const auditLogService = require('./auditLogService')
 const workflowAutomationService = require('./workflowAutomationService')
+const liveDispatchService = require('./liveDispatchService')
 const {
   defaultPaymentFields,
   isPaidForAgents,
@@ -140,8 +141,15 @@ async function createRequest(payload, agents = []) {
 
   const request = createAttendanceRequest(payload)
 
-  const nearby = findNearbyAgents(agents, request)
-  request.notifiedAgents = nearby.slice(0, 10).map((a) => a.id)
+  const dispatchMatches = await liveDispatchService.findBestAgentsForRequest(request, {
+    limit: 10,
+  })
+  request.notifiedAgents =
+    dispatchMatches.length > 0
+      ? dispatchMatches.map((a) => a.agentId)
+      : findNearbyAgents(agents, request)
+          .slice(0, 10)
+          .map((a) => a.id)
 
   await storage.saveAttendanceRequest(request)
 
@@ -160,7 +168,11 @@ async function createRequest(payload, agents = []) {
     smeId: request.smeId,
   })
 
-  return { request, nearbyAgents: nearby }
+  const nearbyAgents =
+    dispatchMatches.length > 0
+      ? dispatchMatches.map((m) => ({ id: m.agentId, ...m }))
+      : findNearbyAgents(agents, request)
+  return { request, nearbyAgents }
 }
 
 async function assignRequestToAgent(requestId, agent, { byAdmin = false } = {}) {

@@ -24,6 +24,7 @@ Body: `{ "job": "all" }` or one of:
 - `missed_briefing_detection`
 - `retry_failed_whatsapp`
 - `sla_escalations`
+- `smart_dispatch` (live dispatch top-5, radius/province escalation, stale close)
 
 Cloud Scheduler example (hourly):
 

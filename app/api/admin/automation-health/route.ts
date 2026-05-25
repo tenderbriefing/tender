@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
           'missed_briefing_detection',
           'retry_failed_whatsapp',
           'sla_escalations',
+          'smart_dispatch',
         ],
         checkedAt: new Date().toISOString(),
       },

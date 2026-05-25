@@ -206,6 +206,21 @@ async function dispatchWorkflowEvent(eventType, payload = {}, options = {}) {
       retryCount,
       error: errMsg,
     })
+    try {
+      const db = await getWorkflowDb()
+      await db.collection('workflowFailures').doc(idempotencyKey).set(
+        sanitizeFirestoreData({
+          id: idempotencyKey,
+          eventType,
+          error: errMsg,
+          retryCount,
+          createdAt: nowIso(),
+        }),
+        { merge: true }
+      )
+    } catch {
+      /* non-blocking */
+    }
     return { success: false, workflowEvent: failed, error: errMsg }
   }
 }
@@ -431,6 +446,7 @@ async function runScheduledAutomation(jobName = 'all') {
           'missed_briefing_detection',
           'retry_failed_whatsapp',
           'sla_escalations',
+          'smart_dispatch',
         ]
       : [jobName]
 
@@ -451,6 +467,11 @@ async function runScheduledAutomation(jobName = 'all') {
       case 'sla_escalations':
         results[job] = await runSlaEscalations()
         break
+      case 'smart_dispatch': {
+        const liveDispatchService = require('./liveDispatchService')
+        results[job] = await liveDispatchService.runSmartDispatchAutomation()
+        break
+      }
       default:
         results[job] = { error: 'Unknown job' }
     }

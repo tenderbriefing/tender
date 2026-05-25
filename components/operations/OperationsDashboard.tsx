@@ -15,6 +15,7 @@ import OperationalIntelligencePanel from '@/components/procurement/OperationalIn
 import { useOperationalIntelligence } from '@/hooks/useOperationalIntelligence'
 import RequestStatusTimeline from '@/components/operations/RequestStatusTimeline'
 import WorkflowOperationsPanel from '@/components/operations/WorkflowOperationsPanel'
+import CommandCenter from '@/components/operations/CommandCenter'
 import { formatAttendanceFeeZar } from '@/lib/payments/attendanceFee'
 
 type Tab = 'pending' | 'assigned' | 'completed' | 'declined'
@@ -254,6 +255,8 @@ export default function OperationsDashboard() {
 
   return (
     <div className="space-y-8">
+      <CommandCenter />
+
       <OperationalIntelligencePanel data={intelligence} loading={intelligenceLoading} />
 
       <div>
