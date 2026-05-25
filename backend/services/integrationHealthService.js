@@ -1,4 +1,5 @@
-const whatsapp = require('./integrations/whatsappService')
+const metaWhatsapp = require('./integrations/whatsappService')
+const twilioWhatsapp = require('./whatsappService')
 const firebaseStorage = require('./integrations/firebaseStorageService')
 const maps = require('./integrations/mapsService')
 const fcm = require('./integrations/fcmService')
@@ -25,7 +26,8 @@ async function getIntegrationsHealth() {
   const analyticsHealth = await safeHealth(() => analytics.healthCheck())
 
   const integrations = [
-    await safeHealth(() => whatsapp.healthCheck()),
+    await safeHealth(() => twilioWhatsapp.healthCheck()),
+    await safeHealth(() => metaWhatsapp.healthCheck()),
     await safeHealth(() => firebaseStorage.healthCheck()),
     await safeHealth(() => maps.healthCheck()),
     await safeHealth(() => fcm.healthCheck()),

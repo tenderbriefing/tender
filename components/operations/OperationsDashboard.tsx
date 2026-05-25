@@ -43,20 +43,31 @@ export default function OperationsDashboard() {
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
   const [assigningId, setAssigningId] = useState<string | null>(null)
   const [selectedAgent, setSelectedAgent] = useState<Record<string, string>>({})
+  const [whatsappMetrics, setWhatsappMetrics] = useState<{
+    configured: boolean
+    sent: number
+    failed: number
+    pending: number
+    lastSentAt?: string | null
+    latest?: Array<{ id: string; status?: string; type?: string; message?: string }>
+  } | null>(null)
 
   const load = useCallback(async () => {
     try {
-      const [reqRes, agentRes, syncRes] = await Promise.all([
+      const [reqRes, agentRes, syncRes, waRes] = await Promise.all([
         authFetch('/api/attendance-requests'),
         authFetch('/api/agents'),
         fetch('/api/sync/status'),
+        authFetch('/api/admin/whatsapp-metrics'),
       ])
       const reqJson = await reqRes.json()
       const agentJson = await agentRes.json()
       const syncJson = await syncRes.json()
+      const waJson = await waRes.json()
       if (reqJson.success) setRequests(reqJson.data || [])
       if (agentJson.success) setAgents(agentJson.data || [])
       if (syncJson.success) setSyncHealth(syncJson.data?.apiHealth || 'unknown')
+      if (waJson.success) setWhatsappMetrics(waJson.data)
     } catch {
       toast.error('Failed to load operations data')
     } finally {
@@ -275,6 +286,45 @@ export default function OperationsDashboard() {
           </div>
         ))}
       </div>
+
+      {whatsappMetrics && (
+        <section className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-bold text-slate-900">WhatsApp notifications</h2>
+            <span className="text-xs font-semibold text-slate-600">
+              Twilio {whatsappMetrics.configured ? 'configured' : 'not configured'}
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-3 sm:max-w-md">
+            <div className="rounded-lg bg-white px-3 py-2 text-center border border-slate-100">
+              <p className="text-xl font-bold text-emerald-800">{whatsappMetrics.sent}</p>
+              <p className="text-xs text-slate-600">Sent</p>
+            </div>
+            <div className="rounded-lg bg-white px-3 py-2 text-center border border-slate-100">
+              <p className="text-xl font-bold text-red-700">{whatsappMetrics.failed}</p>
+              <p className="text-xs text-slate-600">Failed</p>
+            </div>
+            <div className="rounded-lg bg-white px-3 py-2 text-center border border-slate-100">
+              <p className="text-xl font-bold text-amber-800">{whatsappMetrics.pending}</p>
+              <p className="text-xs text-slate-600">Pending</p>
+            </div>
+          </div>
+          {whatsappMetrics.lastSentAt && (
+            <p className="mt-2 text-xs text-slate-600">
+              Last sent: {new Date(whatsappMetrics.lastSentAt).toLocaleString()}
+            </p>
+          )}
+          {whatsappMetrics.latest && whatsappMetrics.latest.length > 0 && (
+            <ul className="mt-3 max-h-32 space-y-1 overflow-y-auto text-xs text-slate-700">
+              {whatsappMetrics.latest.slice(0, 8).map((row) => (
+                <li key={row.id} className="truncate">
+                  <span className="font-semibold capitalize">{row.status}</span> — {row.type}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {!noActivity && (
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

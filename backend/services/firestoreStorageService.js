@@ -269,6 +269,7 @@ async function getNotifications(filters = {}) {
   const snapshot = await query.limit(filters.limit || 50).get()
   return snapshot.docs
     .map((doc) => docToObject(doc))
+    .filter((n) => n.channel !== 'whatsapp' && n.type !== 'idempotency_marker')
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
 }
 

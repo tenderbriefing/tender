@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import IntegrationsDashboard from '@/components/admin/IntegrationsDashboard'
+import TestWhatsAppPanel from '@/components/admin/TestWhatsAppPanel'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { useAuth } from '@/components/providers/AuthProvider'
 
@@ -33,7 +34,10 @@ export default function AdminIntegrationsPage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <IntegrationsDashboard />
+        <div className="space-y-8">
+          <TestWhatsAppPanel />
+          <IntegrationsDashboard />
+        </div>
       </main>
       <Footer />
     </div>

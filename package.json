@@ -19,6 +19,7 @@
     "verify:firestore-collections": "node scripts/verify-firestore-collections.js",
     "smoke:production": "node scripts/production-smoke-test.js",
     "yoco:readiness": "node scripts/yoco-readiness-check.js",
+    "test:whatsapp": "node scripts/test-whatsapp.js",
     "smoke:production:rest": "node scripts/production-smoke-rest.js",
     "test:integrations": "node scripts/test-integrations-health.js"
   },

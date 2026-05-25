@@ -419,6 +419,24 @@ async function main() {
   report.notificationsCount = notifSnap.size
   report.recentNotificationEvents = notifSnap.docs.map((d) => d.data().eventType).filter(Boolean)
 
+  const healthRes = await fetchJson(`${PROD_BASE}/api/integrations/health`)
+  report.apiSteps.push({
+    step: 'GET /api/integrations/health',
+    status: healthRes.status,
+    success: healthRes.json.ok !== false,
+  })
+  const twilioWa = (healthRes.json.integrations || []).find((i) => i.id === 'twilio-whatsapp')
+  report.whatsappIntegration = twilioWa
+    ? { status: twilioWa.status, configured: twilioWa.status === 'configured' }
+    : null
+  if (!twilioWa) {
+    report.bugs.push('twilio-whatsapp missing from integrations health')
+  }
+  const healthStr = JSON.stringify(healthRes.json)
+  if (/sk_[a-z0-9]{10,}/i.test(healthStr) || /TWILIO_AUTH_TOKEN["\s:]+[A-Za-z0-9]{20,}/.test(healthStr)) {
+    report.bugs.push('integrations health may expose secret-like values')
+  }
+
   report.passed = report.bugs.length === 0
   console.log(JSON.stringify(report, null, 2))
   process.exit(report.passed ? 0 : 1)
