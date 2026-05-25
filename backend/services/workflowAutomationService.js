@@ -325,8 +325,26 @@ async function runMissedBriefingDetection() {
   return { job: 'missed_briefing_detection', triggered }
 }
 
+async function archiveWhatsappNotification(db, id, reason, extra = {}) {
+  await db
+    .collection('notifications')
+    .doc(id)
+    .set(
+      sanitizeFirestoreData({
+        status: 'archived',
+        retryable: false,
+        archivedReason: reason,
+        archivedAt: nowIso(),
+        updatedAt: nowIso(),
+        ...extra,
+      }),
+      { merge: true }
+    )
+}
+
 async function retryFailedWhatsApp({ limit = 20 } = {}) {
   const db = await getWorkflowDb()
+  const retryPolicy = require('./whatsappRetryPolicy')
   const snap = await db
     .collection('notifications')
     .where('channel', '==', 'whatsapp')
@@ -334,30 +352,59 @@ async function retryFailedWhatsApp({ limit = 20 } = {}) {
     .get()
 
   const candidates = snap.docs
-    .map((d) => ({ id: d.id, ...d.data() }))
+    .map((d) => ({ id: d.id, ref: d.ref, ...d.data() }))
     .filter((n) => n.status === 'failed' || n.status === 'pending')
-    .filter((n) => n.type !== 'idempotency_marker')
+    .filter((n) => n.retryable !== false)
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-    .slice(0, limit)
 
   const whatsappService = require('./whatsappService')
   let retried = 0
   let sent = 0
+  let skipped = 0
+  let archived = 0
 
   for (const row of candidates) {
-    if (!row.message || !row.to) continue
+    if (retried >= limit) break
+
+    const block = retryPolicy.getWhatsAppRetryBlockReason(row)
+    if (block.blocked) {
+      skipped += 1
+      if (
+        block.reason === 'qa_or_test' ||
+        block.reason === 'short_non_operational' ||
+        retryPolicy.shouldArchiveQaNotification(row)
+      ) {
+        await archiveWhatsappNotification(db, row.id, block.reason || 'retry_policy_skip')
+        archived += 1
+      }
+      continue
+    }
+
+    if (!row.message || !row.to) {
+      await archiveWhatsappNotification(db, row.id, 'missing_message_or_recipient')
+      archived += 1
+      continue
+    }
+
     const result = await whatsappService.sendWhatsAppMessage(row.to, row.message, {
       type: row.type || 'retry',
       recipientRole: row.recipientRole,
       recipientId: row.recipientId,
-      metadata: { ...(row.metadata || {}), retryOf: row.id },
-      idempotencyKey: `retry:${row.id}:${Date.now()}`,
+      metadata: { ...(row.metadata || {}), retryOf: row.id, operationalRetry: true },
+      idempotencyKey: `retry:${row.id}`,
     })
     retried += 1
-    if (result.ok) sent += 1
+    if (result.ok && !result.duplicate) sent += 1
+
+    await archiveWhatsappNotification(db, row.id, result.ok ? 'retry_completed' : 'retry_failed', {
+      status: result.ok ? 'retried' : 'failed',
+      lastRetryAt: nowIso(),
+      lastRetryOk: result.ok === true,
+    })
+    archived += 1
   }
 
-  return { job: 'retry_failed_whatsapp', retried, sent }
+  return { job: 'retry_failed_whatsapp', retried, sent, skipped, archived }
 }
 
 async function loadAgentsForMatching() {

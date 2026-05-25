@@ -24,11 +24,13 @@
     "qa:whatsapp:production": "WHATSAPP_QA_MODE=production-api node scripts/whatsapp-operational-qa.js",
     "qa:ensure-admin": "node scripts/ensure-ops-smoke-admin.js",
     "workflow:qa": "node scripts/workflow-qa.js",
+    "whatsapp:cleanup-qa": "node scripts/cleanup-whatsapp-qa-notifications.js",
     "command-center:qa": "node scripts/command-center-qa.js",
     "pilot:qa": "node scripts/pilot-qa.js",
     "ai-ops:qa": "node scripts/ai-ops-qa.js",
     "field-validation:qa": "node scripts/field-validation-qa.js",
     "mobile-field-qa": "node scripts/mobile-field-qa.js",
+    "mobile:agent:qa": "node scripts/mobile-agent-native-qa.js && cd mobile-agent-app && npm run typecheck",
     "smoke:production:rest": "node scripts/production-smoke-rest.js",
     "test:integrations": "node scripts/test-integrations-health.js"
   },

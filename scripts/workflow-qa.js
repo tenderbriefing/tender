@@ -83,8 +83,38 @@ async function main() {
   }
 
   try {
+    const retryPolicy = require('../backend/services/whatsappRetryPolicy')
+    check(
+      'QA dup2 blocked from retry',
+      !retryPolicy.isWhatsAppRetryAllowed({
+        type: 'qa_dup',
+        message: 'dup2',
+        to: '+27720708467',
+        status: 'failed',
+      })
+    )
+    check(
+      'admin_test blocked from retry',
+      !retryPolicy.isWhatsAppRetryAllowed({
+        type: 'admin_test',
+        message: 'short',
+        status: 'pending',
+        metadata: { source: 'test-whatsapp-api' },
+      })
+    )
+    check(
+      'operational reminder allowed',
+      retryPolicy.isWhatsAppRetryAllowed({
+        type: 'agent_briefing_reminder',
+        message: 'Reminder: compulsory briefing tomorrow at 09:00.',
+        to: '+27821234567',
+        status: 'failed',
+      })
+    )
+
     const retry = await workflow.retryFailedWhatsApp({ limit: 3 })
     check('WhatsApp retry job runs', typeof retry.retried === 'number')
+    check('WhatsApp retry returns skipped count', typeof retry.skipped === 'number')
     report.whatsappRetry = retry
   } catch (e) {
     check('WhatsApp retry job runs', false, e.message)

@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "TenderBriefing Agent",
+    "slug": "tenderbriefing-agent",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#16a34a"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "co.za.tenderbriefing.agent",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Capture briefing venue and attendance proof photos.",
+        "NSMicrophoneUsageDescription": "Record voice notes for briefing reports.",
+        "NSLocationWhenInUseUsageDescription": "Verify GPS attendance at briefing venues."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#16a34a"
+      },
+      "package": "co.za.tenderbriefing.agent",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-location",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow TenderBriefing Agent to use the camera for field proof."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#16a34a"
+        }
+      ],
+      "expo-asset"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "tenderbriefing-agent"
+      }
+    }
+  }
+}
