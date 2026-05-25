@@ -12,6 +12,20 @@ TenderBriefing sends operational WhatsApp messages via **Twilio** (not the legac
 
 Never commit values. Use `.env.local` for local `npm run test:whatsapp` only.
 
+## Cloud Run service account access
+
+Grant the default Compute / Cloud Run service account access to each secret (no secret values involved):
+
+```bash
+RUN_SA="serviceAccount:9058655644-compute@developer.gserviceaccount.com"
+for s in TWILIO_ACCOUNT_SID TWILIO_AUTH_TOKEN TWILIO_WHATSAPP_FROM; do
+  gcloud secrets add-iam-policy-binding "$s" \
+    --project=tenderbriefing-34679 \
+    --member="$RUN_SA" \
+    --role="roles/secretmanager.secretAccessor"
+done
+```
+
 ## Cloud Run mapping
 
 `cloudbuild.yaml` maps:
