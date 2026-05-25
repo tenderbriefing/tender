@@ -7,6 +7,7 @@
  *   local-direct           — requires local TWILIO_* env vars
  */
 const path = require('path')
+const { execFileSync } = require('child_process')
 process.chdir(path.join(__dirname, '..'))
 require('./load-env-local').loadEnvLocal()
 
@@ -33,16 +34,41 @@ function maskRecipient(value) {
   return `${s.slice(0, 6)}***`
 }
 
-async function fetchJson(url, options = {}) {
-  const res = await fetch(url, options)
-  const text = await res.text()
+function fetchJsonViaCurl(url, options = {}) {
+  const method = options.method || 'GET'
+  const headers = options.headers || {}
+  const args = ['-sS', '--noproxy', '*', '-w', '\n%{http_code}', '-X', method, url]
+  for (const [k, v] of Object.entries(headers)) {
+    args.push('-H', `${k}: ${v}`)
+  }
+  if (options.body) args.push('-d', options.body)
+  const raw = execFileSync('curl', args, { encoding: 'utf8' })
+  const nl = raw.lastIndexOf('\n')
+  const status = parseInt(raw.slice(nl + 1), 10) || 0
+  const text = raw.slice(0, nl)
   let json
   try {
     json = JSON.parse(text)
   } catch {
     json = { raw: text.slice(0, 300) }
   }
-  return { status: res.status, json, contentType: res.headers.get('content-type') }
+  return { status, json, contentType: null, transport: 'curl' }
+}
+
+async function fetchJson(url, options = {}) {
+  try {
+    const res = await fetch(url, options)
+    const text = await res.text()
+    let json
+    try {
+      json = JSON.parse(text)
+    } catch {
+      json = { raw: text.slice(0, 300) }
+    }
+    return { status: res.status, json, contentType: res.headers.get('content-type'), transport: 'fetch' }
+  } catch {
+    return fetchJsonViaCurl(url, options)
+  }
 }
 
 async function getAdminIdToken() {
@@ -56,7 +82,7 @@ async function getAdminIdToken() {
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
     require('../lib/firebase-config').firebaseConfig.apiKey
 
-  const res = await fetch(
+  const authRes = await fetchJson(
     `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
     {
       method: 'POST',
@@ -64,8 +90,8 @@ async function getAdminIdToken() {
       body: JSON.stringify({ email, password, returnSecureToken: true }),
     }
   )
-  const data = await res.json()
-  if (!res.ok) {
+  const data = authRes.json
+  if (authRes.status !== 200 || data.error) {
     throw new Error(data.error?.message || 'Admin sign-in failed')
   }
   return { idToken: data.idToken, localId: data.localId, email }

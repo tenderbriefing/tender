@@ -43,6 +43,7 @@ firebase-debug.*.log
 service-account.json
 *-service-account*.json
 **/service-account*.json
+.qa-smoke-admin.txt
 
 # IDE
 .vscode/

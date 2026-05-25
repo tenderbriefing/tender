@@ -13,7 +13,17 @@ Run on a machine with network access to production. **Production API mode is rec
 
 1. **Twilio sandbox joined** — send the join code to `whatsapp:+14155238886` from your test phone before any live send.
 2. Secret Manager secrets exist and Cloud Run mounts them (see `docs/TWILIO_WHATSAPP_SETUP.md`).
-3. **Admin Firebase account** for production API mode (`QA_ADMIN_EMAIL` / `QA_ADMIN_PASSWORD`).
+3. **Admin Firebase account** for production API mode (`QA_ADMIN_EMAIL` / `QA_ADMIN_PASSWORD`), or provision the ops smoke admin:
+
+   ```bash
+   npm run qa:ensure-admin
+   # password written to .qa-smoke-admin.txt (gitignored; never commit)
+
+   TEST_WHATSAPP_TO=+27720708467 \
+   QA_ADMIN_EMAIL=ops-smoke-admin@tenderbriefing.co.za \
+   QA_ADMIN_PASSWORD="$(cat .qa-smoke-admin.txt)" \
+   npm run qa:whatsapp:production
+   ```
 4. **Optional:** `GOOGLE_APPLICATION_CREDENTIALS` for Firestore log verification after the API send. Without it, the script still passes if the test API reports `status: sent`.
 
 ## Recommended: production API mode
