@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { signIn, getUserProfile } from '@/lib/auth'
@@ -13,7 +13,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner'
 const inputClass =
   'w-full rounded-lg border border-slate-200 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20'
 
-export default function SignInPage() {
+function SignInForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams?.get('redirect') || ''
@@ -37,8 +37,11 @@ export default function SignInPage() {
 
     setLoading(true)
     try {
-      const { user } = await signIn(normalizeAuthEmail(formData.email), formData.password)
-      const profile = await getUserProfile(user.uid)
+      const { user, userProfile } = await signIn(
+        normalizeAuthEmail(formData.email),
+        formData.password
+      )
+      const profile = userProfile || (await getUserProfile(user.uid))
       if (!profile?.userType) {
         toast.error('Profile not found. Contact support or complete registration again.')
         return
@@ -113,5 +116,19 @@ export default function SignInPage() {
         </Link>
       </p>
     </AuthShell>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-slate-50">
+          <LoadingSpinner size="lg" />
+        </div>
+      }
+    >
+      <SignInForm />
+    </Suspense>
   )
 }

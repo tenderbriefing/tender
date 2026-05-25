@@ -11,33 +11,50 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'auth/user-not-found': 'No account found with this email. Check the address or register.',
   'auth/wrong-password': 'Incorrect password. Try again or reset your password.',
   'auth/invalid-credential': 'Invalid email or password. Please try again.',
+  'auth/invalid-login-credentials': 'Invalid email or password. Please try again.',
   'auth/user-disabled': 'This account has been disabled. Contact support.',
   'auth/operation-not-allowed': 'Email/password sign-in is not enabled for this project.',
   'auth/unauthorized-domain':
-    'This domain is not authorized for sign-in. Contact support if this persists.',
+    'This site is not authorized for sign-in. Add www.tenderbriefing.co.za in Firebase Auth → Settings → Authorized domains.',
   'auth/configuration-not-found': 'Authentication is not configured correctly. Contact support.',
+  'auth/invalid-api-key': 'Sign-in is misconfigured (API key). Contact support.',
+  'auth/internal-error': 'Sign-in temporarily unavailable. Please try again in a moment.',
   'permission-denied':
-    'Could not save your profile. Please try again or contact support.',
+    'Signed in, but your profile could not be loaded. Contact support or complete registration again.',
+  'failed-precondition':
+    'Database is not ready. Please refresh and try again.',
+  'unavailable': 'Service temporarily unavailable. Please try again.',
 }
 
 export function normalizeAuthEmail(email: string): string {
   return email.trim().toLowerCase()
 }
 
-export function getAuthErrorMessage(error: unknown, fallback = 'Something went wrong. Please try again.'): string {
-  if (error instanceof FirebaseError) {
-    return AUTH_ERROR_MESSAGES[error.code] || fallback
+function codeFromUnknown(error: unknown): string | null {
+  if (error instanceof FirebaseError) return error.code
+  if (error && typeof error === 'object' && 'code' in error) {
+    const code = (error as { code?: string }).code
+    if (typeof code === 'string' && code) return code
   }
   if (error instanceof Error) {
-    const code = (error as Error & { code?: string }).code
-    if (code && AUTH_ERROR_MESSAGES[code]) return AUTH_ERROR_MESSAGES[code]
-    if (error.message.includes('Firebase: Error')) {
-      const match = error.message.match(/\(auth\/[^)]+\)/)
-      if (match) {
-        const firebaseCode = match[0].slice(1, -1)
-        if (AUTH_ERROR_MESSAGES[firebaseCode]) return AUTH_ERROR_MESSAGES[firebaseCode]
-      }
+    const withCode = error as Error & { code?: string }
+    if (withCode.code) return withCode.code
+    const paren = error.message.match(/\(auth\/[^)]+\)/)
+    if (paren) return paren[0].slice(1, -1)
+    if (/INVALID_LOGIN_CREDENTIALS/i.test(error.message)) {
+      return 'auth/invalid-credential'
     }
+    if (/EMAIL_NOT_FOUND/i.test(error.message)) return 'auth/user-not-found'
+    if (/INVALID_PASSWORD/i.test(error.message)) return 'auth/wrong-password'
+  }
+  return null
+}
+
+export function getAuthErrorMessage(error: unknown, fallback = 'Something went wrong. Please try again.'): string {
+  const code = codeFromUnknown(error)
+  if (code && AUTH_ERROR_MESSAGES[code]) return AUTH_ERROR_MESSAGES[code]
+  if (error instanceof Error && error.message && !error.message.includes('Firebase: Error')) {
+    return error.message
   }
   return fallback
 }
