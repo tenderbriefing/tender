@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { authFetch } from '@/lib/api/authenticatedFetch'
 import { formatAttendanceFeeZar } from '@/lib/payments/attendanceFee'
+import AiOpsExtension from '@/components/operations/AiOpsExtension'
 
 interface CommandCenterData {
   generatedAt?: string
@@ -55,6 +56,7 @@ interface CommandCenterData {
     tier?: string
     availability?: string
   }>
+  aiOps?: Record<string, unknown>
 }
 
 export default function CommandCenter() {
@@ -263,6 +265,8 @@ export default function CommandCenter() {
           </ul>
         </Panel>
       )}
+
+      <AiOpsExtension aiOps={data.aiOps as never} />
     </section>
   )
 }

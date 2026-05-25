@@ -29,9 +29,9 @@ export const AGENT_NAV = [
 export const ADMIN_NAV = [
   { name: 'Dashboard', href: '/admin/dashboard' },
   { name: 'Operations', href: '/admin/operations' },
-  { name: 'Executive', href: '/admin/executive' },
+  { name: 'Dispatch', href: '/admin/dispatch' },
+  { name: 'AI Insights', href: '/admin/ai-insights' },
   { name: 'Pilot', href: '/admin/pilot' },
-  { name: 'Sync Status', href: '/admin/dashboard' },
 ] as const
 
 export const PUBLIC_NAV = [

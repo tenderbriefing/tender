@@ -15,7 +15,7 @@ export async function GET(
 
   try {
     const reportId = params.reportId
-    const storage = require('../../../../../../backend/services/storageAdapter').getStorage()
+    const storage = require('../../../../../backend/services/storageAdapter').getStorage()
     const reports = await storage.getBriefingReports()
     const report = reports.find((r: { id: string }) => r.id === reportId)
     if (!report) {
@@ -25,7 +25,7 @@ export async function GET(
     const requests = await storage.getAttendanceRequests()
     const req = requests.find((r: { id: string }) => r.id === report.requestId)
 
-    const pdfService = require('../../../../../../backend/services/briefingReportPdfService')
+    const pdfService = require('../../../../../backend/services/briefingReportPdfService')
     const buffer = pdfService.generatePdfBufferForReport(report, req || {})
 
     return new NextResponse(buffer, {

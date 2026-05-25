@@ -9,6 +9,7 @@ const procurementInsightsService = require('./procurementInsightsService')
 const agentPerformanceService = require('./agentPerformanceService')
 const workflowAutomationService = require('./workflowAutomationService')
 const whatsappService = require('./whatsappService')
+const aiOpsExecutive = require('./aiOpsExecutiveService')
 
 function parseDate(value) {
   if (!value) return null
@@ -128,8 +129,16 @@ async function getCommandCenterPayload() {
       recipientRole: n.recipientRole,
     }))
 
+  let aiOps = null
+  try {
+    aiOps = await aiOpsExecutive.getAiOpsExtension()
+  } catch {
+    aiOps = null
+  }
+
   return {
     generatedAt: new Date().toISOString(),
+    aiOps,
     dispatchBoard,
     pendingQueue: pendingQueue.map((r) => ({
       id: r.id,

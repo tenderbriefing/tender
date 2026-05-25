@@ -126,6 +126,59 @@ service cloud.firestore {
       allow create: if isAuthenticated();
     }
 
+    match /gpsAttendanceLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isYouthAgent();
+      allow write: if false;
+    }
+
+    match /dispatchTracking/{docId} {
+      allow read: if isAdmin() || isYouthAgent();
+      allow write: if isAdmin();
+    }
+
+    match /fraudAlerts/{alertId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /financePayouts/{payoutId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /financeInvoices/{invoiceId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /financeTransactions/{txId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /aiTenderInsights/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /aiBriefingInsights/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /agentVerification/{agentId} {
+      allow read: if isAdmin() || (isYouthAgent() && request.auth.uid == agentId);
+      allow create, update: if isYouthAgent() && request.auth.uid == agentId;
+      allow write: if isAdmin();
+    }
+
+    match /operationalIncidents/{incidentId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow write: if false;
+    }
+
     match /agents/{agentId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin() || (isYouthAgent() && request.auth.uid == agentId);
