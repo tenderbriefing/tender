@@ -1,6 +1,8 @@
 # CI/CD setup (GitHub Actions → Firebase + Cloud Run)
 
-Automatic deploys are **not** enabled in the GitHub repo yet because the first push used a token without the **`workflow`** scope. The workflow template is kept out of `.github/workflows/` until you add credentials with the right permissions.
+GitHub Actions deploy workflow lives at `.github/workflows/deploy.yml`. On each push to `master`/`main` it deploys Firebase (rules, indexes, storage, hosting), Cloud Run (`cloudbuild.yaml`), the europe-west1 hosting proxy, then verifies production URLs.
+
+**Requires** repository secret `FIREBASE_SERVICE_ACCOUNT` and a push token with **`workflow`** scope.
 
 ---
 
@@ -42,17 +44,12 @@ Use a dedicated SA (e.g. `github-deploy@tenderbriefing-34679.iam.gserviceaccount
 
 ---
 
-## Step 3 — Enable the workflow file
+## Step 3 — Workflow file
 
-Copy the template into the repo:
+Already in the repo: `.github/workflows/deploy.yml`. To re-copy from template:
 
 ```bash
-cd "/Users/billionaire/Desktop/Tender briefing"
-mkdir -p .github/workflows
 cp docs/github-actions-deploy.yml.example .github/workflows/deploy.yml
-git add .github/workflows/deploy.yml
-git commit -m "Add GitHub Actions deploy workflow."
-git push origin master
 ```
 
 Push must use a PAT or `gh` session with **`workflow`** scope or GitHub will reject the workflow file.
@@ -63,10 +60,10 @@ Push must use a PAT or `gh` session with **`workflow`** scope or GitHub will rej
 
 On push to `main` or `master` (and manual `workflow_dispatch`):
 
-1. **deploy_firebase_rules** — `firebase deploy --only firestore,storage` (enable Storage in console first)
-2. **deploy_cloud_run** — `gcloud builds submit` using `cloudbuild.yaml` (includes `NEXT_PUBLIC_SITE_URL=https://www.tenderbriefing.co.za`)
-
-Hosting custom domain is **not** auto-updated by this workflow; run `firebase deploy --only hosting` when `firebase.json` hosting config changes.
+1. **deploy_firebase** — Firestore rules, indexes, Storage rules, Firebase Hosting
+2. **deploy_cloud_run** — `gcloud builds submit` with `cloudbuild.yaml` (`africa-south1`)
+3. **deploy_hosting_proxy** — `cloudbuild-hosting-proxy.yaml` (`europe-west1` → production Cloud Run)
+4. **verify_production** — HTTP checks on `www`, apex, `web.app`, and `/api/integrations/health`
 
 ---
 
