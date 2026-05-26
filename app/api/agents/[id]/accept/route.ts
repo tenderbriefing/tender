@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { backend } from '@/lib/backend/loadServices'
+import { ensureRouteAccess, isAccessDenied } from '@/lib/auth/ensureRouteAccess'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,6 +8,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const access = await ensureRouteAccess(request, {
+    allowedTypes: ['youth-agent', 'admin'],
+    matchAgentIdParam: params.id,
+  })
+  if (isAccessDenied(access)) return access
+
   try {
     const body = await request.json()
     const agentService = backend.agentAssignment()
@@ -19,8 +26,9 @@ export async function POST(
       )
     }
 
+    const agentId = access.userType === 'admin' ? params.id : access.uid
     const updated = await agentService.acceptRequest(requestId, {
-      id: params.id,
+      id: agentId,
       displayName: body.displayName || body.agentName,
       name: body.agentName,
       rating: body.rating,

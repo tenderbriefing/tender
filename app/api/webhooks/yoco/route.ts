@@ -18,17 +18,17 @@ export async function POST(request: NextRequest) {
     request.headers.get('webhook-signature')
 
   const verified = yoco.verifyWebhookSignature(rawBody, signature)
-  if (!verified.ok && !verified.skipped) {
-    console.warn('[yoco webhook] signature verification failed')
+  if (!verified.ok) {
+    console.warn('[yoco webhook] signature verification failed:', verified.reason)
     return NextResponse.json(
       { ok: false, error: verified.reason || 'Unauthorized' },
       { status: 401 }
     )
   }
 
-  if (verified.skipped) {
+  if (verified.skipped && process.env.NODE_ENV !== 'production') {
     console.warn(
-      '[yoco webhook] YOCO_WEBHOOK_SECRET not configured — processing with checkout status guard only'
+      '[yoco webhook] YOCO_WEBHOOK_SECRET not configured — dev-only processing'
     )
   }
 

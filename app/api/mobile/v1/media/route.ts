@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyApiUser, unauthorizedResponse } from '@/lib/auth/verifyApiUser'
+import { validateUploadFile } from '@/lib/security/uploadValidation'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +14,10 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file')
     if (!requestId || !(file instanceof File)) {
       return NextResponse.json({ success: false, error: 'requestId and file required' }, { status: 400 })
+    }
+    const uploadError = validateUploadFile(file)
+    if (uploadError) {
+      return NextResponse.json({ success: false, error: uploadError }, { status: 400 })
     }
     const buffer = Buffer.from(await file.arrayBuffer())
     const storageService = require('../../../../../backend/services/integrations/firebaseStorageService.js')

@@ -116,7 +116,14 @@ async function getCheckout(checkoutId) {
 function verifyWebhookSignature(rawBody, signatureHeader) {
   const secret = env('YOCO_WEBHOOK_SECRET')
   if (!secret) {
-    return { ok: false, skipped: true, reason: 'YOCO_WEBHOOK_SECRET not configured' }
+    const isProduction = process.env.NODE_ENV === 'production'
+    return {
+      ok: false,
+      skipped: !isProduction,
+      reason: isProduction
+        ? 'YOCO_WEBHOOK_SECRET required in production'
+        : 'YOCO_WEBHOOK_SECRET not configured',
+    }
   }
   if (!signatureHeader) {
     return { ok: false, reason: 'Missing signature header' }

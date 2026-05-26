@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { backend } from '@/lib/backend/loadServices'
+import { ensureRouteAccess, isAccessDenied } from '@/lib/auth/ensureRouteAccess'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  const access = await ensureRouteAccess(request)
+  if (isAccessDenied(access)) return access
+  void access
+
   try {
     const storage = backend.getStorage()
     const calendar = backend.calendar()

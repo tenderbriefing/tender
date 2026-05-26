@@ -25,7 +25,16 @@ service firebase.storage {
 
     // Briefing attendance proof (see docs/API_INTEGRATIONS.md — enable Storage in console first)
     match /briefing-proofs/{requestId}/{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null && (
+        exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && (
+          get(/databases/(default)/documents/users/$(request.auth.uid)).data.userType == 'admin'
+          || exists(/databases/(default)/documents/attendanceRequests/$(requestId))
+        )
+      );
+      allow write: if request.auth != null
+        && exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && get(/databases/(default)/documents/users/$(request.auth.uid)).data.userType in ['admin', 'youth-agent'];
     }
     
     // Allow public read access to profile pictures and public documents

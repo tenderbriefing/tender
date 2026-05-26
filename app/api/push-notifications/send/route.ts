@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin, isGuardResponse } from '@/lib/auth/apiGuards'
 import { getMessaging } from 'firebase-admin/messaging'
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 
@@ -18,6 +19,9 @@ if (!getApps().length) {
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await requireAdmin(request)
+  if (isGuardResponse(guard)) return guard
+
   try {
     const { userId, payload, topic, condition } = await request.json()
 

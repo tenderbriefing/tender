@@ -40,3 +40,30 @@ export function hasBearerToken(request: { headers: { get(name: string): string |
   const auth = request.headers.get('authorization')
   return Boolean(auth?.startsWith('Bearer ') && auth.slice(7).trim())
 }
+
+/** Legacy integration / QA APIs — disabled in production (use admin tools + authFetch). */
+const PRODUCTION_BLOCKED_API_PREFIXES = [
+  '/api/gmail',
+  '/api/drive',
+  '/api/storage',
+  '/api/maps',
+  '/api/matching',
+  '/api/file-processing',
+  '/api/ai/',
+  '/api/connector-response',
+] as const
+
+export function isProductionBlockedApiRoute(pathname: string): boolean {
+  return PRODUCTION_BLOCKED_API_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix)
+  )
+}
+
+export function extractBearerToken(request: {
+  headers: { get(name: string): string | null }
+}): string | null {
+  const auth = request.headers.get('authorization')
+  if (!auth?.startsWith('Bearer ')) return null
+  const token = auth.slice(7).trim()
+  return token || null
+}

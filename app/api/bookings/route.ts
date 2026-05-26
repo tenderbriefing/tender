@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { bookingService, BookingRequest } from '@/lib/services/bookingService'
+import { ensureRouteAccess, isAccessDenied } from '@/lib/auth/ensureRouteAccess'
 
 export async function POST(request: NextRequest) {
+  const access = await ensureRouteAccess(request)
+  if (isAccessDenied(access)) return access
+
   try {
     const body = await request.json()
     const { action, ...data } = body
 
     switch (action) {
       case 'create':
+        if (data.smeId && data.smeId !== access.uid && access.userType !== 'admin') {
+          return NextResponse.json(
+            { success: false, error: 'Forbidden' },
+            { status: 403 }
+          )
+        }
         const bookingRequest: BookingRequest = {
           tenderId: data.tenderId,
-          smeId: data.smeId,
+          smeId: data.smeId || access.uid,
           amount: 250.00 // Fixed rate
         }
         

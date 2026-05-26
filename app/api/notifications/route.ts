@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { notificationService } from '@/lib/services/notificationService'
+import { ensureRouteAccess, isAccessDenied } from '@/lib/auth/ensureRouteAccess'
+import { forbiddenResponse } from '@/lib/auth/verifyApiUser'
 
 export async function POST(request: NextRequest) {
+  const access = await ensureRouteAccess(request)
+  if (isAccessDenied(access)) return access
+
   try {
     const body = await request.json()
     const { action, ...data } = body
@@ -33,6 +38,10 @@ export async function POST(request: NextRequest) {
 
       case 'markAllAsRead':
         const { userId } = data
+
+        if (userId && userId !== access.uid && access.userType !== 'admin') {
+          return forbiddenResponse()
+        }
         
         if (!userId) {
           return NextResponse.json({

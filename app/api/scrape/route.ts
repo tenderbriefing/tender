@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin, isGuardResponse } from '@/lib/auth/apiGuards'
 
 // Simple scraping function to get real data from eTenders
 async function scrapeRealTenders() {
@@ -278,6 +279,9 @@ function extractCategoryFromTitle(title: string): string {
 }
 
 export async function GET(request: NextRequest) {
+  const guard = await requireAdmin(request)
+  if (isGuardResponse(guard)) return guard
+
   try {
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')
@@ -368,6 +372,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await requireAdmin(request)
+  if (isGuardResponse(guard)) return guard
+
   try {
     let body
     try {

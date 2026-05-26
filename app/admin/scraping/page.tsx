@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { authFetch } from '@/lib/api/authenticatedFetch'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
@@ -53,7 +54,7 @@ const AdminScrapingPage = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/scrape?action=stats')
+      const response = await authFetch('/api/scrape?action=stats')
       const data = await response.json()
       
       if (data.success) {
@@ -69,11 +70,8 @@ const AdminScrapingPage = () => {
   const startScraping = async () => {
     setScraping(true)
     try {
-      const response = await fetch('/api/scrape', {
+      const response = await authFetch('/api/scrape', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ action: 'start' }),
       })
       
