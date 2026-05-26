@@ -80,11 +80,11 @@ export default function SmeCategoryCommoditySelector({
   return (
     <div className="space-y-6">
       {showFreeModelBanner && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm">
-          <p className="text-sm font-semibold text-emerald-900">
+        <div className="rounded-xl border border-accent-200 bg-accent-50 p-4 shadow-sm">
+          <p className="text-sm font-semibold text-brand-900">
             TenderBriefing is free for SMEs
           </p>
-          <p className="mt-1 text-sm text-emerald-800">
+          <p className="mt-1 text-sm text-brand-800">
             You only pay R249 when you request a verified Youth Agent to attend a compulsory
             briefing on your behalf.
           </p>

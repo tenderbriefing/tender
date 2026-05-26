@@ -35,16 +35,25 @@ export const metadata: Metadata = {
     title: 'TenderBriefing | South Africa Tender Briefing Intelligence Platform',
     description:
       'Discover compulsory government tender briefings, site meetings, and procurement opportunities across South Africa.',
+    images: ['/logo.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'TenderBriefing | South Africa Tender Briefing Intelligence Platform',
     description:
       'Discover compulsory government tender briefings, site meetings, and procurement opportunities across South Africa.',
+    images: ['/logo.png'],
   },
   robots: { index: true, follow: true },
   alternates: {
     canonical: siteUrl,
+  },
+  icons: {
+    icon: [
+      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: '/icon.png',
   },
   ...(process.env.GOOGLE_SITE_VERIFICATION
     ? {
@@ -58,7 +67,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#16a34a',
+  themeColor: '#0F1E3D',
 }
 
 export default function RootLayout({
@@ -78,7 +87,7 @@ export default function RootLayout({
               style: { background: '#0f172a', color: '#fff' },
               success: {
                 duration: 3000,
-                iconTheme: { primary: '#22c55e', secondary: '#fff' },
+                iconTheme: { primary: '#D4AF37', secondary: '#0F1E3D' },
               },
               error: {
                 duration: 5000,

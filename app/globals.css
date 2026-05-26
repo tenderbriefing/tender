@@ -76,7 +76,11 @@ a {
 
 /* Custom button styles */
 .btn-primary {
-  @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  @apply bg-brand-800 hover:bg-brand-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 shadow-soft;
+}
+
+.btn-accent {
+  @apply bg-accent-500 hover:bg-accent-600 text-brand-900 font-semibold py-2 px-4 rounded-lg transition-colors duration-200 shadow-gold;
 }
 
 .btn-secondary {
@@ -96,7 +100,7 @@ a {
 }
 
 .btn-outline {
-  @apply border border-primary-600 text-primary-600 hover:bg-primary-600 hover:text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  @apply border border-brand-800 text-brand-800 hover:bg-brand-800 hover:text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
 }
 
 /* Card styles */

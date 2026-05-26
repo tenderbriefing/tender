@@ -14,17 +14,17 @@ const STEPS = [
 
 export default function SmeHowItWorksCard() {
   return (
-    <section className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm">
+    <section className="rounded-2xl border border-brand-100 bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-brand-700">
+          <p className="text-xs font-semibold uppercase tracking-wider text-accent-600">
             Free for SMEs
           </p>
-          <h2 className="text-lg font-bold text-slate-900">How TenderBriefing Works</h2>
+          <h2 className="text-lg font-bold text-brand-900">How TenderBriefing Works</h2>
         </div>
         <Link
           href="/tenders"
-          className="mt-2 text-sm font-semibold text-brand-700 hover:underline sm:mt-0"
+          className="mt-2 text-sm font-semibold text-brand-800 hover:text-accent-600 hover:underline sm:mt-0"
         >
           Browse tenders →
         </Link>
@@ -32,7 +32,7 @@ export default function SmeHowItWorksCard() {
       <ul className="mt-4 space-y-3">
         {STEPS.map((step) => (
           <li key={step} className="flex items-start gap-3 text-sm text-slate-700">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent-500" aria-hidden />
             <span>{step}</span>
           </li>
         ))}

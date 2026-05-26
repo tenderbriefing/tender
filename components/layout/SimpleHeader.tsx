@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { 
   Bars3Icon, 
@@ -23,11 +24,18 @@ const SimpleHeader = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">T</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">TenderConnect</span>
+            <Link href="/" className="flex items-center gap-2.5" aria-label="TenderBriefing home">
+              <Image
+                src="/icon.png"
+                alt=""
+                width={32}
+                height={32}
+                priority
+                className="h-8 w-8"
+              />
+              <span className="text-xl font-bold text-brand-900">
+                Tender<span className="text-accent-600">Briefing</span>
+              </span>
             </Link>
           </div>
 

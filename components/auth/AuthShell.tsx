@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { TrustStrip } from '@/components/procurement/TrustDisclaimer'
 
@@ -13,12 +14,17 @@ export default function AuthShell({
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-4 py-12 sm:px-6">
-        <Link href="/" className="mb-8 flex items-center justify-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600">
-            <span className="text-lg font-bold text-white">TB</span>
-          </div>
-          <span className="text-xl font-bold text-slate-900">
-            Tender<span className="text-brand-600">Briefing</span>
+        <Link href="/" className="mb-8 flex items-center justify-center gap-2.5" aria-label="TenderBriefing home">
+          <Image
+            src="/icon.png"
+            alt=""
+            width={40}
+            height={40}
+            priority
+            className="h-10 w-10"
+          />
+          <span className="text-xl font-bold text-brand-900">
+            Tender<span className="text-accent-600">Briefing</span>
           </span>
         </Link>
 

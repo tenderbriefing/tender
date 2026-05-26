@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -79,12 +80,17 @@ const Header = () => {
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between lg:h-[72px]">
-          <Link href="/" className="group flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 shadow-soft transition group-hover:bg-brand-700">
-              <span className="text-lg font-bold text-white">TB</span>
-            </div>
-            <span className="text-xl font-bold tracking-tight text-slate-900">
-              Tender<span className="text-brand-600">Briefing</span>
+          <Link href="/" className="group flex items-center gap-2.5" aria-label="TenderBriefing home">
+            <Image
+              src="/icon.png"
+              alt=""
+              width={40}
+              height={40}
+              priority
+              className="h-10 w-10 transition group-hover:opacity-90"
+            />
+            <span className="text-xl font-bold tracking-tight text-brand-900">
+              Tender<span className="text-accent-600">Briefing</span>
             </span>
           </Link>
 
@@ -128,7 +134,7 @@ const Header = () => {
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
                   className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-brand-200"
                 >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-xs font-bold text-white">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-800 text-xs font-bold text-white">
                     {(userProfile?.displayName || user.email)?.charAt(0).toUpperCase()}
                   </span>
                   <span className="hidden md:inline max-w-[120px] truncate">
@@ -171,7 +177,7 @@ const Header = () => {
                 </Link>
                 <Link
                   href="/auth/role-selection"
-                  className="hidden sm:inline-flex rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-soft hover:bg-brand-700"
+                  className="hidden sm:inline-flex rounded-xl bg-brand-800 px-4 py-2.5 text-sm font-semibold text-white shadow-soft hover:bg-brand-700"
                 >
                   Register
                 </Link>
@@ -227,7 +233,7 @@ const Header = () => {
                   </Link>
                   <Link
                     href="/auth/role-selection"
-                    className="mx-3 mt-2 rounded-xl bg-brand-600 py-3 text-center font-semibold text-white"
+                    className="mx-3 mt-2 rounded-xl bg-brand-800 py-3 text-center font-semibold text-white"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Register

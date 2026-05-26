@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { Mail, MapPin, Phone } from 'lucide-react'
 
@@ -7,11 +8,17 @@ const Footer = () => {
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-2">
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600">
-                <span className="font-bold text-white">TB</span>
-              </div>
-              <span className="text-xl font-bold text-white">TenderBriefing</span>
+            <div className="flex items-center gap-2.5">
+              <Image
+                src="/icon.png"
+                alt=""
+                width={40}
+                height={40}
+                className="h-10 w-10"
+              />
+              <span className="text-xl font-bold text-white">
+                Tender<span className="text-accent-400">Briefing</span>
+              </span>
             </div>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-400">
               South Africa&apos;s procurement intelligence platform for compulsory tender
