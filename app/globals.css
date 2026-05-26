@@ -290,6 +290,21 @@ a {
   @apply overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm;
 }
 
+/* Tender opportunities — fixed layout, no horizontal scroll */
+.tender-opps-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.tender-opps-table th {
+  @apply px-3 py-3.5 text-left;
+}
+
+.tender-opps-table td {
+  @apply overflow-hidden;
+  word-wrap: break-word;
+}
+
 .procurement-table thead {
   @apply sticky top-0 z-10;
 }

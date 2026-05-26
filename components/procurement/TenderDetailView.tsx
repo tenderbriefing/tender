@@ -23,6 +23,8 @@ import {
 } from '@/lib/procurement/dates'
 
 import { BriefingSessionBlock, CompulsoryBriefingBadge } from './CompulsoryBriefingBadge'
+import StatusBadge from '@/components/tenders/StatusBadge'
+import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
 
 import CountdownBadge from './CountdownBadge'
 
@@ -176,7 +178,11 @@ export default function TenderDetailView({ tender }: TenderDetailViewProps) {
 
           <p className="mt-2 text-slate-600">{tender.department}</p>
 
-          <p className="mt-1 text-xs font-medium text-slate-500">
+          <div className="mt-3">
+            <StatusBadge status={getTenderDisplayStatus(tender)} />
+          </div>
+
+          <p className="mt-3 text-xs font-medium text-slate-500">
 
             Source: Official eTenders data · Last synced{' '}
 
@@ -422,12 +428,24 @@ export default function TenderDetailView({ tender }: TenderDetailViewProps) {
 
               <DetailRow label="Briefing Venue" value={tender.briefingVenue} />
 
+              <DetailRow
+                label="Compulsory briefing"
+                value={tender.briefingCompulsory ? 'Yes — attendance required' : 'No'}
+              />
+
               {tender.meetingLink && (
-
                 <DetailRow label="Meeting link" value={tender.meetingLink} />
-
               )}
 
+              <DetailRow label="Contact person" value={tender.contactPerson} />
+
+              <DetailRow label="Email" value={tender.contactEmail} />
+
+              <DetailRow label="Telephone" value={tender.contactPhone} />
+
+              {tender.detailUrl && (
+                <DetailRow label="Official source" value={tender.detailUrl} />
+              )}
             </dl>
 
           </section>

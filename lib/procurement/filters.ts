@@ -15,6 +15,7 @@ export interface ProcurementFilterState {
   compulsoryOnly: boolean
   closingSoon: boolean
   briefingsThisWeek: boolean
+  briefingType: '' | 'compulsory' | 'has_briefing' | 'optional' | 'none'
 }
 
 export const defaultProcurementFilters: ProcurementFilterState = {
@@ -31,6 +32,7 @@ export const defaultProcurementFilters: ProcurementFilterState = {
   compulsoryOnly: false,
   closingSoon: false,
   briefingsThisWeek: false,
+  briefingType: '',
 }
 
 export type TenderSortKey =
@@ -51,6 +53,11 @@ export function filterTenders(
     if (filters.briefingRequired && !t.briefingDate && !t.briefingCompulsory) return false
     if (filters.closingSoon && !isClosingSoon(t.closingDate)) return false
     if (filters.briefingsThisWeek && !isBriefingThisWeek(t.briefingDate)) return false
+
+    if (filters.briefingType === 'compulsory' && !t.briefingCompulsory) return false
+    if (filters.briefingType === 'has_briefing' && !t.briefingDate) return false
+    if (filters.briefingType === 'optional' && t.briefingCompulsory) return false
+    if (filters.briefingType === 'none' && (t.briefingDate || t.briefingCompulsory)) return false
 
     if (filters.province && t.province !== filters.province) return false
     if (filters.department && t.department !== filters.department) return false
