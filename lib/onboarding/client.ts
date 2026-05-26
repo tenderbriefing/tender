@@ -2,6 +2,7 @@ import { doc, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { sanitizeClientData } from '@/lib/auth/sanitize'
 import type { UserProfile } from '@/lib/auth'
+import { buildMatchingKeywords } from '@/lib/data/csdProcurementCatalog'
 
 function nowIso() {
   return new Date().toISOString()
@@ -12,6 +13,7 @@ export interface SmeOnboardingInput {
   csdNumber: string
   province: string
   categories: string[]
+  commodities: string[]
   preferredDepartments: string[]
   whatsAppNumber: string
   tenderInterests: string
@@ -35,6 +37,7 @@ export async function saveSmeOnboarding(
   input: SmeOnboardingInput
 ) {
   const timestamp = nowIso()
+  const matchingKeywords = buildMatchingKeywords(input.categories, input.commodities)
   const profilePatch = sanitizeClientData({
     ...existing,
     uid,
@@ -44,6 +47,8 @@ export async function saveSmeOnboarding(
     csdNumber: input.csdNumber.trim(),
     province: input.province,
     categories: input.categories,
+    commodities: input.commodities,
+    matchingKeywords,
     sectors: input.categories,
     provincesOfInterest: [input.province],
     phoneNumber: input.whatsAppNumber.trim(),
@@ -68,6 +73,8 @@ export async function saveSmeOnboarding(
       csdNumber: input.csdNumber.trim(),
       province: input.province,
       categories: input.categories,
+      commodities: input.commodities,
+      matchingKeywords,
       sectors: input.categories,
       preferredDepartments: input.preferredDepartments,
       tenderInterests: input.tenderInterests.trim(),

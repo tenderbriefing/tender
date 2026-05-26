@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
-import CategorySelection from '@/components/auth/CommoditySelection'
+import SmeCategoryCommoditySelector from '@/components/sme/SmeCategoryCommoditySelector'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { SA_PROVINCES } from '@/lib/procurement/provinces'
 import { saveSmeOnboarding } from '@/lib/onboarding/client'
@@ -24,6 +24,7 @@ export default function SmeOnboardingPage() {
     csdNumber: '',
     province: '',
     categories: [] as string[],
+    commodities: [] as string[],
     preferredDepartments: '',
     whatsAppNumber: '',
     tenderInterests: '',
@@ -41,6 +42,7 @@ export default function SmeOnboardingPage() {
         csdNumber: userProfile.csdNumber || p.csdNumber,
         province: userProfile.province || p.province,
         categories: userProfile.categories || p.categories,
+        commodities: userProfile.commodities || p.commodities,
         preferredDepartments: (userProfile.preferredDepartments || []).join(', '),
         whatsAppNumber: userProfile.whatsAppNumber || userProfile.phoneNumber || p.whatsAppNumber,
         tenderInterests: userProfile.tenderInterests || p.tenderInterests,
@@ -63,7 +65,7 @@ export default function SmeOnboardingPage() {
       return
     }
     if (form.categories.length === 0) {
-      toast.error('Select at least one sector/category')
+      toast.error('Select at least one business category')
       return
     }
     if (!form.whatsAppNumber.trim()) {
@@ -83,6 +85,7 @@ export default function SmeOnboardingPage() {
         csdNumber: form.csdNumber,
         province: form.province,
         categories: form.categories,
+        commodities: form.commodities,
         preferredDepartments: departments,
         whatsAppNumber: form.whatsAppNumber,
         tenderInterests: form.tenderInterests,
@@ -105,104 +108,107 @@ export default function SmeOnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-emerald-50/20">
       <Header />
-      <main className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
+      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:py-12">
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-wider text-brand-700">
             SME onboarding
           </p>
           <h1 className="mt-2 text-3xl font-bold text-slate-900">Tell us about your business</h1>
-          <p className="mt-2 text-slate-600">
-            This helps us match compulsory briefings and Youth Agent support to your procurement
-            interests.
+          <p className="mt-2 max-w-2xl text-slate-600">
+            Help us match you with relevant government tenders and compulsory briefing sessions —
+            at no cost to browse or receive matches.
           </p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-5 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
+          className="space-y-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
         >
-          <div>
-            <label className="block text-sm font-semibold text-slate-700">Company name *</label>
-            <input
-              value={form.companyName}
-              onChange={(e) => setForm((p) => ({ ...p, companyName: e.target.value }))}
-              className={`mt-1 ${inputClass}`}
-              required
-            />
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-semibold text-slate-700">Company name *</label>
+              <input
+                value={form.companyName}
+                onChange={(e) => setForm((p) => ({ ...p, companyName: e.target.value }))}
+                className={`mt-1 ${inputClass}`}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700">CSD number</label>
+              <input
+                value={form.csdNumber}
+                onChange={(e) => setForm((p) => ({ ...p, csdNumber: e.target.value }))}
+                placeholder="Central Supplier Database registration"
+                className={`mt-1 ${inputClass}`}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700">Province *</label>
+              <select
+                value={form.province}
+                onChange={(e) => setForm((p) => ({ ...p, province: e.target.value }))}
+                className={`mt-1 ${inputClass}`}
+                required
+              >
+                <option value="">Select province</option>
+                {SA_PROVINCES.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-700">CSD number</label>
-            <input
-              value={form.csdNumber}
-              onChange={(e) => setForm((p) => ({ ...p, csdNumber: e.target.value }))}
-              placeholder="Central Supplier Database registration"
-              className={`mt-1 ${inputClass}`}
-            />
+
+          <SmeCategoryCommoditySelector
+            value={{ categories: form.categories, commodities: form.commodities }}
+            onChange={({ categories, commodities }) =>
+              setForm((p) => ({ ...p, categories, commodities }))
+            }
+          />
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-semibold text-slate-700">
+                Preferred departments
+              </label>
+              <input
+                value={form.preferredDepartments}
+                onChange={(e) => setForm((p) => ({ ...p, preferredDepartments: e.target.value }))}
+                placeholder="e.g. Health, Education, Public Works (comma-separated)"
+                className={`mt-1 ${inputClass}`}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700">WhatsApp number *</label>
+              <input
+                type="tel"
+                value={form.whatsAppNumber}
+                onChange={(e) => setForm((p) => ({ ...p, whatsAppNumber: e.target.value }))}
+                placeholder="+27..."
+                className={`mt-1 ${inputClass}`}
+                required
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-semibold text-slate-700">Tender interests</label>
+              <textarea
+                value={form.tenderInterests}
+                onChange={(e) => setForm((p) => ({ ...p, tenderInterests: e.target.value }))}
+                rows={3}
+                placeholder="Optional — describe the types of tenders and briefing support you need most"
+                className={`mt-1 ${inputClass}`}
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-700">Province *</label>
-            <select
-              value={form.province}
-              onChange={(e) => setForm((p) => ({ ...p, province: e.target.value }))}
-              className={`mt-1 ${inputClass}`}
-              required
-            >
-              <option value="">Select province</option>
-              {SA_PROVINCES.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-700">
-              Sectors / categories *
-            </label>
-            <CategorySelection
-              selectedCategories={form.categories}
-              onSelectionChange={(categories) => setForm((p) => ({ ...p, categories }))}
-              maxSelections={8}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-700">
-              Preferred departments
-            </label>
-            <input
-              value={form.preferredDepartments}
-              onChange={(e) => setForm((p) => ({ ...p, preferredDepartments: e.target.value }))}
-              placeholder="e.g. Health, Education, Public Works (comma-separated)"
-              className={`mt-1 ${inputClass}`}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-700">WhatsApp number *</label>
-            <input
-              type="tel"
-              value={form.whatsAppNumber}
-              onChange={(e) => setForm((p) => ({ ...p, whatsAppNumber: e.target.value }))}
-              placeholder="+27..."
-              className={`mt-1 ${inputClass}`}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-700">Tender interests</label>
-            <textarea
-              value={form.tenderInterests}
-              onChange={(e) => setForm((p) => ({ ...p, tenderInterests: e.target.value }))}
-              rows={4}
-              placeholder="Describe the types of tenders and briefing support you need most"
-              className={`mt-1 ${inputClass}`}
-            />
-          </div>
+
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-xl bg-brand-600 py-3 font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+            className="w-full rounded-xl bg-brand-600 py-3.5 font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-60"
           >
             {submitting ? 'Saving…' : 'Complete onboarding'}
           </button>

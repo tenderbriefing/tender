@@ -5,7 +5,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
-import CategorySelection from '@/components/auth/CommoditySelection'
+import SmeCategoryCommoditySelector from '@/components/sme/SmeCategoryCommoditySelector'
 import { toast } from 'react-hot-toast'
 import { 
   UserIcon,
@@ -30,7 +30,8 @@ const ProfilePage = () => {
     phoneNumber: '',
     location: '',
     skills: [] as string[],
-    categories: [] as string[]
+    categories: [] as string[],
+    commodities: [] as string[],
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -44,7 +45,8 @@ const ProfilePage = () => {
         phoneNumber: userProfile.phoneNumber || '',
         location: userProfile.location || '',
         skills: userProfile.skills || [],
-        categories: userProfile.categories || []
+        categories: userProfile.categories || [],
+        commodities: userProfile.commodities || [],
       })
     }
   }, [userProfile, user])
@@ -127,7 +129,8 @@ const ProfilePage = () => {
         phoneNumber: userProfile.phoneNumber || '',
         location: userProfile.location || '',
         skills: userProfile.skills || [],
-        categories: userProfile.categories || []
+        categories: userProfile.categories || [],
+        commodities: userProfile.commodities || [],
       })
     }
     setErrors({})
@@ -420,21 +423,40 @@ const ProfilePage = () => {
                         Business Categories
                       </label>
                       {isEditing ? (
-                        <CategorySelection
-                          selectedCategories={formData.categories}
-                          onSelectionChange={handleCategoriesChange}
-                          maxSelections={5}
+                        <SmeCategoryCommoditySelector
+                          value={{
+                            categories: formData.categories,
+                            commodities: formData.commodities,
+                          }}
+                          onChange={({ categories, commodities }) =>
+                            setFormData((prev) => ({ ...prev, categories, commodities }))
+                          }
+                          showFreeModelBanner={false}
                         />
                       ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {userProfile.categories?.map((category, index) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center px-2 py-1 bg-primary-100 text-primary-800 rounded-full text-sm"
-                            >
-                              {category}
-                            </span>
-                          )) || <p className="text-gray-500">No categories selected</p>}
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap gap-2">
+                            {userProfile.categories?.map((category, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-2 py-1 bg-primary-100 text-primary-800 rounded-full text-sm"
+                              >
+                                {category}
+                              </span>
+                            )) || <p className="text-gray-500">No categories selected</p>}
+                          </div>
+                          {userProfile.commodities && userProfile.commodities.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {userProfile.commodities.map((item, index) => (
+                                <span
+                                  key={index}
+                                  className="inline-flex items-center px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-sm"
+                                >
+                                  {item}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                       {errors.categories && (

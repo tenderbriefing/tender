@@ -33,7 +33,30 @@ function scoreTenderOpportunity(tender, smeProfile = {}) {
     opportunity += 8
   }
   const cats = smeProfile.categories || smeProfile.sectors || []
-  if (tender.industrySector && cats.some((c) => String(c).includes(tender.industrySector))) {
+  const commodities = smeProfile.commodities || []
+  const keywords = smeProfile.matchingKeywords || []
+  const haystack = [
+    tender.title,
+    tender.description,
+    tender.summary,
+    tender.category,
+    tender.industrySector,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  if (haystack) {
+    for (const cat of cats) {
+      if (haystack.includes(String(cat).toLowerCase())) suitability += 15
+    }
+    for (const item of commodities) {
+      if (haystack.includes(String(item).toLowerCase())) suitability += 12
+    }
+    for (const kw of keywords) {
+      if (kw.length >= 4 && haystack.includes(String(kw).toLowerCase())) suitability += 4
+    }
+  } else if (tender.industrySector && cats.some((c) => String(c).includes(tender.industrySector))) {
     suitability += 15
   }
 

@@ -15,6 +15,7 @@ import QuickActions from '@/components/dashboard/QuickActions'
 import CalendarIntegration from '@/components/dashboard/CalendarIntegration'
 import { TrustStrip } from '@/components/procurement/TrustDisclaimer'
 import SmeProcurementWorkspace from '@/components/sme/SmeProcurementWorkspace'
+import SmeHowItWorksCard from '@/components/sme/SmeHowItWorksCard'
 import OperationalIntelligencePanel from '@/components/procurement/OperationalIntelligencePanel'
 import { useOperationalIntelligence } from '@/hooks/useOperationalIntelligence'
 
@@ -63,6 +64,10 @@ export default function SmeDashboardPage() {
       </div>
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <DashboardWelcome userProfile={userProfile} email={sessionUser.email} />
+
+        <div className="mt-6">
+          <SmeHowItWorksCard />
+        </div>
 
         <div className="mt-6">
           <OperationalIntelligencePanel data={intelligence} loading={intelligenceLoading} compact />

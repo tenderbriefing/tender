@@ -58,6 +58,10 @@ export interface UserProfile {
 
   categories?: string[];
 
+  commodities?: string[];
+
+  matchingKeywords?: string[];
+
   sectors?: string[];
 
   provincesOfInterest?: string[];
@@ -164,6 +168,10 @@ async function writeRoleProfile(uid: string, userType: UserProfile['userType'], 
         location: profile.location || '',
 
         categories: profile.categories || [],
+
+        commodities: profile.commodities || [],
+
+        matchingKeywords: profile.matchingKeywords || [],
 
         sectors: profile.sectors || profile.categories || [],
 

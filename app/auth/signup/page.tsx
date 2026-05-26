@@ -10,7 +10,8 @@ import { SA_PROVINCES } from '@/lib/procurement/provinces'
 import { toast } from 'react-hot-toast'
 import AuthShell from '@/components/auth/AuthShell'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
-import CategorySelection from '@/components/auth/CommoditySelection'
+import SmeCategoryCommoditySelector from '@/components/sme/SmeCategoryCommoditySelector'
+import { buildMatchingKeywords } from '@/lib/data/csdProcurementCatalog'
 
 const inputClass =
   'w-full rounded-lg border border-slate-200 px-4 py-3 text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20'
@@ -33,6 +34,7 @@ export default function SignUpPage() {
     city: '',
     csdNumber: '',
     categories: [] as string[],
+    commodities: [] as string[],
     availabilityRadiusKm: 25,
     transportAvailable: true,
     preferredServiceAreas: [] as string[],
@@ -55,7 +57,7 @@ export default function SignUpPage() {
     if (formData.userType === 'sme' && !formData.companyName)
       newErrors.companyName = 'Company name is required'
     if (formData.userType === 'sme' && formData.categories.length === 0)
-      newErrors.categories = 'Select at least one sector/category'
+      newErrors.categories = 'Select at least one business category'
     if (!formData.phoneNumber) newErrors.phoneNumber = 'Phone is required'
     if (!formData.province) newErrors.province = 'Province is required'
     if (formData.userType === 'youth-agent' && !formData.city)
@@ -79,6 +81,11 @@ export default function SignUpPage() {
             province: formData.province,
             location: `${formData.city || ''} ${formData.province}`.trim(),
             categories: formData.categories,
+            commodities: formData.commodities,
+            matchingKeywords: buildMatchingKeywords(
+              formData.categories,
+              formData.commodities
+            ),
             sectors: formData.categories,
             provincesOfInterest: [formData.province],
             ...(formData.csdNumber ? { csdNumber: formData.csdNumber.trim() } : {}),
@@ -286,19 +293,18 @@ export default function SignUpPage() {
                 placeholder="Central Supplier Database number"
               />
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Sectors / categories of interest
-              </label>
-              <CategorySelection
-                selectedCategories={formData.categories}
-                onSelectionChange={(categories) =>
-                  setFormData((p) => ({ ...p, categories }))
+            <div className="sm:col-span-2">
+              <SmeCategoryCommoditySelector
+                value={{
+                  categories: formData.categories,
+                  commodities: formData.commodities,
+                }}
+                onChange={({ categories, commodities }) =>
+                  setFormData((p) => ({ ...p, categories, commodities }))
                 }
-                maxSelections={5}
               />
               {errors.categories && (
-                <p className="mt-1 text-sm text-red-600">{errors.categories}</p>
+                <p className="mt-2 text-sm text-red-600">{errors.categories}</p>
               )}
             </div>
           </>
