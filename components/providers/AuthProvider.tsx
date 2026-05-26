@@ -32,21 +32,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user)
-      
-      if (user) {
-        try {
-          const profile = await getUserProfile(user.uid)
+    const loadProfile = async (uid: string, attempt = 0) => {
+      try {
+        const profile = await getUserProfile(uid)
+        if (profile) {
           setUserProfile(profile)
-        } catch (error) {
-          console.error('Error fetching user profile:', error)
-          setUserProfile(null)
+          return
         }
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)))
+          return loadProfile(uid, attempt + 1)
+        }
+        setUserProfile(null)
+      } catch (error) {
+        console.error('Error fetching user profile:', error)
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 400))
+          return loadProfile(uid, attempt + 1)
+        }
+        setUserProfile(null)
+      }
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
+      setUser(nextUser)
+
+      if (nextUser) {
+        await loadProfile(nextUser.uid)
       } else {
         setUserProfile(null)
       }
-      
+
       setLoading(false)
     })
 

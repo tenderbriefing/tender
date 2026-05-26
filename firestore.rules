@@ -185,12 +185,16 @@ service cloud.firestore {
 
     match /agents/{agentId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin() || (isYouthAgent() && request.auth.uid == agentId);
+      allow create: if isAuthenticated() && request.auth.uid == agentId;
+      allow update: if isAdmin() || (isYouthAgent() && request.auth.uid == agentId);
+      allow delete: if isAdmin();
     }
 
     match /smes/{smeId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin() || (isSme() && request.auth.uid == smeId);
+      allow create: if isAuthenticated() && request.auth.uid == smeId;
+      allow update: if isAdmin() || (isSme() && request.auth.uid == smeId);
+      allow delete: if isAdmin();
     }
 
   match /smeWorkspace/{userId} {

@@ -20,7 +20,7 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'auth/invalid-api-key': 'Sign-in is misconfigured (API key). Contact support.',
   'auth/internal-error': 'Sign-in temporarily unavailable. Please try again in a moment.',
   'permission-denied':
-    'Signed in, but your profile could not be loaded. Contact support or complete registration again.',
+    'Your account was created but profile setup failed. Try signing in, or contact support if this continues.',
   'failed-precondition':
     'Database is not ready. Please refresh and try again.',
   'unavailable': 'Service temporarily unavailable. Please try again.',

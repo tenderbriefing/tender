@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { auth } from '@/lib/firebase'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
@@ -33,13 +34,14 @@ export default function AgentDashboardPage() {
     )
   }
 
-  if (!user) return null
+  const sessionUser = user ?? auth.currentUser
+  if (!sessionUser) return null
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <DashboardWelcome userProfile={userProfile} email={user.email} />
+        <DashboardWelcome userProfile={userProfile} email={sessionUser.email} />
 
         <div className="mt-8">
           <AgentTrustIndicators profile={userProfile} />

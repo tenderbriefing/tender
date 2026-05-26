@@ -12,6 +12,8 @@ import {
 
   updateProfile,
 
+  deleteUser,
+
 } from 'firebase/auth';
 
 import { doc, setDoc, getDoc } from 'firebase/firestore';
@@ -108,6 +110,25 @@ function nowIso() {
 
   return new Date().toISOString();
 
+}
+
+function waitForAuthSession(expectedUser: User): Promise<void> {
+  if (auth.currentUser?.uid === expectedUser.uid) {
+    return Promise.resolve()
+  }
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      unsubscribe()
+      reject(new Error('auth/session-timeout'))
+    }, 10000)
+    const unsubscribe = onAuthStateChanged(auth, (sessionUser) => {
+      if (sessionUser?.uid === expectedUser.uid) {
+        clearTimeout(timeout)
+        unsubscribe()
+        resolve()
+      }
+    })
+  })
 }
 
 
@@ -255,62 +276,46 @@ async function writeRoleProfile(uid: string, userType: UserProfile['userType'], 
 
 
 export const signUp = async (
-
   email: string,
-
   password: string,
-
   displayName: string,
-
   userType: 'sme' | 'youth-agent' | 'admin',
-
   additionalData?: Partial<UserProfile>
-
 ) => {
+  const normalizedEmail = normalizeAuthEmail(email)
+  const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
+  const user = userCredential.user
 
-  const normalizedEmail = normalizeAuthEmail(email);
+  try {
+    await updateProfile(user, { displayName: displayName.trim() })
 
-  const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+    const timestamp = nowIso()
+    const userProfile: UserProfile = sanitizeClientData({
+      uid: user.uid,
+      email: normalizedEmail,
+      displayName: displayName.trim(),
+      userType,
+      onboardingCompleted: true,
+      onboardingCompletedAt: timestamp,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      ...additionalData,
+    }) as UserProfile
 
-  const user = userCredential.user;
+    await setDoc(doc(db, 'users', user.uid), userProfile)
+    await writeRoleProfile(user.uid, userType, userProfile)
+    await waitForAuthSession(user)
 
-
-
-  await updateProfile(user, { displayName: displayName.trim() });
-
-
-
-  const timestamp = nowIso();
-
-  const userProfile: UserProfile = sanitizeClientData({
-
-    uid: user.uid,
-
-    email: normalizedEmail,
-
-    displayName: displayName.trim(),
-
-    userType,
-
-    createdAt: timestamp,
-
-    updatedAt: timestamp,
-
-    ...additionalData,
-
-  }) as UserProfile;
-
-
-
-  await setDoc(doc(db, 'users', user.uid), userProfile);
-
-  await writeRoleProfile(user.uid, userType, userProfile);
-
-
-
-  return { user, userProfile };
-
-};
+    return { user, userProfile }
+  } catch (error) {
+    try {
+      await deleteUser(user)
+    } catch {
+      /* account may already be removed or require re-auth */
+    }
+    throw error
+  }
+}
 
 
 

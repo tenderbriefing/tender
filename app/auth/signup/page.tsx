@@ -82,6 +82,7 @@ export default function SignUpPage() {
             sectors: formData.categories,
             provincesOfInterest: [formData.province],
             ...(formData.csdNumber ? { csdNumber: formData.csdNumber.trim() } : {}),
+            onboardingCompleted: true,
           }
         : {
             phoneNumber: formData.phoneNumber,
@@ -98,9 +99,10 @@ export default function SignUpPage() {
             missedBriefingCount: 0,
             completedBriefingCount: 0,
             acceptedBriefingCount: 0,
+            onboardingCompleted: true,
           }
 
-      await signUp(
+      const { userProfile } = await signUp(
         normalizeAuthEmail(formData.email),
         formData.password,
         formData.displayName.trim(),
@@ -108,8 +110,9 @@ export default function SignUpPage() {
         additionalData
       )
 
-      toast.success('Registration complete')
-      router.push(dashboardPathForRole(formData.userType))
+      const destination = dashboardPathForRole(userProfile?.userType || formData.userType)
+      toast.success("You're signed in — welcome to TenderBriefing")
+      router.replace(destination)
     } catch (error: unknown) {
       toast.error(getAuthErrorMessage(error, 'Registration failed. Please try again.'))
     } finally {

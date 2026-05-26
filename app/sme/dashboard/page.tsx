@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { auth } from '@/lib/firebase'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
@@ -24,14 +25,20 @@ export default function SmeDashboardPage() {
   const { data: intelligence, loading: intelligenceLoading } = useOperationalIntelligence()
 
   useEffect(() => {
-    if (!loading && !user) router.push('/auth/signin')
+    if (loading) return
+    const sessionUser = user ?? auth.currentUser
+    if (!sessionUser) {
+      router.replace('/auth/signin')
+      return
+    }
     if (
-      !loading &&
       userProfile &&
       userProfile.userType !== 'sme' &&
       userProfile.userType !== 'admin'
     ) {
-      router.push(userProfile.userType === 'youth-agent' ? '/agent/dashboard' : '/dashboard')
+      router.replace(
+        userProfile.userType === 'youth-agent' ? '/agent/dashboard' : '/dashboard'
+      )
     }
   }, [user, userProfile, loading, router])
 
@@ -43,7 +50,8 @@ export default function SmeDashboardPage() {
     )
   }
 
-  if (!user) return null
+  const sessionUser = user ?? auth.currentUser
+  if (!sessionUser) return null
 
   return (
     <div className="procurement-shell">
@@ -54,7 +62,7 @@ export default function SmeDashboardPage() {
         </div>
       </div>
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <DashboardWelcome userProfile={userProfile} email={user.email} />
+        <DashboardWelcome userProfile={userProfile} email={sessionUser.email} />
 
         <div className="mt-6">
           <OperationalIntelligencePanel data={intelligence} loading={intelligenceLoading} compact />
@@ -75,7 +83,7 @@ export default function SmeDashboardPage() {
           <RecentActivity userType="sme" />
         </div>
         <div className="mt-8">
-          <CalendarIntegration userType="sme" userEmail={user.email || undefined} />
+          <CalendarIntegration userType="sme" userEmail={sessionUser.email || undefined} />
         </div>
       </main>
       <Footer />
