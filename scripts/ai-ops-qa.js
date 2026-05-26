@@ -41,6 +41,7 @@ async function main() {
   check('no service account path leak', !/service-account\.json/.test(msg))
 
   const db = getFirestore()
+  const COLLECTIONS = require('../backend/services/ai/autonomousCollections')
   for (const col of [
     'gpsAttendanceLogs',
     'dispatchTracking',
@@ -48,6 +49,9 @@ async function main() {
     'financePayouts',
     'aiTenderInsights',
     'operationalIncidents',
+    COLLECTIONS.DISPATCH_AUTOMATION_LOGS,
+    COLLECTIONS.FRAUD_AUTOMATION_INSIGHTS,
+    COLLECTIONS.ATTENDANCE_RISK_PREDICTIONS,
   ]) {
     try {
       await db.collection(col).limit(1).get()

@@ -494,6 +494,13 @@ async function runScheduledAutomation(jobName = 'all') {
           'retry_failed_whatsapp',
           'sla_escalations',
           'smart_dispatch',
+          'smart_escalation',
+          'no_show_prediction',
+          'daily_procurement_brief',
+          'procurement_watchlists',
+          'procurement_memory',
+          'procurement_forecasting',
+          'calendar_intelligence',
           'smart_procurement_ingestion',
         ]
       : [jobName]
@@ -525,6 +532,41 @@ async function runScheduledAutomation(jobName = 'all') {
         results[job] = await aggregation.runSmartProcurementIngestion({
           includeEtenders: false,
         })
+        break
+      }
+      case 'smart_escalation': {
+        const smartEscalation = require('./ai/smartEscalationService')
+        results[job] = await smartEscalation.runSmartEscalations()
+        break
+      }
+      case 'no_show_prediction': {
+        const noShow = require('./ai/noShowPredictionService')
+        results[job] = await noShow.runNoShowSweep()
+        break
+      }
+      case 'daily_procurement_brief': {
+        const dailyBrief = require('./ai/dailyProcurementBriefService')
+        results[job] = await dailyBrief.runDailyProcurementBrief({ skipNotifications: false })
+        break
+      }
+      case 'procurement_watchlists': {
+        const watchlist = require('./ai/procurementWatchlistService')
+        results[job] = await watchlist.refreshAllWatchlists()
+        break
+      }
+      case 'procurement_memory': {
+        const memory = require('./ai/procurementMemoryService')
+        results[job] = await memory.refreshProcurementMemory()
+        break
+      }
+      case 'procurement_forecasting': {
+        const forecasting = require('./ai/procurementForecastingService')
+        results[job] = await forecasting.runProcurementForecasting()
+        break
+      }
+      case 'calendar_intelligence': {
+        const calendarIntel = require('./calendarIntelligenceService')
+        results[job] = await calendarIntel.analyzeCalendar()
         break
       }
       default:

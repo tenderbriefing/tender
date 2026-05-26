@@ -101,6 +101,16 @@ async function main() {
     typeof aggregation.runSmartProcurementIngestion === 'function'
   )
 
+  const rfqTriage = require('../backend/services/ai/rfqTriageService')
+  const triageSample = rfqTriage.classifyRfq(
+    { title: 'QA', readiness: { dispatchEligible: false, missingFields: ['province'], confidence: 0.4 } },
+    null
+  )
+  check('autonomous RFQ triage service', Boolean(triageSample.outcome))
+
+  const emailIngestion = require('../backend/services/procurement/emailIngestionService')
+  check('email ingestion triage hook', typeof emailIngestion.ingestEmail === 'function')
+
   const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
   check('pdf-parse dependency', Boolean(pkg.dependencies['pdf-parse']))
   check('npm script procurement-intelligence:qa', Boolean(pkg.scripts['procurement-intelligence:qa']))

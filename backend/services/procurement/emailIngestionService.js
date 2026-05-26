@@ -229,6 +229,14 @@ async function ingestEmail(payload) {
     updatedAt: new Date().toISOString(),
   })
   await ref.set(doc)
+
+  try {
+    const rfqTriage = require('../ai/rfqTriageService')
+    await rfqTriage.triageIngestedEmail(doc)
+  } catch {
+    /* triage optional */
+  }
+
   return doc
 }
 
@@ -266,7 +274,14 @@ async function rerunExtraction(id) {
     sanitizeFirestoreData({ extraction, updatedAt: new Date().toISOString() }),
     { merge: true }
   )
-  return getById(id)
+  const updated = await getById(id)
+  try {
+    const rfqTriage = require('../ai/rfqTriageService')
+    await rfqTriage.triageIngestedEmail(updated)
+  } catch {
+    /* optional */
+  }
+  return updated
 }
 
 async function listIngested({ limit = 50, forwardedByUid = null, status = null } = {}) {

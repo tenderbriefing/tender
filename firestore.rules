@@ -308,5 +308,78 @@ service cloud.firestore {
       allow update: if isAdmin()
         || (isSme() && resource.data.forwardedByUid == request.auth.uid);
     }
+
+    match /dispatchAutomationLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /attendanceRiskPredictions/{docId} {
+      allow read: if isAdmin()
+        || (isSme() && resource.data.requestId != null);
+      allow write: if false;
+    }
+
+    match /rfqTriageResults/{docId} {
+      allow read: if isAdmin()
+        || (isSme() && resource.data.forwardedByUid == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /procurementWatchlists/{smeUid} {
+      allow read: if isAdmin() || (isSme() && request.auth.uid == smeUid);
+      allow write: if false;
+    }
+
+    match /submissionReadinessReports/{docId} {
+      allow read: if isAdmin()
+        || (isSme() && docId.matches('^' + request.auth.uid + '(_|$)'));
+      allow write: if false;
+    }
+
+    match /dailyProcurementBriefs/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /workflowEscalations/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /executiveBriefingSummaries/{docId} {
+      allow read: if isAdmin() || isSme();
+      allow write: if false;
+    }
+
+    match /procurementMemory/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /pricingOptimizationLogs/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /fraudAutomationInsights/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /procurementForecasts/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /calendarIntelligenceInsights/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /enterpriseFieldOps/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
   }
 }

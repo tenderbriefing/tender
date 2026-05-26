@@ -83,6 +83,23 @@ async function main() {
   }
 
   try {
+    const liveDispatch = require('../backend/services/liveDispatchService')
+    const smart = await liveDispatch.runSmartDispatchAutomation()
+    check('auto-dispatch logic', smart.job === 'smart_dispatch')
+    report.smartDispatch = smart
+  } catch (e) {
+    check('auto-dispatch logic', false, e.message)
+  }
+
+  try {
+    const smartEscalation = require('../backend/services/ai/smartEscalationService')
+    const esc = await smartEscalation.runSmartEscalations()
+    check('smart escalation job', esc.job === 'smart_escalation')
+  } catch (e) {
+    check('smart escalation job', false, e.message)
+  }
+
+  try {
     const retryPolicy = require('../backend/services/whatsappRetryPolicy')
     check(
       'QA dup2 blocked from retry',
