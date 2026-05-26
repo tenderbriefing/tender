@@ -8,7 +8,7 @@ import { motion } from 'framer-motion'
 const indicators = [
   { label: 'Official eTenders OCDS API', icon: Database },
   { label: 'Automated enrichment pipeline', icon: RefreshCw },
-  { label: '15-minute production sync', icon: Activity },
+  { label: 'Official data sync', icon: Activity },
   { label: 'Enterprise-grade data integrity', icon: ShieldCheck },
 ]
 

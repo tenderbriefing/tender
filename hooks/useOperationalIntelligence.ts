@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { OperationalIntelligence } from '@/lib/procurement/operationalIntelligence'
+import { authFetch } from '@/lib/api/authenticatedFetch'
 
 export function useOperationalIntelligence(pollMs = 60000) {
   const [data, setData] = useState<OperationalIntelligence | null>(null)
@@ -9,7 +10,7 @@ export function useOperationalIntelligence(pollMs = 60000) {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch('/api/operational/intelligence')
+      const res = await authFetch('/api/operational/intelligence')
       const json = await res.json()
       if (json.success) setData(json.data)
     } finally {

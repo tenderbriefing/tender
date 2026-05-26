@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import type { IntegrationHealthItem, IntegrationsHealthResponse } from '@/lib/backend/integrations'
+import { authFetch } from '@/lib/api/authenticatedFetch'
 import {
   ArrowPathIcon,
   CheckCircleIcon,
@@ -46,7 +47,7 @@ export default function IntegrationsDashboard() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/integrations/health')
+      const res = await authFetch('/api/integrations/health')
       const json = await res.json()
       if (!res.ok || !json.ok) {
         throw new Error(json.error || 'Failed to load integration health')

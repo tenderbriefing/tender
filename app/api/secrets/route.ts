@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { secretManager } from '@/lib/secrets/secretManager';
+import { requireAdmin, isGuardResponse } from '@/lib/auth/apiGuards';
 
 export async function GET(request: NextRequest) {
+  const guard = await requireAdmin(request);
+  if (isGuardResponse(guard)) return guard;
+
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
@@ -37,16 +41,19 @@ export async function GET(request: NextRequest) {
           message: 'Invalid action specified'
         }, { status: 400 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Secret Manager API error:', error);
     return NextResponse.json({
       success: false,
-      message: error.message || 'An error occurred while processing the secret request'
+      message: error instanceof Error ? error.message : 'An error occurred while processing the secret request'
     }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await requireAdmin(request);
+  if (isGuardResponse(guard)) return guard;
+
   try {
     const { action, name, value } = await request.json();
 
@@ -99,11 +106,11 @@ export async function POST(request: NextRequest) {
           message: 'Invalid action specified'
         }, { status: 400 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Secret Manager API error:', error);
     return NextResponse.json({
       success: false,
-      message: error.message || 'An error occurred while processing the secret request'
+      message: error instanceof Error ? error.message : 'An error occurred while processing the secret request'
     }, { status: 500 });
   }
 }

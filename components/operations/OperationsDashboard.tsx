@@ -59,7 +59,7 @@ export default function OperationsDashboard() {
       const [reqRes, agentRes, syncRes, waRes] = await Promise.all([
         authFetch('/api/attendance-requests'),
         authFetch('/api/agents'),
-        fetch('/api/sync/status'),
+        authFetch('/api/sync/status'),
         authFetch('/api/admin/whatsapp-metrics'),
       ])
       const reqJson = await reqRes.json()

@@ -66,6 +66,12 @@ export function SyncHealthBadge({
   if (health === 'healthy' || health === 'ok') {
     return <span className={`${base} bg-green-50 text-green-900 border-green-200`}>Healthy</span>
   }
+  if (health === 'degraded') {
+    return <span className={`${base} bg-amber-50 text-amber-900 border-amber-200`}>Degraded</span>
+  }
+  if (health === 'syncing') {
+    return <span className={`${base} bg-blue-50 text-blue-900 border-blue-200`}>Syncing</span>
+  }
   if (health === 'unhealthy' || health === 'failed') {
     return <span className={`${base} bg-red-50 text-red-900 border-red-200`}>Failed</span>
   }

@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { backend } from '@/lib/backend/loadServices'
+import { requireAdmin, isGuardResponse } from '@/lib/auth/apiGuards'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,7 +39,10 @@ function isWithinMinutes(iso: string | undefined, minutes: number) {
   return Date.now() - t <= minutes * 60 * 1000
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const guard = await requireAdmin(request)
+  if (isGuardResponse(guard)) return guard
+
   try {
     const storage = backend.getStorage()
     const syncService = backend.incrementalSync()

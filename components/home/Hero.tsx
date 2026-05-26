@@ -36,7 +36,7 @@ export default function Hero() {
             className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-100 bg-brand-50 px-4 py-2 text-sm font-medium text-brand-800"
           >
             <Sparkles className="h-4 w-4 text-brand-600" />
-            Built on official procurement data · Updated every 15 minutes
+            Built on official procurement data · Regularly updated from government sources
             <span className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" />
           </motion.div>
 
@@ -67,7 +67,7 @@ export default function Hero() {
             className="mt-4 text-base text-slate-500"
           >
             Free tender discovery for SMEs. Verified agents nationwide. Official procurement
-            data refreshed every 15 minutes.
+            data refreshed from official sources.
           </motion.p>
 
           <motion.div

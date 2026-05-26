@@ -30,13 +30,8 @@ export function useTenderBriefings(options: UseTenderBriefingsOptions = {}) {
       const params = new URLSearchParams()
       if (compulsoryOnly) params.set('compulsoryOnly', 'true')
 
-      const [tendersRes, syncRes] = await Promise.all([
-        fetch(`/api/tender-briefings?${params.toString()}`),
-        fetch('/api/sync/status'),
-      ])
-
+      const tendersRes = await fetch(`/api/tender-briefings?${params.toString()}`)
       const tendersJson = await tendersRes.json()
-      const syncJson = await syncRes.json()
 
       if (tendersJson.success) {
         setTenders(tendersJson.data || [])
@@ -44,10 +39,6 @@ export function useTenderBriefings(options: UseTenderBriefingsOptions = {}) {
         setSyncStatus(tendersJson.syncStatus || {})
       } else {
         setError(tendersJson.error || 'Failed to load tenders')
-      }
-
-      if (syncJson.success) {
-        setSyncStatus((prev) => ({ ...prev, ...syncJson.data }))
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error')

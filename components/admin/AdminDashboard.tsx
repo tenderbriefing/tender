@@ -10,6 +10,7 @@ import { SyncHealthBadge } from '@/components/procurement/StatusBadges'
 import type { AdminDashboardStats } from '@/lib/tenderBriefing/types'
 import OperationalIntelligencePanel from '@/components/procurement/OperationalIntelligencePanel'
 import { useOperationalIntelligence } from '@/hooks/useOperationalIntelligence'
+import { authFetch } from '@/lib/api/authenticatedFetch'
 import {
   ArrowPathIcon,
   ChartBarIcon,
@@ -65,7 +66,7 @@ export default function AdminDashboard() {
 
   const loadStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/tender-briefings/stats/summary')
+      const res = await authFetch('/api/tender-briefings/stats/summary')
       const json = await res.json()
       if (json.success) setStats(json.data)
     } finally {
