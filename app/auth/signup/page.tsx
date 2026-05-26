@@ -14,7 +14,7 @@ import SmeCategoryCommoditySelector from '@/components/sme/SmeCategoryCommodityS
 import { buildMatchingKeywords } from '@/lib/data/csdProcurementCatalog'
 
 const inputClass =
-  'w-full rounded-lg border border-slate-200 px-4 py-3 text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20'
+  'w-full rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-700/20'
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -138,20 +138,20 @@ export default function SignUpPage() {
           : 'Register to accept briefing assignments and submit reports for SMEs.'
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-        <div className="grid grid-cols-2 gap-2 text-sm">
+      <form onSubmit={handleSubmit} className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+        <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 text-sm">
           <Link
             href="/auth/signup?type=sme"
-            className={`rounded-lg border py-2 text-center font-semibold ${
-              isSme ? 'border-brand-600 bg-brand-50 text-brand-800' : 'border-slate-200'
+            className={`rounded-lg py-2 text-center font-semibold transition ${
+              isSme ? 'bg-white text-brand-900 shadow-sm' : 'text-slate-600 hover:text-brand-800'
             }`}
           >
             SME
           </Link>
           <Link
             href="/auth/signup?type=youth-agent"
-            className={`rounded-lg border py-2 text-center font-semibold ${
-              !isSme ? 'border-brand-600 bg-brand-50 text-brand-800' : 'border-slate-200'
+            className={`rounded-lg py-2 text-center font-semibold transition ${
+              !isSme ? 'bg-white text-brand-900 shadow-sm' : 'text-slate-600 hover:text-brand-800'
             }`}
           >
             Youth Agent
@@ -341,19 +341,21 @@ export default function SignUpPage() {
         <button
           type="submit"
           disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-800 py-3.5 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-700 disabled:opacity-50"
         >
-          {loading ? <LoadingSpinner size="sm" /> : 'Create account'}
+          {loading ? <LoadingSpinner size="sm" /> : `Create ${isSme ? 'SME' : 'agent'} account`}
         </button>
       </form>
 
-      <p className="mt-4 text-center text-xs text-slate-500">
-        Youth Agents are verified before assignments. Status defaults to pending.
-      </p>
+      {!isSme && (
+        <p className="mt-4 text-center text-xs text-slate-500">
+          Youth Agents are verified before receiving assignments — status defaults to pending.
+        </p>
+      )}
 
       <p className="mt-4 text-center text-sm text-slate-600">
         Already registered?{' '}
-        <Link href="/auth/signin" className="font-semibold text-brand-700 hover:underline">
+        <Link href="/auth/signin" className="font-semibold text-brand-800 hover:underline">
           Sign in
         </Link>
       </p>

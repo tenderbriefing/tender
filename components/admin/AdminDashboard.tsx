@@ -26,20 +26,29 @@ function StatCard({
   label,
   value,
   icon: Icon,
+  tone = 'default',
 }: {
   label: string
   value: string | number
   icon: React.ComponentType<{ className?: string }>
+  tone?: 'default' | 'gold' | 'navy'
 }) {
+  const toneStyles = {
+    default: { card: 'border-slate-200 bg-white', icon: 'bg-brand-50 text-brand-800' },
+    gold: { card: 'border-accent-200 bg-gradient-to-br from-accent-50/60 to-white', icon: 'bg-accent-100 text-accent-700' },
+    navy: { card: 'border-brand-700 bg-gradient-to-br from-brand-900 to-brand-800 text-white', icon: 'bg-white/10 text-accent-400' },
+  }[tone]
+  const labelClass = tone === 'navy' ? 'text-brand-100/70' : 'text-slate-500'
+  const valueClass = tone === 'navy' ? 'text-white' : 'text-brand-900'
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className={`group relative overflow-hidden rounded-2xl border p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-card ${toneStyles.card}`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-slate-500">{label}</p>
-          <p className="mt-1 text-2xl font-bold text-slate-900">{value}</p>
+          <p className={`text-xs font-semibold uppercase tracking-wider ${labelClass}`}>{label}</p>
+          <p className={`mt-2 text-2xl font-bold ${valueClass}`}>{value}</p>
         </div>
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50">
-          <Icon className="h-6 w-6 text-brand-600" />
+        <div className={`flex h-11 w-11 items-center justify-center rounded-xl ring-1 ring-inset ${toneStyles.icon} ${tone === 'navy' ? 'ring-white/10' : 'ring-current/10'}`}>
+          <Icon className="h-6 w-6" />
         </div>
       </div>
     </div>
@@ -136,83 +145,68 @@ export default function AdminDashboard() {
     <div className="space-y-8">
       <OperationalIntelligencePanel data={intelligence} loading={intelligenceLoading} />
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-brand-700 uppercase tracking-wide">
-            Admin — procurement operations
-          </p>
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Admin Dashboard</h1>
-          <p className="mt-1 text-slate-600">
-            Official OCDS sync every 15 minutes · Firestore production data
-          </p>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Link
-            href="/admin/operations"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-800 hover:bg-brand-100"
-          >
-            Operations
-          </Link>
-          <Link
-            href="/admin/executive"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-          >
-            Executive
-          </Link>
-          <Link
-            href="/admin/pilot"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-900 hover:bg-emerald-100"
-          >
-            Pilot launch
-          </Link>
-          <Link
-            href="/admin/ai-insights"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-          >
-            AI insights
-          </Link>
-          <Link
-            href="/admin/procurement-intelligence"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-900 hover:bg-brand-100"
-          >
-            Procurement intel
-          </Link>
-          <Link
-            href="/admin/procurement-inbox"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-900 hover:bg-violet-100"
-          >
-            RFQ inbox
-          </Link>
-          <Link
-            href="/admin/finance"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-          >
-            Finance
-          </Link>
-          <Link
-            href="/admin/integrations"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-          >
-            Integrations
-          </Link>
+      <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 px-6 py-8 text-white shadow-card sm:px-10">
+        <div className="pointer-events-none absolute -right-32 -top-32 h-64 w-64 rounded-full bg-accent-500/15 blur-3xl" />
+        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-accent-400">
+              <span className="h-1.5 w-6 rounded-full bg-accent-500" />
+              Admin · Procurement operations
+            </span>
+            <h1 className="mt-3 text-3xl font-bold text-white sm:text-4xl">Admin Command Center</h1>
+            <p className="mt-2 text-brand-100/80">
+              Official OCDS sync · Firestore production data · Live operational telemetry
+            </p>
+          </div>
           <button
             type="button"
             onClick={runSync}
             disabled={isRunning}
-            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 self-start rounded-xl bg-accent-500 px-5 py-3 text-sm font-semibold text-brand-900 shadow-gold transition hover:bg-accent-400 disabled:opacity-60 md:self-auto"
           >
             <ArrowPathIcon className={`h-5 w-5 ${isRunning ? 'animate-spin' : ''}`} />
-            {isRunning ? 'Sync Running…' : 'Run Sync Now'}
+            {isRunning ? 'Sync running…' : 'Run sync now'}
           </button>
+        </div>
+
+        <div className="relative mt-6 flex flex-wrap gap-2">
+          {[
+            { href: '/admin/operations', label: 'Operations' },
+            { href: '/admin/executive', label: 'Executive' },
+            { href: '/admin/pilot', label: 'Pilot launch', accent: true },
+            { href: '/admin/ai-insights', label: 'AI insights' },
+            { href: '/admin/procurement-intelligence', label: 'Procurement intel' },
+            { href: '/admin/procurement-inbox', label: 'RFQ inbox' },
+            { href: '/admin/finance', label: 'Finance' },
+            { href: '/admin/integrations', label: 'Integrations' },
+          ].map((tab) => (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={`inline-flex min-h-[36px] items-center rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
+                tab.accent
+                  ? 'bg-accent-500/20 text-accent-300 ring-1 ring-inset ring-accent-400/40 hover:bg-accent-500/30'
+                  : 'bg-white/5 text-white/80 ring-1 ring-inset ring-white/10 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              {tab.label}
+            </Link>
+          ))}
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <ServerStackIcon className="h-5 w-5 text-brand-600" />
-            Sync Status
-          </h2>
+          <div>
+            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-brand-800">
+              <span className="h-1.5 w-6 rounded-full bg-accent-500" />
+              System health
+            </span>
+            <h2 className="mt-2 flex items-center gap-2 text-xl font-bold text-brand-900">
+              <ServerStackIcon className="h-5 w-5 text-accent-500" />
+              Sync Status
+            </h2>
+          </div>
           <div className="flex items-center gap-2">
             <SyncHealthBadge health={apiHealth} isRunning={isRunning} />
             <span className="text-xs text-slate-500">
@@ -220,20 +214,20 @@ export default function AdminDashboard() {
             </span>
           </div>
         </div>
-        <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
-            <dt className="text-slate-500">Firestore adapter</dt>
-            <dd className="mt-1 font-semibold text-slate-900">{adapter}</dd>
+        <dl className="mt-6 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-brand-700">Firestore adapter</dt>
+            <dd className="mt-2 font-semibold text-brand-900">{adapter}</dd>
           </div>
-          <div className="rounded-lg border border-green-100 bg-green-50 p-4">
-            <dt className="text-green-800">Last successful sync</dt>
-            <dd className="mt-1 font-semibold text-green-900">
+          <div className="rounded-xl border border-accent-200 bg-accent-50/60 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-accent-700">Last successful sync</dt>
+            <dd className="mt-2 font-semibold text-brand-900">
               {formatWhen(syncState?.lastSuccessfulSync)}
             </dd>
           </div>
-          <div className="rounded-lg border border-red-100 bg-red-50 p-4">
-            <dt className="text-red-800">Last failed sync</dt>
-            <dd className="mt-1 font-semibold text-red-900">
+          <div className="rounded-xl border border-red-100 bg-red-50/60 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-red-700">Last failed sync</dt>
+            <dd className="mt-2 font-semibold text-red-900">
               {formatWhen(
                 (syncState as { lastFailedSyncAt?: string })?.lastFailedSyncAt ||
                   (syncState as { lastFailedSync?: string })?.lastFailedSync
@@ -245,19 +239,19 @@ export default function AdminDashboard() {
               </p>
             )}
           </div>
-          <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
-            <dt className="text-slate-500">Scheduler</dt>
-            <dd className="mt-1 font-semibold text-slate-900">
-              Cloud Scheduler · every 15 min (production)
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Scheduler</dt>
+            <dd className="mt-2 font-semibold text-brand-900">
+              Cloud Scheduler · production
             </dd>
           </div>
-          <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
-            <dt className="text-slate-500">OCDS API health</dt>
-            <dd className="mt-1 font-semibold capitalize text-slate-900">{apiHealth}</dd>
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">OCDS API health</dt>
+            <dd className="mt-2 font-semibold capitalize text-brand-900">{apiHealth}</dd>
           </div>
-          <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
-            <dt className="text-slate-500">Total Tender Opportunities</dt>
-            <dd className="mt-1 font-semibold text-slate-900">
+          <div className="rounded-xl border border-brand-100 bg-gradient-to-br from-brand-900 to-brand-800 p-4 text-white">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-accent-400">Total opportunities</dt>
+            <dd className="mt-2 text-2xl font-bold">
               {syncState?.tenderCount ?? stats?.totalBriefings ?? 0}
             </dd>
           </div>
@@ -312,36 +306,44 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900">Operational health</h2>
-          <dl className="mt-4 space-y-3 text-sm">
-            <div className="flex justify-between">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-brand-800">
+            <span className="h-1.5 w-6 rounded-full bg-accent-500" />
+            Operations
+          </span>
+          <h2 className="mt-2 text-lg font-bold text-brand-900">Operational health</h2>
+          <dl className="mt-5 space-y-3 text-sm">
+            <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
               <dt className="text-slate-500">Enrichment scraper</dt>
-              <dd className="font-medium">{syncState?.scraperHealth || 'unknown'}</dd>
+              <dd className="font-semibold text-brand-900">{syncState?.scraperHealth || 'unknown'}</dd>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
               <dt className="text-slate-500">SME attendance requests</dt>
-              <dd className="font-medium">{stats?.smeAttendanceRequests ?? 0}</dd>
+              <dd className="font-semibold text-brand-900">{stats?.smeAttendanceRequests ?? 0}</dd>
             </div>
-            <div className="flex justify-between">
-              <dt className="text-slate-500">Failed syncs / errors</dt>
-              <dd className="font-medium text-red-700">
+            <div className={`flex justify-between rounded-xl px-4 py-3 ${syncFailed ? 'bg-red-50 text-red-900' : 'bg-accent-50/60'}`}>
+              <dt className={syncFailed ? 'text-red-700' : 'text-accent-700'}>Failed syncs / errors</dt>
+              <dd className="font-semibold">
                 {syncFailed ? 'Review sync status' : 'None recent'}
               </dd>
             </div>
           </dl>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-            <MapPinIcon className="h-5 w-5 text-brand-600" />
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-brand-800">
+            <span className="h-1.5 w-6 rounded-full bg-accent-500" />
+            Coverage
+          </span>
+          <h2 className="mt-2 flex items-center gap-2 text-lg font-bold text-brand-900">
+            <MapPinIcon className="h-5 w-5 text-accent-500" />
             Province coverage
           </h2>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             {(stats?.provincesRepresented || []).map((p) => (
               <span
                 key={p}
-                className="rounded border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-medium text-slate-700"
+                className="rounded-full border border-brand-100 bg-brand-50/60 px-3 py-1 text-sm font-medium text-brand-800"
               >
                 {p}
               </span>
@@ -353,15 +355,31 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900">Top departments</h2>
-        <div className="mt-4 space-y-2">
-          {(stats?.topDepartments || []).map((dept) => (
-            <div key={dept.name} className="flex justify-between text-sm">
-              <span className="text-slate-700">{dept.name}</span>
-              <span className="font-semibold text-slate-900">{dept.count}</span>
-            </div>
-          ))}
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-brand-800">
+          <span className="h-1.5 w-6 rounded-full bg-accent-500" />
+          Procurement intelligence
+        </span>
+        <h2 className="mt-2 text-lg font-bold text-brand-900">Top departments</h2>
+        <div className="mt-5 space-y-2">
+          {(stats?.topDepartments || []).map((dept) => {
+            const max = Math.max(...(stats?.topDepartments?.map((d) => d.count) || [1]), 1)
+            const pct = Math.round((dept.count / max) * 100)
+            return (
+              <div key={dept.name}>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-700">{dept.name}</span>
+                  <span className="font-semibold text-brand-900">{dept.count}</span>
+                </div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-brand-800 to-accent-500"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            )
+          })}
           {!stats?.topDepartments?.length && (
             <p className="text-sm text-slate-500">Run sync to load department statistics.</p>
           )}
@@ -369,10 +387,10 @@ export default function AdminDashboard() {
       </div>
 
       <div className="flex flex-wrap gap-4 text-sm">
-        <Link href="/api/health/firestore" className="font-semibold text-brand-700 hover:underline">
+        <Link href="/api/health/firestore" className="font-semibold text-brand-800 hover:text-accent-600">
           Firestore health →
         </Link>
-        <Link href="/api/sync/status" className="font-semibold text-brand-700 hover:underline">
+        <Link href="/api/sync/status" className="font-semibold text-brand-800 hover:text-accent-600">
           Sync status JSON →
         </Link>
       </div>

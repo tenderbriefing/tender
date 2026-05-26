@@ -12,7 +12,10 @@ const LoadingSpinner = ({ size = 'md', className = '' }: LoadingSpinnerProps) =>
 
   return (
     <div className={`flex justify-center items-center ${className}`}>
-      <div className={`animate-spin rounded-full border-2 border-gray-300 border-t-primary-600 ${sizeClasses[size]}`}></div>
+      <div className={`relative ${sizeClasses[size]}`}>
+        <div className="absolute inset-0 animate-spin rounded-full border-2 border-slate-200 border-t-brand-800" />
+        <div className="absolute inset-1 animate-spin rounded-full border-2 border-transparent border-t-accent-500" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
+      </div>
     </div>
   )
 }

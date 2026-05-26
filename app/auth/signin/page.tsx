@@ -11,7 +11,7 @@ import AuthShell from '@/components/auth/AuthShell'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 const inputClass =
-  'w-full rounded-lg border border-slate-200 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20'
+  'w-full rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-700/20'
 
 function SignInForm() {
   const router = useRouter()
@@ -99,22 +99,32 @@ function SignInForm() {
         <button
           type="submit"
           disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-800 py-3.5 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-700 disabled:opacity-50"
         >
-          {loading ? <LoadingSpinner size="sm" /> : 'Sign In'}
+          {loading ? <LoadingSpinner size="sm" /> : 'Sign in to TenderBriefing'}
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-600">
-        No account?{' '}
-        <Link href="/auth/role-selection" className="font-semibold text-brand-700 hover:underline">
-          Register
+      <div className="mt-6 flex items-center gap-4">
+        <span className="h-px flex-1 bg-slate-200" />
+        <span className="text-xs font-medium uppercase tracking-wider text-slate-400">or</span>
+        <span className="h-px flex-1 bg-slate-200" />
+      </div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <Link
+          href="/auth/role-selection"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-brand-200 bg-white px-4 py-3 text-sm font-semibold text-brand-900 transition hover:border-brand-400 hover:bg-brand-50"
+        >
+          Create account
         </Link>
-        {' · '}
-        <Link href="/tenders" className="font-semibold text-slate-700 hover:underline">
-          Browse tenders (public)
+        <Link
+          href="/tenders"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+        >
+          Browse tenders
         </Link>
-      </p>
+      </div>
     </AuthShell>
   )
 }
