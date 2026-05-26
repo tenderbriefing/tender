@@ -8,7 +8,7 @@ const STYLES: Record<
 > = {
   open: {
     label: 'Open',
-    className: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
+    className: 'bg-brand-50 text-brand-800 ring-brand-200',
   },
   closing_soon: {
     label: 'Closing Soon',
@@ -16,7 +16,7 @@ const STYLES: Record<
   },
   closed: {
     label: 'Closed',
-    className: 'bg-red-50 text-red-800 ring-red-200',
+    className: 'bg-slate-100 text-slate-700 ring-slate-200',
   },
   briefing_available: {
     label: 'Briefing Available',
@@ -24,7 +24,7 @@ const STYLES: Record<
   },
   compulsory_briefing: {
     label: 'Compulsory Briefing',
-    className: 'bg-violet-50 text-violet-800 ring-violet-200',
+    className: 'bg-accent-50 text-accent-800 ring-accent-200',
   },
 }
 

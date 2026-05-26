@@ -35,7 +35,7 @@ export default function TenderDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-emerald-50/30">
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/30">
         <Header />
         <div className="flex items-center justify-center py-32">
           <LoadingSpinner size="lg" />
@@ -47,7 +47,7 @@ export default function TenderDetailsPage() {
 
   if (!tender) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-emerald-50/30">
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/30">
         <Header />
         <main className="max-w-3xl mx-auto px-4 py-16 text-center">
           <p className="text-slate-600">Tender opportunity not found.</p>
@@ -61,7 +61,7 @@ export default function TenderDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-emerald-50/30">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/30">
       <Header />
       <div className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-5xl px-4 py-2 sm:px-6 lg:px-8">

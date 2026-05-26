@@ -36,7 +36,7 @@ const Stats = () => {
   const gradientColors = [
     'from-purple-500 to-pink-500',
     'from-blue-500 to-cyan-500',
-    'from-green-500 to-emerald-500',
+    'from-brand-700 to-brand-900',
     'from-yellow-500 to-orange-500'
   ]
 

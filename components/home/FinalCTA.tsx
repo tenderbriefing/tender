@@ -15,10 +15,10 @@ export default function FinalCTA() {
           initial={{ opacity: 0, scale: 0.98 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-brand-800 px-8 py-16 text-center shadow-card sm:px-16"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 px-8 py-16 text-center shadow-card sm:px-16"
         >
-          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
-          <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-brand-400/20 blur-2xl" />
+          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-accent-500/20 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-brand-500/30 blur-2xl" />
 
           <h2 className="relative text-3xl font-bold text-white sm:text-4xl">
             Ready to Stay Ahead of Tender Opportunities?
@@ -32,7 +32,7 @@ export default function FinalCTA() {
             {user ? (
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 font-semibold text-brand-800 shadow-lg transition hover:bg-brand-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-accent-500 px-8 py-4 font-semibold text-brand-900 shadow-gold transition hover:bg-accent-400"
               >
                 Go to Dashboard
                 <ArrowRight className="h-5 w-5" />
@@ -41,9 +41,9 @@ export default function FinalCTA() {
               <>
                 <Link
                   href="/sme/onboarding"
-                  className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 font-semibold text-brand-800 shadow-lg transition hover:bg-brand-50"
+                  className="inline-flex items-center gap-2 rounded-xl bg-accent-500 px-8 py-4 font-semibold text-brand-900 shadow-gold transition hover:bg-accent-400"
                 >
-                  SME — Start pilot
+                  SME — Start free
                   <ArrowRight className="h-5 w-5" />
                 </Link>
                 <Link

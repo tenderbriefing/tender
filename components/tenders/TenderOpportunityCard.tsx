@@ -18,7 +18,7 @@ export default function TenderOpportunityCard({ tender }: TenderOpportunityCardP
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-xs font-bold text-emerald-800">
+          <p className="font-mono text-xs font-bold text-brand-800">
             {tender.tenderNumber || 'Tender'}
           </p>
           <h3 className="mt-1 line-clamp-2 text-base font-semibold leading-snug text-slate-900">
@@ -53,7 +53,7 @@ export default function TenderOpportunityCard({ tender }: TenderOpportunityCardP
 
       <Link
         href={`/tenders/${tender.id}`}
-        className="mt-4 flex min-h-[44px] w-full items-center justify-center rounded-xl bg-emerald-600 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+        className="mt-4 flex min-h-[44px] w-full items-center justify-center rounded-xl bg-brand-800 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
       >
         View Details
       </Link>

@@ -108,7 +108,7 @@ export default function SmeOnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-emerald-50/20">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/30">
       <Header />
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:py-12">
         <div className="mb-8">

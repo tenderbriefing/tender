@@ -36,7 +36,7 @@ function SortableHeader({
       <button
         type="button"
         onClick={() => onSort(column)}
-        className="inline-flex items-center gap-1 text-left text-xs font-bold uppercase tracking-wide text-slate-600 hover:text-emerald-800"
+        className="inline-flex items-center gap-1 text-left text-xs font-bold uppercase tracking-wide text-slate-600 hover:text-brand-800"
       >
         {label}
         {active &&
@@ -63,7 +63,7 @@ export default function TenderTable({ tenders, sortKey, sortDir, onSort }: Tende
           <col className="w-[12%]" />
           <col className="w-[10%]" />
         </colgroup>
-        <thead className="bg-gradient-to-r from-slate-50 to-emerald-50/40">
+        <thead className="bg-gradient-to-r from-slate-50 to-brand-50/40">
           <tr>
             <SortableHeader
               label="Tender #"
@@ -111,7 +111,7 @@ export default function TenderTable({ tenders, sortKey, sortDir, onSort }: Tende
             return (
               <tr
                 key={tender.id}
-                className="group transition-colors hover:bg-emerald-50/40"
+                className="group transition-colors hover:bg-brand-50/40"
               >
                 <td className="px-3 py-4 align-top">
                   <span className="block truncate font-mono text-[11px] font-semibold text-slate-800">
@@ -119,7 +119,7 @@ export default function TenderTable({ tenders, sortKey, sortDir, onSort }: Tende
                   </span>
                 </td>
                 <td className="px-3 py-4 align-top">
-                  <p className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900 group-hover:text-emerald-800">
+                  <p className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900 group-hover:text-brand-800">
                     {tender.title}
                   </p>
                   <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-slate-500">
@@ -147,7 +147,7 @@ export default function TenderTable({ tenders, sortKey, sortDir, onSort }: Tende
                 <td className="px-2 py-4 align-top text-right">
                   <Link
                     href={`/tenders/${tender.id}`}
-                    className="inline-flex min-h-[36px] items-center justify-center rounded-lg bg-emerald-600 px-2 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-emerald-700 hover:shadow whitespace-nowrap"
+                    className="inline-flex min-h-[36px] items-center justify-center rounded-lg bg-brand-800 px-2 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-brand-700 hover:shadow whitespace-nowrap"
                   >
                     View Details
                   </Link>

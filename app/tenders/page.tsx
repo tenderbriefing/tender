@@ -113,7 +113,7 @@ export default function TenderOpportunitiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-emerald-50/30">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/30">
       <Header />
 
       <div className="border-b border-slate-200/80 bg-white/90 backdrop-blur-sm">
@@ -148,7 +148,7 @@ export default function TenderOpportunitiesPage() {
                 type="button"
                 onClick={handleSync}
                 disabled={refreshing}
-                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand-800 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-50"
               >
                 <ArrowPathIcon className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} aria-hidden />
                 Sync now
@@ -160,15 +160,15 @@ export default function TenderOpportunitiesPage() {
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {!user && tenders.length > 0 && (
-          <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-emerald-900">
+          <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-accent-200 bg-accent-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-brand-900">
               Browse opportunities publicly. Sign in as an SME to request Youth Agent briefing
               attendance.
             </p>
             <button
               type="button"
               onClick={() => router.push('/auth/signin')}
-              className="shrink-0 min-h-[44px] rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
+              className="shrink-0 min-h-[44px] rounded-xl bg-brand-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
             >
               Sign in
             </button>
@@ -271,7 +271,7 @@ export default function TenderOpportunitiesPage() {
                     type="button"
                     disabled={!hasNext}
                     onClick={goNext}
-                    className="min-h-[44px] rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
+                    className="min-h-[44px] rounded-xl bg-brand-800 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-40"
                   >
                     Next
                   </button>

@@ -54,7 +54,7 @@ const CTA = () => {
               <ul className="space-y-4">
                 {benefits.map((benefit, index) => (
                   <li key={index} className="flex items-center group/item">
-                    <div className="h-6 w-6 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mr-4 group-hover/item:scale-110 transition-transform duration-300">
+                    <div className="h-6 w-6 bg-gradient-to-br from-accent-500 to-accent-600 rounded-full flex items-center justify-center mr-4 group-hover/item:scale-110 transition-transform duration-300">
                       <CheckCircleIcon className="h-4 w-4 text-white" />
                     </div>
                     <span className="text-gray-300 group-hover/item:text-white transition-colors duration-300">{benefit}</span>
@@ -85,7 +85,7 @@ const CTA = () => {
                   <span className="text-gray-300 group-hover/item:text-white transition-colors duration-300">Professional development</span>
                 </li>
                 <li className="flex items-center group/item">
-                  <div className="h-6 w-6 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mr-4 group-hover/item:scale-110 transition-transform duration-300">
+                  <div className="h-6 w-6 bg-gradient-to-br from-accent-500 to-accent-600 rounded-full flex items-center justify-center mr-4 group-hover/item:scale-110 transition-transform duration-300">
                     <CheckCircleIcon className="h-4 w-4 text-white" />
                   </div>
                   <span className="text-gray-300 group-hover/item:text-white transition-colors duration-300">Networking opportunities</span>

@@ -43,7 +43,7 @@ const HowItWorks = () => {
   const gradientColors = [
     'from-purple-500 to-pink-500',
     'from-blue-500 to-cyan-500',
-    'from-green-500 to-emerald-500',
+    'from-brand-700 to-accent-500',
     'from-yellow-500 to-orange-500',
     'from-indigo-500 to-purple-500'
   ]
@@ -133,7 +133,7 @@ const HowItWorks = () => {
             
             <div className="group p-8 bg-white/70 backdrop-blur-sm rounded-3xl border border-white/50 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-2">
               <div className="text-center">
-                <div className="h-16 w-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <div className="h-16 w-16 bg-gradient-to-br from-brand-700 to-brand-900 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>

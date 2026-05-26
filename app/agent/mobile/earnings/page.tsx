@@ -63,9 +63,9 @@ export default function AgentMobileEarningsPage() {
               <p className="text-xs text-amber-800">Pending payout</p>
               <p className="text-xl font-bold text-amber-900">{zar(data.pendingPayoutCents)}</p>
             </div>
-            <div className="rounded-2xl bg-emerald-50 p-4">
-              <p className="text-xs text-emerald-800">Paid total</p>
-              <p className="text-xl font-bold text-emerald-900">{zar(data.paidEarningsCents)}</p>
+            <div className="rounded-2xl bg-accent-50 p-4">
+              <p className="text-xs text-brand-800">Paid total</p>
+              <p className="text-xl font-bold text-brand-900">{zar(data.paidEarningsCents)}</p>
             </div>
           </div>
           <section className="rounded-2xl bg-white p-4 shadow-sm">

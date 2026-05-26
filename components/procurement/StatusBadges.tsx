@@ -42,7 +42,7 @@ export function AgentVerificationBadge({
     },
     verified: {
       label: 'Verified Agent',
-      className: 'bg-green-50 text-green-900 border-green-200',
+      className: 'bg-accent-50 text-accent-800 border-accent-300',
     },
     suspended: {
       label: 'Suspended',
@@ -64,7 +64,7 @@ export function SyncHealthBadge({
     return <span className={`${base} bg-blue-50 text-blue-900 border-blue-200`}>Running</span>
   }
   if (health === 'healthy' || health === 'ok') {
-    return <span className={`${base} bg-green-50 text-green-900 border-green-200`}>Healthy</span>
+    return <span className={`${base} bg-brand-50 text-brand-900 border-brand-200`}>Healthy</span>
   }
   if (health === 'degraded') {
     return <span className={`${base} bg-amber-50 text-amber-900 border-amber-200`}>Degraded</span>
@@ -115,7 +115,7 @@ export function DeclinedBadge() {
 
 export function ReliableAgentBadge() {
   return (
-    <span className={`${base} bg-green-50 text-green-900 border-green-300`}>Reliable Agent</span>
+    <span className={`${base} bg-accent-50 text-accent-800 border-accent-300`}>Reliable Agent</span>
   )
 }
 

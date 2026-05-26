@@ -70,8 +70,8 @@ function PaymentSuccessContent() {
     <div className="min-h-screen bg-slate-50">
       <Header />
       <main className="mx-auto max-w-lg px-4 py-12">
-        <div className="rounded-2xl border border-emerald-200 bg-white p-8 shadow-sm text-center">
-          <CheckCircleIcon className="mx-auto h-12 w-12 text-emerald-600" />
+        <div className="rounded-2xl border border-accent-200 bg-white p-8 shadow-sm text-center">
+          <CheckCircleIcon className="mx-auto h-12 w-12 text-accent-500" />
           <h1 className="mt-4 text-2xl font-bold text-slate-900">Payment received</h1>
           <p className="mt-2 text-slate-600">{message}</p>
           {request && (

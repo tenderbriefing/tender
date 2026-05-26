@@ -19,15 +19,15 @@ const cards = [
     key: 'total',
     label: 'Total Opportunities',
     icon: BriefcaseIcon,
-    accent: 'from-emerald-500 to-emerald-600',
-    ring: 'ring-emerald-100',
+    accent: 'from-brand-700 to-brand-800',
+    ring: 'ring-brand-100',
   },
   {
     key: 'open',
     label: 'Open Tenders',
     icon: CalendarDaysIcon,
-    accent: 'from-emerald-600 to-teal-600',
-    ring: 'ring-emerald-100',
+    accent: 'from-brand-600 to-brand-700',
+    ring: 'ring-brand-100',
   },
   {
     key: 'closingSoon',
@@ -40,8 +40,8 @@ const cards = [
     key: 'compulsory',
     label: 'Compulsory Briefings',
     icon: ExclamationTriangleIcon,
-    accent: 'from-violet-500 to-purple-600',
-    ring: 'ring-violet-100',
+    accent: 'from-accent-500 to-accent-600',
+    ring: 'ring-accent-100',
   },
 ] as const
 
