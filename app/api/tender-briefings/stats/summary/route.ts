@@ -46,7 +46,9 @@ async function buildStats(): Promise<AdminDashboardStats> {
 
 
 
-  const publicTenders = tenders.filter((t) => t.visibility !== 'private')
+  const compulsoryPublicTenders = tenders.filter(
+    (t) => t.visibility !== 'private' && t.briefingCompulsory === true
+  )
 
   const departmentCounts: Record<string, number> = {}
 
@@ -54,7 +56,7 @@ async function buildStats(): Promise<AdminDashboardStats> {
 
 
 
-  for (const tender of publicTenders) {
+  for (const tender of compulsoryPublicTenders) {
 
     if (tender.department) {
 
@@ -82,9 +84,9 @@ async function buildStats(): Promise<AdminDashboardStats> {
 
   return {
 
-    totalBriefings: publicTenders.length,
+    totalBriefings: compulsoryPublicTenders.length,
 
-    compulsoryBriefings: publicTenders.filter((t) => t.briefingCompulsory).length,
+    compulsoryBriefings: compulsoryPublicTenders.length,
 
     activeSmes: new Set(requests.map((r) => r.smeId)).size,
 
@@ -110,7 +112,7 @@ async function buildStats(): Promise<AdminDashboardStats> {
 
     topDepartments,
 
-    closingWithin7Days: publicTenders.filter((t) => {
+    closingWithin7Days: compulsoryPublicTenders.filter((t) => {
 
       const days = t.closingDate ? daysUntil(t.closingDate) : null
 

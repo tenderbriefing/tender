@@ -128,8 +128,8 @@ export default function TenderOpportunitiesPage() {
 
       <ProcurementPageHeader
         kicker="Procurement intelligence"
-        title="Tender opportunities"
-        description="Scan live government tenders, filter by province and briefing requirements, and open full tender intelligence in one click."
+        title="Compulsory briefing opportunities"
+        description="Every tender shown requires attendance at a compulsory briefing session. Filter by province and category, then request a verified Youth Agent if you cannot attend in person."
         meta={
           lastUpdated ? (
             <span className="text-sm text-slate-500">

@@ -46,8 +46,8 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-4xl font-bold tracking-tight text-brand-900 sm:text-5xl lg:text-6xl lg:leading-[1.1]"
           >
-            South Africa&apos;s{' '}
-            <span className="bg-gradient-to-r from-brand-800 to-accent-600 bg-clip-text text-transparent">Procurement Command Center</span>
+            Never miss a{' '}
+            <span className="bg-gradient-to-r from-brand-800 to-accent-600 bg-clip-text text-transparent">compulsory briefing</span> again
           </motion.h1>
 
           <motion.p
@@ -56,8 +56,10 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mx-auto mt-6 max-w-3xl text-lg text-slate-600 sm:text-xl leading-relaxed"
           >
-            Discover compulsory tender briefings, request Youth Agent attendance support,
-            and receive structured briefing reports — so your team can focus on winning bids.
+            TenderBriefing shows you only the South African government tenders that{' '}
+            <strong className="text-brand-900">require a compulsory briefing</strong>. Track them,
+            request a verified Youth Agent to attend on your behalf, and receive a structured
+            briefing report so your team can focus on winning bids.
           </motion.p>
 
           <motion.p
@@ -66,8 +68,8 @@ export default function Hero() {
             transition={{ delay: 0.35 }}
             className="mt-4 text-base text-slate-500"
           >
-            Free tender discovery for SMEs. Verified agents nationwide. Official procurement
-            data refreshed from official sources.
+            Free briefing discovery for SMEs. Verified agents nationwide. Official procurement
+            data refreshed from government sources.
           </motion.p>
 
           <motion.div

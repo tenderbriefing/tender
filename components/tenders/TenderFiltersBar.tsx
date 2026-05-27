@@ -1,9 +1,7 @@
 'use client'
 
-import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, ShieldCheckIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import type { ProcurementFilterState, TenderSortKey } from '@/lib/procurement/filters'
-
-type BriefingTypeFilter = ProcurementFilterState['briefingType']
 
 interface TenderFiltersBarProps {
   filters: ProcurementFilterState
@@ -36,12 +34,17 @@ export default function TenderFiltersBar({
     filters.search ||
     filters.province ||
     filters.department ||
-    filters.status !== 'active' ||
-    filters.briefingType
+    filters.status !== 'active'
 
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-accent-50 px-3 py-1 text-xs font-semibold text-accent-700 ring-1 ring-inset ring-accent-200">
+            <ShieldCheckIcon className="h-3.5 w-3.5" aria-hidden />
+            Compulsory briefings only
+          </span>
+        </div>
         <div className="relative">
           <MagnifyingGlassIcon
             className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
@@ -51,13 +54,13 @@ export default function TenderFiltersBar({
             type="search"
             value={filters.search}
             onChange={(e) => onChange({ ...filters, search: e.target.value })}
-            placeholder="Search tenders by title, description, or department…"
+            placeholder="Search compulsory briefings by title, description, or department…"
             className="w-full rounded-xl border border-slate-200 bg-slate-50/80 py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600/20"
-            aria-label="Search tenders"
+            aria-label="Search compulsory briefings"
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="block">
             <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
               Province
@@ -112,28 +115,6 @@ export default function TenderFiltersBar({
 
           <label className="block">
             <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Briefing
-            </span>
-            <select
-              value={filters.briefingType}
-              onChange={(e) =>
-                onChange({
-                  ...filters,
-                  briefingType: e.target.value as BriefingTypeFilter,
-                })
-              }
-              className={selectClass}
-            >
-              <option value="">All briefing types</option>
-              <option value="compulsory">Compulsory briefing</option>
-              <option value="has_briefing">Briefing available</option>
-              <option value="optional">Optional / no compulsory</option>
-              <option value="none">No briefing listed</option>
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
               Sort by
             </span>
             <select
@@ -155,8 +136,8 @@ export default function TenderFiltersBar({
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
           <p className="text-sm text-slate-600">
-            <span className="font-semibold text-slate-900">{resultCount}</span> opportunities
-            match your filters
+            <span className="font-semibold text-brand-900">{resultCount}</span> compulsory
+            briefing{resultCount === 1 ? '' : 's'} match your filters
           </p>
           {hasActive && (
             <button

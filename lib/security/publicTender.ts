@@ -1,5 +1,41 @@
 import type { AdminDashboardStats, SyncStatus, TenderBriefing } from '@/lib/tenderBriefing/types'
 
+/**
+ * Platform policy: TenderBriefing only surfaces compulsory briefing opportunities.
+ * Private RFQs (visibility === 'private') are always visible to their owner and admins
+ * regardless of briefing status.
+ */
+export type PlatformViewer =
+  | { userType: 'admin'; uid: string }
+  | { userType: 'sme' | 'youth-agent'; uid: string }
+  | null
+
+export function isCompulsoryBriefingTender(tender: TenderBriefing): boolean {
+  return tender.briefingCompulsory === true
+}
+
+export function isPlatformVisibleToViewer(
+  tender: TenderBriefing,
+  viewer: PlatformViewer,
+  options: { allowOptionalForAdmin?: boolean } = {}
+): boolean {
+  if (viewer?.userType === 'admin') {
+    return options.allowOptionalForAdmin === true ? true : isCompulsoryBriefingTender(tender)
+  }
+  if (tender.visibility === 'private') {
+    return viewer?.userType === 'sme' && tender.ownerUid === viewer.uid
+  }
+  return isCompulsoryBriefingTender(tender)
+}
+
+export function filterPlatformVisible(
+  tenders: TenderBriefing[],
+  viewer: PlatformViewer,
+  options: { allowOptionalForAdmin?: boolean } = {}
+): TenderBriefing[] {
+  return tenders.filter((t) => isPlatformVisibleToViewer(t, viewer, options))
+}
+
 /** Fields safe for anonymous visitors (marketing + /tenders). */
 export type PublicTenderBriefing = Pick<
   TenderBriefing,

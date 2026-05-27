@@ -17,16 +17,16 @@ interface TenderDashboardStatsProps {
 const cards = [
   {
     key: 'total',
-    label: 'Total Opportunities',
-    icon: BriefcaseIcon,
-    accent: 'from-brand-700 to-brand-800',
-    ring: 'ring-brand-100',
+    label: 'Compulsory Briefings',
+    icon: ExclamationTriangleIcon,
+    accent: 'from-accent-500 to-accent-600',
+    ring: 'ring-accent-100',
   },
   {
     key: 'open',
-    label: 'Open Tenders',
+    label: 'Currently Open',
     icon: CalendarDaysIcon,
-    accent: 'from-brand-600 to-brand-700',
+    accent: 'from-brand-700 to-brand-800',
     ring: 'ring-brand-100',
   },
   {
@@ -38,10 +38,10 @@ const cards = [
   },
   {
     key: 'compulsory',
-    label: 'Compulsory Briefings',
-    icon: ExclamationTriangleIcon,
-    accent: 'from-accent-500 to-accent-600',
-    ring: 'ring-accent-100',
+    label: 'Briefings This Week',
+    icon: BriefcaseIcon,
+    accent: 'from-brand-600 to-brand-700',
+    ring: 'ring-brand-100',
   },
 ] as const
 

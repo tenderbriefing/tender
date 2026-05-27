@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
       tenders = tender ? [tender] : []
     }
 
-    const events = calendar.getAllCalendarEvents(tenders)
+    const compulsoryTenders = tenders.filter(
+      (t: { briefingCompulsory?: boolean }) => t.briefingCompulsory === true
+    )
+    const events = calendar.getAllCalendarEvents(compulsoryTenders)
     return NextResponse.json({ success: true, data: events, count: events.length })
   } catch (error) {
     return NextResponse.json(

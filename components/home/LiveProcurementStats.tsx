@@ -26,10 +26,10 @@ export default function LiveProcurementStats() {
   if (!stats) return null
 
   const items = [
-    { label: 'Active opportunities', value: stats.totalBriefings },
     { label: 'Compulsory briefings', value: stats.compulsoryBriefings },
     { label: 'Provinces covered', value: stats.provincesRepresented.length },
     { label: 'Closing within 7 days', value: stats.closingWithin7Days },
+    { label: 'Fixed agent fee', value: 'R249' },
   ]
 
   return (
@@ -50,8 +50,8 @@ export default function LiveProcurementStats() {
       ))}
       <p className="col-span-full text-center text-xs text-slate-500">
         Live counts from official procurement sync ·{' '}
-        <Link href="/tenders" className="font-semibold text-brand-700 hover:underline">
-          View Tender Opportunities
+        <Link href="/tenders" className="font-semibold text-brand-800 hover:text-accent-600 hover:underline">
+          Browse compulsory briefings
         </Link>
       </p>
     </motion.div>
