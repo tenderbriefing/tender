@@ -6,7 +6,7 @@ const config = SEO_LANDING_PAGES['tender-briefings-south-africa']
 
 export const metadata = buildPageMetadata({
   title: config.title,
-  description: config.heroDescription,
+  description: config.metaDescription,
   path: config.path,
   keywords: ['tender briefing South Africa', 'compulsory tender briefings', config.title],
 })
