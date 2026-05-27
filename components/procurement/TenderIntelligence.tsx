@@ -25,6 +25,10 @@ import {
   formatProcurementDateTime,
 } from '@/lib/procurement/dates'
 import { deriveTenderDescription } from '@/lib/procurement/tenderDescription'
+import {
+  collectTenderDocuments,
+  countDownloadableDocuments,
+} from '@/lib/procurement/tenderDocuments'
 
 interface TenderIntelligenceProps {
   tender: TenderBriefing
@@ -115,15 +119,6 @@ function ContactRow({
   )
 }
 
-function docKind(url: string): string {
-  const lower = url.toLowerCase()
-  if (lower.endsWith('.pdf')) return 'PDF'
-  if (/\.(jpg|jpeg|png|gif|webp)$/.test(lower)) return 'Image'
-  if (lower.endsWith('.doc') || lower.endsWith('.docx')) return 'Word'
-  if (lower.endsWith('.xls') || lower.endsWith('.xlsx')) return 'Excel'
-  return 'Document'
-}
-
 export default function TenderIntelligence({ tender }: TenderIntelligenceProps) {
   const derived = deriveTenderDescription(tender)
   const closing = formatProcurementDate(tender.closingDate)
@@ -134,11 +129,8 @@ export default function TenderIntelligence({ tender }: TenderIntelligenceProps) 
     tender.briefingTime
   )
 
-  const docs: string[] = []
-  if (tender.detailUrl) docs.push(tender.detailUrl)
-  const extra = (tender as { documentUrls?: string[] }).documentUrls
-  if (Array.isArray(extra)) docs.push(...extra)
-  const uniqueDocs = Array.from(new Set(docs.filter(Boolean)))
+  const documentLinks = collectTenderDocuments(tender)
+  const downloadableCount = countDownloadableDocuments(documentLinks)
 
   const requirements = Array.isArray(tender.requirements) ? tender.requirements : []
   const risks = Array.isArray(tender.risks) ? tender.risks : []
@@ -182,9 +174,14 @@ export default function TenderIntelligence({ tender }: TenderIntelligenceProps) 
           hint="Plain-English brief"
         />
 
-        <p className="text-xl font-bold leading-snug text-brand-900 sm:text-2xl">
-          {derived.headline}
-        </p>
+        <div className="rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50/80 to-white p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent-700">
+            {derived.scopeTypeLabel}
+          </p>
+          <p className="mt-2 text-xl font-bold leading-snug text-brand-900 sm:text-2xl">
+            {derived.scopeStatement}
+          </p>
+        </div>
 
         {derived.body && (
           <p className="mt-4 text-base leading-relaxed text-slate-700">
@@ -194,7 +191,7 @@ export default function TenderIntelligence({ tender }: TenderIntelligenceProps) 
 
         {derived.isFallback && (
           <div className="mt-4">
-            <EmptyHint text="The official feed only published a short title — open the source document for the full scope of work." />
+            <EmptyHint text="The official feed only published a reference number — download the tender document below or open the eTenders portal for the full scope of work." />
           </div>
         )}
 
@@ -422,41 +419,52 @@ export default function TenderIntelligence({ tender }: TenderIntelligenceProps) 
 
       <Card>
         <SectionHeading icon={File} title="Documents & sources" hint="Downloads" />
-        {uniqueDocs.length === 0 ? (
-          <EmptyHint text="No documents available in TenderBriefing. Tender documents are published on the official procurement portal — use the contact details above to request them." />
+        {documentLinks.length === 0 ? (
+          <EmptyHint text="No documents were attached in the official feed. Contact the procurement officer above or search for this tender number on etenders.gov.za to request the full document pack." />
         ) : (
-          <ul className="space-y-3">
-            {uniqueDocs.map((url, i) => (
-              <li
-                key={url}
-                className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-900 text-accent-400">
-                    <File className="h-5 w-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <span className="inline-block rounded-full border border-brand-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-800">
-                      {docKind(url)}
-                    </span>
-                    <p className="mt-1 truncate text-sm font-semibold text-brand-900">
-                      {i === 0 ? 'Official tender notice' : `Attachment ${i}`}
-                    </p>
-                    <p className="truncate text-xs text-slate-500">{url}</p>
-                  </div>
-                </div>
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-800 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-700"
+          <>
+            <p className="mb-4 text-sm text-slate-600">
+              {downloadableCount > 0
+                ? `${downloadableCount} official ${downloadableCount === 1 ? 'document' : 'documents'} from National Treasury eTenders — opens in a new tab for download.`
+                : 'Open the eTenders portal listing below for the full tender pack and attachments.'}
+            </p>
+            <ul className="space-y-3">
+              {documentLinks.map((doc) => (
+                <li
+                  key={doc.url}
+                  className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  Open
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </li>
-            ))}
-          </ul>
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                        doc.source === 'portal'
+                          ? 'bg-brand-100 text-brand-800'
+                          : 'bg-brand-900 text-accent-400'
+                      }`}
+                    >
+                      <File className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <span className="inline-block rounded-full border border-brand-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-800">
+                        {doc.kind}
+                      </span>
+                      <p className="mt-1 text-sm font-semibold text-brand-900">{doc.title}</p>
+                      <p className="truncate text-xs text-slate-500">{doc.url}</p>
+                    </div>
+                  </div>
+                  <a
+                    href={doc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-800 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-700"
+                  >
+                    {doc.source === 'portal' ? 'Open portal' : 'Download'}
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </Card>
 
