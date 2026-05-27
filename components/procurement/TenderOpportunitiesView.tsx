@@ -8,10 +8,12 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import {
   countdownLabel,
   formatProcurementDate,
+  formatProcurementDateTime,
   isBriefingThisWeek,
   isBriefingToday,
   isClosingSoon,
 } from '@/lib/procurement/dates'
+import { getOfficialEtendersScope } from '@/lib/procurement/tenderDescription'
 import { BriefingSessionBlock, CompulsoryBriefingBadge } from './CompulsoryBriefingBadge'
 import CountdownBadge from './CountdownBadge'
 import { TENDER_TABLE_COLUMNS, type TenderColumnKey } from '@/lib/procurement/tableColumns'
@@ -244,7 +246,7 @@ export default function TenderOpportunitiesView({
                       {tender.title}
                     </Link>
                     <p className="mt-1 line-clamp-2 text-xs text-slate-500">
-                      {tender.summary || tender.description}
+                      {getOfficialEtendersScope(tender) || tender.description || '—'}
                     </p>
                   </td>
                 )}
@@ -266,8 +268,7 @@ export default function TenderOpportunitiesView({
                 {show('briefingDate') && (
                   <td className="whitespace-nowrap text-xs">
                     <div className="font-medium">
-                      {formatProcurementDate(tender.briefingDate)}
-                      {tender.briefingTime ? ` · ${tender.briefingTime}` : ''}
+                      {formatProcurementDateTime(tender.briefingDate, tender.briefingTime)}
                     </div>
                     {isBriefingToday(tender.briefingDate) && (
                       <div className="mt-1">
@@ -362,9 +363,9 @@ export default function TenderOpportunitiesView({
                 <dd className="font-medium">{tender.industrySector || '—'}</dd>
               </div>
               <div>
-                <dt className="text-slate-500">Briefing</dt>
+                <dt className="text-slate-500">Briefing date & time</dt>
                 <dd className="font-medium">
-                  {formatProcurementDate(tender.briefingDate)}
+                  {formatProcurementDateTime(tender.briefingDate, tender.briefingTime)}
                   {countdownLabel(tender.briefingDate) && (
                     <span className="text-amber-800"> · {countdownLabel(tender.briefingDate)}</span>
                   )}

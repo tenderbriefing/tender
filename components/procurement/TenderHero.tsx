@@ -7,8 +7,10 @@ import {
   countdownLabel,
   daysUntil,
   formatProcurementDate,
+  formatProcurementDateTime,
 } from '@/lib/procurement/dates'
 import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
+import { getOfficialEtendersScope } from '@/lib/procurement/tenderDescription'
 
 function UrgencyChip({ tender }: { tender: TenderBriefing }) {
   const status = getTenderDisplayStatus(tender)
@@ -53,6 +55,7 @@ function UrgencyChip({ tender }: { tender: TenderBriefing }) {
 export default function TenderHero({ tender }: { tender: TenderBriefing }) {
   const closingDays = daysUntil(tender.closingDate)
   const briefingDays = daysUntil(tender.briefingDate)
+  const officialScope = getOfficialEtendersScope(tender)
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 text-white">
@@ -98,8 +101,13 @@ export default function TenderHero({ tender }: { tender: TenderBriefing }) {
           {tender.tenderNumber || 'Tender number pending'}
         </p>
         <h1 className="mt-2 text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-[2.75rem]">
-          {tender.title}
+          {officialScope || tender.title}
         </h1>
+        {officialScope && tender.title && tender.title.trim() !== officialScope.trim() && (
+          <p className="mt-2 text-sm font-medium text-brand-100/75">
+            Tender reference: {tender.title}
+          </p>
+        )}
 
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-xl bg-white/5 px-4 py-3 ring-1 ring-inset ring-white/10">
@@ -137,10 +145,12 @@ export default function TenderHero({ tender }: { tender: TenderBriefing }) {
           <div className="rounded-xl bg-white/5 px-4 py-3 ring-1 ring-inset ring-white/10">
             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-accent-400">
               <Calendar className="h-3.5 w-3.5" />
-              Briefing
+              Briefing date & time
             </div>
             <p className="mt-1.5 text-sm font-semibold text-white">
-              {tender.briefingDate ? formatProcurementDate(tender.briefingDate) : 'TBC'}
+              {tender.briefingDate
+                ? formatProcurementDateTime(tender.briefingDate, tender.briefingTime)
+                : 'TBC'}
             </p>
             {briefingDays !== null && briefingDays >= 0 && (
               <p className="text-[11px] text-brand-100/70">

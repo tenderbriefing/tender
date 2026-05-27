@@ -22,10 +22,32 @@ export function formatProcurementDate(value?: string | null): string {
   })
 }
 
+export function formatBriefingTime(date?: string | null, time?: string | null): string {
+  const explicit = time?.trim()
+  if (explicit && explicit !== '—') return explicit
+
+  const d = parseProcurementDate(date)
+  if (!d) return ''
+
+  const hours = d.getUTCHours()
+  const minutes = d.getUTCMinutes()
+  if (hours === 0 && minutes === 0) return ''
+
+  return d.toLocaleTimeString('en-ZA', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Africa/Johannesburg',
+  })
+}
+
 export function formatProcurementDateTime(date?: string | null, time?: string | null): string {
   const datePart = formatProcurementDate(date)
-  if (!time || time === '—') return datePart
-  return `${datePart} · ${time}`
+  if (datePart === '—') return '—'
+
+  const timePart = formatBriefingTime(date, time)
+  if (!timePart) return datePart
+
+  return `${datePart} at ${timePart}`
 }
 
 export function isClosingSoon(closingDate?: string | null, withinDays = 7): boolean {

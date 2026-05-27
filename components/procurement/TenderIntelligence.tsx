@@ -171,27 +171,49 @@ export default function TenderIntelligence({ tender }: TenderIntelligenceProps) 
         <SectionHeading
           icon={FileText}
           title="What this tender is about"
-          hint="Plain-English brief"
+          hint="Official eTenders notice"
         />
 
-        <div className="rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50/80 to-white p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent-700">
-            {derived.scopeTypeLabel}
-          </p>
-          <p className="mt-2 text-xl font-bold leading-snug text-brand-900 sm:text-2xl">
-            {derived.scopeStatement}
-          </p>
-        </div>
+        {tender.briefingDate && (
+          <div className="mb-5 rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50/90 to-white p-5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent-700">
+              {tender.briefingCompulsory ? 'Compulsory briefing date & time' : 'Briefing date & time'}
+            </p>
+            <p className="mt-2 text-xl font-bold text-brand-900 sm:text-2xl">
+              {briefingDateTime}
+            </p>
+            {briefingCountdown && (
+              <p className="mt-1 text-sm font-semibold text-accent-700">
+                {briefingCountdown} away
+              </p>
+            )}
+            {tender.briefingVenue && (
+              <p className="mt-2 text-sm text-slate-600">
+                <span className="font-semibold text-brand-900">Venue: </span>
+                {tender.briefingVenue}
+              </p>
+            )}
+          </div>
+        )}
 
-        {derived.body && (
-          <p className="mt-4 text-base leading-relaxed text-slate-700">
-            {derived.body}
+        {derived.officialScope ? (
+          <p className="whitespace-pre-wrap text-lg font-semibold leading-relaxed text-brand-900">
+            {derived.officialScope}
+          </p>
+        ) : (
+          <EmptyHint text="The official scope was not published in the eTenders feed — open the tender document below for full details." />
+        )}
+
+        {tender.title && derived.officialScope && tender.title.trim() !== derived.officialScope.trim() && (
+          <p className="mt-4 text-sm text-slate-600">
+            <span className="font-semibold text-brand-900">Tender reference: </span>
+            {tender.title}
           </p>
         )}
 
         {derived.isFallback && (
           <div className="mt-4">
-            <EmptyHint text="The official feed only published a reference number — download the tender document below or open the eTenders portal for the full scope of work." />
+            <EmptyHint text="Download the tender document below or open the eTenders portal for the full scope of work." />
           </div>
         )}
 
@@ -208,16 +230,10 @@ export default function TenderIntelligence({ tender }: TenderIntelligenceProps) 
           </div>
         )}
 
-        {derived.officialNotice && (
-          <details className="group mt-6 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 open:bg-white">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Official notice text
-              <span className="text-accent-500 transition group-open:rotate-90">›</span>
-            </summary>
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-              {derived.officialNotice}
-            </p>
-          </details>
+        {tender.briefingCompulsory && (
+          <p className="mt-5 rounded-xl border border-accent-200 bg-accent-50/50 px-4 py-3 text-sm text-brand-900">
+            Attendance at the compulsory briefing is required — submissions from non-attending bidders may be disqualified.
+          </p>
         )}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
