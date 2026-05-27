@@ -24,6 +24,7 @@ import {
   formatProcurementDate,
   formatProcurementDateTime,
 } from '@/lib/procurement/dates'
+import { deriveTenderDescription } from '@/lib/procurement/tenderDescription'
 
 interface TenderIntelligenceProps {
   tender: TenderBriefing
@@ -123,16 +124,8 @@ function docKind(url: string): string {
   return 'Document'
 }
 
-function safeText(...candidates: Array<string | undefined | null>): string | null {
-  for (const c of candidates) {
-    if (typeof c === 'string' && c.trim().length > 0) return c
-  }
-  return null
-}
-
 export default function TenderIntelligence({ tender }: TenderIntelligenceProps) {
-  const description = safeText(tender.description, tender.summary)
-  const summary = safeText(tender.summary, tender.description)
+  const derived = deriveTenderDescription(tender)
   const closing = formatProcurementDate(tender.closingDate)
   const closingCountdown = countdownLabel(tender.closingDate)
   const briefingCountdown = countdownLabel(tender.briefingDate)
@@ -183,22 +176,51 @@ export default function TenderIntelligence({ tender }: TenderIntelligenceProps) 
   return (
     <div className="space-y-6">
       <Card>
-        <SectionHeading icon={FileText} title="Opportunity overview" hint="Tender brief" />
-        {summary ? (
-          <p className="text-base leading-relaxed text-slate-700">{summary}</p>
-        ) : (
-          <EmptyHint text="No opportunity summary published yet — see the full description below or open the official tender notice." />
+        <SectionHeading
+          icon={FileText}
+          title="What this tender is about"
+          hint="Plain-English brief"
+        />
+
+        <p className="text-xl font-bold leading-snug text-brand-900 sm:text-2xl">
+          {derived.headline}
+        </p>
+
+        {derived.body && (
+          <p className="mt-4 text-base leading-relaxed text-slate-700">
+            {derived.body}
+          </p>
         )}
 
-        {description && description !== summary && (
-          <div className="mt-6 rounded-2xl border border-slate-100 bg-slate-50/60 p-5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Full description
-            </p>
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-              {description}
-            </p>
+        {derived.isFallback && (
+          <div className="mt-4">
+            <EmptyHint text="The official feed only published a short title — open the source document for the full scope of work." />
           </div>
+        )}
+
+        {derived.tags.length > 0 && (
+          <div className="mt-5 flex flex-wrap gap-2">
+            {derived.tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center rounded-full border border-brand-100 bg-brand-50/60 px-3 py-1 text-xs font-semibold text-brand-800"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {derived.officialNotice && (
+          <details className="group mt-6 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 open:bg-white">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Official notice text
+              <span className="text-accent-500 transition group-open:rotate-90">›</span>
+            </summary>
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+              {derived.officialNotice}
+            </p>
+          </details>
         )}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
