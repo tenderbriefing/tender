@@ -4,7 +4,7 @@ import './globals.css'
 import { AuthProvider } from '@/components/providers/AuthProvider'
 import GlobalStructuredData from '@/components/seo/GlobalStructuredData'
 import { Toaster } from 'react-hot-toast'
-import { SITE_URL } from '@/lib/seo/site'
+import { GOOGLE_SITE_VERIFICATION, SITE_URL } from '@/lib/seo/site'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -75,7 +75,8 @@ export default function RootLayout({
     <html lang="en-ZA" className="scroll-smooth">
       <body className={`${inter.className} antialiased text-slate-900 bg-white`}>
         <GlobalStructuredData />
-        <AuthProvider>          {children}
+        <AuthProvider>
+          {children}
           <Toaster
             position="top-right"
             toastOptions={{

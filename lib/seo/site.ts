@@ -1,6 +1,13 @@
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://www.tenderbriefing.co.za'
 
+/** Google Search Console HTML meta tag — content value only (not the full meta tag). */
+export const GOOGLE_SITE_VERIFICATION = (
+  process.env.GOOGLE_SITE_VERIFICATION ||
+  process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ||
+  ''
+).trim()
+
 export const SITE_NAME = 'TenderBriefing'
 
 export const DEFAULT_OG_IMAGE = '/logo.png'
