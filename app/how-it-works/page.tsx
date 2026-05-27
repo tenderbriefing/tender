@@ -3,13 +3,20 @@ import Link from 'next/link'
 import MarketingPageLayout from '@/components/marketing/MarketingPageLayout'
 import AnimateIn from '@/components/ui/AnimateIn'
 import SectionLabel from '@/components/ui/SectionLabel'
+import { buildPageMetadata } from '@/lib/seo/metadata'
 import { ArrowRight, Building2, Users } from 'lucide-react'
 
-export const metadata: Metadata = {
-  title: 'How It Works',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'How TenderBriefing Works | SME & Youth Agent Briefing Flow',
   description:
-    'How SMEs request briefing attendance support and how Youth Agents attend briefings, upload reports, and build reliability scores.',
-}
+    'Learn how SMEs discover compulsory tender briefings for free, request Youth Agents for R249, and receive structured briefing reports on TenderBriefing South Africa.',
+  path: '/how-it-works',
+  keywords: [
+    'how tender briefing works',
+    'compulsory briefing attendance',
+    'youth agent tender support',
+  ],
+})
 
 type Step = { step: string; title: string; text: string }
 

@@ -3,6 +3,9 @@ import Link from 'next/link'
 import MarketingPageLayout from '@/components/marketing/MarketingPageLayout'
 import AnimateIn from '@/components/ui/AnimateIn'
 import SectionLabel from '@/components/ui/SectionLabel'
+import JsonLd from '@/components/seo/JsonLd'
+import { buildPageMetadata } from '@/lib/seo/metadata'
+import { faqPageJsonLd } from '@/lib/seo/structuredData'
 import {
   AlertCircle,
   ArrowRight,
@@ -12,11 +15,13 @@ import {
   Phone,
 } from 'lucide-react'
 
-export const metadata: Metadata = {
-  title: 'Support',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Support | Tender Briefing Help for South African SMEs',
   description:
-    'TenderBriefing support — WhatsApp, email, FAQs, briefing reports, and Youth Agent verification.',
-}
+    'Get help with compulsory tender briefings, Youth Agent requests, briefing reports and SME registration on TenderBriefing South Africa.',
+  path: '/support',
+  keywords: ['TenderBriefing support', 'tender briefing help', 'SME procurement support'],
+})
 
 const WHATSAPP_URL = 'https://wa.me/27100133423'
 const SUPPORT_EMAIL = 'support@tenderbriefing.co.za'
@@ -87,7 +92,13 @@ const channels = [
 
 export default function SupportPage() {
   return (
-    <MarketingPageLayout
+    <>
+      <JsonLd
+        data={faqPageJsonLd(
+          faqs.map((faq) => ({ question: faq.q, answer: faq.a }))
+        )}
+      />
+      <MarketingPageLayout
       eyebrow="Support"
       title="We're here when procurement gets complicated."
       description="Reach our team for pilot launch support, briefing report questions, and agent verification enquiries."
@@ -182,5 +193,6 @@ export default function SupportPage() {
         </AnimateIn>
       </div>
     </MarketingPageLayout>
+    </>
   )
 }

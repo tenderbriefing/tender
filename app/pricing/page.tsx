@@ -3,21 +3,21 @@ import Link from 'next/link'
 import MarketingPageLayout from '@/components/marketing/MarketingPageLayout'
 import AnimateIn from '@/components/ui/AnimateIn'
 import SectionLabel from '@/components/ui/SectionLabel'
+import { buildPageMetadata } from '@/lib/seo/metadata'
 import { ATTENDANCE_FEE_LABEL } from '@/lib/payments/attendanceFee'
-import {
-  ArrowRight,
-  Check,
-  Crown,
-  Sparkles,
-  Users,
-  Zap,
-} from 'lucide-react'
+import { ArrowRight, Check, Crown, Sparkles, Users, Zap } from 'lucide-react'
 
-export const metadata: Metadata = {
-  title: 'Pricing',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Pricing | Free Tender Discovery & R249 Briefing Agent Fee',
   description:
-    'Free tender discovery for SMEs. Pay R249 only when you request a verified Youth Agent to attend a compulsory briefing on your behalf.',
-}
+    'TenderBriefing is free for SMEs to discover compulsory tender briefings. Pay R249 only when you request a verified Youth Agent to attend a compulsory briefing on your behalf.',
+  path: '/pricing',
+  keywords: [
+    'tender briefing pricing',
+    'free tender discovery South Africa',
+    'youth agent briefing fee',
+  ],
+})
 
 type Plan = {
   name: string

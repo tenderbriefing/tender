@@ -4,6 +4,7 @@ import MarketingPageLayout from '@/components/marketing/MarketingPageLayout'
 import AnimateIn from '@/components/ui/AnimateIn'
 import FeatureCard from '@/components/ui/FeatureCard'
 import SectionLabel from '@/components/ui/SectionLabel'
+import { buildPageMetadata } from '@/lib/seo/metadata'
 import {
   ArrowRight,
   Building2,
@@ -14,11 +15,13 @@ import {
   Users,
 } from 'lucide-react'
 
-export const metadata: Metadata = {
-  title: 'About',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'About TenderBriefing | South Africa Tender Briefing Platform',
   description:
-    "TenderBriefing is South Africa's procurement intelligence platform connecting SMEs with verified Youth Agents for compulsory tender briefings.",
-}
+    'TenderBriefing connects South African SMEs with compulsory tender briefing intelligence and verified Youth Agents. Free discovery — R249 only when requesting briefing attendance.',
+  path: '/about',
+  keywords: ['about TenderBriefing', 'tender briefing South Africa', 'SME procurement platform'],
+})
 
 const pillars = [
   {

@@ -2,56 +2,53 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/providers/AuthProvider'
+import GlobalStructuredData from '@/components/seo/GlobalStructuredData'
 import { Toaster } from 'react-hot-toast'
+import { SITE_URL } from '@/lib/seo/site'
 
 const inter = Inter({ subsets: ['latin'] })
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://www.tenderbriefing.co.za'
-
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'TenderBriefing | South Africa Tender Briefing Intelligence Platform',
+    default: 'Tender Briefing South Africa | Compulsory Government Tender Briefings',
     template: '%s | TenderBriefing',
   },
   description:
-    'Discover compulsory government tender briefings, site meetings, and procurement opportunities across South Africa.',
+    'TenderBriefing helps South African SMEs discover compulsory tender briefings, track official eTenders opportunities and request Youth Agents for R249 when attendance is required.',
   keywords: [
     'tender briefing',
+    'tender briefing South Africa',
+    'compulsory tender briefings',
     'government tenders South Africa',
-    'compulsory briefing',
-    'procurement intelligence',
-    'SME tenders',
-    'youth agents',
     'eTenders',
+    'SME tenders',
+    'youth agent tender support',
   ],
   authors: [{ name: 'TenderBriefing' }],
   openGraph: {
     type: 'website',
     locale: 'en_ZA',
-    url: siteUrl,
+    url: SITE_URL,
     siteName: 'TenderBriefing',
-    title: 'TenderBriefing | South Africa Tender Briefing Intelligence Platform',
+    title: 'Tender Briefing South Africa | Compulsory Government Tender Briefings',
     description:
-      'Discover compulsory government tender briefings, site meetings, and procurement opportunities across South Africa.',
+      'Discover compulsory government tender briefings across South Africa. Free for SMEs — R249 only when requesting a Youth Agent.',
     images: ['/logo.png'],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'TenderBriefing | South Africa Tender Briefing Intelligence Platform',
+    title: 'Tender Briefing South Africa | TenderBriefing',
     description:
-      'Discover compulsory government tender briefings, site meetings, and procurement opportunities across South Africa.',
+      'Compulsory tender briefings, official eTenders data and Youth Agent attendance support for South African SMEs.',
     images: ['/logo.png'],
   },
   robots: { index: true, follow: true },
   alternates: {
-    canonical: siteUrl,
+    canonical: SITE_URL,
   },
   icons: {
-    icon: [
-      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
-    ],
+    icon: [{ url: '/icon.png', sizes: '512x512', type: 'image/png' }],
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
     shortcut: '/icon.png',
   },
@@ -63,7 +60,6 @@ export const metadata: Metadata = {
       }
     : {}),
 }
-
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
@@ -78,8 +74,8 @@ export default function RootLayout({
   return (
     <html lang="en-ZA" className="scroll-smooth">
       <body className={`${inter.className} antialiased text-slate-900 bg-white`}>
-        <AuthProvider>
-          {children}
+        <GlobalStructuredData />
+        <AuthProvider>          {children}
           <Toaster
             position="top-right"
             toastOptions={{
