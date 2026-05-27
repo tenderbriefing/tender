@@ -4,9 +4,13 @@ import { useEffect, useState } from 'react'
 import type { PublicTenderStats } from '@/lib/security/publicTender'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
-export default function SeoLandingStatsBlock() {
-  const [stats, setStats] = useState<PublicTenderStats | null>(null)
-  const [loading, setLoading] = useState(true)
+interface SeoLandingStatsBlockProps {
+  initialStats?: PublicTenderStats | null
+}
+
+export default function SeoLandingStatsBlock({ initialStats = null }: SeoLandingStatsBlockProps) {
+  const [stats, setStats] = useState<PublicTenderStats | null>(initialStats)
+  const [loading, setLoading] = useState(!initialStats)
 
   useEffect(() => {
     let active = true
@@ -23,7 +27,7 @@ export default function SeoLandingStatsBlock() {
     }
   }, [])
 
-  if (loading) {
+  if (loading && !stats) {
     return (
       <div className="flex justify-center py-10">
         <LoadingSpinner />

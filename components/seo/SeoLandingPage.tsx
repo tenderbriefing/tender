@@ -13,12 +13,17 @@ import {
   faqPageJsonLd,
   organizationJsonLd,
 } from '@/lib/seo/structuredData'
+import { getSeoLandingServerData } from '@/lib/seo/landingServerData'
 import { SA_PROVINCES } from '@/lib/procurement/provinces'
 import { CheckCircle2, Sparkles } from 'lucide-react'
 
 export type { SeoLandingConfig }
 
-export default function SeoLandingPage({ config }: { config: SeoLandingConfig }) {
+export default async function SeoLandingPage({ config }: { config: SeoLandingConfig }) {
+  const { initialStats, initialTenders, initialLastUpdated } = await getSeoLandingServerData(
+    config.slug
+  )
+
   const breadcrumbs = breadcrumbJsonLd([
     { name: 'Home', path: '/' },
     { name: config.title, path: config.path },
@@ -67,12 +72,14 @@ export default function SeoLandingPage({ config }: { config: SeoLandingConfig })
           <SectionLabel>Introduction</SectionLabel>
           <p className="mt-4 text-lg leading-relaxed text-slate-700">{config.intro}</p>
 
-          <SeoLandingStatsBlock />
+          <SeoLandingStatsBlock initialStats={initialStats} />
 
           <SeoLandingTenderList
             slug={config.slug}
             title={config.tenderSectionTitle}
             intro={config.tenderSectionIntro}
+            initialTenders={initialTenders}
+            initialLastUpdated={initialLastUpdated}
           />
 
           {config.sections.map((section) => (

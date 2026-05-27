@@ -4,6 +4,8 @@ import { buildPageMetadata } from '@/lib/seo/metadata'
 
 const config = SEO_LANDING_PAGES['compulsory-tender-briefings']
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = buildPageMetadata({
   title: config.title,
   description: config.metaDescription,

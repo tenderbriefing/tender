@@ -6,6 +6,7 @@ import { useTenderBriefingsPolling } from '@/hooks/useTenderBriefingsPolling'
 import { formatProcurementDate, formatProcurementDateTime } from '@/lib/procurement/dates'
 import { getOfficialEtendersScope } from '@/lib/procurement/tenderDescription'
 import { getLandingTenderFilter } from '@/lib/seo/landingFilters'
+import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 interface SeoLandingTenderListProps {
@@ -13,6 +14,8 @@ interface SeoLandingTenderListProps {
   title: string
   intro: string
   limit?: number
+  initialTenders?: TenderBriefing[]
+  initialLastUpdated?: string | null
 }
 
 export default function SeoLandingTenderList({
@@ -20,6 +23,8 @@ export default function SeoLandingTenderList({
   title,
   intro,
   limit = 8,
+  initialTenders = [],
+  initialLastUpdated = null,
 }: SeoLandingTenderListProps) {
   const { tenders, loading, lastUpdated } = useTenderBriefingsPolling({
     compulsoryOnly: true,
@@ -27,22 +32,25 @@ export default function SeoLandingTenderList({
 
   const filter = useMemo(() => getLandingTenderFilter(slug), [slug])
 
-  const filtered = useMemo(
-    () => tenders.filter(filter).slice(0, limit),
-    [tenders, filter, limit]
-  )
+  const filtered = useMemo(() => {
+    const source = tenders.length > 0 ? tenders : initialTenders
+    return source.filter(filter).slice(0, limit)
+  }, [tenders, initialTenders, filter, limit])
+
+  const syncedAt = lastUpdated || initialLastUpdated
+  const showLoading = loading && filtered.length === 0
 
   return (
     <section className="mt-14 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
       <h2 className="text-2xl font-bold text-brand-900">{title}</h2>
       <p className="mt-2 text-slate-600">{intro}</p>
-      {lastUpdated && (
+      {syncedAt && (
         <p className="mt-1 text-xs text-slate-500">
-          Last synced {new Date(lastUpdated).toLocaleString('en-ZA')}
+          Last synced {new Date(syncedAt).toLocaleString('en-ZA')}
         </p>
       )}
 
-      {loading ? (
+      {showLoading ? (
         <div className="flex justify-center py-12">
           <LoadingSpinner size="lg" />
         </div>
