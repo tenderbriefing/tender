@@ -69,7 +69,7 @@ We are launching the TenderBriefing commercial pilot — a procurement intellige
 
 **Next step:** Complete SME onboarding at {{link}}/sme/onboarding
 
-Support: support@tenderbriefing.co.za | +27 10 013 3423
+Support: support@tenderbriefing.co.za
 
 Regards,  
 TenderBriefing Team  

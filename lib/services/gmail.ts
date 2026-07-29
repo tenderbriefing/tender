@@ -635,7 +635,6 @@ TenderConnect Team
         <p>Your connector will be assigned and will attend the briefing on your behalf. You will receive detailed notes and recordings after the briefing.</p>
         <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <p style="margin: 5px 0;"><strong>Contact Information:</strong></p>
-          <p style="margin: 5px 0;">📞 Landline: +27 10 013 3423</p>
           <p style="margin: 5px 0;">📱 WhatsApp: <a href="${PUBLIC_WHATSAPP_URL}">Chat on WhatsApp</a></p>
           <p style="margin: 5px 0;">📍 Address: Maxwell Office Park, Magwa Crescent, Midrand, Gauteng</p>
         </div>
@@ -661,7 +660,6 @@ Service Includes:
 Your connector will be assigned and will attend the briefing on your behalf. You will receive detailed notes and recordings after the briefing.
 
 Contact Information:
-📞 Landline: +27 10 013 3423
 📱 WhatsApp: ${PUBLIC_WHATSAPP_URL}
 📍 Address: Maxwell Office Park, Magwa Crescent, Midrand, Gauteng
 

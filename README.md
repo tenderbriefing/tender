@@ -347,8 +347,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Contact Information:**
 - 📧 Email: support@tenderconnect.com
-- 📞 Landline: +27 10 013 3423
-- 📱 WhatsApp: +27 61 5253 476
+- 📱 WhatsApp: +27 72 070 8467
 - 📍 Address: Maxwell Office Park, Magwa Crescent, Midrand, Gauteng
 
 For support, email support@tenderconnect.com or contact us via WhatsApp.

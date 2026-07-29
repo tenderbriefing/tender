@@ -16,7 +16,6 @@ export function organizationJsonLd() {
       '@type': 'ContactPoint',
       contactType: 'customer support',
       email: 'support@tenderbriefing.co.za',
-      telephone: '+27-10-013-3423',
       areaServed: 'ZA',
       availableLanguage: 'English',
     },
