@@ -19,6 +19,14 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'auth/configuration-not-found': 'Authentication is not configured correctly. Contact support.',
   'auth/invalid-api-key': 'Sign-in is misconfigured (API key). Contact support.',
   'auth/internal-error': 'Sign-in temporarily unavailable. Please try again in a moment.',
+  'auth/missing-email': 'Please enter your email address.',
+  'auth/invalid-continue-uri':
+    'Password reset is misconfigured. Contact support or try again from www.tenderbriefing.co.za.',
+  'auth/unauthorized-continue-uri':
+    'This site is not authorized for password reset. Add www.tenderbriefing.co.za in Firebase Auth → Settings → Authorized domains.',
+  'auth/expired-action-code': 'This password reset link has expired. Request a new one.',
+  'auth/invalid-action-code':
+    'This password reset link is invalid or has already been used. Request a new one.',
   'permission-denied':
     'Your account was created but profile setup failed. Try signing in, or contact support if this continues.',
   'failed-precondition':

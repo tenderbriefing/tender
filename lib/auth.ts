@@ -4,6 +4,12 @@ import {
 
   signInWithEmailAndPassword,
 
+  sendPasswordResetEmail,
+
+  confirmPasswordReset,
+
+  verifyPasswordResetCode,
+
   signOut,
 
   onAuthStateChanged,
@@ -347,7 +353,39 @@ export const signIn = async (email: string, password: string) => {
   return { user, userProfile }
 }
 
+const PRODUCTION_AUTH_CONTINUE_URL = 'https://www.tenderbriefing.co.za/auth/signin'
 
+function passwordResetContinueUrl(): string {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    const origin = window.location.origin.replace(/\/$/, '')
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return `${origin}/auth/signin`
+    }
+    if (origin.includes('tenderbriefing.co.za')) {
+      return `${origin}/auth/signin`
+    }
+  }
+  return PRODUCTION_AUTH_CONTINUE_URL
+}
+
+/** Sends Firebase password-reset email. Continue URL lands on sign-in after reset. */
+export const requestPasswordReset = async (email: string) => {
+  const normalizedEmail = normalizeAuthEmail(email)
+  await sendPasswordResetEmail(auth, normalizedEmail, {
+    url: passwordResetContinueUrl(),
+    handleCodeInApp: false,
+  })
+}
+
+/** Verifies a password-reset oobCode from the email link (custom action handler). */
+export const verifyResetCode = async (oobCode: string) => {
+  return verifyPasswordResetCode(auth, oobCode)
+}
+
+/** Completes password reset when using a custom action handler page. */
+export const completePasswordReset = async (oobCode: string, newPassword: string) => {
+  await confirmPasswordReset(auth, oobCode, newPassword)
+}
 
 export const logout = async () => {
 

@@ -40,6 +40,27 @@ HTTP referrers should include:
 
 Firebase Console → **Authentication** → **Sign-in method** → **Email/Password** → **Enabled**.
 
+## 6. Password reset / forgot password
+
+Product UI:
+
+- Sign-in: https://www.tenderbriefing.co.za/auth/signin → **Forgot password?**
+- Request email: https://www.tenderbriefing.co.za/auth/forgot-password
+- Custom completion (if action URL is customized): https://www.tenderbriefing.co.za/auth/reset-password
+
+Firebase requirements:
+
+1. **Email/Password** provider enabled (section 5).
+2. Authorized domains include `www.tenderbriefing.co.za` and `tenderbriefing.co.za` (section 1). Without them, reset returns `auth/unauthorized-continue-uri` / `auth/unauthorized-domain`.
+3. Firebase Console → **Authentication** → **Templates** → **Password reset** is enabled (default Firebase template is fine).
+4. Optional branded handler: in the password-reset template, set the action URL to `https://www.tenderbriefing.co.za/auth/reset-password`. If left as the default `*.firebaseapp.com/__/auth/action` page, reset still works; after success users continue to `/auth/signin`.
+
+Ops: trigger a reset email for a known account (does not print passwords):
+
+```bash
+node scripts/send-password-reset.js info@tenderbriefing.co.za
+```
+
 ## Verify in browser
 
 Open DevTools → **Network** → filter `identitytoolkit` → attempt sign-in:
