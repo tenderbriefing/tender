@@ -1,3 +1,4 @@
+import path from 'path'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyApiUser } from '@/lib/auth/verifyApiUser'
 import {
@@ -8,6 +9,13 @@ import { sendSupportTicketEmails } from '@/lib/services/supportEmail'
 
 export const dynamic = 'force-dynamic'
 
+function supportTicketService() {
+  // Standalone Cloud Run copies backend/ to process.cwd(); relative requires from
+  // compiled .next/server routes do not resolve to that tree.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require(path.join(process.cwd(), 'backend/services/supportTicketService'))
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await verifyApiUser(request.headers.get('authorization'))
@@ -15,7 +23,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Sign in required' }, { status: 401 })
     }
 
-    const support = require('../../../backend/services/supportTicketService')
+    const support = supportTicketService()
     const { searchParams } = new URL(request.url)
 
     if (user.userType === 'admin') {
@@ -52,7 +60,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const user = await verifyApiUser(request.headers.get('authorization'))
-    const support = require('../../../backend/services/supportTicketService')
+    const support = supportTicketService()
 
     const ticket = await support.createTicket(
       {
