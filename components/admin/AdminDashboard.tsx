@@ -10,7 +10,12 @@ import { SyncHealthBadge } from '@/components/procurement/StatusBadges'
 import type { AdminDashboardStats } from '@/lib/tenderBriefing/types'
 import OperationalIntelligencePanel from '@/components/procurement/OperationalIntelligencePanel'
 import { useOperationalIntelligence } from '@/hooks/useOperationalIntelligence'
+import RegistrationsPanel from '@/components/admin/RegistrationsPanel'
 import { authFetch } from '@/lib/api/authenticatedFetch'
+import {
+  evaluateFounderAccess,
+  isFounderIntelligenceEnabledClient,
+} from '@/lib/founder/access'
 import {
   ArrowPathIcon,
   ChartBarIcon,
@@ -22,10 +27,11 @@ import {
   UsersIcon,
 } from '@heroicons/react/24/outline'
 
-const ADMIN_NAV = [
+const ADMIN_NAV_BASE = [
   {
     group: 'Operate',
     links: [
+      { href: '/admin/registrations', label: 'Registrations' },
       { href: '/admin/operations', label: 'Operations' },
       { href: '/admin/dispatch', label: 'Dispatch' },
       { href: '/admin/agents/performance', label: 'Agents' },
@@ -191,7 +197,7 @@ function HealthCell({
 }
 
 export default function AdminDashboard() {
-  const { user } = useAuth()
+  const { user, userProfile } = useAuth()
   const { lastUpdated, syncStatus, refresh } = useTenderBriefingsPolling({
     pollIntervalMs: 15000,
   })
@@ -199,6 +205,32 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const { data: intelligence, loading: intelligenceLoading } = useOperationalIntelligence(15000)
+
+  const showFounderNav = evaluateFounderAccess({
+    enabled: isFounderIntelligenceEnabledClient(),
+    authenticated: Boolean(user),
+    userType: userProfile?.userType,
+    email: user?.email || userProfile?.email,
+    founderAccess: (userProfile as { founderAccess?: boolean } | null)?.founderAccess === true,
+  }).ok
+
+  const adminNav = showFounderNav
+    ? ADMIN_NAV_BASE.map((group) =>
+        group.group === 'Operate'
+          ? {
+              ...group,
+              links: [
+                {
+                  href: '/founder/user-intelligence',
+                  label: 'User Intelligence',
+                  accent: true as const,
+                },
+                ...group.links,
+              ],
+            }
+          : group
+      )
+    : ADMIN_NAV_BASE
 
   const syncState = stats?.syncStatus || syncStatus
   const isRunning = Boolean(syncing || syncState?.isRunning)
@@ -317,7 +349,7 @@ export default function AdminDashboard() {
         </div>
 
         <nav className="relative mt-8 space-y-3 border-t border-white/10 pt-6" aria-label="Admin sections">
-          {ADMIN_NAV.map((group) => (
+          {adminNav.map((group) => (
             <div
               key={group.group}
               className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3"
@@ -345,18 +377,8 @@ export default function AdminDashboard() {
         </nav>
       </section>
 
-      {/* Live pulse — compact, no duplicate full panel */}
-      <section aria-label="Live operational pulse">
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          <SectionLabel>Live pulse</SectionLabel>
-          <p className="text-xs text-slate-500">Refreshes every 15s</p>
-        </div>
-        <OperationalIntelligencePanel
-          data={intelligence}
-          loading={intelligenceLoading}
-          compact
-        />
-      </section>
+      {/* Registrations — primary people directory */}
+      <RegistrationsPanel compact showHeaderLink />
 
       {/* Core KPIs */}
       <section aria-label="Platform metrics">
@@ -409,6 +431,19 @@ export default function AdminDashboard() {
             tone="warn"
           />
         </div>
+      </section>
+
+      {/* Live pulse — compact */}
+      <section aria-label="Live operational pulse">
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <SectionLabel>Live pulse</SectionLabel>
+          <p className="text-xs text-slate-500">Refreshes every 15s</p>
+        </div>
+        <OperationalIntelligencePanel
+          data={intelligence}
+          loading={intelligenceLoading}
+          compact
+        />
       </section>
 
       {/* Sync / system health */}

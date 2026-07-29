@@ -46,6 +46,9 @@ export interface UserProfile {
 
   userType: 'sme' | 'youth-agent' | 'admin';
 
+  /** Explicit founder console access (in addition to email allowlist). */
+  founderAccess?: boolean;
+
   companyName?: string;
 
   contactPerson?: string;

@@ -22,6 +22,21 @@ export async function POST(request: NextRequest) {
     if (tenderResponse) return tenderResponse
 
     const result = await smeWorkspace().saveTender(user!.uid, tender)
+    try {
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      const productEvents = require('../../../../../backend/services/productEventService.js')
+      /* eslint-enable @typescript-eslint/no-require-imports */
+      await productEvents.ingestProductEvent(user, {
+        eventName: 'tender_saved',
+        targetEntityType: 'tender',
+        targetEntityId: tender.id || body.tenderId,
+        pagePath: '/tenders',
+        feature: 'sme_workspace',
+        metadata: { tenderId: String(tender.id || body.tenderId || '') },
+      })
+    } catch {
+      /* non-blocking */
+    }
     return workspaceSuccess(result.workspace, { created: result.created })
   } catch (error) {
     return workspaceError(error)

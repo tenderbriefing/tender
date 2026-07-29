@@ -47,6 +47,12 @@ function SignInForm() {
         return
       }
       toast.success('Signed in successfully')
+      try {
+        const { trackProductEvent } = await import('@/lib/founder/trackProductEvent')
+        await trackProductEvent('user_logged_in', { feature: 'auth', pagePath: '/auth/signin' })
+      } catch {
+        /* non-blocking */
+      }
       if (redirectTo) router.push(redirectTo)
       else router.push(dashboardPathForRole(profile.userType))
     } catch (error: unknown) {

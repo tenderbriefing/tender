@@ -28,6 +28,7 @@ export const AGENT_NAV = [
 
 export const ADMIN_NAV = [
   { name: 'Dashboard', href: '/admin/dashboard' },
+  { name: 'Registrations', href: '/admin/registrations' },
   { name: 'Operations', href: '/admin/operations' },
   { name: 'Dispatch', href: '/admin/dispatch' },
   { name: 'AI Insights', href: '/admin/ai-insights' },

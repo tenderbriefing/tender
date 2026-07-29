@@ -33,6 +33,7 @@
     "mobile-field-qa": "node scripts/mobile-field-qa.js",
     "mobile:agent:qa": "node scripts/mobile-agent-native-qa.js && cd mobile-agent-app && npm run typecheck",
     "procurement-intelligence:qa": "node scripts/procurement-intelligence-qa.js",
+    "founder:intelligence:qa": "node scripts/founder-user-intelligence-qa.js",
     "rfq-inbox:qa": "node scripts/rfq-inbox-qa.js",
     "smoke:production:rest": "node scripts/production-smoke-rest.js",
     "test:integrations": "node scripts/test-integrations-health.js",

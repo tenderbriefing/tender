@@ -59,9 +59,20 @@ export async function middleware(request: NextRequest) {
     return new NextResponse(null, { status: 404 })
   }
 
-  if (pathname.startsWith('/admin')) {
-    return withHtmlDeploySafeCache(NextResponse.next())
-  }
+    if (pathname.startsWith('/founder')) {
+      // Server-side flag is authoritative. NEXT_PUBLIC_* must not unlock the route alone.
+      const enabled =
+        process.env.FOUNDER_USER_INTELLIGENCE_ENABLED === '1' ||
+        process.env.FOUNDER_USER_INTELLIGENCE_ENABLED === 'true'
+      if (!enabled) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/admin/dashboard'
+        return NextResponse.redirect(url)
+      }
+    }
+    if (pathname.startsWith('/admin') || pathname.startsWith('/founder')) {
+      return withHtmlDeploySafeCache(NextResponse.next())
+    }
 
   if (pathname.startsWith('/api/')) {
     if (isProduction && isProductionBlockedApiRoute(pathname)) {
@@ -110,5 +121,6 @@ export const config = {
     '/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)',
     '/api/:path*',
     '/admin/:path*',
+    '/founder/:path*',
   ],
 }

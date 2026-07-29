@@ -72,6 +72,31 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // First-party product analytics — clients may create own events only.
+    // Reads are Admin SDK only (Founder APIs). No client list/query of analytics.
+    match /productEvents/{eventId} {
+      allow create: if isAuthenticated()
+        && request.resource.data.actorUserId == request.auth.uid
+        && request.resource.data.keys().hasAll(['eventId', 'eventName', 'actorUserId', 'timestamp'])
+        && request.resource.data.actorUserId is string
+        && request.resource.data.eventName is string;
+      allow read, update, delete: if false;
+    }
+
+    match /userActivitySummaries/{uid} {
+      // Own summary readable for optional UX; writes only via Admin SDK.
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /founderAccessLogs/{logId} {
+      allow read, write: if false;
+    }
+
+    match /founderDailySummaries/{docId} {
+      allow read, write: if false;
+    }
+
     match /syncStatus/{docId} {
       allow read: if isAdmin();
       allow write: if false;

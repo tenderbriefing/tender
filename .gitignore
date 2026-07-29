@@ -45,6 +45,7 @@ service-account.json
 **/service-account*.json
 .qa-smoke-admin.txt
 .admin-password-reset-link.txt
+.admin-password-reset-branded.txt
 
 # IDE
 .vscode/
