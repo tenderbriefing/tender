@@ -10,6 +10,7 @@ import { auth } from '@/lib/firebase'
 import { toast } from 'react-hot-toast'
 import { Menu, X } from 'lucide-react'
 import NotificationCenter from '@/components/notifications/NotificationCenter'
+import WhatsAppIconLink from '@/components/ui/WhatsAppIconLink'
 import {
   ADMIN_NAV,
   AGENT_NAV,
@@ -126,6 +127,10 @@ const Header = () => {
           </nav>
 
           <div className="flex items-center gap-2">
+            <WhatsAppIconLink
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#25D366] text-white transition hover:bg-[#1ebe57] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366]"
+              iconClassName="h-4 w-4"
+            />
             {user && <NotificationCenter />}
             {user ? (
               <div className="relative hidden sm:block">

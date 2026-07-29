@@ -391,6 +391,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /supportTickets/{ticketId} {
+      allow read: if isAdmin()
+        || (isAuthenticated() && resource.data.requesterUid == request.auth.uid);
+      allow write: if false;
+    }
+
     match /enterpriseFieldOps/{docId} {
       allow read: if isAdmin();
       allow write: if false;

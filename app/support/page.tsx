@@ -4,6 +4,8 @@ import MarketingPageLayout from '@/components/marketing/MarketingPageLayout'
 import AnimateIn from '@/components/ui/AnimateIn'
 import SectionLabel from '@/components/ui/SectionLabel'
 import JsonLd from '@/components/seo/JsonLd'
+import WhatsAppIcon from '@/components/ui/WhatsAppIcon'
+import { PUBLIC_WHATSAPP_URL, SUPPORT_EMAIL } from '@/lib/contact'
 import { buildPageMetadata } from '@/lib/seo/metadata'
 import { faqPageJsonLd } from '@/lib/seo/structuredData'
 import {
@@ -11,8 +13,6 @@ import {
   ArrowRight,
   HelpCircle,
   Mail,
-  MessageCircle,
-  Phone,
 } from 'lucide-react'
 
 export const metadata: Metadata = buildPageMetadata({
@@ -22,9 +22,6 @@ export const metadata: Metadata = buildPageMetadata({
   path: '/support',
   keywords: ['TenderBriefing support', 'tender briefing help', 'SME procurement support'],
 })
-
-const WHATSAPP_URL = 'https://wa.me/27100133423'
-const SUPPORT_EMAIL = 'support@tenderbriefing.co.za'
 
 const faqs = [
   {
@@ -62,29 +59,20 @@ const commonIssues = [
 
 const channels = [
   {
-    icon: MessageCircle,
+    kind: 'whatsapp' as const,
     title: 'WhatsApp support',
     helper: 'Fastest during pilot hours',
     cta: 'Message us',
-    href: WHATSAPP_URL,
+    href: PUBLIC_WHATSAPP_URL,
     external: true,
     tone: 'gold' as const,
   },
   {
-    icon: Mail,
-    title: 'Email',
-    helper: SUPPORT_EMAIL,
-    cta: 'Send an email',
-    href: `mailto:${SUPPORT_EMAIL}`,
-    external: false,
-    tone: 'navy' as const,
-  },
-  {
-    icon: Phone,
-    title: 'Phone',
-    helper: '+27 10 013 3423 · Mon–Fri',
-    cta: 'Call business hours',
-    href: 'tel:+27100133423',
+    kind: 'email' as const,
+    title: 'Email / contact form',
+    helper: `${SUPPORT_EMAIL} · response within 24 hours`,
+    cta: 'Open contact form',
+    href: '/contact',
     external: false,
     tone: 'navy' as const,
   },
@@ -103,28 +91,29 @@ export default function SupportPage() {
       title="We're here when procurement gets complicated."
       description="Reach our team for pilot launch support, briefing report questions, and agent verification enquiries."
     >
-      <div className="grid gap-5 sm:grid-cols-3">
+      <div className="grid gap-5 sm:grid-cols-2">
         {channels.map((c, i) => (
           <AnimateIn key={c.title} delay={i * 0.06}>
             <a
               href={c.href}
               target={c.external ? '_blank' : undefined}
               rel={c.external ? 'noopener noreferrer' : undefined}
+              aria-label={c.kind === 'whatsapp' ? 'Chat on WhatsApp' : undefined}
               className={`group relative flex h-full flex-col overflow-hidden rounded-2xl border p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-card ${
                 c.tone === 'gold'
                   ? 'border-accent-200 bg-gradient-to-br from-accent-50/60 to-white'
                   : 'border-brand-100 bg-white'
               }`}
             >
-              <div
-                className={`flex h-12 w-12 items-center justify-center rounded-xl ring-1 ring-inset ${
-                  c.tone === 'gold'
-                    ? 'bg-accent-100 text-accent-700 ring-accent-200'
-                    : 'bg-brand-50 text-brand-800 ring-brand-100'
-                }`}
-              >
-                <c.icon className="h-6 w-6" />
-              </div>
+              {c.kind === 'whatsapp' ? (
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#25D366] text-white shadow-sm">
+                  <WhatsAppIcon className="h-6 w-6" />
+                </span>
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-100">
+                  <Mail className="h-6 w-6" />
+                </div>
+              )}
               <h2 className="mt-5 text-lg font-bold text-brand-900">{c.title}</h2>
               <p className="mt-1 text-sm text-slate-600">{c.helper}</p>
               <span className="mt-6 inline-flex items-center gap-1 text-sm font-semibold text-brand-800 group-hover:text-accent-600">

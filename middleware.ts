@@ -12,13 +12,18 @@ import { checkRateLimit, clientIpFromRequest } from '@/lib/security/rateLimit'
 const isProduction = process.env.NODE_ENV === 'production'
 
 function rateLimitPublicApi(request: NextRequest, pathname: string): NextResponse | null {
-  if (!pathname.startsWith('/api/tender-briefings') && pathname !== '/api/health/firestore') {
+  const isSupportCreate = pathname === '/api/support/tickets' && request.method === 'POST'
+  if (
+    !pathname.startsWith('/api/tender-briefings') &&
+    pathname !== '/api/health/firestore' &&
+    !isSupportCreate
+  ) {
     return null
   }
 
   const ip = clientIpFromRequest(request)
   const key = `${ip}:${pathname.split('?')[0]}`
-  const limit = pathname.includes('stats') ? 30 : 120
+  const limit = isSupportCreate ? 8 : pathname.includes('stats') ? 30 : 120
   const result = checkRateLimit(key, limit, 60_000)
 
   if (!result.allowed) {

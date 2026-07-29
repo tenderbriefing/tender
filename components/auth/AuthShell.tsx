@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ShieldCheck, Sparkles, Users } from 'lucide-react'
+import WhatsAppIconLink from '@/components/ui/WhatsAppIconLink'
 
 export default function AuthShell({
   title,
@@ -127,12 +128,15 @@ export default function AuthShell({
               {children}
             </div>
 
-            <p className="mt-6 text-center text-xs text-slate-500">
-              Need help?{' '}
-              <Link href="/support" className="font-semibold text-brand-800 hover:underline">
-                Contact support
-              </Link>
-            </p>
+            <div className="mt-6 flex flex-col items-center gap-3 text-xs text-slate-500">
+              <p>
+                Need help?{' '}
+                <Link href="/support" className="font-semibold text-brand-800 hover:underline">
+                  Contact support
+                </Link>
+              </p>
+              <WhatsAppIconLink className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#25D366] text-white transition hover:bg-[#1ebe57] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366]" iconClassName="h-4 w-4" />
+            </div>
           </div>
         </div>
       </div>

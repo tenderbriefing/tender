@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { environmentManager } from '@/lib/config/environment';
+import { PUBLIC_WHATSAPP_URL } from '@/lib/contact';
 
 interface EmailMessage {
   id: string;
@@ -635,7 +636,7 @@ TenderConnect Team
         <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <p style="margin: 5px 0;"><strong>Contact Information:</strong></p>
           <p style="margin: 5px 0;">📞 Landline: +27 10 013 3423</p>
-          <p style="margin: 5px 0;">📱 WhatsApp: +27 61 5253 476</p>
+          <p style="margin: 5px 0;">📱 WhatsApp: <a href="${PUBLIC_WHATSAPP_URL}">Chat on WhatsApp</a></p>
           <p style="margin: 5px 0;">📍 Address: Maxwell Office Park, Magwa Crescent, Midrand, Gauteng</p>
         </div>
         <p>Best regards,<br>TenderConnect Team</p>
@@ -661,7 +662,7 @@ Your connector will be assigned and will attend the briefing on your behalf. You
 
 Contact Information:
 📞 Landline: +27 10 013 3423
-📱 WhatsApp: +27 61 5253 476
+📱 WhatsApp: ${PUBLIC_WHATSAPP_URL}
 📍 Address: Maxwell Office Park, Magwa Crescent, Midrand, Gauteng
 
 Best regards,
