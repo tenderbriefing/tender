@@ -9,6 +9,8 @@ const OCDS_API_BASE = 'https://ocds-api.etenders.gov.za/api/OCDSReleases'
 const PAGE_SIZE = 100
 const MAX_PAGES_INCREMENTAL = 20
 const MAX_PAGES_FULL = 200
+/** Cloud Run sync maxDuration is 300s — treat locks older than this as abandoned. */
+const STALE_LOCK_MS = 20 * 60 * 1000
 
 function formatDate(d) {
   return d.toISOString().slice(0, 10)
@@ -140,12 +142,55 @@ function isNightlyReconciliationWindow() {
   return hour >= 2 && hour <= 4
 }
 
+function runningSyncStartedAt(state) {
+  const runningLog = (state.syncLogs || []).find((log) => log.status === 'running')
+  return runningLog?.startedAt || state.lockAcquiredAt || null
+}
+
+function isStaleRunningLock(state) {
+  if (!state.isRunning) return false
+  const startedAt = runningSyncStartedAt(state)
+  if (!startedAt) return true
+  const ageMs = Date.now() - new Date(startedAt).getTime()
+  return Number.isNaN(ageMs) || ageMs > STALE_LOCK_MS
+}
+
+function clearStaleRunningLock(state, reason = 'stale_lock_cleared') {
+  const nowIso = new Date().toISOString()
+  state.syncLogs = (state.syncLogs || []).map((log) =>
+    log.status === 'running'
+      ? {
+          ...log,
+          status: 'failed',
+          error: reason,
+          completedAt: nowIso,
+        }
+      : log
+  )
+  state.isRunning = false
+  state.lockAcquiredAt = null
+  state.lastError = reason
+  state.lastFailedSync = nowIso
+  return state
+}
+
 async function runSync(options = {}) {
   const storage = getStorage()
   const state = await storage.getSyncState()
 
   if (state.isRunning && !options.force) {
-    return { success: false, message: 'Sync already running', state }
+    if (isStaleRunningLock(state)) {
+      const staleStartedAt = runningSyncStartedAt(state)
+      clearStaleRunningLock(state)
+      await storage.saveSyncState(state)
+      await auditLogService.logEvent({
+        type: 'api_sync_stale_lock_cleared',
+        startedAt: staleStartedAt,
+        staleLockMs: STALE_LOCK_MS,
+      })
+    } else {
+      return { success: false, message: 'Sync already running', state }
+    }
   }
 
   const fullReconciliation =
@@ -169,9 +214,10 @@ async function runSync(options = {}) {
     dateFrom = formatDate(lookback)
   }
 
+  const startedAt = new Date().toISOString()
   const syncLog = {
     id: `sync-${Date.now()}`,
-    startedAt: new Date().toISOString(),
+    startedAt,
     mode: fullReconciliation ? 'full_reconciliation' : 'incremental',
     dateFrom,
     dateTo,
@@ -184,6 +230,7 @@ async function runSync(options = {}) {
   }
 
   state.isRunning = true
+  state.lockAcquiredAt = startedAt
   state.syncLogs = [syncLog, ...(state.syncLogs || [])].slice(0, 50)
   await storage.saveSyncState(state)
 
@@ -269,6 +316,7 @@ async function runSync(options = {}) {
       state.lastFullReconciliation = state.lastSuccessfulSync
     }
     state.isRunning = false
+    state.lockAcquiredAt = null
     state.lastError = stats.errors[0] || null
     state.apiHealth = 'healthy'
     state.scraperHealth = 'standby'
@@ -298,6 +346,7 @@ async function runSync(options = {}) {
     const preservedCount = (await storage.getTenderBriefings()).length
 
     state.isRunning = false
+    state.lockAcquiredAt = null
     state.lastError = message
     state.lastFailedSync = new Date().toISOString()
     state.apiHealth = 'unhealthy'
@@ -351,10 +400,13 @@ async function getSyncStatus() {
 
 module.exports = {
   OCDS_API_BASE,
+  STALE_LOCK_MS,
   parseOcdsRelease,
   fetchOcdsPage,
   fetchReleasesInRange,
   runSync,
   getSyncStatus,
   shouldIncludeTender,
+  isStaleRunningLock,
+  clearStaleRunningLock,
 }

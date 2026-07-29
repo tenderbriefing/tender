@@ -64,6 +64,7 @@ const defaultSyncState = () => ({
   lastFullReconciliation: null,
   syncLogs: [],
   isRunning: false,
+  lockAcquiredAt: null,
   lastError: null,
   apiHealth: 'unknown',
   scraperHealth: 'unknown',

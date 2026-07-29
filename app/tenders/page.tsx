@@ -133,7 +133,15 @@ export default function TenderOpportunitiesPage() {
         meta={
           lastUpdated ? (
             <span className="text-sm text-slate-500">
-              Last sync: {new Date(lastUpdated).toLocaleString('en-ZA')}
+              Last sync:{' '}
+              {new Date(lastUpdated).toLocaleString('en-ZA', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'Africa/Johannesburg',
+              })}
             </span>
           ) : null
         }

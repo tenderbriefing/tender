@@ -1,5 +1,6 @@
 import { ShieldCheck } from 'lucide-react'
 import { SyncHealthBadge } from './StatusBadges'
+import { formatLastSyncLabel, isSyncStale } from '@/lib/procurement/formatLastSync'
 
 export function TrustStrip({
   className = '',
@@ -12,14 +13,8 @@ export function TrustStrip({
   syncHealth?: string
   isRunning?: boolean
 }) {
-  const syncLabel = lastSync
-    ? new Date(lastSync).toLocaleString('en-ZA', {
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : null
+  const syncLabel = formatLastSyncLabel(lastSync)
+  const stale = Boolean(lastSync && isSyncStale(lastSync))
 
   return (
     <div
@@ -32,7 +27,12 @@ export function TrustStrip({
         Uses official eTenders data
       </span>
       <span>Updated every 15 minutes</span>
-      {syncLabel && <span>Last sync: {syncLabel}</span>}
+      {syncLabel && (
+        <span className={stale ? 'font-medium text-amber-800' : undefined}>
+          Last sync: {syncLabel}
+          {stale ? ' · delayed' : ''}
+        </span>
+      )}
       {(syncHealth || isRunning) && (
         <SyncHealthBadge health={syncHealth} isRunning={isRunning} />
       )}
