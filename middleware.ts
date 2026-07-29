@@ -41,6 +41,17 @@ function rateLimitPublicApi(request: NextRequest, pathname: string): NextRespons
   return null
 }
 
+function withHtmlDeploySafeCache(response: NextResponse) {
+  // Next.js static pages default to s-maxage=31536000. Edge/CDN caches that HTML
+  // across deploys, so browsers request deleted /_next/static chunk hashes and
+  // crash with ChunkLoadError → React #423 → "Application error".
+  response.headers.set(
+    'Cache-Control',
+    'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
+  )
+  return response
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -49,7 +60,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith('/admin')) {
-    return NextResponse.next()
+    return withHtmlDeploySafeCache(NextResponse.next())
   }
 
   if (pathname.startsWith('/api/')) {
@@ -83,26 +94,21 @@ export async function middleware(request: NextRequest) {
         { status: 401 }
       )
     }
+
+    return NextResponse.next()
   }
 
-  return NextResponse.next()
+  return withHtmlDeploySafeCache(NextResponse.next())
 }
 
 export const config = {
   matcher: [
+    /*
+     * Run on pages + APIs so HTML Cache-Control can be shortened after deploys.
+     * Skip Next internals and common static file extensions.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)',
     '/api/:path*',
     '/admin/:path*',
-    '/scraper-demo',
-    '/scraper-demo/:path*',
-    '/ai-test',
-    '/matching-test',
-    '/features-test',
-    '/gmail-test',
-    '/drive-test',
-    '/storage-test',
-    '/maps-test',
-    '/secrets-test',
-    '/test',
-    '/test/:path*',
   ],
 }

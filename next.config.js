@@ -84,6 +84,24 @@ const nextConfig = {
 
       },
 
+      {
+
+        // Hashed build assets are immutable; keep long cache.
+
+        // HTML Cache-Control is set in middleware so it overrides Next's
+
+        // default s-maxage=31536000 (stale HTML → missing chunks → Application error).
+
+        source: '/_next/static/:path*',
+
+        headers: [
+
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+
+        ],
+
+      },
+
     ]
 
   },

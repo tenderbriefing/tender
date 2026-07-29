@@ -8,6 +8,9 @@ import { GOOGLE_SITE_VERIFICATION, SITE_URL } from '@/lib/seo/site'
 
 const inter = Inter({ subsets: ['latin'] })
 
+/** Keep HTML ISR short so deploys don't leave CDNs serving stale chunk hashes. */
+export const revalidate = 60
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
