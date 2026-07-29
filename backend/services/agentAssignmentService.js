@@ -39,6 +39,8 @@ function createAttendanceRequest(payload) {
           paymentReference: payload.paymentReference || null,
           yocoCheckoutId: null,
           yocoRedirectUrl: null,
+          payfastPaymentId: null,
+          payfastRedirectUrl: null,
           paidAt: null,
           paymentFailureReason: null,
         }

@@ -1,3 +1,5 @@
+> **Retired:** Yoco has been replaced by PayFast. See [PAYFAST_PAYMENTS_SETUP.md](./PAYFAST_PAYMENTS_SETUP.md).
+
 # Yoco payments — attendance support fee
 
 TenderBriefing charges SMEs **R249.00** (`24900` cents, ZAR) via Yoco when they request Youth Agent attendance at a compulsory tender briefing. Youth Agents only see requests after payment is confirmed (`paymentStatus: paid`). Legacy requests may use `not_required`.

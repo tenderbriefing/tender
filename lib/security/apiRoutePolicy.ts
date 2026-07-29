@@ -22,6 +22,7 @@ export function isPublicApiRoute(pathname: string, method: string): boolean {
   if (pathname === '/api/health/firestore' && m === 'GET') return true
 
   if (pathname === '/api/webhooks/whatsapp' && (m === 'GET' || m === 'POST')) return true
+  if (pathname === '/api/webhooks/payfast' && m === 'POST') return true
   if (pathname === '/api/webhooks/yoco' && m === 'POST') return true
 
   if (pathname === '/api/sync/run' && m === 'POST') return true

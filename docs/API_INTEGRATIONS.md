@@ -103,27 +103,27 @@ curl -sS http://localhost:3000/api/integrations/health | jq '.summary,.integrati
 
 ---
 
-## 5. Yoco Payments
+## 5. PayFast Payments
 
 **Purpose:** R249.00 ZAR attendance support fee when an SME requests Youth Agent attendance at a compulsory briefing. Requests stay hidden from agents until `paymentStatus` is `paid`.
 
 | Item | Value |
 |------|--------|
-| **Env** | `YOCO_SECRET_KEY`, `YOCO_WEBHOOK_SECRET`, `NEXT_PUBLIC_ATTENDANCE_FEE_CENTS` (default `24900`), `NEXT_PUBLIC_ATTENDANCE_FEE_LABEL` (default `R249.00`) |
-| **Secret Manager** | `yoco-secret-key`, `yoco-webhook-secret` |
-| **Service** | `backend/services/integrations/yocoService.js`, `backend/services/payments/attendancePaymentService.js` |
-| **API** | `POST /api/payments/yoco/create-checkout`, `POST /api/payments/yoco/confirm` |
-| **Webhook** | `POST /api/webhooks/yoco` → `https://www.tenderbriefing.co.za/api/webhooks/yoco` |
+| **Env** | `PAYFAST_MERCHANT_ID`, `PAYFAST_MERCHANT_KEY / PAYFAST_PASSPHRASE`, `NEXT_PUBLIC_ATTENDANCE_FEE_CENTS` (default `24900`), `NEXT_PUBLIC_ATTENDANCE_FEE_LABEL` (default `R249.00`) |
+| **Secret Manager** | `payfast-merchant-id`, `payfast-passphrase` |
+| **Service** | `backend/services/integrations/payfastService.js`, `backend/services/payments/attendancePaymentService.js` |
+| **API** | `POST /api/payments/payfast/create-checkout`, `POST /api/payments/payfast/confirm` |
+| **Webhook** | `POST /api/webhooks/payfast` → `https://www.tenderbriefing.co.za/api/webhooks/payfast` |
 
-**Credentials:** [Yoco Dashboard](https://www.yoco.com/) → Developers → API keys (test or live).
+**Credentials:** [PayFast Dashboard](https://www.payfast.com/) → Developers → API keys (test or live).
 
-**Flow:** SME submits request → `paymentStatus: pending` → redirect to Yoco hosted checkout → webhook or return URL sets `paid` → agents notified.
+**Flow:** SME submits request → `paymentStatus: pending` → redirect to PayFast hosted checkout → webhook or return URL sets `paid` → agents notified.
 
-**Full setup:** [YOCO_PAYMENTS_SETUP.md](./YOCO_PAYMENTS_SETUP.md)
+**Full setup:** [PAYFAST_PAYMENTS_SETUP.md](./PAYFAST_PAYMENTS_SETUP.md)
 
 **Methods:** `createCheckout()`, `getCheckout()`, webhook signature verification
 
-If `YOCO_SECRET_KEY` is missing, checkout APIs return `503` with `YOCO_NOT_CONFIGURED` (app does not crash).
+If `PAYFAST_MERCHANT_ID` is missing, checkout APIs return `503` with `PAYFAST_NOT_CONFIGURED` (app does not crash).
 
 ---
 
@@ -208,8 +208,8 @@ Tender briefing dates are already exposed in-app via `backend/services/calendarS
 | `openai-api-key` | `OPENAI_API_KEY` |
 | `google-maps-api-key` | `GOOGLE_MAPS_API_KEY` |
 | `gmail-client-secret` | (existing Gmail integration) |
-| `yoco-secret-key` | `YOCO_SECRET_KEY` |
-| `yoco-webhook-secret` | `YOCO_WEBHOOK_SECRET` |
+| `payfast-merchant-id` | `PAYFAST_MERCHANT_ID` |
+| `payfast-passphrase` | `PAYFAST_MERCHANT_KEY / PAYFAST_PASSPHRASE` |
 
 Upload from env (no hardcoded values in scripts):
 
@@ -266,7 +266,7 @@ backend/services/integrations/
   firebaseStorageService.js
   mapsService.js
   fcmService.js
-  yocoService.js
+  payfastService.js
   analyticsService.js
   openaiService.js
   calendarService.js
@@ -274,7 +274,7 @@ backend/services/integrations/
 backend/services/integrationHealthService.js
 app/api/integrations/health/route.ts
 app/api/webhooks/whatsapp/route.ts
-app/api/webhooks/yoco/route.ts
+app/api/webhooks/payfast/route.ts
 app/admin/integrations/page.tsx
 components/admin/IntegrationsDashboard.tsx
 ```

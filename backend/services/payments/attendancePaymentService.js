@@ -1,5 +1,5 @@
 const { getStorage } = require('../storageAdapter')
-const yocoService = require('../integrations/yocoService')
+const payfastService = require('../integrations/payfastService')
 const workflowAutomationService = require('../workflowAutomationService')
 const auditLogService = require('../auditLogService')
 const { sanitizeFirestoreData } = require('../../utils/sanitizeFirestoreData')
@@ -23,11 +23,14 @@ function siteBaseUrl(override) {
 function defaultPaymentFields(requestId) {
   return {
     paymentStatus: 'pending',
-    paymentProvider: 'yoco',
+    paymentProvider: 'payfast',
     paymentAmount: ATTENDANCE_FEE_CENTS,
     quotedFee: ATTENDANCE_FEE_CENTS,
     currency: ATTENDANCE_FEE_CURRENCY,
     paymentReference: paymentReferenceForRequest(requestId),
+    payfastPaymentId: null,
+    payfastRedirectUrl: null,
+    /** Legacy Yoco fields retained for old records */
     yocoCheckoutId: null,
     yocoRedirectUrl: null,
     paidAt: null,
@@ -58,43 +61,50 @@ async function saveRequest(patch) {
   return updated
 }
 
-async function createYocoCheckoutForRequest(request, baseUrl) {
+async function createPayfastCheckoutForRequest(request, baseUrl) {
   const origin = siteBaseUrl(baseUrl)
   const successUrl = `${origin}/sme/requests/payment-success?requestId=${encodeURIComponent(request.id)}`
   const cancelUrl = `${origin}/sme/requests/payment-cancelled?requestId=${encodeURIComponent(request.id)}`
-  const failureUrl = cancelUrl
+  const notifyUrl = `${origin}/api/webhooks/payfast`
 
-  const result = await yocoService.createCheckout({
-    amount: ATTENDANCE_FEE_CENTS,
-    currency: ATTENDANCE_FEE_CURRENCY,
-    successUrl,
+  const nameParts = String(request.smeName || '').trim().split(/\s+/)
+  const nameFirst = nameParts[0] || 'SME'
+  const nameLast = nameParts.slice(1).join(' ') || 'Owner'
+
+  const result = payfastService.createCheckoutPayload({
+    amountCents: ATTENDANCE_FEE_CENTS,
+    mPaymentId: paymentReferenceForRequest(request.id),
+    itemName: 'Compulsory briefing attendance support',
+    itemDescription: `Youth Agent attendance for tender ${request.tenderNumber || request.tenderId || request.id}`,
+    returnUrl: successUrl,
     cancelUrl,
-    failureUrl,
-    metadata: {
-      requestId: String(request.id),
-      smeId: String(request.smeId || ''),
-      tenderId: String(request.tenderId || ''),
-      paymentReference: paymentReferenceForRequest(request.id),
-    },
+    notifyUrl,
+    email: request.smeEmail || undefined,
+    nameFirst,
+    nameLast,
+    cellNumber: request.smePhone || undefined,
+    customStr1: String(request.id),
+    customStr2: String(request.smeId || ''),
+    customStr3: String(request.tenderId || ''),
   })
 
   if (result.skipped || !result.ok) {
     return {
       ok: false,
       configured: !result.skipped,
-      error: result.error || result.reason || 'Yoco is not configured',
+      error: result.error || result.reason || 'PayFast is not configured',
     }
   }
 
-  const checkout = result.checkout || {}
-  const checkoutId = checkout.id || checkout.checkoutId
-  const redirectUrl = checkout.redirectUrl || checkout.redirect_url
-
-  if (!checkoutId || !redirectUrl) {
-    return { ok: false, configured: true, error: 'Yoco checkout response missing redirect URL' }
+  return {
+    ok: true,
+    formAction: result.formAction,
+    fields: result.fields,
+    /** Client submits formAction+fields; stored for support/debugging */
+    redirectUrl: null,
+    checkoutId: paymentReferenceForRequest(request.id),
+    sandbox: result.sandbox,
   }
-
-  return { ok: true, checkoutId, redirectUrl }
 }
 
 async function notifyAgentsAfterPayment(request) {
@@ -105,7 +115,7 @@ async function notifyAgentsAfterPayment(request) {
   })
 }
 
-async function markRequestPaid(requestId, { checkoutId, source = 'webhook' } = {}) {
+async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'webhook' } = {}) {
   const request = await getRequestById(requestId)
   if (!request) throw new Error('Attendance request not found')
 
@@ -117,12 +127,12 @@ async function markRequestPaid(requestId, { checkoutId, source = 'webhook' } = {
   const updated = await saveRequest({
     id: requestId,
     paymentStatus: 'paid',
-    paymentProvider: 'yoco',
+    paymentProvider: 'payfast',
     paymentAmount: ATTENDANCE_FEE_CENTS,
     quotedFee: ATTENDANCE_FEE_CENTS,
     currency: ATTENDANCE_FEE_CURRENCY,
     paymentReference: paymentReferenceForRequest(requestId),
-    yocoCheckoutId: checkoutId || request.yocoCheckoutId || null,
+    payfastPaymentId: pfPaymentId || request.payfastPaymentId || null,
     paidAt: now,
     paymentFailureReason: null,
   })
@@ -136,6 +146,8 @@ async function markRequestPaid(requestId, { checkoutId, source = 'webhook' } = {
     type: 'payment_confirmed',
     entityId: requestId,
     source,
+    pfPaymentId: pfPaymentId || null,
+    checkoutId: checkoutId || null,
   })
 
   return { request: updated, alreadyPaid: false }
@@ -184,15 +196,16 @@ async function createCheckoutForExistingRequest(requestId, smeId, baseUrl) {
     throw new Error('This request was cancelled. Submit a new attendance request.')
   }
 
-  const checkout = await createYocoCheckoutForRequest(request, baseUrl)
+  const checkout = await createPayfastCheckoutForRequest(request, baseUrl)
   if (!checkout.ok) {
     return { ok: false, error: checkout.error, configured: checkout.configured !== false }
   }
 
   const updated = await saveRequest({
     id: requestId,
-    yocoCheckoutId: checkout.checkoutId,
-    yocoRedirectUrl: checkout.redirectUrl,
+    paymentProvider: 'payfast',
+    paymentReference: paymentReferenceForRequest(requestId),
+    payfastRedirectUrl: checkout.formAction,
     paymentStatus: 'pending',
     paymentFailureReason: null,
   })
@@ -200,80 +213,115 @@ async function createCheckoutForExistingRequest(requestId, smeId, baseUrl) {
   return {
     ok: true,
     request: updated,
+    formAction: checkout.formAction,
+    fields: checkout.fields,
     redirectUrl: checkout.redirectUrl,
     checkoutId: checkout.checkoutId,
   }
 }
 
-function resolveRequestIdFromWebhook(body) {
-  const metadata = body?.metadata || body?.payload?.metadata || {}
-  if (metadata.requestId) return String(metadata.requestId)
-  const checkoutId = body?.checkoutId || body?.payload?.checkoutId || body?.id
-  if (!checkoutId) return null
-  return null
+async function findRequestByPaymentReference(mPaymentId) {
+  if (!mPaymentId) return null
+  const storage = getStorage()
+  const requests = await storage.getAttendanceRequests()
+  return (
+    requests.find((r) => r.paymentReference === mPaymentId) ||
+    requests.find((r) => paymentReferenceForRequest(r.id) === mPaymentId) ||
+    null
+  )
 }
 
 async function findRequestByCheckoutId(checkoutId) {
   if (!checkoutId) return null
   const storage = getStorage()
   const requests = await storage.getAttendanceRequests()
-  return requests.find((r) => r.yocoCheckoutId === checkoutId) || null
+  return (
+    requests.find((r) => r.yocoCheckoutId === checkoutId) ||
+    requests.find((r) => r.payfastPaymentId === checkoutId) ||
+    null
+  )
 }
 
-async function processWebhookEvent(body) {
-  const eventType = String(body?.type || body?.event || '').toLowerCase()
-  const checkoutId =
-    body?.checkoutId ||
-    body?.payload?.checkoutId ||
-    body?.id ||
-    body?.payload?.id
-
-  let requestId = resolveRequestIdFromWebhook(body)
-  let request = requestId ? await getRequestById(requestId) : null
-  if (!request && checkoutId) {
-    request = await findRequestByCheckoutId(checkoutId)
-    requestId = request?.id
+/**
+ * Process PayFast ITN (form-urlencoded fields as object).
+ */
+async function processPayfastItn(posted) {
+  const signatureCheck = payfastService.verifyItnSignature(posted)
+  if (!signatureCheck.ok) {
+    return { ok: false, handled: false, reason: signatureCheck.reason || 'Invalid signature' }
   }
 
-  if (!request || !requestId) {
+  const serverValidate = await payfastService.validateItnWithPayfast(posted)
+  if (!serverValidate.ok) {
+    return {
+      ok: false,
+      handled: false,
+      reason: `PayFast validate failed: ${serverValidate.raw || 'INVALID'}`,
+    }
+  }
+
+  const requestId =
+    posted.custom_str1 ||
+    (String(posted.m_payment_id || '').startsWith('TB-REQ-')
+      ? String(posted.m_payment_id).replace(/^TB-REQ-/, '')
+      : null)
+
+  let request = requestId ? await getRequestById(String(requestId)) : null
+  if (!request && posted.m_payment_id) {
+    request = await findRequestByPaymentReference(String(posted.m_payment_id))
+  }
+
+  if (!request) {
     return { ok: true, handled: false, reason: 'No matching attendance request' }
   }
 
-  const successEvents = [
-    'payment.succeeded',
-    'checkout.completed',
-    'payment_succeeded',
-    'checkout_completed',
-    'payment.success',
-  ]
-  const failureEvents = [
-    'payment.failed',
-    'checkout.failed',
-    'payment_failed',
-    'checkout_failed',
-    'payment.failure',
-  ]
+  const status = String(posted.payment_status || '').toUpperCase()
+  const pfPaymentId = posted.pf_payment_id ? String(posted.pf_payment_id) : null
 
-  if (successEvents.some((e) => eventType.includes(e.replace('.', '')) || eventType === e)) {
-    const result = await markRequestPaid(requestId, { checkoutId, source: 'webhook' })
-    return { ok: true, handled: true, requestId, paymentStatus: 'paid', alreadyPaid: result.alreadyPaid }
+  if (status === 'COMPLETE') {
+    const expectedCents = ATTENDANCE_FEE_CENTS
+    const paidZar = Number(posted.amount_gross || posted.amount || 0)
+    const paidCents = Math.round(paidZar * 100)
+    if (paidCents > 0 && Math.abs(paidCents - expectedCents) > 1) {
+      await markRequestFailed(
+        request.id,
+        `Amount mismatch: expected ${expectedCents} cents, got ${paidCents}`
+      )
+      return { ok: true, handled: true, requestId: request.id, paymentStatus: 'failed' }
+    }
+
+    const result = await markRequestPaid(request.id, {
+      pfPaymentId,
+      checkoutId: posted.m_payment_id,
+      source: 'payfast_itn',
+    })
+    return {
+      ok: true,
+      handled: true,
+      requestId: request.id,
+      paymentStatus: 'paid',
+      alreadyPaid: result.alreadyPaid,
+    }
   }
 
-  if (failureEvents.some((e) => eventType.includes(e.replace('.', '')) || eventType === e)) {
-    await markRequestFailed(requestId, body?.failureReason || eventType)
-    return { ok: true, handled: true, requestId, paymentStatus: 'failed' }
+  if (status === 'FAILED' || status === 'CANCELLED') {
+    await markRequestFailed(request.id, `PayFast status: ${status}`)
+    return { ok: true, handled: true, requestId: request.id, paymentStatus: 'failed' }
   }
 
-  if (checkoutId && (body?.status === 'completed' || body?.payload?.status === 'completed')) {
-    const result = await markRequestPaid(requestId, { checkoutId, source: 'webhook_status' })
-    return { ok: true, handled: true, requestId, paymentStatus: 'paid', alreadyPaid: result.alreadyPaid }
-  }
-
-  return { ok: true, handled: false, reason: `Unhandled event type: ${eventType || 'unknown'}` }
+  return { ok: true, handled: false, reason: `Unhandled PayFast status: ${status || 'unknown'}` }
 }
 
-async function verifyCheckoutStatus(checkoutId) {
-  return yocoService.getCheckout(checkoutId)
+/** @deprecated Yoco webhook compatibility — unused after PayFast cutover */
+async function processWebhookEvent(body) {
+  if (body?.payment_status || body?.pf_payment_id || body?.m_payment_id) {
+    return processPayfastItn(body)
+  }
+  return { ok: true, handled: false, reason: 'Legacy Yoco event ignored' }
+}
+
+async function verifyCheckoutStatus() {
+  return { ok: false, skipped: true, reason: 'PayFast has no checkout poll API; wait for ITN' }
 }
 
 module.exports = {
@@ -282,12 +330,17 @@ module.exports = {
   paymentReferenceForRequest,
   defaultPaymentFields,
   isPaidForAgents,
-  createYocoCheckoutForRequest,
+  createPayfastCheckoutForRequest,
   createCheckoutForExistingRequest,
   markRequestPaid,
   markRequestFailed,
   markRequestCancelled,
+  processPayfastItn,
   processWebhookEvent,
   verifyCheckoutStatus,
   notifyAgentsAfterPayment,
+  findRequestByPaymentReference,
+  findRequestByCheckoutId,
+  /** Alias kept for older require() call sites */
+  createYocoCheckoutForRequest: createPayfastCheckoutForRequest,
 }

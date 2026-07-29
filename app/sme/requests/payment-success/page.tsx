@@ -32,7 +32,7 @@ function PaymentSuccessContent() {
 
     const confirm = async () => {
       try {
-        await authFetch('/api/payments/yoco/confirm', {
+        await authFetch('/api/payments/payfast/confirm', {
           method: 'POST',
           body: JSON.stringify({ requestId }),
         })

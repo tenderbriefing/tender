@@ -118,8 +118,10 @@ export interface AttendanceRequest {
   paymentAmount?: number | null
   quotedFee?: number | null
   currency?: string
-  paymentProvider?: 'yoco' | 'manual' | 'none'
+  paymentProvider?: 'payfast' | 'yoco' | 'manual' | 'none'
   paymentReference?: string | null
+  payfastPaymentId?: string | null
+  payfastRedirectUrl?: string | null
   yocoCheckoutId?: string | null
   yocoRedirectUrl?: string | null
   paidAt?: string | null

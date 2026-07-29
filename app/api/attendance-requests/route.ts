@@ -128,15 +128,15 @@ export async function POST(request: NextRequest) {
 
     if (!checkout.ok) {
       const code =
-        checkout.configured === false ? 'YOCO_NOT_CONFIGURED' : 'CHECKOUT_FAILED'
+        checkout.configured === false ? 'PAYFAST_NOT_CONFIGURED' : 'CHECKOUT_FAILED'
       const payment = {
         required: true,
         configured: checkout.configured !== false,
         code,
-        message: checkout.error || 'Yoco is not configured',
+        message: checkout.error || 'PayFast is not configured',
       }
       // Request is saved; return success so SME can view pending payment + retry
-      if (code === 'YOCO_NOT_CONFIGURED') {
+      if (code === 'PAYFAST_NOT_CONFIGURED') {
         return NextResponse.json({
           success: true,
           data: {
@@ -164,10 +164,13 @@ export async function POST(request: NextRequest) {
         nearbyAgents: [],
         payment: {
           required: true,
+          formAction: checkout.formAction,
+          fields: checkout.fields,
           redirectUrl: checkout.redirectUrl,
           checkoutId: checkout.checkoutId,
           amountCents: paymentService.ATTENDANCE_FEE_CENTS,
           currency: 'ZAR',
+          provider: 'payfast',
         },
       },
     })

@@ -88,10 +88,13 @@ export default function RequestYouthAgentPage() {
       })
       const json = await res.json()
       if (!json.success) {
-        if (json.code === 'YOCO_NOT_CONFIGURED' && json.data?.request?.id) {
+        if (
+          (json.code === 'PAYFAST_NOT_CONFIGURED' || json.code === 'YOCO_NOT_CONFIGURED') &&
+          json.data?.request?.id
+        ) {
           toast.error(
             json.error ||
-              'Your request was saved. Online payment is not active yet — you can pay from My Attendance Requests when Yoco is enabled.'
+              'Your request was saved. Online payment is not active yet — you can pay from My Attendance Requests when PayFast is enabled.'
           )
           router.push(`/sme/requests/${json.data.request.id}`)
           return
@@ -100,19 +103,26 @@ export default function RequestYouthAgentPage() {
       }
 
       const payment = json.data?.payment
-      if (payment?.code === 'YOCO_NOT_CONFIGURED') {
+      if (payment?.code === 'PAYFAST_NOT_CONFIGURED' || payment?.code === 'YOCO_NOT_CONFIGURED') {
         const requestId = json.data?.request?.id
         toast.error(
           payment.message ||
-            'Your request was saved. Online payment is not active yet — use Pay with Yoco on the request when available.'
+            'Your request was saved. Online payment is not active yet — use Pay with PayFast on the request when available.'
         )
         router.push(requestId ? `/sme/requests/${requestId}` : '/sme/requests')
         return
       }
 
+      if (payment?.formAction && payment?.fields) {
+        const { startPayFastFromApiPayload } = await import('@/lib/payments/payfastClient')
+        toast.success('Redirecting to secure PayFast checkout…')
+        startPayFastFromApiPayload(payment)
+        return
+      }
+
       const redirectUrl = payment?.redirectUrl
       if (redirectUrl) {
-        toast.success('Redirecting to secure Yoco checkout…')
+        toast.success('Redirecting to secure PayFast checkout…')
         window.location.href = redirectUrl
         return
       }
@@ -394,7 +404,7 @@ export default function RequestYouthAgentPage() {
             </button>
             <p className="text-center text-xs text-slate-500">
               <Lock className="mr-1 inline h-3 w-3" />
-              Secure Yoco checkout when enabled. Your request is saved either way.
+              Secure PayFast checkout when enabled. Your request is saved either way.
             </p>
           </form>
 

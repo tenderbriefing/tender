@@ -47,7 +47,7 @@ export default function PilotSmePage() {
             </ul>
             <p className="mt-6 text-sm text-slate-600">
               Attendance support fee: <strong>{ATTENDANCE_FEE_LABEL}</strong> per briefing during
-              pilot. Card payment optional until Yoco is finalized.
+              pilot. Card payment optional until PayFast is finalized.
             </p>
           </div>
         </AnimateIn>

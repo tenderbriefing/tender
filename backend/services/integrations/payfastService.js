@@ -1,0 +1,240 @@
+const crypto = require('crypto')
+const { env, hasEnv, checkRequired, integrationResult, statusFromConfig } = require('./integrationConfig')
+
+const REQUIRED_ENV = ['PAYFAST_MERCHANT_ID', 'PAYFAST_MERCHANT_KEY', 'PAYFAST_PASSPHRASE']
+
+/** Field order for hosted checkout signatures (PayFast custom integration attribute order). */
+const CHECKOUT_FIELD_ORDER = [
+  'merchant_id',
+  'merchant_key',
+  'return_url',
+  'cancel_url',
+  'notify_url',
+  'name_first',
+  'name_last',
+  'email_address',
+  'cell_number',
+  'm_payment_id',
+  'amount',
+  'item_name',
+  'item_description',
+  'custom_int1',
+  'custom_int2',
+  'custom_int3',
+  'custom_int4',
+  'custom_int5',
+  'custom_str1',
+  'custom_str2',
+  'custom_str3',
+  'custom_str4',
+  'custom_str5',
+  'email_confirmation',
+  'confirmation_address',
+  'payment_method',
+]
+
+function isSandbox() {
+  const mode = String(env('PAYFAST_MODE') || process.env.PAYFAST_SANDBOX || '').toLowerCase()
+  return mode === 'sandbox' || mode === 'test' || mode === 'true' || mode === '1'
+}
+
+function processUrl() {
+  return isSandbox()
+    ? 'https://sandbox.payfast.co.za/eng/process'
+    : 'https://www.payfast.co.za/eng/process'
+}
+
+function validateUrl() {
+  return isSandbox()
+    ? 'https://sandbox.payfast.co.za/eng/query/validate'
+    : 'https://www.payfast.co.za/eng/query/validate'
+}
+
+/**
+ * PayFast PHP-compatible URL encoding: spaces as +, hex uppercase.
+ */
+function pfEncode(value) {
+  return encodeURIComponent(String(value).trim())
+    .replace(/%20/g, '+')
+    .replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
+}
+
+function getConfig() {
+  const required = checkRequired(REQUIRED_ENV)
+  return {
+    configured: required.configured,
+    missing: required.missing,
+    sandbox: isSandbox(),
+    processUrl: processUrl(),
+  }
+}
+
+function getStatus() {
+  const config = getConfig()
+  return integrationResult({
+    id: 'payfast',
+    name: 'PayFast Payments',
+    status: statusFromConfig(config.configured),
+    requiredEnv: [...REQUIRED_ENV, 'PAYFAST_MODE'],
+    missing: config.missing,
+    setupNotes: config.sandbox
+      ? 'Sandbox mode — register ITN notify_url to /api/webhooks/payfast'
+      : 'Live mode — register ITN notify_url https://www.tenderbriefing.co.za/api/webhooks/payfast',
+  })
+}
+
+/**
+ * Build MD5 signature for outbound checkout fields (attribute order, empty skipped).
+ */
+function generateSignature(fields, passphrase) {
+  const parts = []
+  for (const key of CHECKOUT_FIELD_ORDER) {
+    if (Object.prototype.hasOwnProperty.call(fields, key)) {
+      const value = fields[key]
+      if (value === undefined || value === null || String(value).trim() === '') continue
+      parts.push(`${key}=${pfEncode(value)}`)
+    }
+  }
+  let paramString = parts.join('&')
+  const phrase = passphrase || env('PAYFAST_PASSPHRASE')
+  if (phrase) {
+    paramString += `&passphrase=${pfEncode(phrase)}`
+  }
+  return crypto.createHash('md5').update(paramString).digest('hex')
+}
+
+/**
+ * Verify ITN signature — exclude signature key; use posted key order.
+ */
+function verifyItnSignature(posted, passphrase) {
+  if (!posted || typeof posted !== 'object') {
+    return { ok: false, reason: 'Empty ITN payload' }
+  }
+  const received = String(posted.signature || '').toLowerCase()
+  if (!received) {
+    return { ok: false, reason: 'Missing ITN signature' }
+  }
+
+  const phrase = passphrase || env('PAYFAST_PASSPHRASE')
+  if (!phrase && process.env.NODE_ENV === 'production') {
+    return { ok: false, reason: 'PAYFAST_PASSPHRASE required in production' }
+  }
+
+  let paramString = ''
+  for (const [key, value] of Object.entries(posted)) {
+    if (key === 'signature') continue
+    if (value === undefined || value === null || String(value).trim() === '') continue
+    paramString += `${key}=${pfEncode(value)}&`
+  }
+  paramString = paramString.slice(0, -1)
+  if (phrase) {
+    paramString += `&passphrase=${pfEncode(phrase)}`
+  }
+
+  const expected = crypto.createHash('md5').update(paramString).digest('hex')
+  const valid = expected === received
+  return { ok: valid, reason: valid ? undefined : 'Invalid ITN signature', expected }
+}
+
+/**
+ * Ask PayFast to confirm ITN payload validity.
+ */
+async function validateItnWithPayfast(posted) {
+  try {
+    const body = new URLSearchParams()
+    for (const [key, value] of Object.entries(posted)) {
+      if (value === undefined || value === null) continue
+      body.append(key, String(value))
+    }
+    const response = await fetch(validateUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    })
+    const text = (await response.text()).trim()
+    return { ok: text.startsWith('VALID'), raw: text }
+  } catch (error) {
+    return { ok: false, raw: error instanceof Error ? error.message : 'validate failed' }
+  }
+}
+
+/**
+ * Build signed PayFast checkout fields for R249 attendance fee.
+ */
+function createCheckoutPayload({
+  amountCents,
+  mPaymentId,
+  itemName,
+  itemDescription,
+  returnUrl,
+  cancelUrl,
+  notifyUrl,
+  email,
+  nameFirst,
+  nameLast,
+  cellNumber,
+  customStr1,
+  customStr2,
+  customStr3,
+}) {
+  const config = getConfig()
+  if (!config.configured) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: `PayFast not configured (missing: ${config.missing.join(', ')})`,
+    }
+  }
+
+  const merchantId = env('PAYFAST_MERCHANT_ID')
+  const merchantKey = env('PAYFAST_MERCHANT_KEY')
+  const amountZar = (Number(amountCents) / 100).toFixed(2)
+
+  const fields = {
+    merchant_id: String(merchantId),
+    merchant_key: String(merchantKey),
+    return_url: returnUrl,
+    cancel_url: cancelUrl,
+    notify_url: notifyUrl,
+    m_payment_id: String(mPaymentId),
+    amount: amountZar,
+    item_name: String(itemName || 'TenderBriefing attendance support').slice(0, 100),
+  }
+
+  if (itemDescription) fields.item_description = String(itemDescription).slice(0, 255)
+  if (email) fields.email_address = String(email).slice(0, 100)
+  if (nameFirst) fields.name_first = String(nameFirst).slice(0, 100)
+  if (nameLast) fields.name_last = String(nameLast).slice(0, 100)
+  if (cellNumber) fields.cell_number = String(cellNumber).replace(/\D/g, '').slice(0, 20)
+  if (customStr1) fields.custom_str1 = String(customStr1).slice(0, 255)
+  if (customStr2) fields.custom_str2 = String(customStr2).slice(0, 255)
+  if (customStr3) fields.custom_str3 = String(customStr3).slice(0, 255)
+
+  fields.signature = generateSignature(fields)
+
+  return {
+    ok: true,
+    formAction: processUrl(),
+    fields,
+    sandbox: config.sandbox,
+  }
+}
+
+async function healthCheck() {
+  return getStatus()
+}
+
+module.exports = {
+  REQUIRED_ENV,
+  getConfig,
+  getStatus,
+  pfEncode,
+  generateSignature,
+  verifyItnSignature,
+  validateItnWithPayfast,
+  createCheckoutPayload,
+  processUrl,
+  validateUrl,
+  isSandbox,
+  healthCheck,
+}

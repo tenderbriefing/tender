@@ -85,7 +85,7 @@ async function markRequestPaid(requestId) {
   const now = new Date().toISOString()
   await db.collection('attendanceRequests').doc(requestId).update({
     paymentStatus: 'paid',
-    paymentProvider: 'yoco',
+    paymentProvider: 'payfast',
     paymentAmount: 24900,
     currency: 'ZAR',
     paidAt: now,

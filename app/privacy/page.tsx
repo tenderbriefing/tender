@@ -45,7 +45,7 @@ export default function PrivacyPage() {
         <h2>5. Sharing</h2>
         <p>
           SME contact details relevant to an assignment are shared with assigned Youth Agents.
-          Payment data is handled by Yoco when enabled. Infrastructure providers (Google Cloud,
+          Payment data is handled by PayFast when enabled. Infrastructure providers (Google Cloud,
           Firebase, Twilio) process data under their agreements. We do not sell personal
           information.
         </p>

@@ -7,7 +7,7 @@ Real-time procurement orchestration via `workflowAutomationService.js`.
 | Workflow event | Triggers |
 |----------------|----------|
 | `attendance_requested` | Paid request — notify SME + nearby agents (WhatsApp) |
-| `request_paid` | Yoco payment confirmed — unlock agents |
+| `request_paid` | PayFast payment confirmed — unlock agents |
 | `request_accepted` | Agent/admin assign — notify SME |
 | `report_uploaded` | Briefing report — PDF summary + SME/admin WhatsApp |
 | `tender_closing_soon` | Tracked tender closing within 24h |

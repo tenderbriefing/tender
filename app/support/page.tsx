@@ -45,7 +45,7 @@ const faqs = [
   },
   {
     q: 'What if payment fails?',
-    a: 'Your attendance request is saved. You can retry payment when Yoco checkout is enabled, or contact support during the pilot for manual coordination.',
+    a: 'Your attendance request is saved. You can retry payment when PayFast checkout is enabled, or contact support during the pilot for manual coordination.',
   },
   {
     q: 'How do I get dispatch updates?',

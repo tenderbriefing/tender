@@ -18,7 +18,7 @@
     "sync:firestore": "node scripts/run-sync-firestore.js",
     "verify:firestore-collections": "node scripts/verify-firestore-collections.js",
     "smoke:production": "node scripts/production-smoke-test.js",
-    "yoco:readiness": "node scripts/yoco-readiness-check.js",
+    "yoco:readiness": "node scripts/payfast-readiness-check.js",
     "test:whatsapp": "node scripts/test-whatsapp.js",
     "qa:whatsapp": "WHATSAPP_QA_MODE=production-api node scripts/whatsapp-operational-qa.js",
     "qa:whatsapp:production": "WHATSAPP_QA_MODE=production-api node scripts/whatsapp-operational-qa.js",
@@ -35,7 +35,8 @@
     "procurement-intelligence:qa": "node scripts/procurement-intelligence-qa.js",
     "rfq-inbox:qa": "node scripts/rfq-inbox-qa.js",
     "smoke:production:rest": "node scripts/production-smoke-rest.js",
-    "test:integrations": "node scripts/test-integrations-health.js"
+    "test:integrations": "node scripts/test-integrations-health.js",
+    "payfast:readiness": "node scripts/payfast-readiness-check.js"
   },
   "dependencies": {
     "@google-cloud/secret-manager": "^6.1.0",

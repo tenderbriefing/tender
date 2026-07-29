@@ -1,4 +1,4 @@
-/** Attendance support fee — R249.00 ZAR (amount in cents for Yoco). */
+/** Attendance support fee — R249.00 ZAR (amount in cents; PayFast uses decimal ZAR). */
 export const ATTENDANCE_FEE_CENTS = Number(
   process.env.NEXT_PUBLIC_ATTENDANCE_FEE_CENTS || 24900
 )

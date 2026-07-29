@@ -64,7 +64,7 @@ const plans: Plan[] = [
       'WhatsApp + in-app status updates',
       'Structured briefing report within 24h',
       'SLA-tracked assignment',
-      'Secure Yoco checkout when enabled',
+      'Secure PayFast checkout when enabled',
     ],
     cta: 'Register as SME',
     href: '/auth/signup?type=sme',

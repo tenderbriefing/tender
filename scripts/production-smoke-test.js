@@ -99,13 +99,13 @@ async function getDoc(collection, id) {
   return doc.exists ? { id: doc.id, ...doc.data() } : null
 }
 
-/** Test-only: simulate successful Yoco payment without calling live checkout. */
+/** Test-only: simulate successful PayFast payment without calling live checkout. */
 async function markRequestPaidForSmoke(requestId) {
   const admin = getFirebaseAdmin()
   const now = new Date().toISOString()
   await admin.firestore().collection('attendanceRequests').doc(requestId).update({
     paymentStatus: 'paid',
-    paymentProvider: 'yoco',
+    paymentProvider: 'payfast',
     paymentAmount: 24900,
     currency: 'ZAR',
     paidAt: now,
@@ -217,13 +217,13 @@ async function main() {
     throw new Error(createRes.json.error || 'Create request failed — no request id')
   }
   const yocoNotConfiguredOnCreate =
-    createRes.json.data?.payment?.code === 'YOCO_NOT_CONFIGURED' ||
-    createRes.json.code === 'YOCO_NOT_CONFIGURED'
+    createRes.json.data?.payment?.code === 'PAYFAST_NOT_CONFIGURED' ||
+    createRes.json.code === 'PAYFAST_NOT_CONFIGURED'
   if (!createRes.json.success && !yocoNotConfiguredOnCreate && !requestId) {
     throw new Error(createRes.json.error || 'Create request failed')
   }
   report.attendanceRequestId = requestId
-  report.yocoConfigured = createRes.json.success === true
+  report.payfastConfigured = createRes.json.success === true
   report.statusTimeline.push({
     at: 'create',
     status: createRes.json.data?.request?.status || 'pending',

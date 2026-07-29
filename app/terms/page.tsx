@@ -38,7 +38,7 @@ export default function TermsPage() {
         <h2>4. Payments and refunds</h2>
         <p>
           Briefing attendance support fees are quoted at checkout (standard fee R249.00 unless
-          otherwise stated). Payment processing via Yoco may be enabled progressively during
+          otherwise stated). Payment processing via PayFast may be enabled progressively during
           pilot. Refund policy: requests cancelled before agent dispatch may qualify for a
           refund review; no-shows by agents are escalated operationally. Full refund terms will
           be published before general availability.
