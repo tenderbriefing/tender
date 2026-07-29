@@ -12,11 +12,14 @@ function paymentReferenceForRequest(requestId) {
 }
 
 function siteBaseUrl(override) {
-  const base =
-    override ||
+  const configured =
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
     'https://www.tenderbriefing.co.za'
+  // Production PayFast return/cancel/notify must use the public www site URL —
+  // never request Origin (could be apex, preview, or spoofed).
+  const base =
+    process.env.NODE_ENV === 'production' ? configured : override || configured
   return String(base).replace(/\/$/, '')
 }
 
@@ -258,6 +261,15 @@ async function processPayfastItn(posted) {
       handled: false,
       reason: `PayFast validate failed: ${serverValidate.raw || 'INVALID'}`,
     }
+  }
+
+  const expectedMerchantId = String(process.env.PAYFAST_MERCHANT_ID || '').trim()
+  const postedMerchantId = String(posted.merchant_id || '').trim()
+  if (expectedMerchantId && postedMerchantId && postedMerchantId !== expectedMerchantId) {
+    return { ok: false, handled: false, reason: 'Merchant ID mismatch' }
+  }
+  if (expectedMerchantId && !postedMerchantId) {
+    return { ok: false, handled: false, reason: 'Missing merchant_id' }
   }
 
   const requestId =
