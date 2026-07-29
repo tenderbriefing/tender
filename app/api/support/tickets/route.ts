@@ -1,4 +1,3 @@
-import path from 'path'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyApiUser } from '@/lib/auth/verifyApiUser'
 import {
@@ -6,15 +5,9 @@ import {
   isGuardResponse,
 } from '@/lib/auth/apiGuards'
 import { sendSupportTicketEmails } from '@/lib/services/supportEmail'
+import * as support from '@/lib/services/supportTickets'
 
 export const dynamic = 'force-dynamic'
-
-function supportTicketService() {
-  // Standalone Cloud Run copies backend/ to process.cwd(); relative requires from
-  // compiled .next/server routes do not resolve to that tree.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require(path.join(process.cwd(), 'backend/services/supportTicketService'))
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,7 +16,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Sign in required' }, { status: 401 })
     }
 
-    const support = supportTicketService()
     const { searchParams } = new URL(request.url)
 
     if (user.userType === 'admin') {
@@ -60,7 +52,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const user = await verifyApiUser(request.headers.get('authorization'))
-    const support = supportTicketService()
 
     const ticket = await support.createTicket(
       {
@@ -109,7 +100,6 @@ export async function POST(request: NextRequest) {
         email: {
           supportNotified: emailResult.supportEmailSent,
           acknowledgementSent: emailResult.acknowledgementEmailSent,
-          // Surface soft-fail without failing the request (ticket is the source of truth)
           deferred: Boolean(emailResult.error),
         },
       },
