@@ -13,7 +13,14 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'auth/invalid-credential': 'Invalid email or password. Please try again.',
   'auth/invalid-login-credentials': 'Invalid email or password. Please try again.',
   'auth/user-disabled': 'This account has been disabled. Contact support.',
-  'auth/operation-not-allowed': 'Email/password sign-in is not enabled for this project.',
+  'auth/popup-blocked':
+    'Your browser blocked the Google sign-in popup. Allow popups or try again — we will redirect instead.',
+  'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
+  'auth/cancelled-popup-request': 'Google sign-in was interrupted. Please try again.',
+  'auth/account-exists-with-different-credential':
+    'An account already exists with this email using a different sign-in method. Sign in with your password to link Google.',
+  'auth/operation-not-allowed':
+    'This sign-in method is not enabled. Contact support if Google or email sign-in should be available.',
   'auth/unauthorized-domain':
     'This site is not authorized for sign-in. Add www.tenderbriefing.co.za in Firebase Auth → Settings → Authorized domains.',
   'auth/configuration-not-found': 'Authentication is not configured correctly. Contact support.',

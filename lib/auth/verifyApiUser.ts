@@ -30,6 +30,9 @@ export async function verifyApiUser(
     if (!userDoc.exists) return null
 
     const data = userDoc.data()!
+    if (data.suspended === true || data.verificationStatus === 'suspended') {
+      return null
+    }
     const userType = data.userType as ApiUserType
     if (!['sme', 'youth-agent', 'admin'].includes(userType)) return null
     if (allowedTypes && !allowedTypes.includes(userType)) return null

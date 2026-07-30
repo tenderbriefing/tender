@@ -1,13 +1,21 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { signIn, getUserProfile } from '@/lib/auth'
 import { getAuthErrorMessage, normalizeAuthEmail } from '@/lib/auth/errors'
 import { dashboardPathForRole } from '@/lib/auth/redirects'
+import { resolvePostAuthDestination } from '@/lib/auth/googleAuthFlow'
+import {
+  continueWithGoogle,
+  finishGoogleRedirect,
+} from '@/lib/auth/continueWithGoogle'
 import { toast } from 'react-hot-toast'
 import AuthShell from '@/components/auth/AuthShell'
+import GoogleContinueButton, {
+  AuthMethodDivider,
+} from '@/components/auth/GoogleContinueButton'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 const inputClass =
@@ -19,8 +27,36 @@ function SignInForm() {
   const redirectTo = searchParams?.get('redirect') || ''
 
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const result = await finishGoogleRedirect({
+        registrationJourney: 'signin',
+        pagePath: '/auth/signin',
+      })
+      if (cancelled || !result) return
+      if (!result.ok) {
+        if (result.needsAccountLink) {
+          const q = result.email ? `?email=${encodeURIComponent(result.email)}` : ''
+          router.push(`/auth/link-account${q}`)
+          return
+        }
+        if (result.message && !/redirecting/i.test(result.message)) {
+          toast.error(result.message)
+        }
+        return
+      }
+      toast.success('Signed in with Google')
+      router.replace(redirectTo || result.redirectPath || '/sme/dashboard')
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [router, redirectTo])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -46,19 +82,55 @@ function SignInForm() {
         toast.error('Profile not found. Contact support or complete registration again.')
         return
       }
+      const dest = resolvePostAuthDestination(profile)
+      if (dest.blocked) {
+        toast.error(dest.blockReason || 'Access denied.')
+        return
+      }
       toast.success('Signed in successfully')
       try {
         const { trackProductEvent } = await import('@/lib/founder/trackProductEvent')
-        await trackProductEvent('user_logged_in', { feature: 'auth', pagePath: '/auth/signin' })
+        await trackProductEvent('user_logged_in', {
+          feature: 'auth',
+          pagePath: '/auth/signin',
+          metadata: { authenticationProvider: 'password', deviceCategory: 'desktop' },
+        })
       } catch {
         /* non-blocking */
       }
       if (redirectTo) router.push(redirectTo)
-      else router.push(dashboardPathForRole(profile.userType))
+      else router.push(dest.path || dashboardPathForRole(profile.userType))
     } catch (error: unknown) {
       toast.error(getAuthErrorMessage(error, 'Failed to sign in. Please try again.'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleGoogle = async () => {
+    setGoogleLoading(true)
+    try {
+      const result = await continueWithGoogle({
+        registrationJourney: 'signin',
+        pagePath: '/auth/signin',
+      })
+      if (!result.ok) {
+        if (result.needsAccountLink) {
+          const q = result.email ? `?email=${encodeURIComponent(result.email)}` : ''
+          router.push(`/auth/link-account${q}`)
+          return
+        }
+        if (result.message && !/redirecting/i.test(result.message)) {
+          toast.error(result.message)
+        }
+        return
+      }
+      toast.success('Signed in with Google')
+      router.replace(redirectTo || result.redirectPath || '/sme/dashboard')
+    } catch (error: unknown) {
+      toast.error(getAuthErrorMessage(error, 'Google sign-in failed.'))
+    } finally {
+      setGoogleLoading(false)
     }
   }
 
@@ -67,6 +139,10 @@ function SignInForm() {
       title="Sign in to TenderBriefing"
       subtitle="Access your procurement dashboard, attendance requests, and briefing reports."
     >
+      <GoogleContinueButton onClick={handleGoogle} loading={googleLoading} disabled={loading} />
+
+      <AuthMethodDivider />
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
@@ -112,7 +188,7 @@ function SignInForm() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || googleLoading}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-800 py-3.5 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-700 disabled:opacity-50"
         >
           {loading ? <LoadingSpinner size="sm" /> : 'Sign in to TenderBriefing'}

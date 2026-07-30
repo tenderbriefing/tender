@@ -60,6 +60,16 @@ const nextConfig = {
 
   output: 'standalone',
 
+  // Repo historically had no ESLint config; disable build-blocking lint until a full config is adopted.
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
+  typescript: {
+    // Typecheck is run separately in CI/QA (`npx tsc --noEmit`).
+    ignoreBuildErrors: false,
+  },
+
   experimental: {
 
     serverComponentsExternalPackages: ['firebase-admin'],

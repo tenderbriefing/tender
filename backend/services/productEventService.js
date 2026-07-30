@@ -3,6 +3,12 @@ const { getFirestore } = require('../config/firebaseAdmin')
 // Allow-listed first-party product events (keep in sync with lib/founder/eventSchema.ts)
 const EVENT_NAMES = new Set([
   'user_logged_in',
+  'google_sign_in_started',
+  'google_sign_in_succeeded',
+  'google_sign_in_failed',
+  'first_google_registration',
+  'onboarding_started',
+  'onboarding_completed',
   'dashboard_viewed',
   'navigation_selected',
   'search_initiated',
@@ -58,12 +64,19 @@ const METADATA_ALLOWLIST = new Set([
   'referralSource',
   'durationMs',
   'hasResults',
+  'authenticationProvider',
+  'registrationJourney',
+  'errorCode',
+  'pagePath',
 ])
 
 const FORBIDDEN = ['password', 'token', 'idtoken', 'authorization', 'secret', 'bank', 'card', 'cvv', 'idnumber', 'said', 'rawtext', 'formvalue', 'keystroke']
 
 const MEANINGFUL = new Set([
   'user_logged_in',
+  'google_sign_in_succeeded',
+  'first_google_registration',
+  'onboarding_completed',
   'search_initiated',
   'search_performed',
   'tender_opened',
@@ -154,6 +167,11 @@ async function ingestProductEvent(actor, input) {
         uid: actor.uid,
         actorRole: actor.userType,
         lastSeenAt: now,
+        lastLoginAt: doc.eventName === 'user_logged_in' || doc.eventName === 'google_sign_in_succeeded' ? now : prev.lastLoginAt || null,
+        authenticationProvider:
+          (meta.metadata && meta.metadata.authenticationProvider) || prev.authenticationProvider || null,
+        firstSeenAt: prev.firstSeenAt || now,
+        registrationDate: prev.registrationDate || prev.firstSeenAt || now,
         lastMeaningfulAt: doc.meaningful ? now : prev.lastMeaningfulAt || null,
         meaningfulEventCount: meaningfulCount,
         eventCount: Number(prev.eventCount || 0) + 1,

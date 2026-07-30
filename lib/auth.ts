@@ -49,6 +49,20 @@ export interface UserProfile {
   /** Explicit founder console access (in addition to email allowlist). */
   founderAccess?: boolean;
 
+  photoURL?: string | null;
+
+  /** e.g. password | google — informational only; not an authorization source. */
+  authenticationProvider?: string;
+
+  providerIds?: string[];
+
+  lastLoginAt?: string;
+
+  lastSeenAt?: string;
+
+  /** Soft suspension flag (agents may also use verificationStatus). */
+  suspended?: boolean;
+
   companyName?: string;
 
   contactPerson?: string;
