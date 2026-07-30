@@ -68,8 +68,15 @@ export async function createPlatformProfile(
     lastSeenAt: timestamp,
     ...extra,
     onboardingCompleted,
-    onboardingCompletedAt:
-      extra.onboardingCompletedAt || (onboardingCompleted ? timestamp : undefined),
+  }
+
+  if (onboardingCompleted) {
+    userProfile.onboardingCompletedAt =
+      typeof extra.onboardingCompletedAt === 'string' && extra.onboardingCompletedAt
+        ? extra.onboardingCompletedAt
+        : timestamp
+  } else {
+    delete (userProfile as { onboardingCompletedAt?: string }).onboardingCompletedAt
   }
 
   if (input.role === 'youth-agent') {
@@ -87,8 +94,13 @@ export async function createPlatformProfile(
   userProfile.userType = input.role
   userProfile.founderAccess = false
 
+  // Firestore Admin rejects `undefined` field values.
+  const profileDoc = Object.fromEntries(
+    Object.entries(userProfile).filter(([, value]) => value !== undefined)
+  ) as UserProfile
+
   const userRef = db.collection('users').doc(input.uid)
-  await userRef.set(userProfile)
+  await userRef.set(profileDoc)
 
   if (input.role === 'sme') {
     await db.collection('smes').doc(input.uid).set(
@@ -112,7 +124,7 @@ export async function createPlatformProfile(
         tenderInterests: userProfile.tenderInterests || '',
         whatsAppNumber: userProfile.whatsAppNumber || userProfile.phoneNumber || '',
         onboardingCompleted,
-        onboardingCompletedAt: userProfile.onboardingCompletedAt || '',
+        onboardingCompletedAt: profileDoc.onboardingCompletedAt || '',
         userType: 'sme',
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -138,7 +150,7 @@ export async function createPlatformProfile(
         idVerificationNote: userProfile.idVerificationNote || '',
         codeOfConductAccepted: userProfile.codeOfConductAccepted === true,
         onboardingCompleted,
-        onboardingCompletedAt: userProfile.onboardingCompletedAt || '',
+        onboardingCompletedAt: profileDoc.onboardingCompletedAt || '',
         verificationStatus: 'pending',
         verified: false,
         reliabilityScore: userProfile.reliabilityScore ?? 100,
@@ -169,7 +181,7 @@ export async function createPlatformProfile(
     { merge: true }
   )
 
-  return userProfile
+  return profileDoc
 }
 
 export function logProfileSetupFailure(context: string, details: Record<string, unknown>) {
