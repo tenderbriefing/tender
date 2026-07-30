@@ -8,6 +8,7 @@ import {
   signInWithGoogle,
   type GoogleSignInResult,
 } from '@/lib/auth/googleAuth'
+import { isGoogleAuthEnabled } from '@/lib/auth/googleAuthEnabled'
 import type { UserProfile } from '@/lib/auth'
 import type { ProductEventName } from '@/lib/founder/eventSchema'
 
@@ -111,6 +112,10 @@ export async function continueWithGoogle(input: {
   redirectPath?: string
   profile?: Partial<UserProfile> | null
 }> {
+  if (!isGoogleAuthEnabled()) {
+    return { ok: false, message: 'Google sign-in is temporarily unavailable.' }
+  }
+
   await trackAuthFunnel('google_sign_in_started', {
     registrationJourney: input.registrationJourney,
     pagePath: input.pagePath,
@@ -125,6 +130,8 @@ export async function finishGoogleRedirect(input: {
   intendedRole?: 'sme' | 'youth-agent'
   pagePath: string
 }) {
+  if (!isGoogleAuthEnabled()) return null
+
   const result = await completeGoogleRedirectIfPresent()
   if (!result) return null
   if (!result.ok && result.code !== 'auth/redirect-pending') {

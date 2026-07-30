@@ -11,12 +11,15 @@ import {
   continueWithGoogle,
   finishGoogleRedirect,
 } from '@/lib/auth/continueWithGoogle'
+import { isGoogleAuthEnabled } from '@/lib/auth/googleAuthEnabled'
 import { toast } from 'react-hot-toast'
 import AuthShell from '@/components/auth/AuthShell'
 import GoogleContinueButton, {
   AuthMethodDivider,
 } from '@/components/auth/GoogleContinueButton'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+
+const googleAuthEnabled = isGoogleAuthEnabled()
 
 const inputClass =
   'w-full rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-700/20'
@@ -32,6 +35,7 @@ function SignInForm() {
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
+    if (!googleAuthEnabled) return
     let cancelled = false
     ;(async () => {
       const result = await finishGoogleRedirect({
@@ -140,9 +144,12 @@ function SignInForm() {
       title="Sign in to TenderBriefing"
       subtitle="Access your procurement dashboard, attendance requests, and briefing reports."
     >
-      <GoogleContinueButton onClick={handleGoogle} loading={googleLoading} disabled={loading} />
-
-      <AuthMethodDivider />
+      {googleAuthEnabled ? (
+        <>
+          <GoogleContinueButton onClick={handleGoogle} loading={googleLoading} disabled={loading} />
+          <AuthMethodDivider />
+        </>
+      ) : null}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

@@ -7,6 +7,7 @@ import { signUp } from '@/lib/auth'
 import { getAuthErrorMessage, normalizeAuthEmail } from '@/lib/auth/errors'
 import { dashboardPathForRole } from '@/lib/auth/redirects'
 import { continueWithGoogle, finishGoogleRedirect } from '@/lib/auth/continueWithGoogle'
+import { isGoogleAuthEnabled } from '@/lib/auth/googleAuthEnabled'
 import { requestWelcomeEmail } from '@/lib/auth/requestWelcomeEmail'
 import { SA_PROVINCES } from '@/lib/procurement/provinces'
 import { toast } from 'react-hot-toast'
@@ -17,6 +18,8 @@ import GoogleContinueButton, {
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import SmeCategoryCommoditySelector from '@/components/sme/SmeCategoryCommoditySelector'
 import { buildMatchingKeywords } from '@/lib/data/csdProcurementCatalog'
+
+const googleAuthEnabled = isGoogleAuthEnabled()
 
 const inputClass =
   'w-full rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-700/20'
@@ -52,6 +55,7 @@ function SignUpForm() {
   }, [initialType])
 
   useEffect(() => {
+    if (!googleAuthEnabled) return
     let cancelled = false
     const journey = initialType === 'youth-agent' ? 'youth-agent' : 'sme'
     ;(async () => {
@@ -225,13 +229,17 @@ function SignUpForm() {
         </Link>
       </div>
 
-      <GoogleContinueButton
-        onClick={handleGoogle}
-        loading={googleLoading}
-        disabled={loading}
-        label={isSme ? 'Continue with Google as SME' : 'Continue with Google as Youth Agent'}
-      />
-      <AuthMethodDivider label="or register with email" />
+      {googleAuthEnabled ? (
+        <>
+          <GoogleContinueButton
+            onClick={handleGoogle}
+            loading={googleLoading}
+            disabled={loading}
+            label={isSme ? 'Continue with Google as SME' : 'Continue with Google as Youth Agent'}
+          />
+          <AuthMethodDivider label="or register with email" />
+        </>
+      ) : null}
 
       <form onSubmit={handleSubmit} className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
 
