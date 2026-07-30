@@ -110,7 +110,7 @@ function Track({
         </div>
         <div>
           <SectionLabel tone={isSme ? 'navy' : 'gold'}>{isSme ? 'For SMEs' : 'For Youth Agents'}</SectionLabel>
-          <h2 className="mt-1 text-2xl font-bold text-brand-900">{title}</h2>
+          <h2 className="mt-1 font-display text-2xl font-bold text-brand-900">{title}</h2>
         </div>
       </div>
 
@@ -126,7 +126,7 @@ function Track({
             >
               {s.step}
             </span>
-            <h3 className="font-bold text-brand-900">{s.title}</h3>
+            <h3 className="font-display font-bold text-brand-900">{s.title}</h3>
             <p className="mt-1 text-sm leading-relaxed text-slate-600">{s.text}</p>
             {idx === steps.length - 1 && (
               <span className="absolute -left-[2.4rem] -bottom-2 h-2 w-2 rounded-full bg-accent-500" />
@@ -163,8 +163,8 @@ export default function HowItWorksPage() {
             title="The SME journey"
             icon={Building2}
             steps={smeSteps}
-            ctaHref="/sme/onboarding"
-            ctaLabel="Complete SME onboarding"
+            ctaHref="/auth/role-selection"
+            ctaLabel="Register as SME"
             variant="sme"
           />
         </AnimateIn>
@@ -173,8 +173,8 @@ export default function HowItWorksPage() {
             title="The Youth Agent journey"
             icon={Users}
             steps={agentSteps}
-            ctaHref="/agent/onboarding"
-            ctaLabel="Complete agent onboarding"
+            ctaHref="/auth/signup?type=youth-agent"
+            ctaLabel="Register as Youth Agent"
             variant="agent"
           />
         </AnimateIn>

@@ -50,7 +50,7 @@ export default function ProgrammaticTendersPage({ slug }: { slug: string }) {
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/auth/signup"
+              href="/auth/role-selection"
               className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-white/20 px-6 py-3 text-sm font-semibold text-white"
             >
               Register free
@@ -74,7 +74,7 @@ export default function ProgrammaticTendersPage({ slug }: { slug: string }) {
             </div>
 
             <div className="mt-12">
-              <h2 className="text-2xl font-bold text-brand-900">Matching opportunities</h2>
+              <h2 className="font-display text-2xl font-bold text-brand-900">Matching opportunities</h2>
               <p className="mt-2 text-slate-600">
                 Live compulsory briefing opportunities synced from official eTenders data.
               </p>

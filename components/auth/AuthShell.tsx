@@ -54,22 +54,19 @@ export default function AuthShell({
             <rect width="100%" height="100%" fill="url(#auth-grid)" />
           </svg>
 
-          <Link href="/" className="relative flex items-center gap-2.5">
+          <Link href="/" className="relative flex items-center" aria-label="TenderBriefing home">
             <Image
-              src="/icon.png"
-              alt=""
-              width={40}
-              height={40}
+              src="/logo.png"
+              alt="TenderBriefing"
+              width={220}
+              height={147}
               priority
-              className="h-10 w-10"
+              className="h-12 w-auto"
             />
-            <span className="text-xl font-bold text-white">
-              Tender<span className="text-accent-400">Briefing</span>
-            </span>
           </Link>
 
           <div className="relative mt-12 flex-1 space-y-6">
-            <h2 className="text-3xl font-bold leading-tight">
+            <h2 className="font-display text-3xl font-bold leading-tight">
               Win more government work.
               <br />
               <span className="text-accent-400">Never miss a compulsory briefing.</span>
@@ -106,13 +103,17 @@ export default function AuthShell({
         >
           <Link
             href="/"
-            className="mb-10 flex items-center justify-center gap-2.5 lg:hidden"
+            className="mb-10 flex items-center justify-center lg:hidden"
             aria-label="TenderBriefing home"
           >
-            <Image src="/icon.png" alt="" width={40} height={40} priority className="h-10 w-10" />
-            <span className="text-xl font-bold text-brand-900">
-              Tender<span className="text-accent-600">Briefing</span>
-            </span>
+            <Image
+              src="/logo.png"
+              alt="TenderBriefing"
+              width={220}
+              height={147}
+              priority
+              className="h-12 w-auto"
+            />
           </Link>
 
           <div className="mx-auto w-full max-w-md">
@@ -122,7 +123,7 @@ export default function AuthShell({
                   <span className="h-1.5 w-6 rounded-full bg-brand-800" />
                   Welcome
                 </span>
-                <h1 className="mt-3 text-2xl font-bold text-brand-900 sm:text-3xl">{title}</h1>
+                <h1 className="mt-3 font-display text-2xl font-bold text-brand-900 sm:text-3xl">{title}</h1>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600">{subtitle}</p>
               </div>
               {children}

@@ -45,7 +45,7 @@ export default function PageHero({
 
       <div className={`relative mx-auto flex max-w-4xl flex-col gap-5 px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24 ${alignment}`}>
         <SectionLabel tone={isDark ? 'light' : 'navy'}>{eyebrow}</SectionLabel>
-        <h1 className={`text-4xl font-bold tracking-tight sm:text-5xl lg:text-[3.25rem] lg:leading-[1.1] ${titleColor}`}>
+        <h1 className={`font-display text-4xl font-bold tracking-tight sm:text-5xl lg:text-[3.25rem] lg:leading-[1.1] ${titleColor}`}>
           {title}
         </h1>
         {description && (

@@ -58,7 +58,7 @@ export default function SeoLandingStatsBlock({ initialStats = null }: SeoLanding
 
   return (
     <section className="mt-14">
-      <h2 className="text-2xl font-bold text-brand-900">Live procurement snapshot</h2>
+      <h2 className="font-display text-2xl font-bold text-brand-900">Live procurement snapshot</h2>
       <p className="mt-2 text-slate-600">
         Real counts from official eTenders sync — updated as new compulsory briefing opportunities
         are published across South Africa.

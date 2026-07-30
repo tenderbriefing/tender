@@ -54,7 +54,7 @@ export default function FinalCTA() {
             ) : (
               <>
                 <Link
-                  href="/sme/onboarding"
+                  href="/auth/role-selection"
                   className="inline-flex items-center gap-2 rounded-xl bg-accent-500 px-8 py-4 font-semibold text-brand-950 shadow-gold transition hover:bg-accent-400"
                 >
                   Start free

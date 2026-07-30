@@ -92,7 +92,7 @@ a {
 }
 
 .procurement-page-header {
-  @apply text-2xl font-bold text-slate-900 sm:text-3xl;
+  @apply font-display text-2xl font-bold text-slate-900 sm:text-3xl;
 }
 
 .procurement-kicker {

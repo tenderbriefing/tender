@@ -26,7 +26,7 @@ export default function ResourceArticlePage({ article }: { article: ResourceArti
 
           {article.sections.map((section) => (
             <section key={section.heading} className="mt-10">
-              <h2 className="text-2xl font-bold text-brand-900">{section.heading}</h2>
+              <h2 className="font-display text-2xl font-bold text-brand-900">{section.heading}</h2>
               <div className="mt-4 space-y-4 text-slate-700 leading-relaxed">
                 {section.paragraphs.map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>
@@ -56,7 +56,7 @@ export default function ResourceArticlePage({ article }: { article: ResourceArti
           <SeoCtaBand
             title="Put this knowledge into action"
             description="Register free, track compulsory briefings and request a Youth Agent for R249 only when you need attendance support."
-            primaryHref="/auth/signup"
+            primaryHref="/auth/role-selection"
             primaryLabel="Create free SME account"
             secondaryHref="/tenders"
             secondaryLabel="View tenders"

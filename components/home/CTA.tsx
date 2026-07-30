@@ -111,7 +111,7 @@ const CTA = () => {
           ) : (
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
                       <Link 
-                        href="/auth/signup?type=sme" 
+                        href="/auth/role-selection" 
                         className="group inline-flex items-center px-12 py-5 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-2xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-2xl hover:shadow-purple-500/25 hover:scale-105 transform text-lg"
                       >
                         <span>I'm an SME</span>

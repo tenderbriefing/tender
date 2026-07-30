@@ -34,9 +34,9 @@ export default function Hero() {
           className="absolute -left-32 bottom-0 h-[360px] w-[360px] rounded-full bg-brand-500/20 blur-3xl"
         />
         {/* Soft brand mark as visual plane */}
-        <div className="absolute inset-x-0 bottom-0 top-[18%] flex items-center justify-center opacity-[0.09]">
+        <div className="absolute inset-x-0 bottom-0 top-[18%] flex items-center justify-center opacity-[0.12]">
           <Image
-            src="/icon-mark.png"
+            src="/icon.png"
             alt=""
             width={640}
             height={640}
@@ -54,22 +54,14 @@ export default function Hero() {
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="flex flex-col items-center"
         >
-          <div className="flex items-center gap-3 sm:gap-4">
-            <Image
-              src="/icon-mark.png"
-              alt=""
-              width={88}
-              height={88}
-              priority
-              className="h-16 w-16 rounded-2xl shadow-gold sm:h-20 sm:w-20"
-            />
-            <span className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-[2.75rem]">
-              Tender<span className="text-accent-400">Briefing</span>
-            </span>
-          </div>
-          <p className="mt-6 font-display text-xs font-semibold uppercase tracking-[0.35em] text-accent-400 sm:text-sm">
-            Find. Track. Win.
-          </p>
+          <Image
+            src="/logo.png"
+            alt="TenderBriefing — Find. Track. Win."
+            width={480}
+            height={320}
+            priority
+            className="h-auto w-[min(88vw,420px)] object-contain"
+          />
         </motion.div>
 
         <motion.h1
@@ -108,7 +100,7 @@ export default function Hero() {
           ) : (
             <>
               <Link
-                href="/sme/onboarding"
+                href="/auth/role-selection"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent-500 px-8 py-4 text-base font-semibold text-brand-950 shadow-gold transition hover:bg-accent-400"
               >
                 Start free
@@ -133,7 +125,7 @@ export default function Hero() {
           >
             Youth Agent?{' '}
             <Link
-              href="/agent/onboarding"
+              href="/auth/signup?type=youth-agent"
               className="font-semibold text-accent-400 underline-offset-4 hover:underline"
             >
               Join the network

@@ -37,7 +37,7 @@ export default function FeatureCard({
       <div className={`mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl ring-1 ring-inset ${iconTone}`}>
         <Icon className="h-6 w-6" aria-hidden />
       </div>
-      <h3 className="text-lg font-bold text-brand-900">{title}</h3>
+      <h3 className="font-display text-lg font-bold text-brand-900">{title}</h3>
       {description && (
         <p className="mt-2 text-sm leading-relaxed text-slate-600">{description}</p>
       )}

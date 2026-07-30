@@ -140,7 +140,7 @@ const TenderCard = ({ tender }: TenderCardProps) => {
         )}
         
         {!user && (
-          <Link href="/auth/signup?type=entrepreneur" className="btn-primary flex-1 text-center">
+          <Link href="/auth/role-selection" className="btn-primary flex-1 text-center">
             Sign Up to Book
           </Link>
         )}

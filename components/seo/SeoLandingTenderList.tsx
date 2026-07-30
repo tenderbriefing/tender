@@ -42,7 +42,7 @@ export default function SeoLandingTenderList({
 
   return (
     <section className="mt-14 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-      <h2 className="text-2xl font-bold text-brand-900">{title}</h2>
+      <h2 className="font-display text-2xl font-bold text-brand-900">{title}</h2>
       <p className="mt-2 text-slate-600">{intro}</p>
       {syncedAt && (
         <p className="mt-1 text-xs text-slate-500">

@@ -23,16 +23,18 @@ import {
   type TenderSortKey,
 } from '@/lib/procurement/filters'
 import { computeTenderDashboardStats } from '@/lib/procurement/tenderStatus'
-import { ArrowPathIcon, CheckCircleIcon, ExclamationTriangleIcon, FunnelIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { ClipboardList, Filter } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 const PAGE_SIZE = 12
+const COMPULSORY_ONLY = false
 
 export default function TenderOpportunitiesPage() {
   const { user, userProfile } = useAuth()
   const router = useRouter()
   const { tenders, loading, lastUpdated, syncStatus, refresh } = useTenderBriefingsPolling({
-    compulsoryOnly: false,
+    compulsoryOnly: COMPULSORY_ONLY,
   })
   const { filters, setFilters, resetFilters, hydrated: filtersHydrated } =
     useSavedProcurementFilters()
@@ -67,6 +69,8 @@ export default function TenderOpportunitiesPage() {
 
   const canRunSync = userProfile?.userType === 'admin'
   const ready = filtersHydrated
+  const hasData = tenders.length > 0
+  const isEmptyCatalog = !loading && !hasData
 
   const handleSort = (key: TenderSortKey) => {
     if (sortKey === key) setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
@@ -128,8 +132,16 @@ export default function TenderOpportunitiesPage() {
 
       <ProcurementPageHeader
         kicker="Procurement intelligence"
-        title="Compulsory briefing opportunities"
-        description="Every tender shown requires attendance at a compulsory briefing session. Filter by province and category, then request a verified Youth Agent if you cannot attend in person."
+        title={
+          COMPULSORY_ONLY
+            ? 'Compulsory briefing opportunities'
+            : 'Tender briefing opportunities'
+        }
+        description={
+          COMPULSORY_ONLY
+            ? 'Every tender shown requires attendance at a compulsory briefing session. Filter by province and category, then request a verified Youth Agent if you cannot attend in person.'
+            : 'Browse live government tenders with briefing dates and details highlighted. Filter by province and category, then request a verified Youth Agent when a compulsory session needs attendance support.'
+        }
         meta={
           lastUpdated ? (
             <span className="text-sm text-slate-500">
@@ -147,10 +159,16 @@ export default function TenderOpportunitiesPage() {
         }
         actions={
           <>
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
-              <CheckCircleIcon className="h-4 w-4" aria-hidden />
-              Live data
-            </span>
+            {hasData ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-800">
+                <CheckCircleIcon className="h-4 w-4 text-accent-600" aria-hidden />
+                Live data
+              </span>
+            ) : !loading ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-500">
+                Awaiting sync
+              </span>
+            ) : null}
             {canRunSync && (
               <button
                 type="button"
@@ -167,7 +185,7 @@ export default function TenderOpportunitiesPage() {
       />
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {!user && tenders.length > 0 && (
+        {!user && hasData && (
           <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-accent-200 bg-accent-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-brand-900">
               Browse opportunities publicly. Sign in as an SME to request Youth Agent briefing
@@ -183,26 +201,18 @@ export default function TenderOpportunitiesPage() {
           </div>
         )}
 
-        {tenders.length === 0 && !loading && (
-          <div className="mb-6 flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-            <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-amber-700" aria-hidden />
-            <p className="text-sm text-amber-900">
-              No tender opportunities loaded yet. An administrator can run a sync from the admin
-              dashboard.
-            </p>
+        {hasData && (
+          <div className="mb-6">
+            <TenderDashboardStats
+              total={stats.total}
+              open={stats.open}
+              closingSoon={stats.closingSoon}
+              compulsory={stats.compulsory}
+            />
           </div>
         )}
 
-        <div className="mb-6">
-          <TenderDashboardStats
-            total={stats.total}
-            open={stats.open}
-            closingSoon={stats.closingSoon}
-            compulsory={stats.compulsory}
-          />
-        </div>
-
-        {ready && (
+        {ready && hasData && (
           <div className="mb-6">
             <TenderFiltersBar
               filters={filters}
@@ -219,10 +229,18 @@ export default function TenderOpportunitiesPage() {
 
         {!ready || loading ? (
           <TenderTableSkeleton rows={PAGE_SIZE} />
+        ) : isEmptyCatalog ? (
+          <ProcurementEmptyState
+            icon={ClipboardList}
+            title="No tender opportunities loaded yet"
+            description="Listings appear here after official eTenders data syncs. Create a free account to get started, or check back shortly — an administrator can refresh the feed from the dashboard."
+            actionLabel="Start free"
+            actionHref="/auth/role-selection"
+          />
         ) : filtered.length === 0 ? (
           <div>
             <ProcurementEmptyState
-              icon={FunnelIcon}
+              icon={Filter}
               title="No opportunities match your filters"
               description="Try clearing filters or broadening your province and department selection."
             />
@@ -230,7 +248,7 @@ export default function TenderOpportunitiesPage() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="inline-flex min-h-[44px] items-center rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
+                className="inline-flex min-h-[44px] items-center rounded-xl bg-brand-800 px-5 py-2.5 text-sm font-semibold text-white shadow-soft hover:bg-brand-700"
               >
                 Clear all filters
               </button>

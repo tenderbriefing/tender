@@ -45,7 +45,7 @@ export default function SmeSolutionsPage() {
           <AnimateIn key={s.title} delay={i * 0.06}>
             <div className="rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
               <s.icon className="h-8 w-8 text-brand-600" />
-              <h2 className="mt-4 text-xl font-bold text-slate-900">{s.title}</h2>
+              <h2 className="mt-4 font-display text-xl font-bold text-slate-900">{s.title}</h2>
               <p className="mt-2 text-slate-600 leading-relaxed">{s.text}</p>
             </div>
           </AnimateIn>
@@ -53,7 +53,7 @@ export default function SmeSolutionsPage() {
       </div>
       <div className="mt-12 text-center">
         <Link
-          href="/auth/signup?type=sme"
+          href="/auth/role-selection"
           className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-8 py-4 font-semibold text-white hover:bg-brand-700"
         >
           Start as an SME

@@ -67,7 +67,7 @@ export default function AboutPage() {
       <AnimateIn>
         <div className="mx-auto max-w-3xl rounded-3xl border border-brand-100 bg-gradient-to-br from-brand-50/50 to-white p-8 text-center shadow-sm sm:p-10">
           <Compass className="mx-auto h-10 w-10 text-accent-500" />
-          <h2 className="mt-4 text-2xl font-bold text-brand-900 sm:text-3xl">
+          <h2 className="mt-4 font-display text-2xl font-bold text-brand-900 sm:text-3xl">
             The opportunity gap, closed.
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-slate-600">
@@ -81,7 +81,7 @@ export default function AboutPage() {
       <div className="mt-16">
         <AnimateIn>
           <SectionLabel>What we stand for</SectionLabel>
-          <h2 className="mt-3 text-3xl font-bold text-brand-900 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-bold text-brand-900 sm:text-4xl">
             Four pillars shaping how we build.
           </h2>
         </AnimateIn>
@@ -99,7 +99,7 @@ export default function AboutPage() {
           <div className="pointer-events-none absolute -right-32 -top-32 h-64 w-64 rounded-full bg-accent-500/20 blur-3xl" />
           <div className="relative">
             <SectionLabel tone="light">By the numbers</SectionLabel>
-            <h2 className="mt-3 max-w-2xl text-2xl font-bold text-white sm:text-3xl">
+            <h2 className="mt-3 max-w-2xl font-display text-2xl font-bold text-white sm:text-3xl">
               Built for South African procurement realities.
             </h2>
             <div className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-4">
@@ -113,7 +113,7 @@ export default function AboutPage() {
 
             <div className="mt-10 flex flex-wrap gap-4">
               <Link
-                href="/sme/onboarding"
+                href="/auth/role-selection"
                 className="inline-flex items-center gap-2 rounded-xl bg-accent-500 px-5 py-3 text-sm font-semibold text-brand-900 shadow-gold transition hover:bg-accent-400"
               >
                 <Sparkles className="h-4 w-4" />
@@ -121,7 +121,7 @@ export default function AboutPage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/agent/onboarding"
+                href="/auth/signup?type=youth-agent"
                 className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
               >
                 Become a Youth Agent

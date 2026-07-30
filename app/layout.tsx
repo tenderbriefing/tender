@@ -1,12 +1,17 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Space_Grotesk } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/providers/AuthProvider'
 import GlobalStructuredData from '@/components/seo/GlobalStructuredData'
 import { Toaster } from 'react-hot-toast'
-import { GOOGLE_SITE_VERIFICATION, SITE_URL } from '@/lib/seo/site'
+import { SITE_URL } from '@/lib/seo/site'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
+const display = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+})
 
 /** Keep HTML ISR short so deploys don't leave CDNs serving stale chunk hashes. */
 export const revalidate = 60
@@ -51,9 +56,12 @@ export const metadata: Metadata = {
     canonical: SITE_URL,
   },
   icons: {
-    icon: [{ url: '/icon.png', sizes: '512x512', type: 'image/png' }],
+    icon: [
+      { url: '/favicon.ico', sizes: '16x16 32x32 48x48', type: 'image/x-icon' },
+      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
+    ],
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
-    shortcut: '/icon.png',
+    shortcut: '/favicon.ico',
   },
   ...(process.env.GOOGLE_SITE_VERIFICATION
     ? {
@@ -75,7 +83,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en-ZA" className="scroll-smooth">
+    <html lang="en-ZA" className={`scroll-smooth ${display.variable} ${inter.variable}`}>
       <body className={`${inter.className} antialiased text-slate-900 bg-white`}>
         <GlobalStructuredData />
         <AuthProvider>

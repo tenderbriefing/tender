@@ -54,7 +54,7 @@ export default async function SeoLandingPage({ config }: { config: SeoLandingCon
         heroExtra={
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/auth/signup"
+              href="/auth/role-selection"
               className="inline-flex min-h-[48px] items-center justify-center rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-brand-900"
             >
               {config.heroPrimaryCta}
@@ -84,7 +84,7 @@ export default async function SeoLandingPage({ config }: { config: SeoLandingCon
 
           {config.sections.map((section) => (
             <section key={section.heading} className="mt-14">
-              <h2 className="text-2xl font-bold text-brand-900">{section.heading}</h2>
+              <h2 className="font-display text-2xl font-bold text-brand-900">{section.heading}</h2>
               <div className="mt-4 space-y-4 text-base leading-relaxed text-slate-700">
                 {section.paragraphs.map((paragraph) => (
                   <p key={paragraph.slice(0, 48)}>{paragraph}</p>
@@ -94,7 +94,7 @@ export default async function SeoLandingPage({ config }: { config: SeoLandingCon
           ))}
 
           <section className="mt-14 rounded-3xl border border-brand-200 bg-gradient-to-br from-brand-50/70 to-white p-6 sm:p-8">
-            <h2 className="text-2xl font-bold text-brand-900">{config.authority.heading}</h2>
+            <h2 className="font-display text-2xl font-bold text-brand-900">{config.authority.heading}</h2>
             <div className="mt-4 space-y-4 text-base leading-relaxed text-slate-700">
               {config.authority.paragraphs.map((paragraph) => (
                 <p key={paragraph.slice(0, 48)}>{paragraph}</p>
@@ -103,7 +103,7 @@ export default async function SeoLandingPage({ config }: { config: SeoLandingCon
           </section>
 
           <section className="mt-14">
-            <h2 className="text-2xl font-bold text-brand-900">{config.smeGuidance.title}</h2>
+            <h2 className="font-display text-2xl font-bold text-brand-900">{config.smeGuidance.title}</h2>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {config.smeGuidance.items.map((item) => (
                 <div
@@ -133,7 +133,7 @@ export default async function SeoLandingPage({ config }: { config: SeoLandingCon
           </section>
 
           <section className="mt-14">
-            <h2 className="text-2xl font-bold text-brand-900">Real-world use cases</h2>
+            <h2 className="font-display text-2xl font-bold text-brand-900">Real-world use cases</h2>
             <div className="mt-6 grid gap-4 md:grid-cols-3">
               {config.useCases.map((useCase) => (
                 <div
@@ -155,7 +155,7 @@ export default async function SeoLandingPage({ config }: { config: SeoLandingCon
           </section>
 
           <section className="mt-14">
-            <h2 className="text-2xl font-bold text-brand-900">Provinces we track</h2>
+            <h2 className="font-display text-2xl font-bold text-brand-900">Provinces we track</h2>
             <p className="mt-2 text-slate-600">
               Compulsory briefing opportunities are monitored across South African provinces.
               Explore regional listings or filter live tenders by location.
@@ -219,7 +219,7 @@ export default async function SeoLandingPage({ config }: { config: SeoLandingCon
           <SeoCtaBand
             title={config.ctaTitle}
             description={config.ctaDescription}
-            primaryHref="/auth/signup"
+            primaryHref="/auth/role-selection"
             primaryLabel={config.ctaPrimaryLabel}
             secondaryHref="/tenders"
             secondaryLabel={config.ctaSecondaryLabel}

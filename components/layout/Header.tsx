@@ -59,19 +59,11 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
           ? ADMIN_NAV
           : []
 
-  const navItems = user ? roleNav : PUBLIC_NAV
+  // While auth is loading, keep public wayfinding visible — only swap chrome after resolve
+  const showAccountChrome = !loading && !!user
+  const navItems = showAccountChrome ? roleNav : PUBLIC_NAV
   const onHomeOverlay = transparentOnHome && pathname === '/'
   const overDarkHero = onHomeOverlay && !scrolled && !isMenuOpen
-
-  if (loading) {
-    return (
-      <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center px-4 sm:px-6 lg:px-8">
-          <div className="h-8 w-36 animate-pulse rounded-lg bg-slate-100" />
-        </div>
-      </header>
-    )
-  }
 
   return (
     <header
@@ -87,25 +79,15 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between lg:h-[72px]">
-          <Link href="/" className="group flex items-center gap-2.5" aria-label="TenderBriefing home">
+          <Link href="/" className="group flex items-center" aria-label="TenderBriefing home">
             <Image
-              src="/icon.png"
-              alt=""
-              width={40}
-              height={40}
+              src="/logo.png"
+              alt="TenderBriefing"
+              width={192}
+              height={128}
               priority
-              className="h-10 w-10 transition group-hover:opacity-90"
+              className="h-10 w-auto transition group-hover:opacity-90 sm:h-12"
             />
-            <span
-              className={`text-xl font-bold tracking-tight ${
-                overDarkHero ? 'text-white' : 'text-brand-900'
-              }`}
-            >
-              Tender
-              <span className={overDarkHero ? 'text-accent-400' : 'text-accent-600'}>
-                Briefing
-              </span>
-            </span>
           </Link>
 
           <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Main">
@@ -129,7 +111,7 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
                 </Link>
               )
             })}
-            {user && (
+            {showAccountChrome && (
               <Link
                 href={dashboardHref}
                 className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
@@ -149,11 +131,11 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
 
           <div className="flex items-center gap-2">
             <WhatsAppIconLink
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#25D366] text-white transition hover:bg-[#1ebe57] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366]"
+              className="hidden h-9 w-9 items-center justify-center rounded-full bg-[#25D366] text-white transition hover:bg-[#1ebe57] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366] sm:inline-flex"
               iconClassName="h-4 w-4"
             />
-            {user && <NotificationCenter />}
-            {user ? (
+            {showAccountChrome && <NotificationCenter />}
+            {showAccountChrome ? (
               <div className="relative hidden sm:block">
                 <button
                   type="button"
@@ -165,7 +147,7 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
                   }`}
                 >
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-800 text-xs font-bold text-white">
-                    {(userProfile?.displayName || user.email)?.charAt(0).toUpperCase()}
+                    {(userProfile?.displayName || user?.email)?.charAt(0).toUpperCase()}
                   </span>
                   <span className="hidden md:inline max-w-[120px] truncate">
                     {userProfile?.displayName || 'Account'}
@@ -211,13 +193,13 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
                 </Link>
                 <Link
                   href="/auth/role-selection"
-                  className={`hidden sm:inline-flex rounded-xl px-4 py-2.5 text-sm font-semibold shadow-soft ${
+                  className={`inline-flex rounded-xl px-3.5 py-2 text-sm font-semibold shadow-soft sm:px-4 sm:py-2.5 ${
                     overDarkHero
                       ? 'bg-accent-500 text-brand-950 hover:bg-accent-400'
                       : 'bg-brand-800 text-white hover:bg-brand-700'
                   }`}
                 >
-                  Register
+                  Start free
                 </Link>
               </>
             )}
@@ -255,7 +237,7 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
                   {item.name}
                 </Link>
               ))}
-              {user && (
+              {showAccountChrome && (
                 <Link
                   href={dashboardHref}
                   className="rounded-lg px-3 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50"
@@ -264,7 +246,7 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
                   Dashboard
                 </Link>
               )}
-              {!user && (
+              {!showAccountChrome && (
                 <>
                   <Link
                     href="/auth/signin"
@@ -278,10 +260,17 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
                     className="mx-3 mt-2 rounded-xl bg-brand-800 py-3 text-center font-semibold text-white"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Register
+                    Start free
                   </Link>
                 </>
               )}
+              <div className="mx-3 mt-3 flex items-center gap-3 border-t border-slate-100 pt-3 sm:hidden">
+                <WhatsAppIconLink
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-white transition hover:bg-[#1ebe57]"
+                  iconClassName="h-4 w-4"
+                />
+                <span className="text-sm text-slate-600">Chat on WhatsApp</span>
+              </div>
             </div>
           </nav>
         )}

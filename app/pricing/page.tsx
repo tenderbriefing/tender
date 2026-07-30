@@ -5,7 +5,18 @@ import AnimateIn from '@/components/ui/AnimateIn'
 import SectionLabel from '@/components/ui/SectionLabel'
 import { buildPageMetadata } from '@/lib/seo/metadata'
 import { ATTENDANCE_FEE_LABEL } from '@/lib/payments/attendanceFee'
-import { ArrowRight, Check, Crown, Sparkles, Users, Zap } from 'lucide-react'
+import {
+  ArrowRight,
+  Check,
+  ClipboardCheck,
+  Compass,
+  FileText,
+  MapPin,
+  MessageCircle,
+  Search,
+  ShieldCheck,
+  Users,
+} from 'lucide-react'
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Pricing | Free Tender Discovery & R249 Briefing Agent Fee',
@@ -19,251 +30,262 @@ export const metadata: Metadata = buildPageMetadata({
   ],
 })
 
-type Plan = {
-  name: string
-  badge?: string
-  price: string
-  period: string
-  description: string
-  features: string[]
-  cta: string
-  href: string
-  highlighted?: boolean
-  tone: 'light' | 'gold' | 'dark'
-  note?: string
-}
-
-const plans: Plan[] = [
+const howItWorks = [
   {
-    name: 'Free Tender Discovery',
-    badge: 'Always free',
-    price: 'R0',
-    period: 'forever',
-    description:
-      'Browse live government tender opportunities and compulsory briefing sessions nationwide — no card required.',
-    features: [
-      'Live tender sync from official sources',
-      'Compulsory briefing filters',
-      'Province and department tracking',
-      'Closing date intelligence',
-      'SME workspace and saved tenders',
-    ],
-    cta: 'Browse tenders',
-    href: '/tenders',
-    tone: 'light',
+    step: '01',
+    icon: Search,
+    title: 'Browse tenders free',
+    text: 'Discover live government opportunities and compulsory briefings nationwide — no card, no subscription.',
   },
   {
-    name: 'Pay-per-Briefing Attendance',
-    badge: 'Most popular',
-    price: ATTENDANCE_FEE_LABEL,
-    period: 'per briefing attended',
-    description:
-      'Cannot attend a compulsory briefing? Request a verified Youth Agent to attend on your behalf and deliver a structured report.',
-    features: [
-      'Smart dispatch to nearby verified agents',
-      'WhatsApp + in-app status updates',
-      'Structured briefing report within 24h',
-      'SLA-tracked assignment',
-      'Secure PayFast checkout when enabled',
-    ],
-    cta: 'Register as SME',
-    href: '/auth/signup?type=sme',
-    highlighted: true,
-    tone: 'dark',
-    note: 'Pay only when you request attendance support. No subscriptions.',
+    step: '02',
+    icon: ClipboardCheck,
+    title: 'Request when you need it',
+    text: 'Cannot attend in person? Request a verified Youth Agent for that specific briefing only.',
   },
   {
-    name: 'Managed Procurement Support',
-    badge: 'For active bidders',
-    price: 'From R499',
-    period: 'per month (pilot)',
-    description:
-      'Coordinated briefing attendance across multiple tenders and provinces for SMEs scaling their bid pipeline.',
-    features: [
-      'Priority agent matching',
-      'Multi-tender briefing coordination',
-      'Dedicated support channel',
-      'Report archive and exports',
-      'Pilot onboarding assistance',
-    ],
-    cta: 'Talk to us',
-    href: '/support',
-    tone: 'light',
-  },
-  {
-    name: 'Enterprise SME Package',
-    badge: 'Custom built',
-    price: 'Custom',
-    period: 'annual agreement',
-    description:
-      'For bid teams, cooperatives, and suppliers managing high tender volumes across departments.',
-    features: [
-      'Volume briefing attendance',
-      'Team accounts and reporting',
-      'Custom SLA arrangements',
-      'Executive analytics access',
-      'Dedicated account manager',
-    ],
-    cta: 'Contact sales',
-    href: '/contact',
-    tone: 'gold',
+    step: '03',
+    icon: ShieldCheck,
+    title: 'Pay per attendance',
+    text: `You pay ${ATTENDANCE_FEE_LABEL} only when an agent is dispatched to attend on your behalf.`,
   },
 ]
 
-function PlanCard({ plan, index }: { plan: Plan; index: number }) {
-  const baseCard =
-    'group relative flex h-full flex-col overflow-hidden rounded-3xl p-8 transition'
+const attendanceIncludes = [
+  'Smart dispatch to a nearby verified Youth Agent',
+  'Representation at the compulsory briefing on your behalf',
+  'WhatsApp and in-app status updates while the assignment runs',
+  'Structured digital briefing report within 24 hours',
+  'SLA-tracked assignment from request to report delivery',
+]
 
-  const toneClass = {
-    light:
-      'border border-slate-200 bg-white shadow-sm hover:-translate-y-0.5 hover:shadow-card',
-    gold:
-      'border border-accent-300 bg-gradient-to-br from-accent-50 to-white shadow-sm hover:-translate-y-0.5 hover:shadow-card',
-    dark:
-      'border border-brand-700 bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 text-white shadow-card hover:-translate-y-0.5',
-  }[plan.tone]
-
-  const textTone = plan.tone === 'dark' ? 'text-white' : 'text-brand-900'
-  const subTone = plan.tone === 'dark' ? 'text-brand-100/80' : 'text-slate-600'
-  const dividerTone = plan.tone === 'dark' ? 'border-white/10' : 'border-slate-100'
-
-  return (
-    <AnimateIn delay={index * 0.06}>
-      <article className={`${baseCard} ${toneClass}`}>
-        {plan.tone === 'dark' && (
-          <>
-            <div className="pointer-events-none absolute -top-20 -right-20 h-48 w-48 rounded-full bg-accent-500/20 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-brand-500/30 blur-3xl" />
-          </>
-        )}
-
-        {plan.badge && (
-          <span
-            className={`absolute right-6 top-6 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${
-              plan.tone === 'dark'
-                ? 'bg-accent-500 text-brand-900'
-                : plan.tone === 'gold'
-                  ? 'bg-brand-900 text-accent-300'
-                  : 'bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-200'
-            }`}
-          >
-            {plan.highlighted && <Sparkles className="h-3 w-3" aria-hidden />}
-            {plan.badge}
-          </span>
-        )}
-
-        <div className="relative">
-          <h2 className={`text-xl font-bold ${textTone}`}>{plan.name}</h2>
-          <div className="mt-5 flex items-baseline gap-2">
-            <span
-              className={`text-4xl font-bold tracking-tight ${
-                plan.tone === 'dark' ? 'text-accent-400' : 'text-brand-900'
-              }`}
-            >
-              {plan.price}
-            </span>
-            <span className={`text-sm ${subTone}`}>· {plan.period}</span>
-          </div>
-          <p className={`mt-4 text-sm leading-relaxed ${subTone}`}>{plan.description}</p>
-          {plan.note && (
-            <p
-              className={`mt-3 rounded-lg px-3 py-2 text-xs leading-relaxed ${
-                plan.tone === 'dark'
-                  ? 'bg-white/5 text-accent-200'
-                  : 'bg-accent-50 text-brand-800'
-              }`}
-            >
-              {plan.note}
-            </p>
-          )}
-        </div>
-
-        <ul className={`relative mt-6 space-y-3 border-t ${dividerTone} pt-6 flex-1`}>
-          {plan.features.map((f) => (
-            <li key={f} className={`flex items-start gap-2.5 text-sm ${subTone}`}>
-              <span
-                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
-                  plan.tone === 'dark'
-                    ? 'bg-accent-500/15 text-accent-400'
-                    : 'bg-brand-100 text-brand-800'
-                }`}
-              >
-                <Check className="h-3 w-3" />
-              </span>
-              <span className={plan.tone === 'dark' ? 'text-white/90' : 'text-slate-700'}>
-                {f}
-              </span>
-            </li>
-          ))}
-        </ul>
-
-        <Link
-          href={plan.href}
-          className={`relative mt-8 inline-flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition ${
-            plan.tone === 'dark'
-              ? 'bg-accent-500 text-brand-900 shadow-gold hover:bg-accent-400'
-              : plan.tone === 'gold'
-                ? 'bg-brand-900 text-white hover:bg-brand-800'
-                : 'border border-brand-200 bg-white text-brand-900 hover:border-brand-400 hover:bg-brand-50'
-          }`}
-        >
-          {plan.cta}
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      </article>
-    </AnimateIn>
-  )
-}
+const freeDiscovery = [
+  {
+    icon: Compass,
+    title: 'Live tender sync',
+    text: 'Official government sources, refreshed so you stay ahead of closing dates.',
+  },
+  {
+    icon: MapPin,
+    title: 'Compulsory briefing filters',
+    text: 'Filter by province, department, and sessions that require in-person attendance.',
+  },
+  {
+    icon: FileText,
+    title: 'SME workspace',
+    text: 'Save tenders, track deadlines, and manage requests from one place — always free.',
+  },
+]
 
 export default function PricingPage() {
   return (
     <MarketingPageLayout
       eyebrow="Pricing"
-      title="Free for SMEs. Pay only when you need attendance."
-      description="Browse tenders and receive matches at no cost. Pay the standard R249 fee only when you request a verified Youth Agent to attend a compulsory briefing on your behalf."
+      title="Pay only when you need a Youth Agent"
+      description="Browse tenders free. Verified Youth Agents are ready across every municipality to represent your SME at compulsory briefings — you pay R249 only when one attends on your behalf."
+      heroExtra={
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <Link
+            href="/auth/role-selection"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-brand-900 shadow-gold transition hover:bg-accent-400"
+          >
+            Get started free
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link
+            href="/tenders"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-brand-200 bg-white px-6 py-3 text-sm font-semibold text-brand-900 transition hover:border-brand-400 hover:bg-brand-50"
+          >
+            Browse tenders
+          </Link>
+        </div>
+      }
     >
-      <div className="mb-10 grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-brand-100 bg-white p-5 shadow-sm">
-          <Zap className="h-6 w-6 text-accent-500" />
-          <p className="mt-3 text-sm font-bold text-brand-900">Always free to browse</p>
-          <p className="mt-1 text-xs text-slate-600">
-            Tender discovery, matches, and dashboards never cost a cent for SMEs.
-          </p>
-        </div>
-        <div className="rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50 to-white p-5 shadow-sm">
-          <Crown className="h-6 w-6 text-accent-600" />
-          <p className="mt-3 text-sm font-bold text-brand-900">R249 only when requested</p>
-          <p className="mt-1 text-xs text-slate-600">
-            Pay-as-you-go briefing attendance. No subscriptions, no surprises.
-          </p>
-        </div>
-        <div className="rounded-2xl border border-brand-100 bg-white p-5 shadow-sm">
-          <Users className="h-6 w-6 text-brand-800" />
-          <p className="mt-3 text-sm font-bold text-brand-900">Verified Youth Agents</p>
-          <p className="mt-1 text-xs text-slate-600">
-            Background-checked, reliability-scored, and SLA-monitored attendance.
-          </p>
+      {/* How pricing works */}
+      <div>
+        <SectionLabel>How pricing works</SectionLabel>
+        <h2 className="mt-3 max-w-2xl font-display text-3xl font-bold text-brand-900 sm:text-4xl">
+          Free to discover. Pay only for attendance.
+        </h2>
+        <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">
+          There are no packages or monthly plans for SMEs. Discovery is part of the product —
+          you only pay when you request Youth Agent attendance.
+        </p>
+
+        <div className="mt-10 grid gap-6 md:grid-cols-3">
+          {howItWorks.map((item, i) => (
+            <AnimateIn key={item.step} delay={i * 0.06}>
+              <article className="relative h-full rounded-2xl border border-brand-100 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-900 text-accent-400">
+                    <item.icon className="h-5 w-5" aria-hidden />
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-brand-400">
+                    {item.step}
+                  </span>
+                </div>
+                <h3 className="mt-5 font-display text-lg font-bold text-brand-900">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.text}</p>
+              </article>
+            </AnimateIn>
+          ))}
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        {plans.map((plan, i) => (
-          <PlanCard key={plan.name} plan={plan} index={i} />
-        ))}
+      {/* Primary fee panel */}
+      <AnimateIn>
+        <div className="relative mt-16 overflow-hidden rounded-3xl border border-brand-800 bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 px-8 py-10 shadow-card sm:px-12 sm:py-12">
+          <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent-500/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-28 -left-20 h-56 w-56 rounded-full bg-brand-500/30 blur-3xl" />
+
+          <div className="relative grid items-center gap-10 lg:grid-cols-[1.2fr,1fr]">
+            <div>
+              <SectionLabel tone="light">Attendance fee</SectionLabel>
+              <h2 className="mt-3 text-2xl font-bold text-white sm:text-3xl">
+                {ATTENDANCE_FEE_LABEL} per briefing attended
+              </h2>
+              <p className="mt-4 max-w-xl text-base leading-relaxed text-brand-100/85">
+                Verified Youth Agents are ready across every municipality to represent your SME
+                at compulsory briefings. You pay only when you request attendance — no
+                subscriptions, no surprises.
+              </p>
+              <ul className="mt-6 space-y-2.5">
+                {[
+                  'No monthly SME fees',
+                  'No commitment beyond the briefing you request',
+                  'Secure PayFast checkout when payment is enabled',
+                ].map((line) => (
+                  <li key={line} className="flex items-start gap-2.5 text-sm text-brand-100/90">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-500/15 text-accent-400">
+                      <Check className="h-3 w-3" aria-hidden />
+                    </span>
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-2xl bg-white/5 p-7 ring-1 ring-inset ring-white/10 backdrop-blur-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-300">
+                Standard fee
+              </p>
+              <div className="mt-3 flex items-baseline gap-2">
+                <span className="text-5xl font-bold tracking-tight text-accent-400">
+                  {ATTENDANCE_FEE_LABEL.replace(/\.00$/, '')}
+                </span>
+                <span className="text-sm text-brand-100/75">per attendance</span>
+              </div>
+              <p className="mt-4 text-sm leading-relaxed text-brand-100/80">
+                Charged only when you request a Youth Agent for a specific compulsory briefing.
+              </p>
+              <div className="mt-7 flex flex-col gap-3">
+                <Link
+                  href="/auth/role-selection"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent-500 px-5 py-3 text-sm font-semibold text-brand-900 shadow-gold transition hover:bg-accent-400"
+                >
+                  Register as SME
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="/tenders"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/25 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  Browse tenders free
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </AnimateIn>
+
+      {/* What's included */}
+      <div className="mt-16 grid gap-10 lg:grid-cols-[1fr,1.1fr] lg:items-start">
+        <div>
+          <SectionLabel>Attendance support</SectionLabel>
+          <h2 className="mt-3 font-display text-3xl font-bold text-brand-900 sm:text-4xl">
+            What&apos;s included when an agent attends
+          </h2>
+          <p className="mt-3 text-base leading-relaxed text-slate-600">
+            The fee covers a single briefing attendance assignment — not a package or tier.
+            You get operational support from request through to your report.
+          </p>
+        </div>
+        <ul className="space-y-3 rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50/40 to-white p-6 sm:p-8">
+          {attendanceIncludes.map((item) => (
+            <li key={item} className="flex items-start gap-3 text-sm text-slate-700">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-800">
+                <Check className="h-3 w-3" aria-hidden />
+              </span>
+              {item}
+            </li>
+          ))}
+        </ul>
       </div>
 
-      <div className="mt-16 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900 to-brand-800 px-8 py-12 sm:px-12">
+      {/* Always-free discovery */}
+      <div className="mt-16">
+        <SectionLabel>Always free</SectionLabel>
+        <h2 className="mt-3 max-w-2xl font-display text-3xl font-bold text-brand-900 sm:text-4xl">
+          Tender discovery is product value — not a paid plan
+        </h2>
+        <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">
+          Every SME can browse, filter, and track compulsory briefings at no cost. You only
+          pay when you choose attendance support.
+        </p>
+
+        <div className="mt-10 grid gap-6 sm:grid-cols-3">
+          {freeDiscovery.map((item, i) => (
+            <AnimateIn key={item.title} delay={i * 0.06}>
+              <article className="h-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-100">
+                  <item.icon className="h-5 w-5" aria-hidden />
+                </span>
+                <h3 className="mt-4 font-display text-lg font-bold text-brand-900">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.text}</p>
+              </article>
+            </AnimateIn>
+          ))}
+        </div>
+      </div>
+
+      {/* High-volume contact — not a package */}
+      <AnimateIn>
+        <div className="mt-16 flex flex-col gap-6 rounded-2xl border border-slate-200 bg-slate-50/80 px-6 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+          <div className="flex gap-4">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-brand-800 shadow-sm ring-1 ring-inset ring-slate-200">
+              <MessageCircle className="h-5 w-5" aria-hidden />
+            </span>
+            <div>
+              <h2 className="font-display text-lg font-bold text-brand-900">High briefing volume?</h2>
+              <p className="mt-1 max-w-xl text-sm leading-relaxed text-slate-600">
+                Coordinating many compulsory sessions across provinces? Talk to us about
+                operational support — without locking into a package.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/contact"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-brand-200 bg-white px-5 py-3 text-sm font-semibold text-brand-900 transition hover:border-brand-400 hover:bg-brand-50"
+          >
+            Contact us
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </AnimateIn>
+
+      {/* Youth Agents */}
+      <div className="relative mt-16 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900 to-brand-800 px-8 py-12 sm:px-12">
         <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-accent-500/20 blur-3xl" />
         <div className="relative grid items-center gap-6 lg:grid-cols-[2fr,1fr]">
           <div>
             <SectionLabel tone="light">Youth Agents</SectionLabel>
-            <h3 className="mt-3 text-2xl font-bold text-white sm:text-3xl">
+            <h3 className="mt-3 font-display text-2xl font-bold text-white sm:text-3xl">
               Earn income per briefing attended
             </h3>
             <p className="mt-3 max-w-2xl text-brand-100/80">
-              Verified Youth Agents receive paid dispatch opportunities, build reliability scores,
-              and submit digital briefing reports. Registration is free — income is earned per
-              completed assignment.
+              Verified Youth Agents receive paid dispatch opportunities, build reliability
+              scores, and submit digital briefing reports. Registration is free — income is
+              earned per completed assignment.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
@@ -283,6 +305,11 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
+
+      <p className="mt-10 flex items-center justify-center gap-2 text-center text-sm text-slate-500">
+        <Users className="h-4 w-4 text-brand-600" aria-hidden />
+        Nationwide municipal coverage — verified agents ready when you need them.
+      </p>
     </MarketingPageLayout>
   )
 }

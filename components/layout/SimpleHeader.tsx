@@ -24,18 +24,15 @@ const SimpleHeader = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/" className="flex items-center gap-2.5" aria-label="TenderBriefing home">
+            <Link href="/" className="flex items-center" aria-label="TenderBriefing home">
               <Image
-                src="/icon.png"
-                alt=""
-                width={32}
-                height={32}
+                src="/logo.png"
+                alt="TenderBriefing"
+                width={192}
+                height={128}
                 priority
-                className="h-8 w-8"
+                className="h-9 w-auto sm:h-10"
               />
-              <span className="text-xl font-bold text-brand-900">
-                Tender<span className="text-accent-600">Briefing</span>
-              </span>
             </Link>
           </div>
 
@@ -62,7 +59,7 @@ const SimpleHeader = () => {
                 Sign In
               </Link>
               <Link
-                href="/auth/signup"
+                href="/auth/role-selection"
                 className="btn-primary"
               >
                 Get Started
@@ -105,7 +102,7 @@ const SimpleHeader = () => {
                 Sign In
               </Link>
               <Link
-                href="/auth/signup"
+                href="/auth/role-selection"
                 className="btn-primary block mx-3 mt-2"
                 onClick={() => setIsMenuOpen(false)}
               >

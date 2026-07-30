@@ -51,7 +51,7 @@ export function SeoCtaBand({
 }) {
   return (
     <section className="mt-16 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 px-6 py-10 text-white shadow-card sm:px-10">
-      <h2 className="text-2xl font-bold sm:text-3xl">{title}</h2>
+      <h2 className="font-display text-2xl font-bold sm:text-3xl">{title}</h2>
       <p className="mt-3 max-w-2xl text-brand-100/85">{description}</p>
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         <Link

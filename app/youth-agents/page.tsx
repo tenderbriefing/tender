@@ -45,7 +45,7 @@ export default function YouthAgentsPage() {
           <AnimateIn key={b.title} delay={i * 0.06}>
             <div className="rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
               <b.icon className="h-8 w-8 text-brand-600" />
-              <h2 className="mt-4 text-xl font-bold text-slate-900">{b.title}</h2>
+              <h2 className="mt-4 font-display text-xl font-bold text-slate-900">{b.title}</h2>
               <p className="mt-2 text-slate-600 leading-relaxed">{b.text}</p>
             </div>
           </AnimateIn>
