@@ -33,21 +33,21 @@ const SEO_LINK_GROUPS = [
 
 export default function HomeSeoLinks() {
   return (
-    <section className="border-t border-slate-100 bg-slate-50/60 py-16">
+    <section className="border-t border-slate-100 bg-slate-50/40 py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionLabel>Explore TenderBriefing</SectionLabel>
-        <div className="mt-8 grid gap-8 md:grid-cols-3">
+        <SectionLabel>Explore</SectionLabel>
+        <div className="mt-6 grid gap-8 md:grid-cols-3">
           {SEO_LINK_GROUPS.map((group) => (
             <div key={group.title}>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-brand-900">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 {group.title}
               </h2>
-              <ul className="mt-4 space-y-2">
+              <ul className="mt-3 space-y-1.5">
                 {group.links.map((link) => (
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="text-sm font-medium text-slate-600 transition hover:text-brand-800"
+                      className="text-sm text-slate-600 transition hover:text-brand-800"
                     >
                       {link.label}
                     </Link>

@@ -62,6 +62,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'Inter', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         soft: '0 4px 24px -4px rgba(15, 30, 61, 0.18)',

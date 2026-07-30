@@ -9,6 +9,7 @@ import {
   type GoogleBootstrapRole,
 } from '@/lib/auth/googleAuthFlow'
 import { dashboardPathForRole } from '@/lib/auth/redirects'
+import { sendWelcomeEmailSafe } from '@/lib/services/welcomeEmail'
 
 export const dynamic = 'force-dynamic'
 
@@ -236,6 +237,23 @@ export async function POST(request: NextRequest) {
         },
         { merge: true }
       )
+
+    // First-time Google registration only — never on subsequent logins.
+    // Mail failures must not block profile creation.
+    if (email) {
+      try {
+        const welcome = await sendWelcomeEmailSafe({
+          to: email,
+          displayName,
+          userType: role,
+        })
+        if (welcome.sent) {
+          await userRef.set({ welcomeEmailSentAt: now, updatedAt: now }, { merge: true })
+        }
+      } catch (welcomeErr) {
+        console.warn('[auth/bootstrap-profile] welcome email failed (non-blocking):', welcomeErr)
+      }
+    }
 
     const redirectPath = onboardingPathForRole(role)
     return NextResponse.json({

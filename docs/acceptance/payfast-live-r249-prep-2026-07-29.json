@@ -1,0 +1,41 @@
+{
+  "phase": "prep_complete_awaiting_manual_payment",
+  "preparedAt": "2026-07-29T21:50:38Z",
+  "productionBaseline": {
+    "service": "tenderbriefing",
+    "region": "africa-south1",
+    "servingRevision": "tenderbriefing-00070-gf9",
+    "buildId": "9962551c-b43e-4282-8e76-f9dbefdaa977",
+    "imageDigest": "sha256:0af4c82170fae2ae38e2299399f0e77c16b884bf2737b3277205b7c2c5c4ff23",
+    "traffic": "100%",
+    "ready": true,
+    "runtimeServiceAccount": "9058655644-compute@developer.gserviceaccount.com",
+    "PAYFAST_MODE": "live",
+    "secretMounts": ["payfast-merchant-id", "payfast-merchant-key", "payfast-passphrase"],
+    "rollbackRevisions": ["tenderbriefing-00069-q4j", "tenderbriefing-00068-v69"]
+  },
+  "git": {
+    "branch": "master",
+    "localSha": "a852445a5475bc847529447031d1b684822956f7",
+    "originMasterSha": "a852445a5475bc847529447031d1b684822956f7",
+    "workingTree": "dirty (unrelated local edits not deployed)"
+  },
+  "testTransaction": {
+    "requestId": "req-1785361820954-c22u9d",
+    "m_payment_id": "TB-REQ-req-1785361820954-c22u9d",
+    "amount": "249.00",
+    "currency": "ZAR",
+    "initialPaymentStatus": "pending",
+    "testerCategory": "ops smoke SME account",
+    "smeEmail": "ops-smoke-sme@tenderbriefing.co.za",
+    "notifyUrl": "https://www.tenderbriefing.co.za/api/webhooks/payfast",
+    "processUrl": "https://www.payfast.co.za/eng/process"
+  },
+  "scheduler": {
+    "location": "europe-west1",
+    "jobs": [
+      {"name": "tenderbriefing-sync-every-15min", "state": "ENABLED", "schedule": "*/15 * * * *"},
+      {"name": "tenderbriefing-workflow-automation-hourly", "state": "ENABLED", "schedule": "0 * * * *"}
+    ]
+  }
+}

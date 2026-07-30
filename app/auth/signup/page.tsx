@@ -7,6 +7,7 @@ import { signUp } from '@/lib/auth'
 import { getAuthErrorMessage, normalizeAuthEmail } from '@/lib/auth/errors'
 import { dashboardPathForRole } from '@/lib/auth/redirects'
 import { continueWithGoogle, finishGoogleRedirect } from '@/lib/auth/continueWithGoogle'
+import { requestWelcomeEmail } from '@/lib/auth/requestWelcomeEmail'
 import { SA_PROVINCES } from '@/lib/procurement/provinces'
 import { toast } from 'react-hot-toast'
 import AuthShell from '@/components/auth/AuthShell'
@@ -148,6 +149,9 @@ function SignUpForm() {
         formData.userType,
         additionalData
       )
+
+      // Non-blocking — registration succeeds even if mail fails / Resend is unset.
+      void requestWelcomeEmail()
 
       const destination = dashboardPathForRole(userProfile?.userType || formData.userType)
       toast.success("You're signed in — welcome to TenderBriefing")

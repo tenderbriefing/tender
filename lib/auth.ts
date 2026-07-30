@@ -129,6 +129,9 @@ export interface UserProfile {
 
   updatedAt: string;
 
+  /** Set server-side after a one-time welcome email is sent (Resend). */
+  welcomeEmailSentAt?: string;
+
 }
 
 
