@@ -28,6 +28,17 @@ Do **not** paste real secrets into tickets, chat, or git. Use Secret Manager, `.
 
 ---
 
+## 2b. Resend API key (welcome emails)
+
+| Item | Detail |
+|------|--------|
+| **Where to rotate** | [Resend API Keys](https://resend.com/api-keys) — revoke old key, create new |
+| **Update after rotation** | Secret Manager secret `Resend_API` (add new version); local `.env.local` `RESEND_API_KEY` |
+| **Redeploy** | Cloud Run mounts `RESEND_API_KEY=Resend_API:latest` via `cloudbuild.yaml` — redeploy after new version if the revision caches env |
+| **Verify** | Register a test SME/agent; check Cloud Run logs for `[welcomeEmail]`; missing key skips send without blocking signup |
+
+---
+
 ## 3. Firebase / Google service account key (server)
 
 | Item | Detail |
@@ -55,7 +66,7 @@ Do **not** paste real secrets into tickets, chat, or git. Use Secret Manager, `.
 | Item | Detail |
 |------|--------|
 | **Where to rotate** | [Secret Manager](https://console.cloud.google.com/security/secret-manager?project=tenderbriefing-34679) — add **new version** for each exposed secret |
-| **Secrets to review** | `firebase-api-key`, `gmail-client-id`, `gmail-client-secret`, `google-maps-api-key`, `openai-api-key`, any custom secrets |
+| **Secrets to review** | `firebase-api-key`, `gmail-client-id`, `gmail-client-secret`, `google-maps-api-key`, `openai-api-key`, `Resend_API`, any custom secrets |
 | **Update after rotation** | Cloud Run env or app code that loads secrets at runtime; run `node scripts/setup-secret-manager.js` with env vars set (no hardcoded values) |
 | **Verify** | `/secrets-test` (dev only), maps/Gmail features in staging |
 

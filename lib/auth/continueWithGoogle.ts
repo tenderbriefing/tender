@@ -208,7 +208,7 @@ async function finishGoogleResult(
 
   return {
     ok: true,
-    redirectPath: boot.data?.redirectPath || '/auth/role-selection?google=1',
+    redirectPath: boot.data?.redirectPath || '/auth/role-selection?recover=1',
     profile: boot.data?.profile || null,
   }
 }

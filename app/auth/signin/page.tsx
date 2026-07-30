@@ -79,7 +79,8 @@ function SignInForm() {
       )
       const profile = userProfile || (await getUserProfile(user.uid))
       if (!profile?.userType) {
-        toast.error('Profile not found. Contact support or complete registration again.')
+        toast.success('Almost there — choose SME or Youth Agent to finish setup')
+        router.replace('/auth/role-selection?recover=1')
         return
       }
       const dest = resolvePostAuthDestination(profile)

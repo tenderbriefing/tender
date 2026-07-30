@@ -9,6 +9,13 @@ import {
   type GoogleBootstrapRole,
 } from '@/lib/auth/googleAuthFlow'
 import { dashboardPathForRole } from '@/lib/auth/redirects'
+import { sendWelcomeEmailSafe } from '@/lib/services/welcomeEmail'
+import {
+  createPlatformProfile,
+  logProfileSetupFailure,
+  sanitizeRegistrationAdditional,
+} from '@/lib/auth/serverProfileBootstrap'
+import type { UserProfile } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,19 +27,26 @@ type Decoded = {
   firebase?: { sign_in_provider?: string; identities?: Record<string, unknown> }
 }
 
+type BootstrapBody = {
+  intendedRole?: string
+  registrationJourney?: string
+  displayName?: string
+  additionalData?: Partial<UserProfile>
+}
+
 function providerIdsFromDecoded(decoded: Decoded): string[] {
   const identities = decoded.firebase?.identities || {}
   const ids = Object.keys(identities)
   if (ids.length) return ids
   if (decoded.firebase?.sign_in_provider) return [decoded.firebase.sign_in_provider]
-  return ['google.com']
+  return ['password']
 }
 
 /**
- * Authenticated profile bootstrap after Google (or any) sign-in.
+ * Unified authenticated profile bootstrap (Google, email, or recovery).
  * - Never creates admin or founderAccess from client intent
  * - Never overwrites an existing userType
- * - First-time Google users get onboardingCompleted: false
+ * - Optional additionalData for full email registration payloads
  */
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -44,7 +58,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { intendedRole?: string; registrationJourney?: string } = {}
+  let body: BootstrapBody = {}
   try {
     body = await request.json()
   } catch {
@@ -59,15 +73,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Firebase Auth disabled users fail verifyIdToken; still check Firestore suspension.
     const db = admin.firestore()
     const userRef = db.collection('users').doc(uid)
     const snap = await userRef.get()
     const now = new Date().toISOString()
     const providerIds = providerIdsFromDecoded(decoded)
     const email = (decoded.email || '').trim().toLowerCase()
-    const displayName = (decoded.name || email.split('@')[0] || 'User').trim()
+    const displayName = (
+      body.displayName ||
+      decoded.name ||
+      email.split('@')[0] ||
+      'User'
+    ).trim()
     const photoURL = typeof decoded.picture === 'string' ? decoded.picture : null
+    const authProvider = providerIds.includes('google.com')
+      ? 'google'
+      : providerIds.includes('password')
+        ? 'password'
+        : providerIds[0] || 'password'
+    const hasFullRegistrationPayload =
+      body.additionalData != null && Object.keys(body.additionalData).length > 0
 
     if (snap.exists) {
       const existing = snap.data() || {}
@@ -90,7 +115,6 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Touch login metadata only — never privileged fields.
       const prevProviders = Array.isArray(existing.providerIds) ? existing.providerIds : []
       const mergedProviders = Array.from(new Set([...prevProviders, ...providerIds]))
       await userRef.set(
@@ -98,7 +122,7 @@ export async function POST(request: NextRequest) {
           email: email || existing.email || '',
           displayName: existing.displayName || displayName,
           photoURL: photoURL || existing.photoURL || null,
-          authenticationProvider: existing.authenticationProvider || 'google',
+          authenticationProvider: existing.authenticationProvider || authProvider,
           providerIds: mergedProviders,
           lastLoginAt: now,
           lastSeenAt: now,
@@ -107,12 +131,13 @@ export async function POST(request: NextRequest) {
         { merge: true }
       )
 
-      const profile = { ...existing, ...{ lastLoginAt: now, lastSeenAt: now, userType }, uid }
+      const profile = { ...existing, lastLoginAt: now, lastSeenAt: now, userType, uid }
       const dest = resolvePostAuthDestination(profile as never)
       return NextResponse.json({
         success: true,
         data: {
           created: false,
+          userProfile: profile,
           profile: {
             uid,
             email: profile.email || email,
@@ -120,7 +145,7 @@ export async function POST(request: NextRequest) {
             userType,
             onboardingCompleted: profile.onboardingCompleted === true,
             photoURL: profile.photoURL || photoURL,
-            authenticationProvider: profile.authenticationProvider || 'google',
+            authenticationProvider: profile.authenticationProvider || authProvider,
           },
           onboardingRequired: dest.onboardingRequired,
           redirectPath: dest.path,
@@ -130,14 +155,17 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // First-time profile — require explicit SME or Youth Agent journey.
     const resolved = resolveBootstrapRole({
       existingUserType: null,
       intendedRole: body.intendedRole,
     })
     if (resolved.rejectedAdminIntent) {
       return NextResponse.json(
-        { success: false, error: 'Admin cannot be assigned via Google Sign-In.', code: 'ROLE_REJECTED' },
+        {
+          success: false,
+          error: 'Admin cannot be assigned via self-registration.',
+          code: 'ROLE_REJECTED',
+        },
         { status: 403 }
       )
     }
@@ -147,126 +175,87 @@ export async function POST(request: NextRequest) {
         data: {
           created: false,
           needsRoleSelection: true,
-          redirectPath: '/auth/role-selection?google=1',
+          redirectPath: '/auth/role-selection?recover=1',
           onboardingRequired: true,
           profile: null,
+          userProfile: null,
         },
       })
     }
 
     const role: GoogleBootstrapRole = resolved.role
-    const profile = {
+    const extra = sanitizeRegistrationAdditional(body.additionalData)
+    const onboardingCompleted = hasFullRegistrationPayload
+      ? extra.onboardingCompleted === true
+      : false
+
+    const userProfile = await createPlatformProfile(db, {
       uid,
       email,
       displayName,
-      photoURL,
-      userType: role,
-      authenticationProvider: 'google',
+      role,
+      authenticationProvider: authProvider,
       providerIds,
-      onboardingCompleted: false,
-      founderAccess: false,
-      createdAt: now,
-      updatedAt: now,
-      lastLoginAt: now,
-      lastSeenAt: now,
-      ...(role === 'youth-agent'
-        ? {
-            verificationStatus: 'pending',
-            reliabilityScore: 100,
-            missedBriefingCount: 0,
-            completedBriefingCount: 0,
-            acceptedBriefingCount: 0,
-            rating: 3,
-          }
-        : {}),
+      photoURL,
+      additionalData: extra,
+      onboardingCompleted,
+    })
+
+    if (email && !hasFullRegistrationPayload) {
+      try {
+        const welcome = await sendWelcomeEmailSafe({
+          to: email,
+          displayName,
+          userType: role,
+        })
+        if (welcome.sent) {
+          await userRef.set({ welcomeEmailSentAt: now, updatedAt: now }, { merge: true })
+        }
+      } catch (welcomeErr) {
+        console.warn('[auth/bootstrap-profile] welcome email failed (non-blocking):', welcomeErr)
+      }
     }
 
-    await userRef.set(profile)
+    const redirectPath = onboardingCompleted
+      ? dashboardPathForRole(role)
+      : onboardingPathForRole(role)
 
-    if (role === 'sme') {
-      await db.collection('smes').doc(uid).set(
-        {
-          id: uid,
-          uid,
-          email,
-          displayName,
-          companyName: '',
-          contactPerson: displayName,
-          userType: 'sme',
-          onboardingCompleted: false,
-          createdAt: now,
-          updatedAt: now,
-        },
-        { merge: true }
-      )
-    } else {
-      await db.collection('agents').doc(uid).set(
-        {
-          id: uid,
-          uid,
-          email,
-          displayName,
-          name: displayName,
-          userType: 'youth-agent',
-          verificationStatus: 'pending',
-          verified: false,
-          onboardingCompleted: false,
-          reliabilityScore: 100,
-          createdAt: now,
-          updatedAt: now,
-        },
-        { merge: true }
-      )
-    }
-
-    // Touch summary registration fields (Admin SDK only collection)
-    await db
-      .collection('userActivitySummaries')
-      .doc(uid)
-      .set(
-        {
-          uid,
-          actorRole: role,
-          authenticationProvider: 'google',
-          registrationDate: now,
-          firstSeenAt: now,
-          lastLoginAt: now,
-          lastSeenAt: now,
-          updatedAt: now,
-        },
-        { merge: true }
-      )
-
-    const redirectPath = onboardingPathForRole(role)
     return NextResponse.json({
       success: true,
       data: {
         created: true,
-        firstGoogleRegistration: true,
+        firstGoogleRegistration: authProvider === 'google',
+        userProfile,
         profile: {
           uid,
           email,
           displayName,
           userType: role,
-          onboardingCompleted: false,
+          onboardingCompleted,
           photoURL,
-          authenticationProvider: 'google',
+          authenticationProvider: authProvider,
         },
-        onboardingRequired: true,
+        onboardingRequired: !onboardingCompleted,
         redirectPath,
         dashboardPath: dashboardPathForRole(role),
       },
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Bootstrap failed'
-    // Disabled Firebase users surface as auth errors from verifyIdToken
     if (/disabled|USER_DISABLED/i.test(message)) {
       return NextResponse.json(
-        { success: false, error: 'This account has been disabled. Contact support.', code: 'ACCOUNT_DISABLED' },
+        {
+          success: false,
+          error: 'This account has been disabled. Contact support.',
+          code: 'ACCOUNT_DISABLED',
+        },
         { status: 403 }
       )
     }
-    console.error('[auth/bootstrap-profile]', message)
-    return NextResponse.json({ success: false, error: 'Could not complete sign-in profile setup.' }, { status: 500 })
+    logProfileSetupFailure('bootstrap-profile', { message })
+    return NextResponse.json(
+      { success: false, error: 'Could not complete sign-in profile setup.' },
+      { status: 500 }
+    )
   }
 }

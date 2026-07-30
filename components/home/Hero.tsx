@@ -1,142 +1,145 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowRight, ShieldCheck, Sparkles } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
-import DashboardPreview from './DashboardPreview'
-import LiveProcurementStats from './LiveProcurementStats'
 
 export default function Hero() {
   const { user, userProfile } = useAuth()
 
+  const dashboardHref =
+    userProfile?.userType === 'youth-agent'
+      ? '/agent/dashboard'
+      : userProfile?.userType === 'admin'
+        ? '/admin/dashboard'
+        : '/sme/dashboard'
+
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-white via-white to-brand-50/30 pt-8 pb-20 lg:pt-12 lg:pb-28">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 right-0 h-[480px] w-[480px] rounded-full bg-brand-100/50 blur-3xl" />
-        <div className="absolute top-1/3 -left-32 h-72 w-72 rounded-full bg-accent-100/40 blur-3xl" />
+    <section className="relative isolate flex min-h-[100svh] flex-col justify-center overflow-hidden bg-brand-950 text-white">
+      {/* Full-bleed atmosphere */}
+      <div className="pointer-events-none absolute inset-0" aria-hidden>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_-10%,#16305d_0%,#0a1530_45%,#050b1c_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_20%,rgba(212,175,55,0.14),transparent_42%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_80%,rgba(58,93,150,0.28),transparent_40%)]" />
         <motion.div
-          animate={{ y: [0, -12, 0], opacity: [0.4, 0.7, 0.4] }}
-          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-24 right-1/4 h-2 w-2 rounded-full bg-accent-500"
+          animate={{ opacity: [0.35, 0.55, 0.35], scale: [1, 1.06, 1] }}
+          transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -right-24 top-1/4 h-[420px] w-[420px] rounded-full bg-accent-500/10 blur-3xl"
         />
         <motion.div
-          animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-          className="absolute bottom-40 left-1/4 h-3 w-3 rounded-full bg-brand-400"
+          animate={{ opacity: [0.2, 0.4, 0.2], x: [0, 18, 0] }}
+          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -left-32 bottom-0 h-[360px] w-[360px] rounded-full bg-brand-500/20 blur-3xl"
         />
+        {/* Soft brand mark as visual plane */}
+        <div className="absolute inset-x-0 bottom-0 top-[18%] flex items-center justify-center opacity-[0.09]">
+          <Image
+            src="/icon-mark.png"
+            alt=""
+            width={640}
+            height={640}
+            priority
+            className="h-[min(70vw,520px)] w-[min(70vw,520px)] object-contain"
+          />
+        </div>
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white to-transparent" />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-200/70 bg-white px-4 py-2 text-sm font-medium text-brand-900 shadow-sm"
-          >
-            <Sparkles className="h-4 w-4 text-accent-500" />
-            Built on official procurement data · Regularly updated from government sources
-            <span className="h-2 w-2 rounded-full bg-accent-500 animate-pulse" />
-          </motion.div>
+      <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center px-4 pb-24 pt-28 text-center sm:px-6 sm:pb-28 sm:pt-32 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col items-center"
+        >
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Image
+              src="/icon-mark.png"
+              alt=""
+              width={88}
+              height={88}
+              priority
+              className="h-16 w-16 rounded-2xl shadow-gold sm:h-20 sm:w-20"
+            />
+            <span className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-[2.75rem]">
+              Tender<span className="text-accent-400">Briefing</span>
+            </span>
+          </div>
+          <p className="mt-6 font-display text-xs font-semibold uppercase tracking-[0.35em] text-accent-400 sm:text-sm">
+            Find. Track. Win.
+          </p>
+        </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-4xl font-bold tracking-tight text-brand-900 sm:text-5xl lg:text-6xl lg:leading-[1.1]"
-          >
-            Never miss a{' '}
-            <span className="bg-gradient-to-r from-brand-800 to-accent-600 bg-clip-text text-transparent">compulsory briefing</span> again
-          </motion.h1>
+        <motion.h1
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-8 max-w-3xl font-display text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-[3.5rem] lg:leading-[1.08]"
+        >
+          Never miss a compulsory briefing
+        </motion.h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mx-auto mt-6 max-w-3xl text-lg text-slate-600 sm:text-xl leading-relaxed"
-          >
-            TenderBriefing shows you only the South African government tenders that{' '}
-            <strong className="text-brand-900">require a compulsory briefing</strong>. Track them,
-            request a verified Youth Agent to attend on your behalf, and receive a structured
-            briefing report so your team can focus on winning bids.
-          </motion.p>
+        <motion.p
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-5 max-w-xl text-base leading-relaxed text-brand-100/85 sm:text-lg"
+        >
+          Discover South African government tenders that require attendance, track what
+          matters, and send a verified Youth Agent when you cannot be there.
+        </motion.p>
 
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.35 }}
-            className="mt-4 text-base text-slate-500"
-          >
-            Free briefing discovery for SMEs. Verified agents nationwide. Official procurement
-            data refreshed from government sources.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
-            className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
-          >
-            {user ? (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.34, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-10 flex w-full max-w-md flex-col items-stretch gap-3 sm:max-w-none sm:flex-row sm:items-center sm:justify-center"
+        >
+          {user ? (
+            <Link
+              href={dashboardHref}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent-500 px-8 py-4 text-base font-semibold text-brand-950 shadow-gold transition hover:bg-accent-400"
+            >
+              Go to Dashboard
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+          ) : (
+            <>
               <Link
-                href={
-                  userProfile?.userType === 'youth-agent'
-                    ? '/agent/dashboard'
-                    : userProfile?.userType === 'admin'
-                      ? '/admin/dashboard'
-                      : '/sme/dashboard'
-                }
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-800 px-8 py-4 text-base font-semibold text-white shadow-soft transition hover:bg-brand-700 hover:shadow-lg"
+                href="/sme/onboarding"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent-500 px-8 py-4 text-base font-semibold text-brand-950 shadow-gold transition hover:bg-accent-400"
               >
-                Go to Dashboard
+                Start free
                 <ArrowRight className="h-5 w-5" />
               </Link>
-            ) : (
-              <>
-                <Link
-                  href="/sme/onboarding"
-                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-brand-800 px-8 py-4 text-base font-semibold text-white shadow-soft transition hover:bg-brand-700"
-                >
-                  I&apos;m an SME — Start free
-                  <ArrowRight className="h-5 w-5" />
-                </Link>
-                <Link
-                  href="/agent/onboarding"
-                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-accent-500 px-8 py-4 text-base font-semibold text-brand-900 shadow-gold transition hover:bg-accent-400"
-                >
-                  I&apos;m a Youth Agent
-                </Link>
-                <Link
-                  href="/tenders"
-                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold text-brand-800 hover:text-accent-600 hover:underline"
-                >
-                  Browse tenders
-                </Link>
-              </>
-            )}
-          </motion.div>
+              <Link
+                href="/tenders"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/5 px-8 py-4 text-base font-semibold text-white backdrop-blur-sm transition hover:border-white/40 hover:bg-white/10"
+              >
+                Browse tenders
+              </Link>
+            </>
+          )}
+        </motion.div>
 
-          <motion.div
+        {!user && (
+          <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.55 }}
-            className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500"
+            transition={{ delay: 0.5, duration: 0.5 }}
+            className="mt-6 text-sm text-brand-200/80"
           >
-            <span className="inline-flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-accent-600" />
-              Uses official government procurement data
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-accent-600" />
-              Nationwide Youth Agent network
-            </span>
-          </motion.div>
-
-          <LiveProcurementStats />
-        </div>
-
-        <DashboardPreview />
+            Youth Agent?{' '}
+            <Link
+              href="/agent/onboarding"
+              className="font-semibold text-accent-400 underline-offset-4 hover:underline"
+            >
+              Join the network
+            </Link>
+          </motion.p>
+        )}
       </div>
     </section>
   )

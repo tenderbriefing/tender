@@ -1,0 +1,26 @@
+# Lightweight PR checks for auth/registration safety.
+name: CI
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  auth_rules_qa:
+    name: Auth & Firestore rules QA
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run qa:firestore-rules
+      - run: npm run qa:google-auth

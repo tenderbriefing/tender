@@ -35,7 +35,7 @@ function resolvePostAuthDestination(profile) {
     return { blocked: true, path: '/auth/signin', onboardingRequired: false }
   }
   if (!profile.userType) {
-    return { blocked: false, path: '/auth/role-selection?google=1', onboardingRequired: true }
+    return { blocked: false, path: '/auth/role-selection?recover=1', onboardingRequired: true }
   }
   if (profile.onboardingCompleted !== true && (profile.userType === 'sme' || profile.userType === 'youth-agent')) {
     return {

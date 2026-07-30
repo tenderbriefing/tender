@@ -127,6 +127,31 @@ If `PAYFAST_MERCHANT_ID` is missing, checkout APIs return `503` with `PAYFAST_NO
 
 ---
 
+## 5b. Resend (welcome emails)
+
+**Purpose:** One-time welcome emails after SME / Youth Agent registration.
+
+| Item | Value |
+|------|--------|
+| **Env** | `RESEND_API_KEY` (required to send), `RESEND_FROM_EMAIL` (optional plain env) |
+| **Secret Manager** | `Resend_API` → Cloud Run env `RESEND_API_KEY` via `cloudbuild.yaml` |
+| **Service** | `lib/services/welcomeEmail.ts` |
+| **API** | `POST /api/auth/welcome-email` |
+
+**Credentials:** [Resend](https://resend.com/) → API Keys. Verify `tenderbriefing.co.za`.
+
+**Production:** Existing GSM secret is named `Resend_API` (exact casing). Grant the Cloud Run SA accessor and redeploy:
+
+```bash
+bash scripts/resend-secret-manager-setup.sh
+gcloud builds submit --config cloudbuild.yaml \
+  --project=tenderbriefing-34679 --region=africa-south1
+```
+
+If `RESEND_API_KEY` is missing, welcome send is skipped with a warning — registration still succeeds.
+
+---
+
 ## 6. Google Analytics 4
 
 **Purpose:** Product analytics for procurement funnel events.
@@ -210,6 +235,7 @@ Tender briefing dates are already exposed in-app via `backend/services/calendarS
 | `gmail-client-secret` | (existing Gmail integration) |
 | `payfast-merchant-id` | `PAYFAST_MERCHANT_ID` |
 | `payfast-passphrase` | `PAYFAST_MERCHANT_KEY / PAYFAST_PASSPHRASE` |
+| `Resend_API` | `RESEND_API_KEY` |
 
 Upload from env (no hardcoded values in scripts):
 

@@ -22,7 +22,7 @@ import {
 
 } from 'firebase/auth';
 
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 
 import { auth, db } from './firebase';
 
@@ -129,6 +129,9 @@ export interface UserProfile {
 
   updatedAt: string;
 
+  /** Set server-side after a one-time welcome email is sent (Resend). */
+  welcomeEmailSentAt?: string;
+
 }
 
 
@@ -160,151 +163,61 @@ function waitForAuthSession(expectedUser: User): Promise<void> {
 
 
 
-async function writeRoleProfile(uid: string, userType: UserProfile['userType'], profile: UserProfile) {
+async function completeRegistrationProfile(
+  user: User,
+  displayName: string,
+  userType: 'sme' | 'youth-agent',
+  additionalData?: Partial<UserProfile>
+): Promise<UserProfile> {
+  await user.getIdToken(true)
+  await waitForAuthSession(user)
+  const token = await user.getIdToken()
 
-  const timestamp = nowIso();
-
-  if (userType === 'sme') {
-
-    await setDoc(
-
-      doc(db, 'smes', uid),
-
-      sanitizeClientData({
-
-        id: uid,
-
-        uid,
-
-        email: profile.email,
-
-        displayName: profile.displayName,
-
-        companyName: profile.companyName || '',
-
-        contactPerson: profile.contactPerson || profile.displayName,
-
-        phoneNumber: profile.phoneNumber || '',
-
-        province: profile.province || '',
-
-        location: profile.location || '',
-
-        categories: profile.categories || [],
-
-        commodities: profile.commodities || [],
-
-        matchingKeywords: profile.matchingKeywords || [],
-
-        sectors: profile.sectors || profile.categories || [],
-
-        provincesOfInterest: profile.provincesOfInterest || [],
-
-        csdNumber: profile.csdNumber || '',
-
-        preferredDepartments: profile.preferredDepartments || [],
-
-        tenderInterests: profile.tenderInterests || '',
-
-        whatsAppNumber: profile.whatsAppNumber || profile.phoneNumber || '',
-
-        onboardingCompleted: profile.onboardingCompleted === true,
-
-        onboardingCompletedAt: profile.onboardingCompletedAt || '',
-
-        userType: 'sme',
-
-        createdAt: profile.createdAt,
-
-        updatedAt: timestamp,
-
+  const res = await fetch('/api/auth/bootstrap-profile', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      displayName: displayName.trim(),
+      intendedRole: userType,
+      registrationJourney: userType,
+      additionalData: sanitizeClientData({
+        onboardingCompleted: true,
+        onboardingCompletedAt: nowIso(),
+        ...additionalData,
       }),
+    }),
+  })
 
-      { merge: true }
+  const payload = (await res.json().catch(() => null)) as {
+    success?: boolean
+    error?: string
+    data?: { userProfile?: UserProfile; profile?: UserProfile }
+  } | null
 
-    );
-
-    return;
-
+  const profile = payload?.data?.userProfile || payload?.data?.profile
+  if (!res.ok || !payload?.success || !profile?.userType) {
+    console.error(
+      JSON.stringify({
+        event: 'profile_setup_failed',
+        context: 'client-signup',
+        status: res.status,
+        error: payload?.error || null,
+        uid: user.uid,
+      })
+    )
+    const err = new Error(
+      payload?.error ||
+        'Your account was created but profile setup failed. Try signing in, or contact support if this continues.'
+    ) as Error & { code?: string }
+    err.code = 'permission-denied'
+    throw err
   }
 
-
-
-  if (userType === 'youth-agent') {
-
-    await setDoc(
-
-      doc(db, 'agents', uid),
-
-      sanitizeClientData({
-
-        id: uid,
-
-        uid,
-
-        email: profile.email,
-
-        displayName: profile.displayName,
-
-        name: profile.displayName,
-
-        phoneNumber: profile.phoneNumber || '',
-
-        province: profile.province || '',
-
-        city: profile.city || '',
-
-        location: profile.location || '',
-
-        availabilityRadiusKm: profile.availabilityRadiusKm ?? 25,
-
-        transportAvailable: profile.transportAvailable !== false,
-
-        preferredServiceAreas: profile.preferredServiceAreas || [],
-
-        whatsAppNumber: profile.whatsAppNumber || profile.phoneNumber || '',
-
-        idVerificationNote: profile.idVerificationNote || '',
-
-        codeOfConductAccepted: profile.codeOfConductAccepted === true,
-
-        onboardingCompleted: profile.onboardingCompleted === true,
-
-        onboardingCompletedAt: profile.onboardingCompletedAt || '',
-
-        verificationStatus: profile.verificationStatus || 'pending',
-
-        verified: false,
-
-        reliabilityScore: profile.reliabilityScore ?? 100,
-
-        missedBriefingCount: profile.missedBriefingCount ?? 0,
-
-        completedBriefingCount: profile.completedBriefingCount ?? 0,
-
-        acceptedBriefingCount: profile.acceptedBriefingCount ?? 0,
-
-        rating: profile.rating ?? 3,
-
-        userType: 'youth-agent',
-
-        availability: 'available',
-
-        createdAt: profile.createdAt,
-
-        updatedAt: timestamp,
-
-      }),
-
-      { merge: true }
-
-    );
-
-  }
-
+  return profile as UserProfile
 }
-
-
 
 export const signUp = async (
   email: string,
@@ -313,36 +226,51 @@ export const signUp = async (
   userType: 'sme' | 'youth-agent' | 'admin',
   additionalData?: Partial<UserProfile>
 ) => {
+  if (userType !== 'sme' && userType !== 'youth-agent') {
+    const err = new Error('Choose SME or Youth Agent to register.') as Error & { code?: string }
+    err.code = 'ROLE_REJECTED'
+    throw err
+  }
+
   const normalizedEmail = normalizeAuthEmail(email)
-  const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
-  const user = userCredential.user
+  let user: User
+  let createdAuthUser = false
+
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
+    user = userCredential.user
+    createdAuthUser = true
+  } catch (error: unknown) {
+    // Recover orphaned Auth accounts from a previous failed profile write.
+    const code =
+      error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: string }).code || '')
+        : ''
+    if (code !== 'auth/email-already-in-use') throw error
+    const existing = await signInWithEmailAndPassword(auth, normalizedEmail, password)
+    user = existing.user
+    const existingProfile = await getUserProfile(user.uid)
+    if (existingProfile?.userType) {
+      return { user, userProfile: existingProfile }
+    }
+  }
 
   try {
     await updateProfile(user, { displayName: displayName.trim() })
-
-    const timestamp = nowIso()
-    const userProfile: UserProfile = sanitizeClientData({
-      uid: user.uid,
-      email: normalizedEmail,
-      displayName: displayName.trim(),
+    const userProfile = await completeRegistrationProfile(
+      user,
+      displayName,
       userType,
-      onboardingCompleted: true,
-      onboardingCompletedAt: timestamp,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      ...additionalData,
-    }) as UserProfile
-
-    await setDoc(doc(db, 'users', user.uid), userProfile)
-    await writeRoleProfile(user.uid, userType, userProfile)
-    await waitForAuthSession(user)
-
+      additionalData
+    )
     return { user, userProfile }
   } catch (error) {
-    try {
-      await deleteUser(user)
-    } catch {
-      /* account may already be removed or require re-auth */
+    if (createdAuthUser) {
+      try {
+        await deleteUser(user)
+      } catch {
+        /* account may already be removed or require re-auth */
+      }
     }
     throw error
   }

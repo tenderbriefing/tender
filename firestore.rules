@@ -27,7 +27,8 @@ service cloud.firestore {
       return isAuthenticated() && userDoc().exists && userType() == 'youth-agent';
     }
 
-    function userCreateAllowed() {
+    // Path captures (userId) must be passed in — top-level functions cannot see match vars.
+    function userCreateAllowed(userId) {
       return isAuthenticated()
         && request.auth.uid == userId
         && request.resource.data.userType in ['sme', 'youth-agent']
@@ -39,7 +40,7 @@ service cloud.firestore {
         );
     }
 
-    function userOwnerUpdateAllowed() {
+    function userOwnerUpdateAllowed(userId) {
       return isAuthenticated()
         && request.auth.uid == userId
         && !request.resource.data.diff(resource.data).affectedKeys()
@@ -61,8 +62,8 @@ service cloud.firestore {
     // Legacy user profiles
     match /users/{userId} {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow create: if userCreateAllowed();
-      allow update: if userOwnerUpdateAllowed() || isAdmin();
+      allow create: if userCreateAllowed(userId);
+      allow update: if userOwnerUpdateAllowed(userId) || isAdmin();
       allow delete: if isAdmin();
     }
 

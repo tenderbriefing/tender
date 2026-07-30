@@ -25,7 +25,7 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-const Header = () => {
+const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -60,6 +60,8 @@ const Header = () => {
           : []
 
   const navItems = user ? roleNav : PUBLIC_NAV
+  const onHomeOverlay = transparentOnHome && pathname === '/'
+  const overDarkHero = onHomeOverlay && !scrolled && !isMenuOpen
 
   if (loading) {
     return (
@@ -73,10 +75,14 @@ const Header = () => {
 
   return (
     <header
-      className={`sticky top-0 z-50 border-b transition-all duration-300 ${
-        scrolled
-          ? 'border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-xl'
-          : 'border-transparent bg-white/90 backdrop-blur-xl'
+      className={`z-50 border-b transition-all duration-300 ${
+        onHomeOverlay ? 'fixed inset-x-0 top-0' : 'sticky top-0'
+      } ${
+        overDarkHero
+          ? 'border-transparent bg-transparent'
+          : scrolled || isMenuOpen
+            ? 'border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-xl'
+            : 'border-transparent bg-white/90 backdrop-blur-xl'
       }`}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -90,8 +96,15 @@ const Header = () => {
               priority
               className="h-10 w-10 transition group-hover:opacity-90"
             />
-            <span className="text-xl font-bold tracking-tight text-brand-900">
-              Tender<span className="text-accent-600">Briefing</span>
+            <span
+              className={`text-xl font-bold tracking-tight ${
+                overDarkHero ? 'text-white' : 'text-brand-900'
+              }`}
+            >
+              Tender
+              <span className={overDarkHero ? 'text-accent-400' : 'text-accent-600'}>
+                Briefing
+              </span>
             </span>
           </Link>
 
@@ -103,9 +116,13 @@ const Header = () => {
                   key={item.name}
                   href={item.href}
                   className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                    active
-                      ? 'bg-brand-50 text-brand-800'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-brand-700'
+                    overDarkHero
+                      ? active
+                        ? 'bg-white/10 text-white'
+                        : 'text-brand-100/80 hover:bg-white/10 hover:text-white'
+                      : active
+                        ? 'bg-brand-50 text-brand-800'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-brand-700'
                   }`}
                 >
                   {item.name}
@@ -116,9 +133,13 @@ const Header = () => {
               <Link
                 href={dashboardHref}
                 className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                  isActive(pathname, dashboardHref)
-                    ? 'bg-brand-50 text-brand-800'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-brand-700'
+                  overDarkHero
+                    ? isActive(pathname, dashboardHref)
+                      ? 'bg-white/10 text-white'
+                      : 'text-brand-100/80 hover:bg-white/10 hover:text-white'
+                    : isActive(pathname, dashboardHref)
+                      ? 'bg-brand-50 text-brand-800'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-brand-700'
                 }`}
               >
                 Dashboard
@@ -137,7 +158,11 @@ const Header = () => {
                 <button
                   type="button"
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
-                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-brand-200"
+                  className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm font-medium ${
+                    overDarkHero
+                      ? 'border-white/20 bg-white/10 text-white hover:bg-white/15'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-brand-200'
+                  }`}
                 >
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-800 text-xs font-bold text-white">
                     {(userProfile?.displayName || user.email)?.charAt(0).toUpperCase()}
@@ -176,13 +201,21 @@ const Header = () => {
               <>
                 <Link
                   href="/auth/signin"
-                  className="hidden sm:inline-flex rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className={`hidden sm:inline-flex rounded-lg px-4 py-2 text-sm font-semibold ${
+                    overDarkHero
+                      ? 'text-white hover:bg-white/10'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  }`}
                 >
                   Sign In
                 </Link>
                 <Link
                   href="/auth/role-selection"
-                  className="hidden sm:inline-flex rounded-xl bg-brand-800 px-4 py-2.5 text-sm font-semibold text-white shadow-soft hover:bg-brand-700"
+                  className={`hidden sm:inline-flex rounded-xl px-4 py-2.5 text-sm font-semibold shadow-soft ${
+                    overDarkHero
+                      ? 'bg-accent-500 text-brand-950 hover:bg-accent-400'
+                      : 'bg-brand-800 text-white hover:bg-brand-700'
+                  }`}
                 >
                   Register
                 </Link>
@@ -191,7 +224,11 @@ const Header = () => {
 
             <button
               type="button"
-              className="inline-flex rounded-lg p-2 text-slate-700 hover:bg-slate-100 lg:hidden"
+              className={`inline-flex rounded-lg p-2 lg:hidden ${
+                overDarkHero
+                  ? 'text-white hover:bg-white/10'
+                  : 'text-slate-700 hover:bg-slate-100'
+              }`}
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-expanded={isMenuOpen}
               aria-label="Toggle menu"
@@ -202,7 +239,7 @@ const Header = () => {
         </div>
 
         {isMenuOpen && (
-          <nav className="border-t border-slate-100 py-4 lg:hidden" aria-label="Mobile">
+          <nav className="border-t border-slate-100 bg-white py-4 lg:hidden" aria-label="Mobile">
             <div className="flex flex-col gap-1">
               {navItems.map((item) => (
                 <Link
