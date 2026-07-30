@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { signUp } from '@/lib/auth'
@@ -20,7 +20,7 @@ import { buildMatchingKeywords } from '@/lib/data/csdProcurementCatalog'
 const inputClass =
   'w-full rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-700/20'
 
-export default function SignUpPage() {
+function SignUpForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialType = searchParams?.get('type') === 'youth-agent' ? 'youth-agent' : 'sme'
@@ -433,5 +433,19 @@ export default function SignUpPage() {
         </Link>
       </p>
     </AuthShell>
+  )
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-slate-50">
+          <LoadingSpinner size="lg" />
+        </div>
+      }
+    >
+      <SignUpForm />
+    </Suspense>
   )
 }
