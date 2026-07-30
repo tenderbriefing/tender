@@ -1,5 +1,7 @@
-Dockerfile
-.dockerignore
+# gcloud builds submit uses .gcloudignore (not .dockerignore).
+# Do NOT ignore Dockerfile — Cloud Build needs it in the upload.
+# Keep .dockerignore so `docker build` still excludes heavy paths.
+
 node_modules
 npm-debug.log
 .next
@@ -21,5 +23,3 @@ README.md
 coverage
 .cursor
 mobile-agent-app
-
-# gcloud builds submit uses .gcloudignore (not .dockerignore)
