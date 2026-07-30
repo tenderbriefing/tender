@@ -218,21 +218,51 @@ check('unknown error sanitized', sanitizeAuthErrorCode('auth/evil') === 'unknown
   check('allows approved auth metadata', good.ok === true)
 }
 
-// Sign-in page google button contract (file contains test id)
+// Sign-in / signup Google UI is gated by NEXT_PUBLIC_GOOGLE_AUTH_ENABLED (fail-closed).
 const fs = require('fs')
 const signin = fs.readFileSync(path.join(__dirname, '../app/auth/signin/page.tsx'), 'utf8')
-check('signin renders Google continue', signin.includes('GoogleContinueButton'))
+check('signin keeps Google continue behind flag', signin.includes('GoogleContinueButton'))
+check('signin gates Google UI with isGoogleAuthEnabled', signin.includes('isGoogleAuthEnabled'))
 check('signin keeps email/password', signin.includes('signIn(') && signin.includes('Forgot password'))
 
 const signup = fs.readFileSync(path.join(__dirname, '../app/auth/signup/page.tsx'), 'utf8')
-check('signup has Google for journey', signup.includes('Continue with Google as SME') || signup.includes('intendedRole'))
-check('signup SME google uses sme journey', signup.includes("intendedRole: journey"))
+check(
+  'signup has Google for journey (flagged)',
+  signup.includes('Continue with Google as SME') || signup.includes('intendedRole')
+)
+check('signup gates Google UI with isGoogleAuthEnabled', signup.includes('isGoogleAuthEnabled'))
+check('signup SME google uses sme journey', signup.includes('intendedRole: journey'))
 
 const btn = fs.readFileSync(
   path.join(__dirname, '../components/auth/GoogleContinueButton.tsx'),
   'utf8'
 )
 check('Google button has test id', btn.includes('data-testid="google-continue-button"'))
+
+const flag = fs.readFileSync(
+  path.join(__dirname, '../lib/auth/googleAuthEnabled.ts'),
+  'utf8'
+)
+check('google auth flag helper exists', flag.includes('NEXT_PUBLIC_GOOGLE_AUTH_ENABLED'))
+check('google auth flag fail-closed', flag.includes("v === 'true'"))
+
+const continueFlow = fs.readFileSync(
+  path.join(__dirname, '../lib/auth/continueWithGoogle.ts'),
+  'utf8'
+)
+check('continueWithGoogle gates on flag', continueFlow.includes('isGoogleAuthEnabled()'))
+
+const dockerfile = fs.readFileSync(path.join(__dirname, '../Dockerfile'), 'utf8')
+check(
+  'Dockerfile defaults Google auth off',
+  dockerfile.includes('NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=false')
+)
+
+const cloudbuild = fs.readFileSync(path.join(__dirname, '../cloudbuild.yaml'), 'utf8')
+check(
+  'cloudbuild ships Google auth disabled',
+  cloudbuild.includes('NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=false')
+)
 
 const rules = fs.readFileSync(path.join(__dirname, '../firestore.rules'), 'utf8')
 check('rules block userType escalation', rules.includes("hasAny([") && rules.includes("'userType'"))

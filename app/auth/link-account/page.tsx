@@ -8,10 +8,13 @@ import {
   continueWithGoogle,
   bootstrapGoogleProfile,
 } from '@/lib/auth/continueWithGoogle'
+import { isGoogleAuthEnabled } from '@/lib/auth/googleAuthEnabled'
 import { signInWithPasswordAndLinkGoogle } from '@/lib/auth/googleAuth'
 import { toast } from 'react-hot-toast'
 import AuthShell from '@/components/auth/AuthShell'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+
+const googleAuthEnabled = isGoogleAuthEnabled()
 
 const inputClass =
   'w-full rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-700/20'
@@ -108,15 +111,19 @@ function LinkAccountForm() {
       </form>
 
       <p className="mt-4 text-center text-sm text-slate-600">
-        <button
-          type="button"
-          onClick={tryGoogleAgain}
-          className="font-semibold text-brand-800 hover:underline"
-          disabled={loading}
-        >
-          Try Google again
-        </button>
-        {' · '}
+        {googleAuthEnabled ? (
+          <>
+            <button
+              type="button"
+              onClick={tryGoogleAgain}
+              className="font-semibold text-brand-800 hover:underline"
+              disabled={loading}
+            >
+              Try Google again
+            </button>
+            {' · '}
+          </>
+        ) : null}
         <Link href="/auth/signin" className="font-semibold text-brand-800 hover:underline">
           Back to sign in
         </Link>
