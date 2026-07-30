@@ -6,6 +6,12 @@
 export const PRODUCT_EVENT_NAMES = [
   // Shared
   'user_logged_in',
+  'google_sign_in_started',
+  'google_sign_in_succeeded',
+  'google_sign_in_failed',
+  'first_google_registration',
+  'onboarding_started',
+  'onboarding_completed',
   'dashboard_viewed',
   'navigation_selected',
   'search_initiated',
@@ -50,6 +56,9 @@ export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number]
 
 export const MEANINGFUL_EVENTS = new Set<ProductEventName>([
   'user_logged_in',
+  'google_sign_in_succeeded',
+  'first_google_registration',
+  'onboarding_completed',
   'search_initiated',
   'search_performed',
   'tender_opened',
@@ -94,6 +103,10 @@ export const METADATA_ALLOWLIST = new Set([
   'referralSource',
   'durationMs',
   'hasResults',
+  'authenticationProvider',
+  'registrationJourney',
+  'errorCode',
+  'pagePath',
 ])
 
 export const FORBIDDEN_METADATA_KEYS = [

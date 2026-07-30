@@ -27,11 +27,43 @@ service cloud.firestore {
       return isAuthenticated() && userDoc().exists && userType() == 'youth-agent';
     }
 
+    function userCreateAllowed() {
+      return isAuthenticated()
+        && request.auth.uid == userId
+        && request.resource.data.userType in ['sme', 'youth-agent']
+        && request.resource.data.get('founderAccess', false) != true
+        && request.resource.data.get('suspended', false) != true
+        && (
+          !('verificationStatus' in request.resource.data)
+          || request.resource.data.verificationStatus == 'pending'
+        );
+    }
+
+    function userOwnerUpdateAllowed() {
+      return isAuthenticated()
+        && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny([
+              'userType',
+              'role',
+              'founderAccess',
+              'verificationStatus',
+              'suspended',
+              'reliabilityScore',
+              'missedBriefingCount',
+              'completedBriefingCount',
+              'acceptedBriefingCount',
+              'rating',
+              'totalJobs'
+            ]);
+    }
+
     // Legacy user profiles
     match /users/{userId} {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow write: if isAuthenticated() && request.auth.uid == userId;
-      allow write: if isAdmin();
+      allow create: if userCreateAllowed();
+      allow update: if userOwnerUpdateAllowed() || isAdmin();
+      allow delete: if isAdmin();
     }
 
     // TenderBriefing platform — procurement intelligence

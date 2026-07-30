@@ -6,9 +6,13 @@ import Link from 'next/link'
 import { signUp } from '@/lib/auth'
 import { getAuthErrorMessage, normalizeAuthEmail } from '@/lib/auth/errors'
 import { dashboardPathForRole } from '@/lib/auth/redirects'
+import { continueWithGoogle, finishGoogleRedirect } from '@/lib/auth/continueWithGoogle'
 import { SA_PROVINCES } from '@/lib/procurement/provinces'
 import { toast } from 'react-hot-toast'
 import AuthShell from '@/components/auth/AuthShell'
+import GoogleContinueButton, {
+  AuthMethodDivider,
+} from '@/components/auth/GoogleContinueButton'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import SmeCategoryCommoditySelector from '@/components/sme/SmeCategoryCommoditySelector'
 import { buildMatchingKeywords } from '@/lib/data/csdProcurementCatalog'
@@ -22,6 +26,7 @@ export default function SignUpPage() {
   const initialType = searchParams?.get('type') === 'youth-agent' ? 'youth-agent' : 'sme'
 
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -44,6 +49,33 @@ export default function SignUpPage() {
   useEffect(() => {
     setFormData((p) => ({ ...p, userType: initialType as 'sme' | 'youth-agent' }))
   }, [initialType])
+
+  useEffect(() => {
+    let cancelled = false
+    const journey = initialType === 'youth-agent' ? 'youth-agent' : 'sme'
+    ;(async () => {
+      const result = await finishGoogleRedirect({
+        registrationJourney: journey,
+        intendedRole: journey,
+        pagePath: `/auth/signup?type=${journey}`,
+      })
+      if (cancelled || !result) return
+      if (!result.ok) {
+        if (result.needsAccountLink) {
+          const q = result.email ? `?email=${encodeURIComponent(result.email)}` : ''
+          router.push(`/auth/link-account${q}`)
+          return
+        }
+        if (result.message && !/redirecting/i.test(result.message)) toast.error(result.message)
+        return
+      }
+      toast.success('Continue onboarding to finish your profile')
+      router.replace(result.redirectPath || (journey === 'sme' ? '/sme/onboarding' : '/agent/onboarding'))
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [initialType, router])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -129,6 +161,38 @@ export default function SignUpPage() {
 
   const isSme = formData.userType === 'sme'
 
+  const handleGoogle = async () => {
+    const journey = isSme ? 'sme' : 'youth-agent'
+    setGoogleLoading(true)
+    try {
+      const result = await continueWithGoogle({
+        registrationJourney: journey,
+        intendedRole: journey,
+        pagePath: `/auth/signup?type=${journey}`,
+      })
+      if (!result.ok) {
+        if (result.needsAccountLink) {
+          const q = result.email ? `?email=${encodeURIComponent(result.email)}` : ''
+          router.push(`/auth/link-account${q}`)
+          return
+        }
+        if (result.message && !/redirecting/i.test(result.message)) toast.error(result.message)
+        return
+      }
+      // Existing users keep their role; first-time users go to onboarding for this journey.
+      toast.success(
+        result.profile?.onboardingCompleted
+          ? 'Signed in with Google'
+          : 'Continue onboarding to finish your profile'
+      )
+      router.replace(result.redirectPath || (isSme ? '/sme/onboarding' : '/agent/onboarding'))
+    } catch (error: unknown) {
+      toast.error(getAuthErrorMessage(error, 'Google registration failed.'))
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
   return (
     <AuthShell
       title={isSme ? 'SME Registration' : 'Youth Agent Registration'}
@@ -138,25 +202,34 @@ export default function SignUpPage() {
           : 'Register to accept briefing assignments and submit reports for SMEs.'
       }
     >
+      <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 text-sm">
+        <Link
+          href="/auth/signup?type=sme"
+          className={`rounded-lg py-2 text-center font-semibold transition ${
+            isSme ? 'bg-white text-brand-900 shadow-sm' : 'text-slate-600 hover:text-brand-800'
+          }`}
+        >
+          SME
+        </Link>
+        <Link
+          href="/auth/signup?type=youth-agent"
+          className={`rounded-lg py-2 text-center font-semibold transition ${
+            !isSme ? 'bg-white text-brand-900 shadow-sm' : 'text-slate-600 hover:text-brand-800'
+          }`}
+        >
+          Youth Agent
+        </Link>
+      </div>
+
+      <GoogleContinueButton
+        onClick={handleGoogle}
+        loading={googleLoading}
+        disabled={loading}
+        label={isSme ? 'Continue with Google as SME' : 'Continue with Google as Youth Agent'}
+      />
+      <AuthMethodDivider label="or register with email" />
+
       <form onSubmit={handleSubmit} className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
-        <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 text-sm">
-          <Link
-            href="/auth/signup?type=sme"
-            className={`rounded-lg py-2 text-center font-semibold transition ${
-              isSme ? 'bg-white text-brand-900 shadow-sm' : 'text-slate-600 hover:text-brand-800'
-            }`}
-          >
-            SME
-          </Link>
-          <Link
-            href="/auth/signup?type=youth-agent"
-            className={`rounded-lg py-2 text-center font-semibold transition ${
-              !isSme ? 'bg-white text-brand-900 shadow-sm' : 'text-slate-600 hover:text-brand-800'
-            }`}
-          >
-            Youth Agent
-          </Link>
-        </div>
 
         {isSme && (
           <div>
