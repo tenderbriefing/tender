@@ -35,6 +35,7 @@
     "procurement-intelligence:qa": "node scripts/procurement-intelligence-qa.js",
     "founder:intelligence:qa": "node scripts/founder-user-intelligence-qa.js",
     "qa:google-auth": "node scripts/google-auth-qa.js",
+    "qa:firestore-rules": "node scripts/firestore-rules-qa.js",
     "rfq-inbox:qa": "node scripts/rfq-inbox-qa.js",
     "smoke:production:rest": "node scripts/production-smoke-rest.js",
     "test:integrations": "node scripts/test-integrations-health.js",

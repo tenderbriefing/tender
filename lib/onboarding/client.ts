@@ -1,13 +1,6 @@
-import { doc, setDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
-import { sanitizeClientData } from '@/lib/auth/sanitize'
-import { stripPrivilegedFields } from '@/lib/auth/googleAuthFlow'
+import { authFetch } from '@/lib/api/authenticatedFetch'
 import type { UserProfile } from '@/lib/auth'
 import { buildMatchingKeywords } from '@/lib/data/csdProcurementCatalog'
-
-function nowIso() {
-  return new Date().toISOString()
-}
 
 export interface SmeOnboardingInput {
   companyName: string
@@ -49,122 +42,44 @@ async function trackOnboardingCompleted(journey: 'sme' | 'youth-agent') {
 }
 
 export async function saveSmeOnboarding(
-  uid: string,
-  email: string,
-  existing: Partial<UserProfile>,
+  _uid: string,
+  _email: string,
+  _existing: Partial<UserProfile>,
   input: SmeOnboardingInput
 ) {
-  const timestamp = nowIso()
-  const matchingKeywords = buildMatchingKeywords(input.categories, input.commodities)
-  const profilePatch = sanitizeClientData(
-    stripPrivilegedFields({
-      email,
-      displayName: existing.displayName || input.companyName.trim(),
-      companyName: input.companyName.trim(),
-      csdNumber: input.csdNumber.trim(),
-      province: input.province,
-      categories: input.categories,
-      commodities: input.commodities,
-      matchingKeywords,
-      sectors: input.categories,
-      provincesOfInterest: [input.province],
-      phoneNumber: input.whatsAppNumber.trim(),
-      whatsAppNumber: input.whatsAppNumber.trim(),
-      preferredDepartments: input.preferredDepartments,
-      tenderInterests: input.tenderInterests.trim(),
-      onboardingCompleted: true,
-      onboardingCompletedAt: timestamp,
-      updatedAt: timestamp,
-    })
-  )
+  // Ensure keywords are consistent if callers inspect local state later.
+  void buildMatchingKeywords(input.categories, input.commodities)
 
-  await setDoc(doc(db, 'users', uid), profilePatch, { merge: true })
-  await setDoc(
-    doc(db, 'smes', uid),
-    sanitizeClientData({
-      id: uid,
-      uid,
-      email,
-      displayName: existing.displayName || input.companyName,
-      companyName: input.companyName.trim(),
-      contactPerson: existing.displayName || '',
-      csdNumber: input.csdNumber.trim(),
-      province: input.province,
-      categories: input.categories,
-      commodities: input.commodities,
-      matchingKeywords,
-      sectors: input.categories,
-      preferredDepartments: input.preferredDepartments,
-      tenderInterests: input.tenderInterests.trim(),
-      phoneNumber: input.whatsAppNumber.trim(),
-      whatsAppNumber: input.whatsAppNumber.trim(),
-      provincesOfInterest: [input.province],
-      userType: 'sme',
-      onboardingCompleted: true,
-      onboardingCompletedAt: timestamp,
-      updatedAt: timestamp,
-    }),
-    { merge: true }
-  )
+  const res = await authFetch('/api/auth/complete-onboarding', {
+    method: 'POST',
+    body: JSON.stringify({ journey: 'sme', input }),
+  })
+  const payload = (await res.json().catch(() => null)) as {
+    success?: boolean
+    error?: string
+  } | null
+  if (!res.ok || !payload?.success) {
+    throw new Error(payload?.error || 'Could not save onboarding. Please try again.')
+  }
   await trackOnboardingCompleted('sme')
 }
 
 export async function saveAgentOnboarding(
-  uid: string,
-  email: string,
-  existing: Partial<UserProfile>,
+  _uid: string,
+  _email: string,
+  _existing: Partial<UserProfile>,
   input: AgentOnboardingInput
 ) {
-  const timestamp = nowIso()
-  const profilePatch = sanitizeClientData(
-    stripPrivilegedFields({
-      email,
-      displayName: input.displayName.trim(),
-      province: input.province,
-      city: input.city.trim(),
-      location: `${input.city.trim()}, ${input.province}`,
-      phoneNumber: input.whatsAppNumber.trim(),
-      whatsAppNumber: input.whatsAppNumber.trim(),
-      transportAvailable: input.transportAvailable,
-      preferredServiceAreas: input.preferredServiceAreas.length
-        ? input.preferredServiceAreas
-        : [input.province],
-      idVerificationNote: input.idVerificationNote.trim(),
-      codeOfConductAccepted: input.codeOfConductAccepted,
-      codeOfConductAcceptedAt: input.codeOfConductAccepted ? timestamp : undefined,
-      onboardingCompleted: true,
-      onboardingCompletedAt: timestamp,
-      updatedAt: timestamp,
-    })
-  )
-
-  await setDoc(doc(db, 'users', uid), profilePatch, { merge: true })
-  await setDoc(
-    doc(db, 'agents', uid),
-    sanitizeClientData({
-      id: uid,
-      uid,
-      email,
-      displayName: input.displayName.trim(),
-      name: input.displayName.trim(),
-      province: input.province,
-      city: input.city.trim(),
-      location: `${input.city.trim()}, ${input.province}`,
-      phoneNumber: input.whatsAppNumber.trim(),
-      whatsAppNumber: input.whatsAppNumber.trim(),
-      transportAvailable: input.transportAvailable,
-      preferredServiceAreas: input.preferredServiceAreas.length
-        ? input.preferredServiceAreas
-        : [input.province],
-      idVerificationNote: input.idVerificationNote.trim(),
-      codeOfConductAccepted: input.codeOfConductAccepted,
-      verificationStatus: existing.verificationStatus || 'pending',
-      userType: 'youth-agent',
-      onboardingCompleted: true,
-      onboardingCompletedAt: timestamp,
-      updatedAt: timestamp,
-    }),
-    { merge: true }
-  )
+  const res = await authFetch('/api/auth/complete-onboarding', {
+    method: 'POST',
+    body: JSON.stringify({ journey: 'youth-agent', input }),
+  })
+  const payload = (await res.json().catch(() => null)) as {
+    success?: boolean
+    error?: string
+  } | null
+  if (!res.ok || !payload?.success) {
+    throw new Error(payload?.error || 'Could not save onboarding. Please try again.')
+  }
   await trackOnboardingCompleted('youth-agent')
 }

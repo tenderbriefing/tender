@@ -13,20 +13,20 @@ import { toast } from 'react-hot-toast'
 function RoleSelectionContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const googlePending = searchParams?.get('google') === '1'
+  const finishPending =
+    searchParams?.get('google') === '1' || searchParams?.get('recover') === '1'
   const { user, userProfile, loading } = useAuth()
   const [busy, setBusy] = useState<'sme' | 'youth-agent' | null>(null)
 
   useEffect(() => {
-    if (!loading && googlePending && userProfile?.userType) {
-      // Already has a role — never overwrite; send to their destination.
+    if (!loading && finishPending && userProfile?.userType) {
       if (userProfile.userType === 'youth-agent') router.replace('/agent/dashboard')
       else if (userProfile.userType === 'admin') router.replace('/admin/dashboard')
       else router.replace('/sme/dashboard')
     }
-  }, [loading, googlePending, userProfile, router])
+  }, [loading, finishPending, userProfile, router])
 
-  const completeGoogleRole = async (role: 'sme' | 'youth-agent') => {
+  const completeRole = async (role: 'sme' | 'youth-agent') => {
     if (!user) {
       router.push(`/auth/signup?type=${role}`)
       return
@@ -47,21 +47,29 @@ function RoleSelectionContent() {
           await trackProductEvent('first_google_registration', {
             feature: 'auth',
             pagePath: '/auth/role-selection',
-            metadata: { authenticationProvider: 'google', registrationJourney: role },
+            metadata: {
+              authenticationProvider: userProfile?.authenticationProvider || 'password',
+              registrationJourney: role,
+            },
           })
         }
         if (boot.data?.onboardingRequired) {
           await trackProductEvent('onboarding_started', {
             feature: 'auth',
             pagePath: '/auth/role-selection',
-            metadata: { authenticationProvider: 'google', registrationJourney: role },
+            metadata: {
+              authenticationProvider: userProfile?.authenticationProvider || 'password',
+              registrationJourney: role,
+            },
           })
         }
       } catch {
         /* non-blocking */
       }
       toast.success('Continue onboarding to finish your profile')
-      router.replace(boot.data?.redirectPath || (role === 'sme' ? '/sme/onboarding' : '/agent/onboarding'))
+      router.replace(
+        boot.data?.redirectPath || (role === 'sme' ? '/sme/onboarding' : '/agent/onboarding')
+      )
     } catch {
       toast.error('Could not complete registration')
     } finally {
@@ -69,7 +77,7 @@ function RoleSelectionContent() {
     }
   }
 
-  if (loading && googlePending) {
+  if (loading && finishPending) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
         <LoadingSpinner size="lg" />
@@ -79,10 +87,10 @@ function RoleSelectionContent() {
 
   return (
     <AuthShell
-      title={googlePending ? 'Choose your Tender Briefing path' : 'Register for TenderBriefing'}
+      title={finishPending ? 'Choose your Tender Briefing path' : 'Register for TenderBriefing'}
       subtitle={
-        googlePending
-          ? 'Your Google account is signed in. Select SME or Youth Agent to finish setup. This choice cannot grant admin access.'
+        finishPending
+          ? 'Your account is signed in. Select SME or Youth Agent to finish setup. This choice cannot grant admin access.'
           : 'Choose how you will use the procurement operations platform.'
       }
     >
@@ -91,7 +99,7 @@ function RoleSelectionContent() {
           type="button"
           disabled={!!busy}
           onClick={() =>
-            googlePending ? completeGoogleRole('sme') : router.push('/auth/signup?type=sme')
+            finishPending ? completeRole('sme') : router.push('/auth/signup?type=sme')
           }
           className="group rounded-xl border-2 border-slate-200 p-5 text-left transition hover:border-brand-500 hover:bg-brand-50 disabled:opacity-60"
         >
@@ -102,7 +110,7 @@ function RoleSelectionContent() {
             reports for your company.
           </p>
           <span className="mt-4 inline-block text-sm font-semibold text-brand-700 group-hover:underline">
-            {busy === 'sme' ? 'Saving…' : googlePending ? 'Continue as SME →' : 'Register as SME →'}
+            {busy === 'sme' ? 'Saving…' : finishPending ? 'Continue as SME →' : 'Register as SME →'}
           </span>
         </button>
 
@@ -110,8 +118,8 @@ function RoleSelectionContent() {
           type="button"
           disabled={!!busy}
           onClick={() =>
-            googlePending
-              ? completeGoogleRole('youth-agent')
+            finishPending
+              ? completeRole('youth-agent')
               : router.push('/auth/signup?type=youth-agent')
           }
           className="group rounded-xl border-2 border-slate-200 p-5 text-left transition hover:border-brand-500 hover:bg-brand-50 disabled:opacity-60"
@@ -125,7 +133,7 @@ function RoleSelectionContent() {
           <span className="mt-4 inline-block text-sm font-semibold text-brand-700 group-hover:underline">
             {busy === 'youth-agent'
               ? 'Saving…'
-              : googlePending
+              : finishPending
                 ? 'Continue as Youth Agent →'
                 : 'Register as Youth Agent →'}
           </span>

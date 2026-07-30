@@ -78,7 +78,7 @@ export function resolvePostAuthDestination(profile: UserProfile): {
   if (!profile.userType) {
     return {
       blocked: false,
-      path: '/auth/role-selection?google=1',
+      path: '/auth/role-selection?recover=1',
       onboardingRequired: true,
     }
   }
