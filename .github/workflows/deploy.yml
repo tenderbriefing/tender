@@ -109,11 +109,12 @@ jobs:
       - name: Health and domain checks
         run: |
           set -e
+          # Public Firestore health — /api/integrations/health is admin-only (401).
           health_code=$(curl -sS -o /tmp/health.json -w "%{http_code}" \
-            "https://www.tenderbriefing.co.za/api/integrations/health")
+            "https://www.tenderbriefing.co.za/api/health/firestore")
           echo "health: $health_code"
           test "$health_code" = "200"
-          python3 -c "import json; d=json.load(open('/tmp/health.json')); assert d.get('ok') is True, d"
+          python3 -c "import json; d=json.load(open('/tmp/health.json')); assert d.get('status') == 'ok' and d.get('connected') is True, d"
           for url in \
             "https://www.tenderbriefing.co.za/" \
             "https://tenderbriefing.co.za/" \
