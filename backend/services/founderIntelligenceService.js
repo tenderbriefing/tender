@@ -252,6 +252,15 @@ async function buildFounderIntelligence({ page = 1, pageSize = 25, role = 'all',
   const onboardedSmes = smes.filter((s) => s.onboardingCompleted).length
   const actions = buildActionCentre(smes, agents, requests)
 
+  const countEngagement = (list) => {
+    const counts = {}
+    for (const row of list) {
+      const key = row.engagement || 'unknown'
+      counts[key] = (counts[key] || 0) + 1
+    }
+    return counts
+  }
+
   const network = {
     smesWithoutAgents: smes.filter((s) => s.assignedAgentCount === 0).length,
     agentsWithoutSmes: agents.filter((a) => a.assignedSmeCount === 0).length,
@@ -295,6 +304,10 @@ async function buildFounderIntelligence({ page = 1, pageSize = 25, role = 'all',
       comparisons: {
         note: 'Day/7d/30d deltas require productEvents history; Phase 1 shows absolute counts.',
       },
+      engagementDistribution: {
+        smes: countEngagement(smes),
+        agents: countEngagement(agents),
+      },
     },
     smes: slicePage(filteredSmes),
     agents: slicePage(filteredAgents),
@@ -309,8 +322,9 @@ async function buildFounderIntelligence({ page = 1, pageSize = 25, role = 'all',
             ? null
             : 0
           : Math.round((counts.smes / counts.agents) * 10) / 10,
-      unassignedSmes: smes.filter((s) => s.province === name && s.assignedAgentCount === 0)
-        .length,
+      unassignedSmes: smes.filter(
+        (s) => (s.province || 'Unknown') === name && s.assignedAgentCount === 0
+      ).length,
     })),
     actions,
     generatedAt: new Date().toISOString(),
