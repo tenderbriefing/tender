@@ -7,7 +7,11 @@ const PROD = 'https://tenderbriefing-xzgs5uw5ta-bq.a.run.app'
 const API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDk_QBzmOXJfdl4PPqycoKtecGu0ioCRuY'
 const SME_EMAIL = 'ops-smoke-sme@tenderbriefing.co.za'
 const AGENT_EMAIL = 'ops-smoke-agent@tenderbriefing.co.za'
-const PASSWORD = process.env.SMOKE_TEST_PASSWORD || 'TenderBriefing_Smoke2026!'
+const PASSWORD = process.env.SMOKE_TEST_PASSWORD
+if (!PASSWORD) {
+  console.error('Set SMOKE_TEST_PASSWORD before running this script.')
+  process.exit(1)
+}
 
 async function authRequest(path, body) {
   const res = await fetch(

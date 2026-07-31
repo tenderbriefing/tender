@@ -308,7 +308,7 @@ const ScraperDemoPage = () => {
                         View Details
                       </button>
                       <button className="btn-primary text-sm px-3 py-1">
-                        Book Connector
+                        Book an agent
                       </button>
                     </div>
                   </div>

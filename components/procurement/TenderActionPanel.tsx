@@ -20,6 +20,7 @@ import {
   BOOK_AGENT_CTA,
   BOOK_AGENT_CTA_WITH_FEE,
 } from '@/lib/booking/labels'
+import { ATTENDANCE_PRICING_HIGHLIGHTS } from '@/lib/booking/copy'
 import {
   buildGoogleCalendarUrl,
   downloadIcsFile,
@@ -32,13 +33,6 @@ interface TenderActionPanelProps {
   className?: string
   variant?: 'desktop' | 'mobile'
 }
-
-const PRICING_HIGHLIGHTS = [
-  'Verified Youth Agent attends briefing on your behalf',
-  'Structured briefing report within 24 hours',
-  'WhatsApp + in-app status updates',
-  'SLA-tracked dispatch & attendance proof',
-]
 
 function downloadIcs(tender: TenderBriefing) {
   if (!downloadIcsFile(tender)) {
@@ -165,7 +159,7 @@ export default function TenderActionPanel({
         </div>
 
         <ul className="relative mt-6 space-y-2.5 border-t border-white/10 pt-5">
-          {PRICING_HIGHLIGHTS.map((item) => (
+          {ATTENDANCE_PRICING_HIGHLIGHTS.map((item) => (
             <li key={item} className="flex items-start gap-2 text-sm text-brand-100/85">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent-400" />
               <span>{item}</span>

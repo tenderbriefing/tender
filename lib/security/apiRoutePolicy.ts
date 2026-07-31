@@ -54,6 +54,8 @@ const PRODUCTION_BLOCKED_API_PREFIXES = [
   '/api/file-processing',
   '/api/ai/',
   '/api/connector-response',
+  // Legacy connector booking — use /api/attendance-requests + PayFast
+  '/api/bookings',
 ] as const
 
 export function isProductionBlockedApiRoute(pathname: string): boolean {

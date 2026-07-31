@@ -35,19 +35,10 @@ import {
   BOOK_AGENT_CTA,
   BOOK_AGENT_PAY_CTA,
 } from '@/lib/booking/labels'
-
-const HIGHLIGHTS = [
-  'Verified Youth Agent attends briefing on your behalf',
-  'Structured briefing report within 24 hours',
-  'WhatsApp + in-app status updates',
-  'SLA-tracked dispatch with attendance proof',
-]
-
-const NEXT_STEPS = [
-  'Pay the fixed fee securely (PayFast)',
-  'We notify nearby Youth Agents automatically',
-  'Track status and receive your Briefing Report',
-]
+import {
+  ATTENDANCE_NEXT_STEPS,
+  ATTENDANCE_PRICING_HIGHLIGHTS,
+} from '@/lib/booking/copy'
 
 export default function RequestYouthAgentPage() {
   const { id } = useParams<{ id: string }>()
@@ -101,10 +92,7 @@ export default function RequestYouthAgentPage() {
       })
       const json = await res.json()
       if (!json.success) {
-        if (
-          (json.code === 'PAYFAST_NOT_CONFIGURED' || json.code === 'YOCO_NOT_CONFIGURED') &&
-          json.data?.request?.id
-        ) {
+        if (json.code === 'PAYFAST_NOT_CONFIGURED' && json.data?.request?.id) {
           toast.error(
             json.error ||
               'Your request was saved. Online payment is not active yet — you can pay from My Requests when PayFast is enabled.'
@@ -116,7 +104,7 @@ export default function RequestYouthAgentPage() {
       }
 
       const payment = json.data?.payment
-      if (payment?.code === 'PAYFAST_NOT_CONFIGURED' || payment?.code === 'YOCO_NOT_CONFIGURED') {
+      if (payment?.code === 'PAYFAST_NOT_CONFIGURED') {
         const requestId = json.data?.request?.id
         toast.error(
           payment.message ||
@@ -443,7 +431,7 @@ export default function RequestYouthAgentPage() {
               {submitting ? 'Booking…' : BOOK_AGENT_PAY_CTA}
             </button>
             <ol className="space-y-1.5 px-1 text-xs text-slate-600">
-              {NEXT_STEPS.map((step, i) => (
+              {ATTENDANCE_NEXT_STEPS.map((step, i) => (
                 <li key={step} className="flex items-start gap-2">
                   <span className="font-bold text-brand-800">{i + 1}.</span>
                   <span>{step}</span>
@@ -476,7 +464,7 @@ export default function RequestYouthAgentPage() {
               </div>
 
               <ul className="relative mt-6 space-y-2.5 border-t border-white/10 pt-5">
-                {HIGHLIGHTS.map((item) => (
+                {ATTENDANCE_PRICING_HIGHLIGHTS.map((item) => (
                   <li key={item} className="flex items-start gap-2 text-sm text-brand-100/85">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent-400" />
                     <span>{item}</span>

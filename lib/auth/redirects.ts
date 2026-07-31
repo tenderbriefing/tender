@@ -15,7 +15,6 @@ export function dashboardPathForRole(userType?: UserProfile['userType']): string
 export const SME_NAV = [
   { name: 'Tender Opportunities', href: '/tenders' },
   { name: 'My Requests', href: '/sme/requests' },
-  { name: 'Briefing Reports', href: '/sme/requests' },
   { name: 'Profile', href: '/settings' },
 ] as const
 

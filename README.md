@@ -1,52 +1,46 @@
-# TenderConnect
+# TenderBriefing
 
-**The Uber of Tender Briefings** - Connecting entrepreneurs with reliable individuals to attend tender briefings on their behalf.
+South African tender briefing platform for SMEs: discover eTenders opportunities, book a verified Youth Agent to attend compulsory briefings, and receive a structured briefing report. Fixed fee via PayFast.
 
-## 🚀 Overview
+## Overview
 
-TenderConnect is an innovative online platform that solves the challenges faced by entrepreneurs in attending tender briefings while empowering unemployed youth. The platform acts as a bridge between entrepreneurs who need briefing attendance and reliable individuals who can provide this service.
+TenderBriefing connects SMEs who need briefing attendance with Youth Agents who provide on-the-ground attendance, proof, and reporting. The live booking path is **attendance requests** (not the retired Connector booking flow).
 
-## ✨ Key Features
+## Key Features
 
-### For Entrepreneurs
-- **Tender Listings**: Regularly updated database of tenders with comprehensive information
-- **Connector Booking**: Easy booking system to request connector services
-- **Secure Payments**: Integrated payment gateway for hassle-free transactions
-- **Quality Assurance**: Rigorous quality control for all submitted materials
-- **Real-time Updates**: Track booking status and receive notifications
+### For SMEs
+- **Tender Opportunities**: Browse and filter live tender briefings
+- **Book an agent**: Request attendance with PayFast checkout (fixed fee)
+- **My Requests**: Track assignment, attendance, and briefing reports
+- **Workspace**: Save/follow tenders, provinces, and departments
 
-### For Connectors (Youth)
-- **Job Opportunities**: Access to flexible, income-generating work
-- **Skill Development**: Professional experience in business documentation
-- **Verified Platform**: Secure and trustworthy environment
-- **Rating System**: Build reputation through quality work
-- **Flexible Schedule**: Work on your own terms
+### For Youth Agents
+- **Available Assignments**: Accept/decline dispatch via `/jobs` and agent dashboard
+- **Field mobile flows**: Check-in, media, briefing submission
+- **Earnings & performance**: Track completed briefings
 
-### Platform Features
-- **Mobile-Friendly**: Responsive design for all devices
-- **Secure Messaging**: Private communication between users
-- **Rating & Feedback**: Accountability and continuous improvement
-- **Admin Dashboard**: Comprehensive platform management
-- **Quality Control**: Review system for all submissions
+### Platform
+- Firebase Auth + Firestore
+- PayFast payments + ITN webhooks
+- Admin operations, dispatch, procurement intelligence
+- Cloud Run + Firebase Hosting proxy deploy
 
-## 🛠️ Technology Stack
+## Technology Stack
 
-- **Frontend**: Next.js 14, React 18, TypeScript
-- **Styling**: Tailwind CSS, Headless UI
-- **Authentication**: Firebase Auth
-- **Database**: Firestore
-- **File Storage**: Firebase Storage
-- **Payments**: Stripe
-- **Deployment**: Firebase Hosting
+- **Frontend**: Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS
+- **Auth**: Firebase Auth
+- **Database / storage**: Firestore, Firebase Storage
+- **Payments**: PayFast
+- **Deploy**: Cloud Run (`cloudbuild.yaml`) + Firebase Hosting proxy
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ 
-- npm or yarn
+- Node.js 18+
+- npm
 - Firebase project
-- Stripe account
+- PayFast merchant credentials (for payments)
 
 ### Installation
 
@@ -60,6 +54,31 @@ TenderConnect is an innovative online platform that solves the challenges faced 
    ```bash
    npm install
    ```
+
+3. **Configure environment**
+   ```bash
+   cp .env.local.example .env.local
+   ```
+   Prefer `STORAGE_ADAPTER=firestore` for local work that mirrors production. See `docs/PAYFAST_PAYMENTS_SETUP.md` for payment setup and `docs/CI_CD_SETUP.md` for deploy.
+
+4. **Run locally**
+   ```bash
+   npm run dev
+   ```
+
+5. **Typecheck**
+   ```bash
+   npm run typecheck
+   ```
+
+> **Note:** Many root-level `*_SETUP.md` guides still describe older TenderConnect / Stripe / project-ID setups. Prefer `README.md`, `docs/`, and `.env.local.example` as the source of truth.
+
+---
+
+<details>
+<summary>Legacy README sections (historical — may be outdated)</summary>
+
+The remainder of this file retains older setup notes. Treat conflicting claims (Stripe, Connector booking, static export, Vercel) as superseded by the sections above.
 
 3. **Environment Setup**
    ```bash
@@ -370,4 +389,6 @@ For support, email support@tenderconnect.com or contact us via WhatsApp.
 
 ---
 
-**TenderConnect** - Empowering entrepreneurs, creating opportunities for youth, and revolutionizing the tender briefing process.
+**TenderBriefing** — SME tender briefings with Youth Agent attendance.
+
+</details>

@@ -1,5 +1,5 @@
 {
-  "name": "tenderconnect",
+  "name": "tenderbriefing",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "deploy": "npm run build && firebase deploy",
     "deploy:hosting": "firebase deploy --only hosting",
     "deploy:firestore": "firebase deploy --only firestore",
@@ -18,7 +19,6 @@
     "sync:firestore": "node scripts/run-sync-firestore.js",
     "verify:firestore-collections": "node scripts/verify-firestore-collections.js",
     "smoke:production": "node scripts/production-smoke-test.js",
-    "yoco:readiness": "node scripts/payfast-readiness-check.js",
     "test:whatsapp": "node scripts/test-whatsapp.js",
     "qa:whatsapp": "WHATSAPP_QA_MODE=production-api node scripts/whatsapp-operational-qa.js",
     "qa:whatsapp:production": "WHATSAPP_QA_MODE=production-api node scripts/whatsapp-operational-qa.js",
@@ -44,7 +44,6 @@
   "dependencies": {
     "@google-cloud/secret-manager": "^6.1.0",
     "@google-cloud/storage": "^7.17.1",
-    "@headlessui/react": "^1.7.17",
     "@heroicons/react": "^2.0.18",
     "@types/node": "^20",
     "@types/react": "^18",
@@ -65,11 +64,8 @@
     "puppeteer-core": "^24.22.0",
     "react": "^18",
     "react-dom": "^18",
-    "react-dropzone": "^14.2.3",
-    "react-hook-form": "^7.48.2",
     "react-hot-toast": "^2.4.1",
     "resend": "^6.18.1",
-    "stripe": "^14.9.0",
     "tailwindcss": "^3.3.0",
     "typescript": "^5",
     "uuid": "^13.0.0"

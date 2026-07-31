@@ -80,6 +80,14 @@ export async function POST(request: NextRequest) {
       }
 
       case 'delete-briefing':
+        // Event IDs are not ownership-scoped in the Google Calendar helper —
+        // restrict deletes to admins until per-event ACLs exist.
+        if (access.userType !== 'admin') {
+          return NextResponse.json(
+            { success: false, message: 'Forbidden — admin required to delete calendar events' },
+            { status: 403 }
+          )
+        }
         await googleCalendarService.deleteBriefingEvent(data.eventId)
         return NextResponse.json({
           success: true,
@@ -103,6 +111,13 @@ export async function POST(request: NextRequest) {
       }
 
       case 'get-events': {
+        // Unscoped calendar listing — admin only until connector calendars are isolated.
+        if (access.userType !== 'admin') {
+          return NextResponse.json(
+            { success: false, message: 'Forbidden — admin required to list calendar events' },
+            { status: 403 }
+          )
+        }
         const { startDate, endDate } = data
         const events = await googleCalendarService.getEvents(
           new Date(startDate),

@@ -13,7 +13,11 @@ const PROD_BASE =
 
 const SME_EMAIL = 'ops-smoke-sme@tenderbriefing.co.za'
 const AGENT_EMAIL = 'ops-smoke-agent@tenderbriefing.co.za'
-const TEST_PASSWORD = process.env.SMOKE_TEST_PASSWORD || 'TenderBriefing_Smoke2026!'
+const TEST_PASSWORD = process.env.SMOKE_TEST_PASSWORD
+if (!TEST_PASSWORD) {
+  console.error('Set SMOKE_TEST_PASSWORD before running this script.')
+  process.exit(1)
+}
 
 const report = {
   baseUrl: PROD_BASE,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   verifyApiUser,
   unauthorizedResponse,
+  forbiddenResponse,
 } from '@/lib/auth/verifyApiUser'
 
 export const dynamic = 'force-dynamic'
@@ -24,6 +25,15 @@ export async function GET(
 
     const requests = await storage.getAttendanceRequests()
     const req = requests.find((r: { id: string }) => r.id === report.requestId)
+
+    const canView =
+      user.userType === 'admin' ||
+      (req &&
+        (req.smeId === user.uid ||
+          req.assignedAgentId === user.uid ||
+          req.agentId === user.uid))
+
+    if (!canView) return forbiddenResponse()
 
     const pdfService = require('../../../../../backend/services/briefingReportPdfService')
     const buffer = pdfService.generatePdfBufferForReport(report, req || {})
