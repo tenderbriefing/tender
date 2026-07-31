@@ -7,8 +7,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function userDocPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
     function userDoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return get(userDocPath());
+    }
+
+    function userDocExists() {
+      return exists(userDocPath());
     }
 
     function userType() {
@@ -16,15 +24,15 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() && userDoc().exists && userType() == 'admin';
+      return isAuthenticated() && userDocExists() && userType() == 'admin';
     }
 
     function isSme() {
-      return isAuthenticated() && userDoc().exists && userType() == 'sme';
+      return isAuthenticated() && userDocExists() && userType() == 'sme';
     }
 
     function isYouthAgent() {
-      return isAuthenticated() && userDoc().exists && userType() == 'youth-agent';
+      return isAuthenticated() && userDocExists() && userType() == 'youth-agent';
     }
 
     // Path captures (userId) must be passed in — top-level functions cannot see match vars.

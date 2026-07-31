@@ -1,8 +1,6 @@
 // Firebase web app configuration (public client values — embedded in browser bundle).
-// Production requires NEXT_PUBLIC_FIREBASE_* and fails closed without them.
-// Non-production may use the known public web config for local DX only.
-
-const isProd = process.env.NODE_ENV === 'production'
+// Runtime production should set NEXT_PUBLIC_FIREBASE_*.
+// During `next build`, NODE_ENV=production but secrets may be absent — do not throw at import time.
 
 /** Public Firebase web config for project tenderbriefing-34679 — not a secret. */
 const PUBLIC_WEB_FALLBACK = {
@@ -15,10 +13,15 @@ const PUBLIC_WEB_FALLBACK = {
   measurementId: 'G-KDQ56R3P5S',
 }
 
+const isProdRuntime =
+  process.env.NODE_ENV === 'production' &&
+  process.env.NEXT_PHASE !== 'phase-production-build'
+
 function pick(envName: string, fallback: string): string {
   const fromEnv = process.env[envName]
   if (fromEnv && fromEnv.trim()) return fromEnv.trim()
-  if (isProd) return ''
+  // Prefer env in production runtime; allow public fallback for local + CI build.
+  if (isProdRuntime) return fromEnv?.trim() || ''
   return fallback
 }
 
@@ -42,11 +45,39 @@ export const firebaseConfig = {
 }
 
 export function getFirebaseConfig() {
-  const config = { ...firebaseConfig }
-  if (isProd && (!config.apiKey || !config.projectId || !config.appId)) {
+  const config = {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || firebaseConfig.apiKey || PUBLIC_WEB_FALLBACK.apiKey,
+    authDomain:
+      process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
+      firebaseConfig.authDomain ||
+      PUBLIC_WEB_FALLBACK.authDomain,
+    projectId:
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+      firebaseConfig.projectId ||
+      PUBLIC_WEB_FALLBACK.projectId,
+    storageBucket:
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+      firebaseConfig.storageBucket ||
+      PUBLIC_WEB_FALLBACK.storageBucket,
+    messagingSenderId:
+      process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ||
+      firebaseConfig.messagingSenderId ||
+      PUBLIC_WEB_FALLBACK.messagingSenderId,
+    appId:
+      process.env.NEXT_PUBLIC_FIREBASE_APP_ID ||
+      firebaseConfig.appId ||
+      PUBLIC_WEB_FALLBACK.appId,
+    measurementId:
+      process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID ||
+      firebaseConfig.measurementId ||
+      PUBLIC_WEB_FALLBACK.measurementId,
+  }
+
+  if (isProdRuntime && (!config.apiKey || !config.projectId || !config.appId)) {
     throw new Error(
       'Firebase web config missing: set NEXT_PUBLIC_FIREBASE_API_KEY, PROJECT_ID, and APP_ID'
     )
   }
+
   return config
 }

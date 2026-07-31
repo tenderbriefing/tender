@@ -176,4 +176,15 @@ assert.ok(
   'firebase.json must declare emulators.firestore.port for the rules-unit-testing suite'
 )
 
+assert.match(
+  body,
+  /function\s+userDocExists\s*\(\s*\)/,
+  'userDocExists must use exists() helper (get().exists is invalid)'
+)
+assert.doesNotMatch(
+  body,
+  /userDoc\(\)\.exists/,
+  'must not use userDoc().exists — use exists(path) / userDocExists()'
+)
+
 console.log('firestore-rules-qa: all checks passed')

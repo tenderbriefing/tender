@@ -4,9 +4,9 @@
 
 name: Deploy TenderBriefing
 
+# Production deploy is manual only — never auto-deploy on push.
+# Run via Actions → Deploy TenderBriefing → Run workflow after CI is green.
 on:
-  push:
-    branches: [main, master]
   workflow_dispatch:
 
 concurrency:
