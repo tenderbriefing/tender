@@ -8,6 +8,8 @@ import {
   Building2,
   Calendar,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   FileText,
   Lock,
   MapPin,
@@ -29,12 +31,22 @@ import {
 import { toast } from 'react-hot-toast'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import { ATTENDANCE_FEE_LABEL } from '@/lib/payments/attendanceFee'
+import {
+  BOOK_AGENT_CTA,
+  BOOK_AGENT_PAY_CTA,
+} from '@/lib/booking/labels'
 
 const HIGHLIGHTS = [
   'Verified Youth Agent attends briefing on your behalf',
   'Structured briefing report within 24 hours',
   'WhatsApp + in-app status updates',
   'SLA-tracked dispatch with attendance proof',
+]
+
+const NEXT_STEPS = [
+  'Pay the fixed fee securely (PayFast)',
+  'We notify nearby Youth Agents automatically',
+  'Track status and receive your Briefing Report',
 ]
 
 export default function RequestYouthAgentPage() {
@@ -44,6 +56,7 @@ export default function RequestYouthAgentPage() {
   const [tender, setTender] = useState<TenderBriefing | null>(null)
   const [tenderLoading, setTenderLoading] = useState(true)
   const [notes, setNotes] = useState('')
+  const [showNotes, setShowNotes] = useState(false)
   const [acknowledged, setAcknowledged] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -94,7 +107,7 @@ export default function RequestYouthAgentPage() {
         ) {
           toast.error(
             json.error ||
-              'Your request was saved. Online payment is not active yet — you can pay from My Attendance Requests when PayFast is enabled.'
+              'Your request was saved. Online payment is not active yet — you can pay from My Requests when PayFast is enabled.'
           )
           router.push(`/sme/requests/${json.data.request.id}`)
           return
@@ -128,7 +141,7 @@ export default function RequestYouthAgentPage() {
       }
 
       const requestId = json.data?.request?.id
-      toast.success('Attendance request submitted')
+      toast.success('Agent booking submitted')
       router.push(
         requestId
           ? `/sme/requests/confirmation?requestId=${requestId}&tenderId=${tender.id}`
@@ -172,6 +185,7 @@ export default function RequestYouthAgentPage() {
   const companyName = userProfile?.companyName || 'Company name on profile'
   const userPhone =
     userProfile?.whatsAppNumber || userProfile?.phoneNumber || null
+  const missingPhone = !userPhone
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/30">
@@ -200,16 +214,16 @@ export default function RequestYouthAgentPage() {
 
           <span className="mt-6 inline-flex items-center gap-2 rounded-full bg-accent-500 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-900">
             <Sparkles className="h-3.5 w-3.5" />
-            Request Youth Agent attendance
+            {BOOK_AGENT_CTA}
           </span>
 
           <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-4xl">
-            Confirm briefing attendance for{' '}
+            Book a Youth Agent for{' '}
             <span className="text-accent-400">{ATTENDANCE_FEE_LABEL}</span>
           </h1>
           <p className="mt-3 max-w-2xl text-brand-100/80">
-            Send a verified Youth Agent to attend this compulsory briefing on your behalf and
-            receive a structured Briefing Report within 24 hours.
+            One confirmation. We send a verified Youth Agent to this compulsory briefing and
+            deliver a structured Briefing Report within 24 hours.
           </p>
 
           <div className="mt-6 inline-flex flex-wrap items-center gap-2 rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-inset ring-white/10">
@@ -224,13 +238,12 @@ export default function RequestYouthAgentPage() {
 
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
         <div className="grid gap-8 lg:grid-cols-[1fr,340px]">
-          <form onSubmit={onSubmit} className="space-y-6">
+          <form onSubmit={onSubmit} className="space-y-5">
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-              <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-brand-800">
-                <span className="h-1.5 w-6 rounded-full bg-accent-500" />
-                Step 1 — Briefing details
-              </span>
-              <h2 className="mt-2 text-lg font-bold text-brand-900">Tender & briefing</h2>
+              <h2 className="text-lg font-bold text-brand-900">Briefing to attend</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Confirm these details — no extra forms required.
+              </p>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-4">
@@ -293,13 +306,8 @@ export default function RequestYouthAgentPage() {
             </section>
 
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-              <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-brand-800">
-                <span className="h-1.5 w-6 rounded-full bg-accent-500" />
-                Step 2 — Your details
-              </span>
-              <h2 className="mt-2 text-lg font-bold text-brand-900">Confirm contact info</h2>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <h2 className="text-lg font-bold text-brand-900">Your contact</h2>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div className="flex items-start gap-3 rounded-xl bg-slate-50/60 p-4">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-100">
                     <User className="h-4 w-4" />
@@ -347,35 +355,67 @@ export default function RequestYouthAgentPage() {
                 </div>
               </div>
 
-              <p className="mt-3 text-xs text-slate-500">
-                Need to update these?{' '}
-                <Link
-                  href="/sme/onboarding"
-                  className="font-semibold text-brand-800 hover:text-accent-600"
-                >
-                  Edit SME profile
-                </Link>
-              </p>
+              {missingPhone ? (
+                <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+                  Add a WhatsApp number so we can update you when an agent accepts.{' '}
+                  <Link
+                    href="/sme/onboarding"
+                    className="font-semibold underline underline-offset-2 hover:text-amber-700"
+                  >
+                    Update profile
+                  </Link>
+                  {' '}(optional — you can book now).
+                </p>
+              ) : (
+                <p className="mt-3 text-xs text-slate-500">
+                  Need to update these?{' '}
+                  <Link
+                    href="/sme/onboarding"
+                    className="font-semibold text-brand-800 hover:text-accent-600"
+                  >
+                    Edit SME profile
+                  </Link>
+                </p>
+              )}
             </section>
 
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-              <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-brand-800">
-                <span className="h-1.5 w-6 rounded-full bg-accent-500" />
-                Step 3 — Brief the agent
-              </span>
-              <h2 className="mt-2 text-lg font-bold text-brand-900">Notes for the agent (optional)</h2>
+              <button
+                type="button"
+                onClick={() => setShowNotes((v) => !v)}
+                className="flex w-full items-center justify-between gap-3 text-left"
+                aria-expanded={showNotes}
+              >
+                <div>
+                  <h2 className="text-lg font-bold text-brand-900">
+                    Notes for the agent
+                    <span className="ml-2 text-sm font-medium text-slate-500">(optional)</span>
+                  </h2>
+                  <p className="mt-0.5 text-sm text-slate-600">
+                    Skip this unless you have access instructions or questions to ask.
+                  </p>
+                </div>
+                {showNotes ? (
+                  <ChevronUp className="h-5 w-5 shrink-0 text-slate-400" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 shrink-0 text-slate-400" />
+                )}
+              </button>
 
-              <textarea
-                rows={5}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Register name, access instructions, PPE requirements, parking info, things to ask, etc."
-                className="mt-4 w-full rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 transition focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-700/20"
-              />
-              <p className="mt-2 text-xs text-slate-500">
-                Anything you want included in the briefing report. Keep it short — the agent will
-                capture all standard procurement intelligence.
-              </p>
+              {showNotes && (
+                <>
+                  <textarea
+                    rows={4}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Register name, access instructions, PPE, parking, questions to ask…"
+                    className="mt-4 w-full rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 transition focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-700/20"
+                  />
+                  <p className="mt-2 text-xs text-slate-500">
+                    Keep it short — the agent captures standard procurement intelligence either way.
+                  </p>
+                </>
+              )}
             </section>
 
             <section className="rounded-3xl border border-accent-200 bg-gradient-to-br from-accent-50/60 to-white p-6 shadow-sm sm:p-7">
@@ -400,11 +440,19 @@ export default function RequestYouthAgentPage() {
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent-500 py-4 text-base font-bold text-brand-900 shadow-gold transition hover:bg-accent-400 disabled:opacity-50 sm:text-lg"
             >
               <Sparkles className="h-5 w-5" />
-              {submitting ? 'Submitting…' : `Continue to pay ${ATTENDANCE_FEE_LABEL}`}
+              {submitting ? 'Booking…' : BOOK_AGENT_PAY_CTA}
             </button>
+            <ol className="space-y-1.5 px-1 text-xs text-slate-600">
+              {NEXT_STEPS.map((step, i) => (
+                <li key={step} className="flex items-start gap-2">
+                  <span className="font-bold text-brand-800">{i + 1}.</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
             <p className="text-center text-xs text-slate-500">
               <Lock className="mr-1 inline h-3 w-3" />
-              Secure PayFast checkout when enabled. Your request is saved either way.
+              Secure PayFast checkout. Your booking is saved either way.
             </p>
           </form>
 
@@ -414,7 +462,7 @@ export default function RequestYouthAgentPage() {
               <div className="relative">
                 <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-accent-400">
                   <span className="h-1.5 w-6 rounded-full bg-accent-500" />
-                  Order summary
+                  Fixed fee
                 </span>
                 <div className="mt-3 flex items-baseline gap-1">
                   <span className="text-4xl font-bold text-accent-400">
@@ -423,7 +471,7 @@ export default function RequestYouthAgentPage() {
                   <span className="text-sm text-brand-100/70">/ briefing</span>
                 </div>
                 <p className="mt-2 text-sm leading-relaxed text-brand-100/80">
-                  One-time fee. Only pay when you request agent attendance.
+                  One-time fee. No subscription. Agents are dispatched after payment.
                 </p>
               </div>
 

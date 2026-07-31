@@ -4,11 +4,8 @@ import type { LucideIcon } from 'lucide-react'
 import {
   AlertTriangle,
   Building2,
-  Calendar,
-  Clock,
   ExternalLink,
   File,
-  FileText,
   Info,
   Link2,
   Mail,
@@ -16,6 +13,7 @@ import {
   MessageSquare,
   Phone,
   ShieldCheck,
+  Clock,
   User,
 } from 'lucide-react'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
@@ -119,6 +117,15 @@ function ContactRow({
   )
 }
 
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-brand-900">{value}</p>
+    </div>
+  )
+}
+
 export default function TenderIntelligence({ tender }: TenderIntelligenceProps) {
   const derived = deriveTenderDescription(tender)
   const closing = formatProcurementDate(tender.closingDate)
@@ -134,237 +141,224 @@ export default function TenderIntelligence({ tender }: TenderIntelligenceProps) 
 
   const requirements = Array.isArray(tender.requirements) ? tender.requirements : []
   const risks = Array.isArray(tender.risks) ? tender.risks : []
-  const keyDates = [
-    tender.publishedDate
-      ? {
-          label: 'Published',
-          value: formatProcurementDate(tender.publishedDate),
-          tone: 'neutral' as const,
-        }
-      : null,
-    tender.briefingDate
-      ? {
-          label: tender.briefingCompulsory ? 'Compulsory briefing' : 'Briefing session',
-          value: briefingDateTime,
-          tone: 'gold' as const,
-          hint: briefingCountdown ? `${briefingCountdown} away` : undefined,
-        }
-      : null,
-    tender.closingDate
-      ? {
-          label: 'Closing date',
-          value: closing,
-          tone: 'navy' as const,
-          hint: closingCountdown ? `${closingCountdown} remaining` : undefined,
-        }
-      : null,
-  ].filter(Boolean) as Array<{
-    label: string
-    value: string
-    tone: 'neutral' | 'gold' | 'navy'
-    hint?: string
-  }>
+
+  // Extra narrative only when it adds something the hero title does not already say.
+  const supplementaryCopy =
+    tender.summary &&
+    tender.summary.trim() &&
+    tender.summary.trim() !== derived.officialScope.trim() &&
+    tender.summary.trim() !== (tender.title || '').trim()
+      ? tender.summary.trim()
+      : null
+
+  const category =
+    tender.industrySector || tender.category || 'General procurement'
+  const method = tender.procurementMethod || 'Standard tender'
+
+  const hasContact =
+    Boolean(tender.contactPerson) ||
+    Boolean(tender.contactEmail) ||
+    Boolean(tender.contactPhone)
+
+  const hasVenueOrMeeting = Boolean(tender.briefingVenue || tender.meetingLink)
 
   return (
     <div className="space-y-6">
-      <Card>
-        <SectionHeading
-          icon={FileText}
-          title="What this tender is about"
-          hint="Official eTenders notice"
-        />
-
-        {tender.briefingDate && (
-          <div className="mb-5 rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50/90 to-white p-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent-700">
-              {tender.briefingCompulsory ? 'Compulsory briefing date & time' : 'Briefing date & time'}
-            </p>
-            <p className="mt-2 text-xl font-bold text-brand-900 sm:text-2xl">
-              {briefingDateTime}
-            </p>
-            {briefingCountdown && (
-              <p className="mt-1 text-sm font-semibold text-accent-700">
-                {briefingCountdown} away
-              </p>
-            )}
-            {tender.briefingVenue && (
-              <p className="mt-2 text-sm text-slate-600">
-                <span className="font-semibold text-brand-900">Venue: </span>
-                {tender.briefingVenue}
-              </p>
-            )}
-          </div>
-        )}
-
-        {derived.officialScope ? (
-          <p className="whitespace-pre-wrap text-lg font-semibold leading-relaxed text-brand-900">
-            {derived.officialScope}
-          </p>
-        ) : (
-          <EmptyHint text="The official scope was not published in the eTenders feed — open the tender document below for full details." />
-        )}
-
-        {tender.title && derived.officialScope && tender.title.trim() !== derived.officialScope.trim() && (
-          <p className="mt-4 text-sm text-slate-600">
-            <span className="font-semibold text-brand-900">Tender reference: </span>
-            {tender.title}
-          </p>
-        )}
-
-        {derived.isFallback && (
-          <div className="mt-4">
-            <EmptyHint text="Download the tender document below or open the eTenders portal for the full scope of work." />
-          </div>
-        )}
-
-        {derived.tags.length > 0 && (
-          <div className="mt-5 flex flex-wrap gap-2">
-            {derived.tags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center rounded-full border border-brand-100 bg-brand-50/60 px-3 py-1 text-xs font-semibold text-brand-800"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {tender.briefingCompulsory && (
-          <p className="mt-5 rounded-xl border border-accent-200 bg-accent-50/50 px-4 py-3 text-sm text-brand-900">
-            Attendance at the compulsory briefing is required — submissions from non-attending bidders may be disqualified.
-          </p>
-        )}
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-brand-700">
-              Procurement method
-            </p>
-            <p className="mt-1.5 text-sm font-semibold text-brand-900">
-              {tender.procurementMethod || 'Standard tender'}
-            </p>
-          </div>
-          <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-brand-700">
-              Category
-            </p>
-            <p className="mt-1.5 text-sm font-semibold text-brand-900">
-              {tender.industrySector || tender.category || 'General procurement'}
-            </p>
-          </div>
-          <div className="rounded-xl border border-accent-200 bg-accent-50/60 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-accent-700">
-              Source
-            </p>
-            <p className="mt-1.5 text-sm font-semibold text-brand-900">
-              Official eTenders sync
-            </p>
-          </div>
-        </div>
-      </Card>
-
+      {/* 1. Dates & venue — operational truth, shown once */}
       <Card>
         <SectionHeading
           icon={Clock}
-          title="Briefing & key dates"
-          hint="Critical deadlines"
+          title="Key dates & venue"
+          hint="Plan attendance"
         />
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          {keyDates.length === 0 ? (
-            <div className="sm:col-span-3">
-              <EmptyHint text="Key dates have not been published yet — check back after the next sync." />
+        <div
+          className={`grid gap-3 ${
+            tender.publishedDate ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+          }`}
+        >
+          {tender.publishedDate && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-800">
+                Published
+              </p>
+              <p className="mt-2 text-lg font-bold text-brand-900">
+                {formatProcurementDate(tender.publishedDate)}
+              </p>
             </div>
-          ) : (
-            keyDates.map((d) => (
-              <div
-                key={d.label}
-                className={`relative overflow-hidden rounded-2xl border p-4 ${
-                  d.tone === 'gold'
-                    ? 'border-accent-200 bg-gradient-to-br from-accent-50 to-white'
-                    : d.tone === 'navy'
-                      ? 'border-brand-200 bg-gradient-to-br from-brand-50 to-white'
-                      : 'border-slate-200 bg-slate-50/60'
-                }`}
-              >
-                <p className="text-[10px] font-bold uppercase tracking-wider text-brand-800">
-                  {d.label}
-                </p>
-                <p className="mt-2 text-lg font-bold text-brand-900">{d.value}</p>
-                {d.hint && (
-                  <p
-                    className={`mt-1 text-xs font-semibold ${
-                      d.tone === 'gold' ? 'text-accent-700' : 'text-brand-800'
-                    }`}
-                  >
-                    {d.hint}
-                  </p>
-                )}
-              </div>
-            ))
           )}
+
+          <div
+            className={`rounded-2xl border p-4 ${
+              tender.briefingDate
+                ? 'border-accent-200 bg-gradient-to-br from-accent-50 to-white'
+                : 'border-dashed border-slate-200 bg-slate-50/60'
+            }`}
+          >
+            <p className="text-[10px] font-bold uppercase tracking-wider text-accent-700">
+              {tender.briefingCompulsory ? 'Compulsory briefing' : 'Briefing session'}
+            </p>
+            <p className="mt-2 text-lg font-bold text-brand-900">
+              {tender.briefingDate ? briefingDateTime : 'To be confirmed'}
+            </p>
+            {briefingCountdown && (
+              <p className="mt-1 text-xs font-semibold text-accent-700">
+                {briefingCountdown} away
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-brand-800">
+              Closing date
+            </p>
+            <p className="mt-2 text-lg font-bold text-brand-900">
+              {closing || 'To be confirmed'}
+            </p>
+            {closingCountdown && (
+              <p className="mt-1 text-xs font-semibold text-brand-800">
+                {closingCountdown} remaining
+              </p>
+            )}
+          </div>
         </div>
 
-        {(tender.briefingVenue || tender.meetingLink || tender.briefingDate) && (
-          <div className="mt-6 rounded-2xl border border-slate-100 bg-white p-5 ring-1 ring-inset ring-slate-100">
-            <div className="grid gap-3 sm:grid-cols-2">
-              {tender.briefingVenue && (
-                <div className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-100">
-                    <MapPin className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                      Briefing venue
-                    </p>
-                    <p className="mt-0.5 text-sm font-semibold text-brand-900">
-                      {tender.briefingVenue}
-                    </p>
-                  </div>
+        {(hasVenueOrMeeting || tender.briefingCompulsory) && (
+          <div className="mt-5 space-y-3">
+            {tender.briefingVenue && (
+              <div className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-3.5">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-100">
+                  <MapPin className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Briefing venue
+                  </p>
+                  <p className="mt-0.5 text-sm font-semibold leading-relaxed text-brand-900">
+                    {tender.briefingVenue}
+                  </p>
                 </div>
-              )}
-              {tender.meetingLink && (
-                <a
-                  href={tender.meetingLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-start gap-3 rounded-xl px-3 py-2 -mx-3 -my-2 transition hover:bg-brand-50/60"
-                >
-                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-100 text-accent-700 ring-1 ring-inset ring-accent-200">
-                    <Link2 className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                      Online meeting
-                    </p>
-                    <p className="mt-0.5 truncate text-sm font-semibold text-accent-700">
-                      Join virtual briefing
-                    </p>
-                  </div>
-                </a>
-              )}
-              {tender.briefingCompulsory && (
-                <div className="flex items-start gap-3 sm:col-span-2">
-                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-100 text-accent-700 ring-1 ring-inset ring-accent-200">
-                    <ShieldCheck className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-accent-700">
-                      Attendance required
-                    </p>
-                    <p className="mt-0.5 text-sm text-brand-900">
-                      Compulsory — submissions from non-attending bidders may be disqualified.
-                      Request a Youth Agent if you cannot attend in person.
-                    </p>
-                  </div>
+              </div>
+            )}
+
+            {tender.meetingLink && (
+              <a
+                href={tender.meetingLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-3 rounded-2xl border border-accent-100 bg-accent-50/40 px-4 py-3.5 transition hover:border-accent-200"
+              >
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-100 text-accent-700 ring-1 ring-inset ring-accent-200">
+                  <Link2 className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Online meeting
+                  </p>
+                  <p className="mt-0.5 text-sm font-semibold text-accent-700">
+                    Join virtual briefing
+                  </p>
                 </div>
-              )}
-            </div>
+              </a>
+            )}
+
+            {tender.briefingCompulsory && (
+              <div className="flex items-start gap-3 rounded-2xl border border-accent-200 bg-accent-50/70 px-4 py-3.5">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-100 text-accent-700 ring-1 ring-inset ring-accent-200">
+                  <ShieldCheck className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-accent-700">
+                    Attendance required
+                  </p>
+                  <p className="mt-0.5 text-sm leading-relaxed text-brand-900">
+                    Compulsory — submissions from non-attending bidders may be disqualified.
+                    Request a Youth Agent if you cannot attend in person.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Card>
 
+      {/* 2. Documents — act next */}
+      <Card>
+        <SectionHeading icon={File} title="Documents & sources" hint="Download" />
+        {documentLinks.length === 0 ? (
+          <EmptyHint text="No documents were attached in the official feed. Contact the procurement officer below or search for this tender number on etenders.gov.za." />
+        ) : (
+          <>
+            <p className="mb-4 text-sm text-slate-600">
+              {downloadableCount > 0
+                ? `${downloadableCount} official ${downloadableCount === 1 ? 'document' : 'documents'} from National Treasury eTenders — opens in a new tab.`
+                : 'Open the eTenders portal listing below for the full tender pack and attachments.'}
+            </p>
+            <ul className="space-y-3">
+              {documentLinks.map((doc) => (
+                <li
+                  key={doc.url}
+                  className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                        doc.source === 'portal'
+                          ? 'bg-brand-100 text-brand-800'
+                          : 'bg-brand-900 text-accent-400'
+                      }`}
+                    >
+                      <File className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <span className="inline-block rounded-full border border-brand-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-800">
+                        {doc.kind}
+                      </span>
+                      <p className="mt-1 text-sm font-semibold text-brand-900">{doc.title}</p>
+                    </div>
+                  </div>
+                  <a
+                    href={doc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-800 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-700"
+                  >
+                    {doc.source === 'portal' ? 'Open portal' : 'Download'}
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </Card>
+
+      {/* 3. Contact */}
+      <Card>
+        <SectionHeading icon={User} title="Procurement contact" hint="Ask questions" />
+        {hasContact ? (
+          <div className="grid gap-1 sm:grid-cols-2">
+            <ContactRow icon={User} label="Contact person" value={tender.contactPerson} />
+            <ContactRow
+              icon={Mail}
+              label="Email"
+              value={tender.contactEmail}
+              href={tender.contactEmail ? `mailto:${tender.contactEmail}` : undefined}
+            />
+            <ContactRow
+              icon={Phone}
+              label="Telephone"
+              value={tender.contactPhone}
+              href={tender.contactPhone ? `tel:${tender.contactPhone}` : undefined}
+            />
+            <ContactRow icon={Building2} label="Issuing department" value={tender.department} />
+          </div>
+        ) : (
+          <EmptyHint text="Contact details not published yet — use the official eTenders portal link above to reach the procurement officer." />
+        )}
+      </Card>
+
+      {/* 4. Requirements / risks when present */}
       {(requirements.length > 0 || risks.length > 0) && (
         <Card>
           <SectionHeading
@@ -409,95 +403,45 @@ export default function TenderIntelligence({ tender }: TenderIntelligenceProps) 
         </Card>
       )}
 
+      {/* 5. Lean facts — only once, no title/date repeats */}
       <Card>
-        <SectionHeading icon={User} title="Contact details" hint="Procurement officer" />
-        {tender.contactPerson || tender.contactEmail || tender.contactPhone ? (
-          <div className="grid gap-1 sm:grid-cols-2">
-            <ContactRow icon={User} label="Contact person" value={tender.contactPerson} />
-            <ContactRow
-              icon={Mail}
-              label="Email"
-              value={tender.contactEmail}
-              href={tender.contactEmail ? `mailto:${tender.contactEmail}` : undefined}
-            />
-            <ContactRow
-              icon={Phone}
-              label="Telephone"
-              value={tender.contactPhone}
-              href={tender.contactPhone ? `tel:${tender.contactPhone}` : undefined}
-            />
-            <ContactRow icon={Building2} label="Issuing department" value={tender.department} />
+        <SectionHeading
+          icon={Info}
+          title="Tender facts"
+          hint="At a glance"
+        />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Fact label="Procurement method" value={method} />
+          <Fact label="Category" value={category} />
+          <Fact label="Source" value="Official eTenders sync" />
+        </div>
+
+        {supplementaryCopy && (
+          <p className="mt-5 text-sm leading-relaxed text-slate-700">{supplementaryCopy}</p>
+        )}
+
+        {derived.isFallback && (
+          <div className="mt-5">
+            <EmptyHint text="Download the tender document above or open the eTenders portal for the full scope of work." />
           </div>
-        ) : (
-          <EmptyHint text="Contact details not published yet — use the official source link to reach the procurement officer." />
         )}
       </Card>
 
-      <Card>
-        <SectionHeading icon={File} title="Documents & sources" hint="Downloads" />
-        {documentLinks.length === 0 ? (
-          <EmptyHint text="No documents were attached in the official feed. Contact the procurement officer above or search for this tender number on etenders.gov.za to request the full document pack." />
-        ) : (
-          <>
-            <p className="mb-4 text-sm text-slate-600">
-              {downloadableCount > 0
-                ? `${downloadableCount} official ${downloadableCount === 1 ? 'document' : 'documents'} from National Treasury eTenders — opens in a new tab for download.`
-                : 'Open the eTenders portal listing below for the full tender pack and attachments.'}
-            </p>
-            <ul className="space-y-3">
-              {documentLinks.map((doc) => (
-                <li
-                  key={doc.url}
-                  className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex items-start gap-3">
-                    <span
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                        doc.source === 'portal'
-                          ? 'bg-brand-100 text-brand-800'
-                          : 'bg-brand-900 text-accent-400'
-                      }`}
-                    >
-                      <File className="h-5 w-5" />
-                    </span>
-                    <div className="min-w-0">
-                      <span className="inline-block rounded-full border border-brand-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-800">
-                        {doc.kind}
-                      </span>
-                      <p className="mt-1 text-sm font-semibold text-brand-900">{doc.title}</p>
-                      <p className="truncate text-xs text-slate-500">{doc.url}</p>
-                    </div>
-                  </div>
-                  <a
-                    href={doc.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-800 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-700"
-                  >
-                    {doc.source === 'portal' ? 'Open portal' : 'Download'}
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </Card>
-
+      {/* 6. Journey last */}
       <Card>
         <SectionHeading
           icon={MessageSquare}
           title="What happens next"
-          hint="Procurement journey"
+          hint="Suggested path"
         />
         <ol className="mt-1">
           {[
-            'Review the briefing and closing dates above. Set a calendar reminder.',
+            'Confirm the briefing and closing dates above, then add the briefing to your calendar.',
             tender.briefingCompulsory
               ? 'If you cannot attend the compulsory briefing in person, request a verified Youth Agent for R249.'
               : 'Confirm whether attendance at the briefing is required for your bid.',
-            'Prepare your compliance documents (CSD registration, tax clearance, BBBEE).',
-            'Submit your tender response through the official government procurement portal.',
+            'Download the tender documents and prepare compliance packs (CSD, tax clearance, BBBEE).',
+            'Submit your response through the official government procurement portal — not through TenderBriefing.',
           ].map((step, idx, steps) => {
             const isLast = idx === steps.length - 1
             return (
