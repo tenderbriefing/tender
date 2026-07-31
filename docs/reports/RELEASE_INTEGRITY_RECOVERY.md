@@ -8,7 +8,7 @@
 
 ## 1. Verdict
 
-**PASS WITH CONDITIONS** — CI evidence https://github.com/tenderbriefing/tender/actions/runs/30644069811. Residual P1: secret-gated full UI auth E2E. Tip `aacb00a3136ec26e09b7ef8e0f0ae8a6c0184e79`.
+**PASS WITH CONDITIONS** — CI green on `11cb4786f7a8c2c05199dcae280b6b77edf39d27` (https://github.com/tenderbriefing/tender/actions/runs/30644721951). Residual P1: secret-gated full UI auth E2E.
 
 ---
 
@@ -96,9 +96,9 @@ Jobs: verify ✅, firestore_rules_emulator ✅, build ✅, e2e_public ✅
 
 | Field | Value |
 |-------|--------|
-| Final certified SHA | `3e6c76016abd031d439b541a05e7652fd5a2a014` |
-| Remote SHA | `3e6c76016abd031d439b541a05e7652fd5a2a014` |
-| Final CI URL | https://github.com/tenderbriefing/tender/actions/runs/30644069811 |
+| Final certified SHA | `11cb4786f7a8c2c05199dcae280b6b77edf39d27` |
+| Remote SHA | `11cb4786f7a8c2c05199dcae280b6b77edf39d27` |
+| Final CI URL | https://github.com/tenderbriefing/tender/actions/runs/30644721951 |
 
 ---
 
@@ -113,4 +113,4 @@ Remaining: R1 final-CI confirm (P0 until green), R2 UI auth E2E secrets (P1), Ar
 
 **deploy with conditions** via manual workflow_dispatch only after explicit approval.
 
-**Release tip SHA:** `3e6c76016abd031d439b541a05e7652fd5a2a014` — prior green parent aacb00a; reconfirm CI on tip
+**Release tip SHA:** `11cb4786f7a8c2c05199dcae280b6b77edf39d27` — CI https://github.com/tenderbriefing/tender/actions/runs/30644721951 (also green parent `aacb00a3136ec26e09b7ef8e0f0ae8a6c0184e79` https://github.com/tenderbriefing/tender/actions/runs/30644069811)

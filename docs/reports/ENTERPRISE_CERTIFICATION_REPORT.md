@@ -11,7 +11,7 @@
 
 **PASS WITH CONDITIONS**
 
-No unresolved **code** P0 remains. Local and prior remote CI evidence close the Firestore IDOR, lifecycle, Next/Firebase advisory, distributed rate-limit, observability, rollback, and a11y-floor conditions. Full browser-authenticated SME/agent/admin UI E2E remains **secret-gated** (service-layer + negative API E2E cover the workflow). Residual conditions are operational (attach Cloud Monitoring alerts / Armor; provision `E2E_*_TOKEN` secrets for optional UI auth).
+Certified tip `11cb4786f7a8c2c05199dcae280b6b77edf39d27` (CI https://github.com/tenderbriefing/tender/actions/runs/30644721951). No unresolved **code** P0 remains. Local and prior remote CI evidence close the Firestore IDOR, lifecycle, Next/Firebase advisory, distributed rate-limit, observability, rollback, and a11y-floor conditions. Full browser-authenticated SME/agent/admin UI E2E remains **secret-gated** (service-layer + negative API E2E cover the workflow). Residual conditions are operational (attach Cloud Monitoring alerts / Armor; provision `E2E_*_TOKEN` secrets for optional UI auth).
 
 **Deploy only after CI is green on the exact certified SHA below.** This programme does **not** deploy production.
 
@@ -24,8 +24,8 @@ No unresolved **code** P0 remains. Local and prior remote CI evidence close the 
 | Sprint start / prior RC | `816433f42b3eb50448e07ad85e36ea53994597df` |
 | Pre-programme LKG | `27a5463ea2b10395f9963d16772264c256c22377` |
 | Pre-recovery CI-green | `5e2811c4f7a73b42a3ce579823a3f7e5052d557a` |
-| Final certified SHA | `3e6c76016abd031d439b541a05e7652fd5a2a014` |
-| Remote SHA | `3e6c76016abd031d439b541a05e7652fd5a2a014` |
+| Final certified SHA | `11cb4786f7a8c2c05199dcae280b6b77edf39d27` |
+| Remote SHA | `11cb4786f7a8c2c05199dcae280b6b77edf39d27` |
 | Branch | `master` |
 | Working tree at certify | clean after push |
 
@@ -112,7 +112,7 @@ Floor ≥6/10: home axe critical=0; tenders `main` landmark; sign-in labels; SME
 
 Workflow `.github/workflows/ci.yml`: `verify`, `firestore_rules_emulator`, `build`, `e2e_public`.  
 Prior green: https://github.com/tenderbriefing/tender/actions/runs/30641207232 (`5e2811c`)  
-Final SHA CI: https://github.com/tenderbriefing/tender/actions/runs/30644069811 (reconfirm on tip after this docs pin)
+Final SHA CI: https://github.com/tenderbriefing/tender/actions/runs/30644721951
 
 ---
 
@@ -141,7 +141,7 @@ Final SHA CI: https://github.com/tenderbriefing/tender/actions/runs/30644069811 
 
 | ID | Item | Class |
 |----|------|-------|
-| R1 | CI confirmation on tip `aacb00a3136ec26e09b7ef8e0f0ae8a6c0184e79` | **CLOSED** (https://github.com/tenderbriefing/tender/actions/runs/30644069811) | **CLOSED** (https://github.com/tenderbriefing/tender/actions/runs/30642978184) |
+| R1 | CI green on certified tip | **CLOSED** (https://github.com/tenderbriefing/tender/actions/runs/30644721951) | **CLOSED** (https://github.com/tenderbriefing/tender/actions/runs/30644069811) | **CLOSED** (https://github.com/tenderbriefing/tender/actions/runs/30642978184) |
 | R2 | Full browser auth E2E without `E2E_*_TOKEN` secrets | P1 |
 | R3 | Cloud Armor not attached | P2 |
 | R4 | Transitive npm audit findings | P2 |
