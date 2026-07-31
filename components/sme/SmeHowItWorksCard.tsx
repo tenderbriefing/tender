@@ -26,7 +26,7 @@ export default function SmeHowItWorksCard() {
           href="/tenders"
           className="mt-2 text-sm font-semibold text-brand-800 hover:text-accent-600 hover:underline sm:mt-0"
         >
-          Browse tenders →
+          Request Youth Agent →
         </Link>
       </div>
       <ul className="mt-4 space-y-3">

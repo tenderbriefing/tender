@@ -26,8 +26,8 @@ const QuickActions = ({ userType }: QuickActionsProps) => {
   const smeActions: Action[] = [
     {
       icon: MagnifyingGlassIcon,
-      title: 'Tender Opportunities',
-      description: 'Browse official government procurement listings',
+      title: 'Request Youth Agent',
+      description: 'Browse tenders and request briefing attendance',
       href: '/tenders',
       tone: 'gold',
     },

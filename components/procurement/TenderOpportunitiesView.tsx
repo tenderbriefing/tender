@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
-import { useAuth } from '@/components/providers/AuthProvider'
 import {
   countdownLabel,
   formatProcurementDate,
@@ -16,6 +14,7 @@ import {
 import { getOfficialEtendersScope } from '@/lib/procurement/tenderDescription'
 import { BriefingSessionBlock, CompulsoryBriefingBadge } from './CompulsoryBriefingBadge'
 import CountdownBadge from './CountdownBadge'
+import RequestAttendanceAction from '@/components/tenders/RequestAttendanceAction'
 import { TENDER_TABLE_COLUMNS, type TenderColumnKey } from '@/lib/procurement/tableColumns'
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import type { TenderSortKey } from '@/lib/procurement/filters'
@@ -67,44 +66,6 @@ function rowHighlightClass(tender: TenderBriefing): string {
   if (isClosingSoon(tender.closingDate)) parts.push('procurement-row-closing-soon')
   if (isBriefingThisWeek(tender.briefingDate)) parts.push('procurement-row-briefing-week')
   return parts.join(' ')
-}
-
-function AttendanceActions({ tender }: { tender: TenderBriefing }) {
-  const { user, userProfile } = useAuth()
-  const router = useRouter()
-  const requestHref = `/tenders/${tender.id}/request-agent`
-
-  if (userProfile?.userType === 'sme') {
-    return (
-      <Link
-        href={requestHref}
-        className="inline-flex min-h-[44px] w-full items-center justify-center rounded-lg bg-brand-600 px-3 py-2.5 text-xs font-semibold text-white hover:bg-brand-700 sm:w-auto"
-      >
-        Request Attendance
-      </Link>
-    )
-  }
-
-  if (!user) {
-    return (
-      <button
-        type="button"
-        onClick={() => router.push('/auth/signin')}
-        className="inline-flex min-h-[44px] w-full items-center justify-center rounded-lg border border-brand-600 px-3 py-2.5 text-xs font-semibold text-brand-700 hover:bg-brand-50 sm:w-auto"
-      >
-        Sign in to request
-      </button>
-    )
-  }
-
-  return (
-    <Link
-      href={`/tenders/${tender.id}`}
-      className="inline-flex min-h-[44px] w-full items-center justify-center rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 sm:w-auto"
-    >
-      View details
-    </Link>
-  )
 }
 
 export default function TenderOpportunitiesView({
@@ -310,7 +271,7 @@ export default function TenderOpportunitiesView({
                       View details
                     </Link>
                     <div className="mt-2 flex justify-end">
-                      <AttendanceActions tender={tender} />
+                      <RequestAttendanceAction tender={tender} size="compact" />
                     </div>
                   </td>
                 )}
@@ -379,7 +340,7 @@ export default function TenderOpportunitiesView({
               >
                 View Details
               </Link>
-              <AttendanceActions tender={tender} />
+              <RequestAttendanceAction tender={tender} />
             </div>
             {tender.detailUrl && (
               <a

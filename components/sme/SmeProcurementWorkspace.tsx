@@ -81,9 +81,9 @@ export default function SmeProcurementWorkspace() {
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link
           href="/tenders"
-          className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+          className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-lg bg-accent-500 px-4 py-2.5 text-sm font-bold text-brand-900 shadow-sm hover:bg-accent-400"
         >
-          Browse Tender Opportunities
+          Browse tenders & request attendance
         </Link>
         <Link
           href="/sme/requests"

@@ -5,6 +5,7 @@ import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import { formatProcurementDate } from '@/lib/procurement/dates'
 import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
 import StatusBadge from './StatusBadge'
+import RequestAttendanceAction from './RequestAttendanceAction'
 
 interface TenderOpportunityCardProps {
   tender: TenderBriefing
@@ -51,12 +52,15 @@ export default function TenderOpportunityCard({ tender }: TenderOpportunityCardP
         </div>
       </dl>
 
-      <Link
-        href={`/tenders/${tender.id}`}
-        className="mt-4 flex min-h-[44px] w-full items-center justify-center rounded-xl bg-brand-800 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
-      >
-        View Details
-      </Link>
+      <div className="mt-4 flex flex-col gap-2">
+        <Link
+          href={`/tenders/${tender.id}`}
+          className="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+        >
+          View Details
+        </Link>
+        <RequestAttendanceAction tender={tender} className="!w-full" />
+      </div>
     </article>
   )
 }

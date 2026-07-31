@@ -5,6 +5,7 @@ import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import { formatProcurementDate } from '@/lib/procurement/dates'
 import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
 import StatusBadge from './StatusBadge'
+import RequestAttendanceAction from './RequestAttendanceAction'
 import type { TenderSortKey } from '@/lib/procurement/filters'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 
@@ -55,13 +56,13 @@ export default function TenderTable({ tenders, sortKey, sortDir, onSort }: Tende
     <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
       <table className="tender-opps-table w-full table-fixed" aria-label="Tender opportunities">
         <colgroup>
+          <col className="w-[9%]" />
+          <col className="w-[28%]" />
+          <col className="w-[14%]" />
+          <col className="w-[9%]" />
           <col className="w-[10%]" />
-          <col className="w-[32%]" />
-          <col className="w-[15%]" />
           <col className="w-[10%]" />
-          <col className="w-[11%]" />
-          <col className="w-[12%]" />
-          <col className="w-[10%]" />
+          <col className="w-[20%]" />
         </colgroup>
         <thead className="bg-gradient-to-r from-slate-50 to-brand-50/40">
           <tr>
@@ -100,7 +101,7 @@ export default function TenderTable({ tenders, sortKey, sortDir, onSort }: Tende
               Status
             </th>
             <th scope="col" className="px-2 py-3.5 text-right text-xs font-bold uppercase tracking-wide text-slate-600">
-              Action
+              Actions
             </th>
           </tr>
         </thead>
@@ -145,12 +146,15 @@ export default function TenderTable({ tenders, sortKey, sortDir, onSort }: Tende
                   <StatusBadge status={displayStatus} />
                 </td>
                 <td className="px-2 py-4 align-top text-right">
-                  <Link
-                    href={`/tenders/${tender.id}`}
-                    className="inline-flex min-h-[36px] items-center justify-center rounded-lg bg-brand-800 px-2 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-brand-700 hover:shadow whitespace-nowrap"
-                  >
-                    View Details
-                  </Link>
+                  <div className="flex flex-col items-stretch gap-1.5 sm:items-end">
+                    <Link
+                      href={`/tenders/${tender.id}`}
+                      className="inline-flex min-h-[36px] items-center justify-center whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      View Details
+                    </Link>
+                    <RequestAttendanceAction tender={tender} size="compact" />
+                  </div>
                 </td>
               </tr>
             )

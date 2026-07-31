@@ -92,13 +92,23 @@ export default function Hero() {
           className="mt-10 flex w-full max-w-md flex-col items-stretch gap-3 sm:max-w-none sm:flex-row sm:items-center sm:justify-center"
         >
           {user ? (
-            <Link
-              href={dashboardHref}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent-500 px-8 py-4 text-base font-semibold text-brand-950 shadow-gold transition hover:bg-accent-400"
-            >
-              Go to Dashboard
-              <ArrowRight className="h-5 w-5" />
-            </Link>
+            <>
+              <Link
+                href={dashboardHref}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent-500 px-8 py-4 text-base font-semibold text-brand-950 shadow-gold transition hover:bg-accent-400"
+              >
+                Go to Dashboard
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+              {userProfile?.userType !== 'youth-agent' && (
+                <Link
+                  href="/tenders"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/5 px-8 py-4 text-base font-semibold text-white backdrop-blur-sm transition hover:border-white/40 hover:bg-white/10"
+                >
+                  Request Youth Agent
+                </Link>
+              )}
+            </>
           ) : (
             <>
               <Link

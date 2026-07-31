@@ -96,7 +96,7 @@ export default function DashboardWelcome({ userProfile, email }: DashboardWelcom
             className="inline-flex items-center gap-2 rounded-xl bg-accent-500 px-5 py-3 text-sm font-bold text-brand-900 shadow-gold transition hover:bg-accent-400"
           >
             <Sparkles className="h-4 w-4" />
-            Browse tender opportunities
+            Browse tenders & request attendance
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
