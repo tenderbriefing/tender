@@ -1,31 +1,47 @@
-# Rollback Runbook
+# Rollback Runbook — Tender Briefing
 
 ## Last known good
 
-Record the production SHA before each deploy. Programme baseline pre-work: `27a5463`.
+| Label | SHA |
+|-------|-----|
+| Pre enterprise programme | `27a5463ea2b10395f9963d16772264c256c22377` |
+| Prior certification RC | `816433f42b3eb50448e07ad85e36ea53994597df` |
 
-## Application rollback (Cloud Run + Hosting)
+## Trigger conditions
 
-1. Identify last known good git SHA.
-2. Re-run GitHub Actions deploy from that SHA **or** `gcloud run services update-traffic` / redeploy prior Cloud Build revision.
-3. If Firestore rules were changed and are unsafe: `firebase deploy --only firestore:rules` from the last-good commit.
-4. Do **not** delete payment or attendance documents to “fix” state.
+- Sustained 5xx after deploy
+- PayFast ITN mass reject after release
+- Cross-tenant data exposure confirmed
+- Auth outage attributable to release
 
-```bash
-git fetch origin
-git checkout <last-known-good-sha>
-# Prefer CI deploy workflow on that SHA rather than local ad-hoc deploy
-```
+## Responsible role
 
-## Data considerations
+Release Manager / on-call SRE with Firebase + Cloud Run access.
 
-- Payment `paid` marks are authoritative after ITN — rolling back code does not reverse money movement.
-- Prefer compensating actions (refunds via PayFast merchant tools + admin status) over deleting records.
+## Sequence (no production mutation during dry-run validation)
+
+1. Announce rollback in ops channel.
+2. Identify unhealthy Cloud Run revision vs last known good image digest / git SHA.
+3. Redeploy last known good SHA via GitHub Actions `Deploy TenderBriefing` workflow_dispatch or `git checkout <sha>` + controlled CI deploy.
+4. If `firestore.rules` changed in bad release: `firebase deploy --only firestore:rules` from last-good tree.
+5. Do **not** reverse PayFast settlements in code — use merchant dashboard for refunds.
+6. Confirm WhatsApp webhook enablement flag matches intended state.
+7. Validate health + smoke plan.
+
+## Compatibility notes (27a5463 ↔ current)
+
+- No destructive Firestore migrations between `27a5463` and current RC.
+- New fields (`lastTransition*`, rate limit buckets) are additive — safe to roll forward/back.
+- Client cannot write privileged attendance fields after rules update — rolling rules back re-opens that risk (avoid unless necessary).
 
 ## Validation after rollback
 
-1. `GET https://www.tenderbriefing.co.za/api/health/firestore`
-2. SME sign-in + tenders list
-3. Create attendance request (sandbox if needed)
-4. Confirm `/api/bookings` still 410
-5. Confirm WhatsApp webhook behaviour matches intended enablement
+1. `/api/health/firestore` → ok  
+2. SME sign-in  
+3. `/api/bookings` still intentional retirement behaviour for that SHA  
+4. Create attendance request in sandbox  
+5. ITN path healthy  
+
+## Communication
+
+Notify founders + support with SHA rolled back from/to and customer impact summary.
