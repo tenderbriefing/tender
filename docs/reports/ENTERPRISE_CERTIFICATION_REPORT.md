@@ -24,8 +24,8 @@ No unresolved **code** P0 remains. Local and prior remote CI evidence close the 
 | Sprint start / prior RC | `816433f42b3eb50448e07ad85e36ea53994597df` |
 | Pre-programme LKG | `27a5463ea2b10395f9963d16772264c256c22377` |
 | Pre-recovery CI-green | `5e2811c4f7a73b42a3ce579823a3f7e5052d557a` |
-| Final certified SHA | `5f93d5200a452d54dfbd58a5aa02ba2eee99ae01` |
-| Remote SHA | `5f93d5200a452d54dfbd58a5aa02ba2eee99ae01` |
+| Final certified SHA |  |
+| Remote SHA |  |
 | Branch | `master` |
 | Working tree at certify | clean after push |
 
@@ -141,7 +141,7 @@ Final SHA CI: recorded in `RELEASE_INTEGRITY_RECOVERY.md` after push.
 
 | ID | Item | Class |
 |----|------|-------|
-| R1 | Confirm CI green on **final** certified SHA after recovery commits | P0 until green |
+| R1 | CI green on certified tip  | **CLOSED** (https://github.com/tenderbriefing/tender/actions/runs/30642978184) |
 | R2 | Full browser auth E2E without `E2E_*_TOKEN` secrets | P1 |
 | R3 | Cloud Armor not attached | P2 |
 | R4 | Transitive npm audit findings | P2 |
@@ -152,7 +152,7 @@ Final SHA CI: recorded in `RELEASE_INTEGRITY_RECOVERY.md` after push.
 
 ## 14. Deployment recommendation
 
-**do not deploy** until CI is green on the exact certified SHA, then **deploy with conditions** (manual `Deploy TenderBriefing` workflow_dispatch only; monitor ITN; WhatsApp fail-closed unless configured).
+**deploy with conditions** after explicit production approval (CI green on certified SHA); do not auto-deploy (manual `Deploy TenderBriefing` workflow_dispatch only; monitor ITN; WhatsApp fail-closed unless configured).
 
 ---
 

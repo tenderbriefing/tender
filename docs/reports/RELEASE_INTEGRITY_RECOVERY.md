@@ -8,7 +8,7 @@
 
 ## 1. Verdict
 
-**PASS WITH CONDITIONS** — local gates green; prior `5e2811c` CI fully green; reconfirm CI on `0646ad2947cca38bf7b4abed126c52714b6df7aa` (and tip) after push.
+**PASS WITH CONDITIONS** — CI green on  (https://github.com/tenderbriefing/tender/actions/runs/30642978184). Residual P1: secret-gated full UI auth E2E.
 
 ---
 
@@ -96,9 +96,9 @@ Jobs: verify ✅, firestore_rules_emulator ✅, build ✅, e2e_public ✅
 
 | Field | Value |
 |-------|--------|
-| Final certified SHA | `5f93d5200a452d54dfbd58a5aa02ba2eee99ae01` |
-| Remote SHA | `5f93d5200a452d54dfbd58a5aa02ba2eee99ae01` |
-| Final CI URL | recorded after push monitor |
+| Final certified SHA |  |
+| Remote SHA |  |
+| Final CI URL | https://github.com/tenderbriefing/tender/actions/runs/30642978184 |
 
 ---
 
@@ -111,6 +111,6 @@ Remaining: R1 final-CI confirm (P0 until green), R2 UI auth E2E secrets (P1), Ar
 
 ## 14. Deployment recommendation
 
-**do not deploy** until final CI green → then **deploy with conditions** via manual workflow_dispatch only.
+**deploy with conditions** via manual  only after explicit approval (CI already green on tip).
 
-**Release tip SHA** (includes SHA-record commit): `3f95360c1e6686375b9bff97d1f11e2e8bddd3d4` — use this for CI/deploy gates. Table Final certified SHA points at the docs evidence commit `5f93d52`.
+**Release tip SHA:**  — CI https://github.com/tenderbriefing/tender/actions/runs/30642978184

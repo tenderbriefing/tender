@@ -2,7 +2,7 @@
 
 **Start RC:** `816433f`  
 **Pre-recovery CI-green:** `5e2811c`  
-**Final SHA:** `5f93d5200a452d54dfbd58a5aa02ba2eee99ae01`  
+**Final SHA:**   
 **Verdict:** PASS WITH CONDITIONS  
 
 ## Phase 0 — Integrity
@@ -37,4 +37,4 @@ Recovery forensics found clean `master` at `5e2811c` matching origin; prior abor
 
 ## Deployment
 
-Do **not** deploy until CI green on final pushed SHA. No automatic production deploy from this sprint.
+CI green on  (https://github.com/tenderbriefing/tender/actions/runs/30642978184). **Deploy with conditions** only via manual workflow_dispatch after explicit approval. No automatic production deploy.
