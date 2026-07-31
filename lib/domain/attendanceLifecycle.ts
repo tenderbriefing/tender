@@ -41,6 +41,9 @@ const ALLOWED: Record<
     accepted: ['youth-agent', 'admin'],
     pending: ['admin'],
     cancelled: ['sme', 'admin'],
+    // Keep parity with backend/services/domain/lifecycleEnforcement.js
+    // (product historically writes status=assigned on accept).
+    assigned: ['youth-agent', 'admin', 'system'],
   },
   accepted: {
     en_route: ['youth-agent', 'admin'],

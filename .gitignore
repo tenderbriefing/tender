@@ -39,6 +39,12 @@ next-env.d.ts
 # Firebase
 .firebase/
 firebase-debug.log
+firestore-debug.log
+ui-debug.log
+pubsub-debug.log
+database-debug.log
+*.log
+!docs/**/*.md
 firebase-debug.*.log
 service-account.json
 *-service-account*.json

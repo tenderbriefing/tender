@@ -36,5 +36,15 @@ assert.match(
   /lifecycleEnforcement/,
   'attendancePaymentService must use lifecycle enforcement'
 )
+assert.match(
+  read('backend/services/liveDispatchService.js'),
+  /lifecycleEnforcement/,
+  'liveDispatchService must use lifecycle enforcement for auto-assign'
+)
+assert.match(
+  read('backend/services/payments/attendancePaymentService.js'),
+  /assertPaymentTransition/,
+  'attendancePaymentService must assert payment transitions'
+)
 
 console.log('route-retirement-qa: all checks passed')

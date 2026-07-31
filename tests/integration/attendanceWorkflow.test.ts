@@ -116,4 +116,24 @@ describe('SME → Pay → Agent → Complete workflow', () => {
     const afterFail = await paymentService.markRequestFailed(request.id, 'should not downgrade')
     expect(afterFail.paymentStatus).toBe('paid')
   })
+
+  it('rejects unpaid auto-dispatch style assignment and allows paid accept', async () => {
+    const { request } = await agentService.createRequest({
+      tenderId: `t3-${Date.now()}`,
+      smeId: 'sme-b',
+      province: 'Western Cape',
+    })
+    await expect(
+      agentService.assignRequestToAgent(request.id, { id: 'agent-x', displayName: 'X' }, { byAdmin: false })
+    ).rejects.toThrow(/paid/i)
+
+    await paymentService.markRequestPaid(request.id, { pfPaymentId: 'PF-3' })
+    const assigned = await agentService.assignRequestToAgent(
+      request.id,
+      { id: 'agent-x', displayName: 'X' },
+      { byAdmin: false }
+    )
+    expect(assigned.status).toBe('assigned')
+    expect(assigned.lastTransitionRole).toBe('youth-agent')
+  })
 })

@@ -60,6 +60,35 @@ test.describe('Route retirement & public accessibility floor', () => {
   })
 })
 
+test.describe('API auth negative gates (no secrets required)', () => {
+  test('attendance-requests without auth is denied', async ({ request }) => {
+    const res = await request.get('/api/attendance-requests')
+    expect([401, 403]).toContain(res.status())
+  })
+
+  test('attendance-requests with invalid bearer is denied', async ({ request }) => {
+    const res = await request.get('/api/attendance-requests', {
+      headers: { Authorization: 'Bearer clearly-invalid-token' },
+    })
+    expect([401, 403]).toContain(res.status())
+  })
+
+  test('agent accept without auth is denied', async ({ request }) => {
+    const res = await request.post('/api/attendance-requests/does-not-exist/accept', {
+      data: {},
+    })
+    expect([401, 403, 404, 405]).toContain(res.status())
+    expect(res.status()).not.toBe(200)
+  })
+
+  test('PayFast create-checkout without auth is denied', async ({ request }) => {
+    const res = await request.post('/api/payments/payfast/create-checkout', {
+      data: { attendanceRequestId: 'x' },
+    })
+    expect([401, 403]).toContain(res.status())
+  })
+})
+
 /**
  * Full authenticated E2E requires E2E_SME_TOKEN / E2E_AGENT_TOKEN / E2E_ADMIN_TOKEN.
  * Skipped in CI unless secrets are provided — service-layer integration covers workflow.

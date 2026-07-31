@@ -243,13 +243,21 @@ async function createCheckoutForExistingRequest(requestId, smeId, baseUrl) {
     return { ok: false, error: checkout.error, configured: checkout.configured !== false }
   }
 
+  // Re-checkout after failed/expired must go through payment lifecycle (e.g. failed→pending).
+  assertPaymentTransition(request.paymentStatus, 'pending')
+  const patched = applyPaymentTransition(request, 'pending', {
+    actorId: smeId,
+    extra: {
+      paymentProvider: 'payfast',
+      paymentReference: paymentReferenceForRequest(requestId),
+      payfastRedirectUrl: checkout.formAction,
+      paymentFailureReason: null,
+    },
+  })
+
   const updated = await saveRequest({
     id: requestId,
-    paymentProvider: 'payfast',
-    paymentReference: paymentReferenceForRequest(requestId),
-    payfastRedirectUrl: checkout.formAction,
-    paymentStatus: 'pending',
-    paymentFailureReason: null,
+    ...patched,
   })
 
   return {
