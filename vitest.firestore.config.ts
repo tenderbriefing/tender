@@ -4,9 +4,10 @@ import path from 'path'
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
-    exclude: ['tests/firestore/**', 'tests/e2e/**', 'node_modules/**'],
-    reporters: ['default'],
+    include: ['tests/firestore/**/*.test.ts'],
+    fileParallelism: false,
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
   },
   resolve: {
     alias: {

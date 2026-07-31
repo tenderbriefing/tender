@@ -138,4 +138,42 @@ assert.match(
   'auditLogs must deny client writes'
 )
 
+// F02 — Firestore emulator security matrix (Phase 1) regression guards.
+// These pair with tests/firestore/rules.idor.test.ts, which exercises the
+// same rules dynamically against the emulator; these are cheap static
+// tripwires that don't need Java/the emulator to run.
+assert.match(
+  body,
+  /match\s+\/users\/\{userId\}[\s\S]{0,200}allow\s+read:\s*if\s+isAuthenticated\(\)\s*&&\s*\(\s*request\.auth\.uid\s*==\s*userId\s*\|\|\s*isAdmin\(\)\s*\)/,
+  'users read must remain scoped to owner or admin'
+)
+assert.match(
+  body,
+  /match\s+\/briefingReports\/\{reportId\}[\s\S]*?allow\s+read:\s*if\s+isAdmin\(\)[\s\S]*?resource\.data\.agentId\s*==\s*request\.auth\.uid[\s\S]*?resource\.data\.smeId\s*==\s*request\.auth\.uid/,
+  'briefingReports read must stay scoped to admin, owning agent, or owning SME'
+)
+const briefingReportsBlockMatch = body.match(
+  /match\s+\/briefingReports\/\{reportId\}\s*\{([\s\S]*?)\n {4}\}/
+)
+assert.ok(briefingReportsBlockMatch, 'briefingReports match block must exist')
+assert.doesNotMatch(
+  briefingReportsBlockMatch[1],
+  /allow\s+(read|write|update|delete):\s*if\s+isAuthenticated\(\)\s*;/,
+  'briefingReports must not regress to a blanket isAuthenticated() rule'
+)
+assert.match(
+  body,
+  /match\s+\/attendanceRequests\/\{requestId\}[\s\S]*?allow\s+read:\s*if\s+isAdmin\(\)/,
+  'attendanceRequests read must require admin or an ownership/notification check (never open to any authenticated user)'
+)
+
+// firebase.json must declare a Firestore emulator so
+// `npm run test:firestore-rules-emulator` has something to connect to.
+const firebaseJsonPath = path.join(__dirname, '..', 'firebase.json')
+const firebaseJson = JSON.parse(fs.readFileSync(firebaseJsonPath, 'utf8'))
+assert.ok(
+  firebaseJson.emulators && firebaseJson.emulators.firestore && Number.isInteger(firebaseJson.emulators.firestore.port),
+  'firebase.json must declare emulators.firestore.port for the rules-unit-testing suite'
+)
+
 console.log('firestore-rules-qa: all checks passed')
