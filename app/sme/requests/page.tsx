@@ -74,7 +74,10 @@ export default function SmeRequestsPage() {
       />
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         {!loading && requests.length > 0 && (
-          <div className="mb-6 flex flex-wrap items-center gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3">
+          <div
+            className="mb-6 flex flex-wrap items-center gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3"
+            aria-live="polite"
+          >
             <span className="text-xs font-semibold uppercase text-slate-500">Status summary</span>
             <div className="flex items-center gap-1.5">
               <AttendanceRequestStatusBadge status="pending" />

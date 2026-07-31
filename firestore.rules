@@ -212,6 +212,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Distributed rate-limit buckets — Admin SDK only
+    match /rateLimitBuckets/{bucketId} {
+      allow read, write: if false;
+    }
+
     // First-party product analytics — clients may create own events only.
     // Reads are Admin SDK only (Founder APIs). No client list/query of analytics.
     match /productEvents/{eventId} {

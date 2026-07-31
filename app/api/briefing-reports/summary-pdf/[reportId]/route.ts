@@ -4,6 +4,11 @@ import {
   unauthorizedResponse,
   forbiddenResponse,
 } from '@/lib/auth/verifyApiUser'
+import {
+  enforceDistributedPolicy,
+  tooManyRequests,
+} from '@/lib/security/distributedRateLimit'
+import { logEvent, newRequestId } from '@/lib/observability/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,8 +16,12 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: { reportId: string } }
 ) {
+  const requestId = newRequestId()
   const user = await verifyApiUser(_request.headers.get('authorization'))
   if (!user) return unauthorizedResponse('Sign-in required')
+
+  const limited = await enforceDistributedPolicy('pdf-download', user.uid)
+  if (!limited.allowed) return tooManyRequests(limited.retryAfterSec)
 
   try {
     const reportId = params.reportId
@@ -33,10 +42,29 @@ export async function GET(
           req.assignedAgentId === user.uid ||
           req.agentId === user.uid))
 
-    if (!canView) return forbiddenResponse()
+    if (!canView) {
+      logEvent({
+        event: 'cross_user_access_denial',
+        severity: 'warn',
+        requestId,
+        userId: user.uid,
+        role: user.userType,
+        outcome: 'denied',
+        errorCode: 'pdf_forbidden',
+      })
+      return forbiddenResponse()
+    }
 
     const pdfService = require('../../../../../backend/services/briefingReportPdfService')
     const buffer = pdfService.generatePdfBufferForReport(report, req || {})
+
+    logEvent({
+      event: 'briefing_pdf_downloaded',
+      requestId,
+      userId: user.uid,
+      role: user.userType,
+      outcome: 'success',
+    })
 
     return new NextResponse(buffer, {
       status: 200,

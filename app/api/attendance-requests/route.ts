@@ -5,6 +5,11 @@ import {
   unauthorizedResponse,
   forbiddenResponse,
 } from '@/lib/auth/verifyApiUser'
+import {
+  enforceDistributedPolicy,
+  tooManyRequests,
+} from '@/lib/security/distributedRateLimit'
+import { logEvent, newRequestId } from '@/lib/observability/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,9 +69,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const requestId = newRequestId()
   try {
     const user = await verifyApiUser(request.headers.get('authorization'), ['sme'])
     if (!user) return unauthorizedResponse('SME sign-in required')
+
+    const limited = await enforceDistributedPolicy('attendance-create', user.uid)
+    if (!limited.allowed) return tooManyRequests(limited.retryAfterSec)
 
     const body = await request.json()
     const agentService = backend.agentAssignment()

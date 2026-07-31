@@ -7,6 +7,11 @@ const {
   isPaidForAgents,
   notifyAgentsAfterPayment,
 } = require('./payments/attendancePaymentService')
+const {
+  assertWorkflowTransition,
+  applyWorkflowTransition,
+  isDispatchablePayment,
+} = require('./domain/lifecycleEnforcement')
 
 const DEFAULT_RADIUS_KM = 50
 
@@ -185,33 +190,43 @@ async function assignRequestToAgent(requestId, agent, { byAdmin = false } = {}) 
   if (!byAdmin && !isPaidForAgents(request.paymentStatus)) {
     throw new Error('Attendance fee must be paid before an agent can accept this request')
   }
-  if (request.status !== 'pending') {
+
+  const role = byAdmin ? 'admin' : 'youth-agent'
+  // Concurrent accept: only pending → assigned allowed for agents
+  assertWorkflowTransition(request.status, 'assigned', role)
+  if (request.status !== 'pending' && !(byAdmin && request.status === 'assigned')) {
     throw new Error(`Request already ${request.status}`)
+  }
+  if (!byAdmin && request.assignedAgentId && request.assignedAgentId !== agent.id) {
+    throw new Error('Request already assigned to another agent')
   }
 
   const now = new Date().toISOString()
-  request.status = 'assigned'
-  request.agentId = agent.id
-  request.assignedAgentId = agent.id
-  request.agentName = agent.displayName || agent.name || ''
-  request.agentReliabilityScore = agent.rating || null
-  request.acceptedAt = now
-  request.updatedAt = now
-  if (byAdmin) request.assignedByAdmin = true
+  const transitioned = applyWorkflowTransition(request, 'assigned', {
+    role,
+    actorId: agent.id,
+    now,
+  })
+  transitioned.agentId = agent.id
+  transitioned.assignedAgentId = agent.id
+  transitioned.agentName = agent.displayName || agent.name || ''
+  transitioned.agentReliabilityScore = agent.rating || null
+  transitioned.acceptedAt = now
+  if (byAdmin) transitioned.assignedByAdmin = true
 
-  await storage.saveAttendanceRequest(request)
+  await storage.saveAttendanceRequest(transitioned)
   await workflowAutomationService.dispatchWorkflowEvent('request_accepted', {
-    ...request,
-    id: request.id,
-    requestId: request.id,
+    ...transitioned,
+    id: transitioned.id,
+    requestId: transitioned.id,
   })
   await auditLogService.logEvent({
     type: byAdmin ? 'admin_assign_agent' : 'agent_acceptance',
-    entityId: request.id,
+    entityId: transitioned.id,
     agentId: agent.id,
   })
 
-  return request
+  return transitioned
 }
 
 async function acceptRequest(requestId, agent) {
@@ -297,14 +312,28 @@ async function submitBriefingReport(payload) {
 
   const request = await getRequestById(payload.requestId)
   if (request) {
-    request.status = 'completed'
-    request.reportId = report.id
-    request.updatedAt = new Date().toISOString()
-    await storage.saveAttendanceRequest(request)
+    if (request.assignedAgentId && request.assignedAgentId !== payload.agentId) {
+      throw new Error('Only the assigned agent can complete this request')
+    }
+    const {
+      applyWorkflowTransition,
+      assertWorkflowTransition,
+    } = require('./domain/lifecycleEnforcement')
+    // Allow completed from assigned/accepted/en_route/arrived/in_progress
+    const from = request.status === 'assigned' ? 'accepted' : request.status
+    // Normalize assigned → treat as accepted for completion path used by product today
+    const effective = request.status === 'assigned' ? { ...request, status: 'accepted' } : request
+    assertWorkflowTransition(effective.status, 'completed', 'youth-agent')
+    const completed = applyWorkflowTransition(effective, 'completed', {
+      role: 'youth-agent',
+      actorId: payload.agentId,
+    })
+    completed.reportId = report.id
+    await storage.saveAttendanceRequest(completed)
     await workflowAutomationService.dispatchWorkflowEvent('report_uploaded', {
-      ...request,
-      id: request.id,
-      requestId: request.id,
+      ...completed,
+      id: completed.id,
+      requestId: completed.id,
       reportId: report.id,
     })
   }

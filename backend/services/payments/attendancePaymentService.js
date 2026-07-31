@@ -3,6 +3,10 @@ const payfastService = require('../integrations/payfastService')
 const workflowAutomationService = require('../workflowAutomationService')
 const auditLogService = require('../auditLogService')
 const { sanitizeFirestoreData } = require('../../utils/sanitizeFirestoreData')
+const {
+  assertPaymentTransition,
+  applyPaymentTransition,
+} = require('../domain/lifecycleEnforcement')
 
 /** Server-authoritative fee — R249. Prefer ATTENDANCE_FEE_CENTS; never trust client body amounts. */
 const ATTENDANCE_FEE_CENTS = Number(
@@ -135,18 +139,27 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
     return { request, alreadyPaid: true }
   }
 
+  assertPaymentTransition(request.paymentStatus, 'paid')
+
   const now = new Date().toISOString()
+  const patched = applyPaymentTransition(request, 'paid', {
+    actorId: source,
+    now,
+    extra: {
+      paymentProvider: 'payfast',
+      paymentAmount: EFFECTIVE_FEE_CENTS,
+      quotedFee: EFFECTIVE_FEE_CENTS,
+      currency: ATTENDANCE_FEE_CURRENCY,
+      paymentReference: paymentReferenceForRequest(requestId),
+      payfastPaymentId: pfPaymentId || request.payfastPaymentId || null,
+      paidAt: now,
+      paymentFailureReason: null,
+    },
+  })
+
   const updated = await saveRequest({
     id: requestId,
-    paymentStatus: 'paid',
-    paymentProvider: 'payfast',
-    paymentAmount: EFFECTIVE_FEE_CENTS,
-    quotedFee: EFFECTIVE_FEE_CENTS,
-    currency: ATTENDANCE_FEE_CURRENCY,
-    paymentReference: paymentReferenceForRequest(requestId),
-    payfastPaymentId: pfPaymentId || request.payfastPaymentId || null,
-    paidAt: now,
-    paymentFailureReason: null,
+    ...patched,
   })
 
   await workflowAutomationService.dispatchWorkflowEvent('request_paid', {
@@ -169,10 +182,19 @@ async function markRequestFailed(requestId, reason = 'Payment failed') {
   const request = await getRequestById(requestId)
   if (!request) throw new Error('Attendance request not found')
 
+  if (request.paymentStatus === 'paid') {
+    // Do not downgrade paid → failed
+    return request
+  }
+
+  assertPaymentTransition(request.paymentStatus, 'failed')
+  const patched = applyPaymentTransition(request, 'failed', {
+    extra: { paymentFailureReason: reason },
+  })
+
   const updated = await saveRequest({
     id: requestId,
-    paymentStatus: 'failed',
-    paymentFailureReason: reason,
+    ...patched,
   })
 
   const notificationService = require('../notificationService')
@@ -190,10 +212,18 @@ async function markRequestCancelled(requestId) {
   const request = await getRequestById(requestId)
   if (!request) throw new Error('Attendance request not found')
 
+  if (request.paymentStatus === 'paid') {
+    throw new Error('Cannot cancel payment after paid')
+  }
+
+  assertPaymentTransition(request.paymentStatus, 'cancelled')
+  const patched = applyPaymentTransition(request, 'cancelled', {
+    extra: { paymentFailureReason: 'Payment cancelled by user' },
+  })
+
   return saveRequest({
     id: requestId,
-    paymentStatus: 'cancelled',
-    paymentFailureReason: 'Payment cancelled by user',
+    ...patched,
   })
 }
 

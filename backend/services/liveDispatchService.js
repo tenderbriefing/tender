@@ -318,11 +318,29 @@ async function autoDispatchRequest(request, { radiusKm, provinceWide, reason }) 
   }
 
   if (AUTONOMOUS_AUTO_ASSIGN && topAgent && !request.assignedAgentId && !request.agentId) {
-    updated.assignedAgentId = topAgent.agentId
-    updated.agentId = topAgent.agentId
-    updated.status = 'assigned'
-    updated.autoAssignedAt = nowIso()
-    updated.autoAssignReason = reason || 'ai_auto_dispatch'
+    const {
+      assertWorkflowTransition,
+      applyWorkflowTransition,
+      isDispatchablePayment,
+    } = require('./domain/lifecycleEnforcement')
+    if (!isDispatchablePayment(request.paymentStatus)) {
+      // Never auto-assign unpaid requests
+    } else {
+      assertWorkflowTransition(request.status || 'pending', 'assigned', 'system')
+      const transitioned = applyWorkflowTransition(
+        { ...updated, status: request.status || 'pending' },
+        'assigned',
+        { role: 'system', actorId: 'system:auto_dispatch' }
+      )
+      updated.status = transitioned.status
+      updated.assignedAgentId = topAgent.agentId
+      updated.agentId = topAgent.agentId
+      updated.autoAssignedAt = nowIso()
+      updated.autoAssignReason = reason || 'ai_auto_dispatch'
+      updated.lastTransitionAt = transitioned.lastTransitionAt
+      updated.lastTransitionBy = transitioned.lastTransitionBy
+      updated.lastTransitionRole = transitioned.lastTransitionRole
+    }
   }
 
   await storage.saveAttendanceRequest(updated)
