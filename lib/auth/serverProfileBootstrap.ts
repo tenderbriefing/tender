@@ -1,30 +1,59 @@
 import type { Firestore } from 'firebase-admin/firestore'
 import type { UserProfile } from '@/lib/auth'
-import type { GoogleBootstrapRole } from '@/lib/auth/googleAuthFlow'
+import {
+  stripPrivilegedFields,
+  type GoogleBootstrapRole,
+} from '@/lib/auth/googleAuthFlow'
 
 export function nowIso() {
   return new Date().toISOString()
 }
 
-/** Strip client escalation fields before merging into a new profile. */
+/**
+ * Strip client escalation / trust / onboarding fields before merging into a new profile.
+ * Onboarding completion is decided server-side via createPlatformProfile input, never from
+ * a raw client boolean alone.
+ */
 export function sanitizeRegistrationAdditional(
   data: Partial<UserProfile> | undefined
 ): Partial<UserProfile> {
   if (!data || typeof data !== 'object') return {}
-  const out: Record<string, unknown> = { ...data }
-  delete out.uid
-  delete out.email
-  delete out.userType
-  delete out.role
-  delete out.founderAccess
-  delete out.suspended
-  if (out.verificationStatus != null && out.verificationStatus !== 'pending') {
-    out.verificationStatus = 'pending'
+  const stripped = stripPrivilegedFields({ ...data } as Record<string, unknown>)
+  delete stripped.uid
+  delete stripped.email
+  delete stripped.verified
+  delete stripped.onboardingCompleted
+  delete stripped.onboardingCompletedAt
+  for (const [key, value] of Object.entries(stripped)) {
+    if (value === undefined) delete stripped[key]
   }
-  for (const [key, value] of Object.entries(out)) {
-    if (value === undefined) delete out[key]
+  return stripped as Partial<UserProfile>
+}
+
+/**
+ * Structured full email-registration payload (signup form), not a Google minimal bootstrap.
+ * Server uses this to decide onboardingCompleted — never trusts client boolean alone.
+ */
+export function hasFullRegistrationPayload(
+  role: GoogleBootstrapRole,
+  data: Partial<UserProfile> | undefined
+): boolean {
+  if (!data || typeof data !== 'object') return false
+  const phone =
+    typeof data.phoneNumber === 'string' && data.phoneNumber.trim().length > 0
+  const province =
+    typeof data.province === 'string' && data.province.trim().length > 0
+  if (!phone || !province) return false
+
+  if (role === 'sme') {
+    const company =
+      typeof data.companyName === 'string' && data.companyName.trim().length > 0
+    const categories = Array.isArray(data.categories) && data.categories.length > 0
+    return company && categories
   }
-  return out as Partial<UserProfile>
+
+  const city = typeof data.city === 'string' && data.city.trim().length > 0
+  return city
 }
 
 export type CreatePlatformProfileInput = {
@@ -36,7 +65,10 @@ export type CreatePlatformProfileInput = {
   providerIds: string[]
   photoURL?: string | null
   additionalData?: Partial<UserProfile>
-  /** When omitted, defaults to false (Google-style) unless additionalData sets it. */
+  /**
+   * Server-decided onboarding flag only. Client additionalData.onboardingCompleted is stripped.
+   * Email full-form registration may pass true; Google minimal bootstrap must pass false/omit.
+   */
   onboardingCompleted?: boolean
 }
 
@@ -50,8 +82,8 @@ export async function createPlatformProfile(
 ): Promise<UserProfile> {
   const timestamp = nowIso()
   const extra = sanitizeRegistrationAdditional(input.additionalData)
-  const onboardingCompleted =
-    input.onboardingCompleted === true || extra.onboardingCompleted === true
+  // Only the trusted server input — never extra.onboardingCompleted.
+  const onboardingCompleted = input.onboardingCompleted === true
 
   const userProfile: UserProfile = {
     uid: input.uid,
@@ -71,21 +103,19 @@ export async function createPlatformProfile(
   }
 
   if (onboardingCompleted) {
-    userProfile.onboardingCompletedAt =
-      typeof extra.onboardingCompletedAt === 'string' && extra.onboardingCompletedAt
-        ? extra.onboardingCompletedAt
-        : timestamp
+    userProfile.onboardingCompletedAt = timestamp
   } else {
     delete (userProfile as { onboardingCompletedAt?: string }).onboardingCompletedAt
   }
 
   if (input.role === 'youth-agent') {
-    userProfile.verificationStatus = userProfile.verificationStatus || 'pending'
-    userProfile.reliabilityScore = userProfile.reliabilityScore ?? 100
-    userProfile.missedBriefingCount = userProfile.missedBriefingCount ?? 0
-    userProfile.completedBriefingCount = userProfile.completedBriefingCount ?? 0
-    userProfile.acceptedBriefingCount = userProfile.acceptedBriefingCount ?? 0
-    userProfile.rating = userProfile.rating ?? 3
+    // Force server defaults for trust metrics — never accept client values.
+    userProfile.verificationStatus = 'pending'
+    userProfile.reliabilityScore = 100
+    userProfile.missedBriefingCount = 0
+    userProfile.completedBriefingCount = 0
+    userProfile.acceptedBriefingCount = 0
+    userProfile.rating = 3
   }
 
   // Re-assert non-escalatable fields after merge.
@@ -93,6 +123,7 @@ export async function createPlatformProfile(
   userProfile.email = input.email
   userProfile.userType = input.role
   userProfile.founderAccess = false
+  userProfile.onboardingCompleted = onboardingCompleted
 
   // Firestore Admin rejects `undefined` field values.
   const profileDoc = Object.fromEntries(
@@ -153,11 +184,11 @@ export async function createPlatformProfile(
         onboardingCompletedAt: profileDoc.onboardingCompletedAt || '',
         verificationStatus: 'pending',
         verified: false,
-        reliabilityScore: userProfile.reliabilityScore ?? 100,
-        missedBriefingCount: userProfile.missedBriefingCount ?? 0,
-        completedBriefingCount: userProfile.completedBriefingCount ?? 0,
-        acceptedBriefingCount: userProfile.acceptedBriefingCount ?? 0,
-        rating: userProfile.rating ?? 3,
+        reliabilityScore: 100,
+        missedBriefingCount: 0,
+        completedBriefingCount: 0,
+        acceptedBriefingCount: 0,
+        rating: 3,
         userType: 'youth-agent',
         availability: 'available',
         createdAt: timestamp,

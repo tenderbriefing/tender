@@ -2,6 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { bookingService, BookingRequest } from '@/lib/services/bookingService'
 import { ensureRouteAccess, isAccessDenied } from '@/lib/auth/ensureRouteAccess'
 
+function isProductionRuntime() {
+  return (
+    process.env.NODE_ENV === 'production' ||
+    process.env.VERCEL_ENV === 'production' ||
+    Boolean(process.env.K_SERVICE)
+  )
+}
+
+/** Legacy booking create assumes payment succeeded + mock tender — disabled in prod. */
+function legacyCreateDisabledResponse() {
+  return NextResponse.json(
+    {
+      success: false,
+      error:
+        'Legacy /api/bookings create is disabled. Use attendance requests with PayFast for paid briefing bookings.',
+      code: 'LEGACY_BOOKINGS_CREATE_DISABLED',
+    },
+    { status: 410 }
+  )
+}
+
 export async function POST(request: NextRequest) {
   const access = await ensureRouteAccess(request)
   if (isAccessDenied(access)) return access
@@ -12,6 +33,9 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'create':
+        if (isProductionRuntime()) {
+          return legacyCreateDisabledResponse()
+        }
         if (data.smeId && data.smeId !== access.uid && access.userType !== 'admin') {
           return NextResponse.json(
             { success: false, error: 'Forbidden' },

@@ -12,8 +12,8 @@ import { dashboardPathForRole } from '@/lib/auth/redirects'
 import { sendWelcomeEmailSafe } from '@/lib/services/welcomeEmail'
 import {
   createPlatformProfile,
+  hasFullRegistrationPayload,
   logProfileSetupFailure,
-  sanitizeRegistrationAdditional,
 } from '@/lib/auth/serverProfileBootstrap'
 import type { UserProfile } from '@/lib/auth'
 
@@ -91,8 +91,6 @@ export async function POST(request: NextRequest) {
       : providerIds.includes('password')
         ? 'password'
         : providerIds[0] || 'password'
-    const hasFullRegistrationPayload =
-      body.additionalData != null && Object.keys(body.additionalData).length > 0
 
     if (snap.exists) {
       const existing = snap.data() || {}
@@ -184,10 +182,7 @@ export async function POST(request: NextRequest) {
     }
 
     const role: GoogleBootstrapRole = resolved.role
-    const extra = sanitizeRegistrationAdditional(body.additionalData)
-    const onboardingCompleted = hasFullRegistrationPayload
-      ? extra.onboardingCompleted === true
-      : false
+    const onboardingCompleted = hasFullRegistrationPayload(role, body.additionalData)
 
     const userProfile = await createPlatformProfile(db, {
       uid,
@@ -197,11 +192,11 @@ export async function POST(request: NextRequest) {
       authenticationProvider: authProvider,
       providerIds,
       photoURL,
-      additionalData: extra,
+      additionalData: body.additionalData,
       onboardingCompleted,
     })
 
-    if (email && !hasFullRegistrationPayload) {
+    if (email && !onboardingCompleted) {
       try {
         const welcome = await sendWelcomeEmailSafe({
           to: email,

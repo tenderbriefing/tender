@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { secretManager } from '@/lib/secrets/secretManager';
 import { requireAdmin, isGuardResponse } from '@/lib/auth/apiGuards';
 
+/**
+ * Admin secret manager metadata / rotation API.
+ * Never returns plaintext secret values over HTTP.
+ */
 export async function GET(request: NextRequest) {
   const guard = await requireAdmin(request);
   if (isGuardResponse(guard)) return guard;
@@ -11,29 +15,20 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get('action');
 
     switch (action) {
-      case 'list':
+      case 'list': {
         const secrets = await secretManager.listSecrets();
         return NextResponse.json({
           success: true,
-          data: secrets,
+          data: secrets.map((name) => ({ name })),
           message: 'Secrets listed successfully'
         });
+      }
 
       case 'get':
-        const secretName = searchParams.get('name');
-        if (!secretName) {
-          return NextResponse.json({
-            success: false,
-            message: 'Secret name is required'
-          }, { status: 400 });
-        }
-
-        const secretValue = await secretManager.getSecret(secretName);
         return NextResponse.json({
-          success: true,
-          data: { name: secretName, value: secretValue },
-          message: 'Secret retrieved successfully'
-        });
+          success: false,
+          message: 'Plaintext secret retrieval over HTTP is disabled. Use list for metadata or rotate via POST.'
+        }, { status: 403 });
 
       default:
         return NextResponse.json({

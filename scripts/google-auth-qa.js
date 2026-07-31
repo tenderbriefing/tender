@@ -59,6 +59,7 @@ function stripPrivilegedFields(data) {
     'role',
     'founderAccess',
     'verificationStatus',
+    'verified',
     'suspended',
     'reliabilityScore',
     'missedBriefingCount',
@@ -70,6 +71,33 @@ function stripPrivilegedFields(data) {
   const out = { ...data }
   for (const key of PRIVILEGED) delete out[key]
   return out
+}
+
+/** Mirror of serverProfileBootstrap.sanitizeRegistrationAdditional */
+function sanitizeRegistrationAdditional(data) {
+  if (!data || typeof data !== 'object') return {}
+  const stripped = stripPrivilegedFields({ ...data })
+  delete stripped.uid
+  delete stripped.email
+  delete stripped.verified
+  delete stripped.onboardingCompleted
+  delete stripped.onboardingCompletedAt
+  return stripped
+}
+
+/** Mirror of serverProfileBootstrap.hasFullRegistrationPayload */
+function hasFullRegistrationPayload(role, data) {
+  if (!data || typeof data !== 'object') return false
+  const phone = typeof data.phoneNumber === 'string' && data.phoneNumber.trim().length > 0
+  const province = typeof data.province === 'string' && data.province.trim().length > 0
+  if (!phone || !province) return false
+  if (role === 'sme') {
+    const company = typeof data.companyName === 'string' && data.companyName.trim().length > 0
+    const categories = Array.isArray(data.categories) && data.categories.length > 0
+    return company && categories
+  }
+  const city = typeof data.city === 'string' && data.city.trim().length > 0
+  return city
 }
 
 function sanitizeAuthErrorCode(code) {
@@ -150,6 +178,54 @@ function check(name, ok, detail = '') {
   const stripped = stripPrivilegedFields({ founderAccess: true, userType: 'admin', displayName: 'X' })
   check('founderAccess stripped from client patch', stripped.founderAccess === undefined)
   check('userType stripped from client patch', stripped.userType === undefined)
+}
+
+// F02 — bootstrap strips trust metrics + onboarding flags; full payload is structural
+{
+  const sanitized = sanitizeRegistrationAdditional({
+    displayName: 'Keep',
+    companyName: 'Acme',
+    phoneNumber: '082',
+    province: 'GP',
+    categories: ['IT'],
+    founderAccess: true,
+    verificationStatus: 'verified',
+    reliabilityScore: 999,
+    rating: 5,
+    onboardingCompleted: true,
+    onboardingCompletedAt: '2099-01-01',
+    verified: true,
+  })
+  check('sanitize strips onboardingCompleted', sanitized.onboardingCompleted === undefined)
+  check('sanitize strips reliabilityScore', sanitized.reliabilityScore === undefined)
+  check('sanitize strips verificationStatus', sanitized.verificationStatus === undefined)
+  check('sanitize strips verified', sanitized.verified === undefined)
+  check('sanitize keeps companyName', sanitized.companyName === 'Acme')
+  check(
+    'boolean alone is not full SME registration',
+    hasFullRegistrationPayload('sme', { onboardingCompleted: true }) === false
+  )
+  check(
+    'structured SME signup is full registration',
+    hasFullRegistrationPayload('sme', {
+      companyName: 'Acme',
+      phoneNumber: '082',
+      province: 'GP',
+      categories: ['IT'],
+    }) === true
+  )
+  check(
+    'Google-minimal agent payload is not full registration',
+    hasFullRegistrationPayload('youth-agent', {}) === false
+  )
+  check(
+    'structured agent signup is full registration',
+    hasFullRegistrationPayload('youth-agent', {
+      phoneNumber: '082',
+      province: 'GP',
+      city: 'Johannesburg',
+    }) === true
+  )
 }
 
 // First-time onboarding destination
@@ -268,6 +344,27 @@ const rules = fs.readFileSync(path.join(__dirname, '../firestore.rules'), 'utf8'
 check('rules block userType escalation', rules.includes("hasAny([") && rules.includes("'userType'"))
 check('rules block founderAccess', rules.includes("'founderAccess'"))
 check('rules only allow sme|youth-agent create', rules.includes("userType in ['sme', 'youth-agent']"))
+check('rules have agentOwnerUpdateAllowed', rules.includes('agentOwnerUpdateAllowed'))
+check(
+  'rules deny agent verificationStatus via denylist helper',
+  /function\s+agentOwnerUpdateAllowed[\s\S]*?'verificationStatus'/.test(rules)
+)
+
+const bootstrapSrc = fs.readFileSync(
+  path.join(__dirname, '../lib/auth/serverProfileBootstrap.ts'),
+  'utf8'
+)
+check(
+  'bootstrap never trusts extra.onboardingCompleted',
+  /const onboardingCompleted\s*=\s*input\.onboardingCompleted\s*===\s*true/.test(bootstrapSrc) &&
+    !/onboardingCompleted\s*=\s*input\.onboardingCompleted\s*===\s*true\s*\|\|/.test(bootstrapSrc) &&
+    !/\|\|\s*extra\.onboardingCompleted/.test(bootstrapSrc)
+)
+check(
+  'bootstrap forces agent trust defaults',
+  bootstrapSrc.includes("verificationStatus = 'pending'") &&
+    bootstrapSrc.includes('reliabilityScore = 100')
+)
 
 const schema = fs.readFileSync(path.join(__dirname, '../lib/founder/eventSchema.ts'), 'utf8')
 check('events include google_sign_in_succeeded', schema.includes("'google_sign_in_succeeded'"))

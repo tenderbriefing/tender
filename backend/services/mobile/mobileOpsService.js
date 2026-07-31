@@ -11,8 +11,23 @@ const offlineSync = require('../fieldOperations/offlineSyncService')
 const dispatchOptimization = require('../ai/dispatchOptimizationService')
 const { getStorage } = require('../storageAdapter')
 
+function resolveMobileUploadSecret() {
+  const secret = process.env.MOBILE_UPLOAD_SECRET || process.env.SYNC_SECRET
+  if (secret) return secret
+  const isProd =
+    process.env.NODE_ENV === 'production' ||
+    Boolean(process.env.K_SERVICE) ||
+    Boolean(process.env.FUNCTION_TARGET)
+  if (isProd) {
+    throw new Error(
+      'MOBILE_UPLOAD_SECRET (or SYNC_SECRET) is required in production — refusing insecure default'
+    )
+  }
+  return 'tb-mobile-dev'
+}
+
 function createUploadToken(agentId, purpose = 'report') {
-  const secret = process.env.MOBILE_UPLOAD_SECRET || process.env.SYNC_SECRET || 'tb-mobile-dev'
+  const secret = resolveMobileUploadSecret()
   const exp = Date.now() + 3600000
   const raw = `${agentId}:${purpose}:${exp}`
   const sig = crypto.createHmac('sha256', secret).update(raw).digest('hex').slice(0, 16)

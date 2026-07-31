@@ -49,6 +49,7 @@ service cloud.firestore {
               'role',
               'founderAccess',
               'verificationStatus',
+              'verified',
               'suspended',
               'reliabilityScore',
               'missedBriefingCount',
@@ -56,6 +57,70 @@ service cloud.firestore {
               'acceptedBriefingCount',
               'rating',
               'totalJobs'
+            ]);
+    }
+
+    // Privileged trust / role fields — client agents must not escalate these.
+    // Verification escalation is Admin SDK (or isAdmin()) only.
+    function agentCreateAllowed(agentId) {
+      return isAuthenticated()
+        && request.auth.uid == agentId
+        && request.resource.data.get('founderAccess', false) != true
+        && request.resource.data.get('suspended', false) != true
+        && request.resource.data.get('verified', false) != true
+        && (
+          !('verificationStatus' in request.resource.data)
+          || request.resource.data.verificationStatus == 'pending'
+        );
+    }
+
+    function agentOwnerUpdateAllowed(agentId) {
+      return isAuthenticated()
+        && request.auth.uid == agentId
+        && isYouthAgent()
+        && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny([
+              'userType',
+              'role',
+              'founderAccess',
+              'verificationStatus',
+              'verified',
+              'suspended',
+              'reliabilityScore',
+              'missedBriefingCount',
+              'completedBriefingCount',
+              'acceptedBriefingCount',
+              'rating',
+              'totalJobs'
+            ]);
+    }
+
+    function agentVerificationCreateAllowed(agentId) {
+      return isYouthAgent()
+        && request.auth.uid == agentId
+        && request.resource.data.get('adminApproved', false) != true
+        && request.resource.data.get('verified', false) != true
+        && (
+          !('status' in request.resource.data)
+          || request.resource.data.status == 'pending'
+        )
+        && (
+          !('verificationStatus' in request.resource.data)
+          || request.resource.data.verificationStatus == 'pending'
+        );
+    }
+
+    function agentVerificationOwnerUpdateAllowed(agentId) {
+      return isYouthAgent()
+        && request.auth.uid == agentId
+        && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny([
+              'status',
+              'adminApproved',
+              'reviewedBy',
+              'reviewedAt',
+              'verified',
+              'verificationStatus'
             ]);
     }
 
@@ -232,8 +297,9 @@ service cloud.firestore {
 
     match /agentVerification/{agentId} {
       allow read: if isAdmin() || (isYouthAgent() && request.auth.uid == agentId);
-      allow create, update: if isYouthAgent() && request.auth.uid == agentId;
-      allow write: if isAdmin();
+      allow create: if agentVerificationCreateAllowed(agentId) || isAdmin();
+      allow update: if agentVerificationOwnerUpdateAllowed(agentId) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /operationalIncidents/{incidentId} {
@@ -244,8 +310,8 @@ service cloud.firestore {
 
     match /agents/{agentId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.auth.uid == agentId;
-      allow update: if isAdmin() || (isYouthAgent() && request.auth.uid == agentId);
+      allow create: if agentCreateAllowed(agentId);
+      allow update: if isAdmin() || agentOwnerUpdateAllowed(agentId);
       allow delete: if isAdmin();
     }
 
