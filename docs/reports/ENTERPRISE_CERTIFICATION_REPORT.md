@@ -9,11 +9,27 @@
 
 ## 1. Executive verdict
 
-**PASS WITH CONDITIONS**
+**PASS WITH CONDITIONS** (production promoted)
+
+| Field | Value |
+|-------|--------|
+| Production baseline SHA | `6e6597264faf4cfcd25c09060d93bc5e406c008b` |
+| Tag | `enterprise-v1.0.0` |
+| Deploy | [30653868712](https://github.com/tenderbriefing/tender/actions/runs/30653868712) success |
+| Cloud Run | `tenderbriefing-00089-zv9` @ 100% |
+| Residual | Authenticated UI E2E / Google IdP smoke **MANUAL** (no secrets in runner) |
+
+See `docs/reports/PRODUCTION_BASELINE_ENTERPRISE_V1.md` and `docs/releases/REGISTRY.md`.
+
+---
+
+## Prior certification summary
+
+**PASS WITH CONDITIONS** (pre-deploy)
 
 Certified tip `11cb4786f7a8c2c05199dcae280b6b77edf39d27` (CI https://github.com/tenderbriefing/tender/actions/runs/30644721951). No unresolved **code** P0 remains. Local and prior remote CI evidence close the Firestore IDOR, lifecycle, Next/Firebase advisory, distributed rate-limit, observability, rollback, and a11y-floor conditions. Full browser-authenticated SME/agent/admin UI E2E remains **secret-gated** (service-layer + negative API E2E cover the workflow). Residual conditions are operational (attach Cloud Monitoring alerts / Armor; provision `E2E_*_TOKEN` secrets for optional UI auth).
 
-**Deploy only after CI is green on the exact certified SHA below.** This programme does **not** deploy production.
+**Production deploy completed 2026-07-31 via manual workflow_dispatch on tag `enterprise-v1.0.0`.**
 
 ---
 
