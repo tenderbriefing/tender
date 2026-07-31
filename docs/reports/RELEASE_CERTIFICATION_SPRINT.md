@@ -2,7 +2,7 @@
 
 **Start RC:** `816433f`  
 **Pre-recovery CI-green:** `5e2811c`  
-**Final SHA:** `PENDING_PUSH_TIP`  
+**Final SHA:** `5f93d5200a452d54dfbd58a5aa02ba2eee99ae01`  
 **Verdict:** PASS WITH CONDITIONS  
 
 ## Phase 0 — Integrity

@@ -24,8 +24,8 @@ No unresolved **code** P0 remains. Local and prior remote CI evidence close the 
 | Sprint start / prior RC | `816433f42b3eb50448e07ad85e36ea53994597df` |
 | Pre-programme LKG | `27a5463ea2b10395f9963d16772264c256c22377` |
 | Pre-recovery CI-green | `5e2811c4f7a73b42a3ce579823a3f7e5052d557a` |
-| Final certified SHA | `PENDING_PUSH_TIP` |
-| Remote SHA | `PENDING_PUSH_TIP` |
+| Final certified SHA | `5f93d5200a452d54dfbd58a5aa02ba2eee99ae01` |
+| Remote SHA | `5f93d5200a452d54dfbd58a5aa02ba2eee99ae01` |
 | Branch | `master` |
 | Working tree at certify | clean after push |
 

@@ -96,8 +96,8 @@ Jobs: verify ✅, firestore_rules_emulator ✅, build ✅, e2e_public ✅
 
 | Field | Value |
 |-------|--------|
-| Final certified SHA | `PENDING_PUSH_TIP` |
-| Remote SHA | `PENDING_PUSH_TIP` |
+| Final certified SHA | `5f93d5200a452d54dfbd58a5aa02ba2eee99ae01` |
+| Remote SHA | `5f93d5200a452d54dfbd58a5aa02ba2eee99ae01` |
 | Final CI URL | recorded after push monitor |
 
 ---
