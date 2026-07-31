@@ -109,6 +109,7 @@ export const PRIVILEGED_USER_FIELDS = [
   'role',
   'founderAccess',
   'verificationStatus',
+  'verified',
   'suspended',
   'reliabilityScore',
   'missedBriefingCount',

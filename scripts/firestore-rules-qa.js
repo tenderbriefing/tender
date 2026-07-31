@@ -63,8 +63,57 @@ assert.match(
 )
 assert.match(
   body,
-  /match\s+\/agents\/\{agentId\}[\s\S]*?allow\s+create:\s*if\s+isAuthenticated\(\)\s*&&\s*request\.auth\.uid\s*==\s*agentId/,
-  'agents create must allow authenticated owner'
+  /match\s+\/agents\/\{agentId\}[\s\S]*?allow\s+create:\s*if\s+agentCreateAllowed\s*\(\s*agentId\s*\)/,
+  'agents create must call agentCreateAllowed(agentId)'
+)
+
+// F01 — agent / agentVerification privileged-field denylist
+assert.match(
+  body,
+  /function\s+agentOwnerUpdateAllowed\s*\(\s*agentId\s*\)/,
+  'agentOwnerUpdateAllowed must exist'
+)
+assert.match(
+  body,
+  /function\s+agentVerificationCreateAllowed\s*\(\s*agentId\s*\)/,
+  'agentVerificationCreateAllowed must exist'
+)
+assert.match(
+  body,
+  /function\s+agentVerificationOwnerUpdateAllowed\s*\(\s*agentId\s*\)/,
+  'agentVerificationOwnerUpdateAllowed must exist'
+)
+assert.match(
+  body,
+  /allow\s+update:\s*if\s+isAdmin\(\)\s*\|\|\s+agentOwnerUpdateAllowed\s*\(\s*agentId\s*\)/,
+  'agents update must use agentOwnerUpdateAllowed denylist'
+)
+assert.match(
+  body,
+  /agentOwnerUpdateAllowed[\s\S]*?verificationStatus/,
+  'agentOwnerUpdateAllowed must deny verificationStatus changes'
+)
+assert.match(
+  body,
+  /agentOwnerUpdateAllowed[\s\S]*?reliabilityScore/,
+  'agentOwnerUpdateAllowed must deny reliabilityScore changes'
+)
+assert.match(
+  body,
+  /agentVerificationOwnerUpdateAllowed[\s\S]*?adminApproved/,
+  'agentVerification owner update must deny adminApproved'
+)
+assert.match(
+  body,
+  /agentVerificationCreateAllowed[\s\S]*?status\s*==\s*'pending'/,
+  'agentVerification create must force pending status'
+)
+
+// Must not allow unrestricted youth-agent self-update on agents.
+assert.doesNotMatch(
+  body,
+  /match\s+\/agents\/\{agentId\}[\s\S]*?allow\s+update:\s*if\s+isAdmin\(\)\s*\|\|\s*\(\s*isYouthAgent\(\)\s*&&\s*request\.auth\.uid\s*==\s*agentId\s*\)\s*;/,
+  'agents must not allow unrestricted youth-agent self-update'
 )
 
 console.log('firestore-rules-qa: all checks passed')

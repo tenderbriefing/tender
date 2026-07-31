@@ -50,6 +50,20 @@ class BookingService {
    */
   async createBooking(request: BookingRequest): Promise<BookingResult> {
     try {
+      // Defense in depth: legacy path assumes payment succeeded + mock tender.
+      // Paid flow is attendance requests + PayFast.
+      if (
+        process.env.NODE_ENV === 'production' ||
+        process.env.VERCEL_ENV === 'production' ||
+        Boolean(process.env.K_SERVICE)
+      ) {
+        return {
+          success: false,
+          error:
+            'Legacy booking create is disabled in production. Use attendance requests with PayFast.',
+        }
+      }
+
       // Validate the request
       if (!request.tenderId || !request.smeId) {
         return {

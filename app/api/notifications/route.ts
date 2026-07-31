@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { notificationService } from '@/lib/services/notificationService'
 import { ensureRouteAccess, isAccessDenied } from '@/lib/auth/ensureRouteAccess'
-import { forbiddenResponse } from '@/lib/auth/verifyApiUser'
 
 export async function POST(request: NextRequest) {
   const access = await ensureRouteAccess(request)
@@ -36,20 +35,9 @@ export async function POST(request: NextRequest) {
           }, { status: 500 })
         }
 
-      case 'markAllAsRead':
-        const { userId } = data
-
-        if (userId && userId !== access.uid && access.userType !== 'admin') {
-          return forbiddenResponse()
-        }
-        
-        if (!userId) {
-          return NextResponse.json({
-            success: false,
-            error: 'Missing required field: userId'
-          }, { status: 400 })
-        }
-
+      case 'markAllAsRead': {
+        // Force caller identity — never trust client userId (IDOR).
+        const userId = access.uid
         const markAllResult = await notificationService.markAllAsRead(userId)
         
         if (markAllResult) {
@@ -63,6 +51,7 @@ export async function POST(request: NextRequest) {
             error: 'Failed to mark all notifications as read'
           }, { status: 500 })
         }
+      }
 
       case 'send':
         const { targetUserId, type, data: notificationData, customMessage } = data
@@ -110,18 +99,15 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const access = await ensureRouteAccess(request)
+  if (isAccessDenied(access)) return access
+
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    // Force caller identity — ignore client userId query (IDOR).
+    const userId = access.uid
     const limit = parseInt(searchParams.get('limit') || '50')
     const unreadOnly = searchParams.get('unreadOnly') === 'true'
-
-    if (!userId) {
-      return NextResponse.json({
-        success: false,
-        error: 'Missing required parameter: userId'
-      }, { status: 400 })
-    }
 
     const notifications = await notificationService.getUserNotifications(
       userId,
