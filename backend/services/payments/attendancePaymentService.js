@@ -4,8 +4,17 @@ const workflowAutomationService = require('../workflowAutomationService')
 const auditLogService = require('../auditLogService')
 const { sanitizeFirestoreData } = require('../../utils/sanitizeFirestoreData')
 
-const ATTENDANCE_FEE_CENTS = Number(process.env.NEXT_PUBLIC_ATTENDANCE_FEE_CENTS || 24900)
+/** Server-authoritative fee — R249. Prefer ATTENDANCE_FEE_CENTS; never trust client body amounts. */
+const ATTENDANCE_FEE_CENTS = Number(
+  process.env.ATTENDANCE_FEE_CENTS ||
+    process.env.NEXT_PUBLIC_ATTENDANCE_FEE_CENTS ||
+    24900
+)
 const ATTENDANCE_FEE_CURRENCY = 'ZAR'
+const CANONICAL_FEE_CENTS = 24900
+const EFFECTIVE_FEE_CENTS = Number.isFinite(ATTENDANCE_FEE_CENTS) && ATTENDANCE_FEE_CENTS > 0
+  ? Math.round(ATTENDANCE_FEE_CENTS)
+  : CANONICAL_FEE_CENTS
 
 function paymentReferenceForRequest(requestId) {
   return `TB-REQ-${requestId}`
@@ -27,8 +36,8 @@ function defaultPaymentFields(requestId) {
   return {
     paymentStatus: 'pending',
     paymentProvider: 'payfast',
-    paymentAmount: ATTENDANCE_FEE_CENTS,
-    quotedFee: ATTENDANCE_FEE_CENTS,
+    paymentAmount: EFFECTIVE_FEE_CENTS,
+    quotedFee: EFFECTIVE_FEE_CENTS,
     currency: ATTENDANCE_FEE_CURRENCY,
     paymentReference: paymentReferenceForRequest(requestId),
     payfastPaymentId: null,
@@ -75,7 +84,7 @@ async function createPayfastCheckoutForRequest(request, baseUrl) {
   const nameLast = nameParts.slice(1).join(' ') || 'Owner'
 
   const result = payfastService.createCheckoutPayload({
-    amountCents: ATTENDANCE_FEE_CENTS,
+    amountCents: EFFECTIVE_FEE_CENTS,
     mPaymentId: paymentReferenceForRequest(request.id),
     itemName: 'Compulsory briefing attendance support',
     itemDescription: `Youth Agent attendance for tender ${request.tenderNumber || request.tenderId || request.id}`,
@@ -131,8 +140,8 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
     id: requestId,
     paymentStatus: 'paid',
     paymentProvider: 'payfast',
-    paymentAmount: ATTENDANCE_FEE_CENTS,
-    quotedFee: ATTENDANCE_FEE_CENTS,
+    paymentAmount: EFFECTIVE_FEE_CENTS,
+    quotedFee: EFFECTIVE_FEE_CENTS,
     currency: ATTENDANCE_FEE_CURRENCY,
     paymentReference: paymentReferenceForRequest(requestId),
     payfastPaymentId: pfPaymentId || request.payfastPaymentId || null,
@@ -291,7 +300,24 @@ async function processPayfastItn(posted) {
   const pfPaymentId = posted.pf_payment_id ? String(posted.pf_payment_id) : null
 
   if (status === 'COMPLETE') {
-    const expectedCents = ATTENDANCE_FEE_CENTS
+    // Replay / duplicate ITN: already paid with same pf_payment_id
+    if (
+      request.paymentStatus === 'paid' &&
+      pfPaymentId &&
+      request.payfastPaymentId &&
+      String(request.payfastPaymentId) === String(pfPaymentId)
+    ) {
+      return {
+        ok: true,
+        handled: true,
+        requestId: request.id,
+        paymentStatus: 'paid',
+        alreadyPaid: true,
+        duplicate: true,
+      }
+    }
+
+    const expectedCents = request.quotedFee || request.paymentAmount || EFFECTIVE_FEE_CENTS
     const paidZar = Number(posted.amount_gross || posted.amount || 0)
     const paidCents = Math.round(paidZar * 100)
     if (paidCents > 0 && Math.abs(paidCents - expectedCents) > 1) {
@@ -337,7 +363,7 @@ async function verifyCheckoutStatus() {
 }
 
 module.exports = {
-  ATTENDANCE_FEE_CENTS,
+  ATTENDANCE_FEE_CENTS: EFFECTIVE_FEE_CENTS,
   ATTENDANCE_FEE_CURRENCY,
   paymentReferenceForRequest,
   defaultPaymentFields,

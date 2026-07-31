@@ -1,12 +1,19 @@
-/** Attendance support fee — R249.00 ZAR (amount in cents; PayFast uses decimal ZAR). */
-export const ATTENDANCE_FEE_CENTS = Number(
-  process.env.NEXT_PUBLIC_ATTENDANCE_FEE_CENTS || 24900
-)
+/** Attendance support fee — R249.00 ZAR (cents). Server charge is canonical; display label may use NEXT_PUBLIC. */
+
+import {
+  CANONICAL_ATTENDANCE_FEE_CENTS,
+  resolveAttendanceFeeCents,
+  isAgentDispatchablePayment,
+} from '@/lib/domain/paymentLifecycle'
+
+export const ATTENDANCE_FEE_CENTS = resolveAttendanceFeeCents()
 
 export const ATTENDANCE_FEE_LABEL =
   process.env.NEXT_PUBLIC_ATTENDANCE_FEE_LABEL || 'R249.00'
 
 export const ATTENDANCE_FEE_CURRENCY = 'ZAR'
+
+export { CANONICAL_ATTENDANCE_FEE_CENTS }
 
 export function formatAttendanceFeeZar(cents = ATTENDANCE_FEE_CENTS): string {
   return `R${(cents / 100).toFixed(2)}`
@@ -27,5 +34,5 @@ export type AttendancePaymentStatus =
 export function isPaidForAgentVisibility(
   paymentStatus?: string | null
 ): boolean {
-  return paymentStatus === 'paid' || paymentStatus === 'not_required'
+  return isAgentDispatchablePayment(paymentStatus)
 }

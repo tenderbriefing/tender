@@ -116,4 +116,26 @@ assert.doesNotMatch(
   'agents must not allow unrestricted youth-agent self-update'
 )
 
+// Attendance privileged fields — client must not escalate payment/assignment/status.
+assert.match(
+  body,
+  /function\s+attendancePrivilegedKeysUnchanged\s*\(\s*\)/,
+  'attendancePrivilegedKeysUnchanged must exist'
+)
+assert.match(
+  body,
+  /attendancePrivilegedKeysUnchanged[\s\S]*?paymentStatus/,
+  'attendance privileged denylist must include paymentStatus'
+)
+assert.match(
+  body,
+  /match\s+\/attendanceRequests\/\{requestId\}[\s\S]*?attendancePrivilegedKeysUnchanged\s*\(\s*\)/,
+  'attendanceRequests updates must require attendancePrivilegedKeysUnchanged()'
+)
+assert.match(
+  body,
+  /match\s+\/auditLogs\/\{logId\}[\s\S]*?allow\s+write:\s*if\s+false/,
+  'auditLogs must deny client writes'
+)
+
 console.log('firestore-rules-qa: all checks passed')

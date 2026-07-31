@@ -1,12 +1,20 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 
-const FIREBASE_PROJECT_ID =
-  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
-  process.env.FIREBASE_PROJECT_ID ||
-  'tenderbriefing-34679'
+function resolveFirebaseProjectId(): string {
+  const id =
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+    process.env.FIREBASE_PROJECT_ID ||
+    (process.env.NODE_ENV === 'production' ? '' : 'tenderbriefing-34679')
+  if (!id) {
+    throw new Error('FIREBASE_PROJECT_ID / NEXT_PUBLIC_FIREBASE_PROJECT_ID required')
+  }
+  return id
+}
 
 const JWKS = createRemoteJWKSet(
-  new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
+  new URL(
+    'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com'
+  )
 )
 
 export type VerifiedFirebaseToken = {
@@ -17,9 +25,10 @@ export type VerifiedFirebaseToken = {
 export async function verifyFirebaseIdTokenEdge(
   token: string
 ): Promise<VerifiedFirebaseToken> {
+  const projectId = resolveFirebaseProjectId()
   const { payload } = await jwtVerify(token, JWKS, {
-    issuer: `https://securetoken.google.com/${FIREBASE_PROJECT_ID}`,
-    audience: FIREBASE_PROJECT_ID,
+    issuer: `https://securetoken.google.com/${projectId}`,
+    audience: projectId,
   })
 
   const uid = typeof payload.sub === 'string' ? payload.sub : ''

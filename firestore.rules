@@ -142,19 +142,61 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Privileged payment / assignment / lifecycle fields — Admin SDK only.
+    function attendancePrivilegedKeysUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny([
+          'paymentStatus',
+          'paymentProvider',
+          'paymentAmount',
+          'quotedFee',
+          'currency',
+          'paymentReference',
+          'payfastPaymentId',
+          'payfastRedirectUrl',
+          'yocoCheckoutId',
+          'yocoRedirectUrl',
+          'paidAt',
+          'paymentFailureReason',
+          'agentId',
+          'assignedAgentId',
+          'agentName',
+          'status',
+          'smeId',
+          'notifiedAgents',
+          'acceptedAt',
+          'declines'
+        ]);
+    }
+
     match /attendanceRequests/{requestId} {
       allow create: if isSme()
-        && request.resource.data.smeId == request.auth.uid;
+        && request.resource.data.smeId == request.auth.uid
+        && request.resource.data.get('paymentStatus', 'pending') in ['pending', 'not_required']
+        && request.resource.data.get('status', 'pending') == 'pending'
+        && !('agentId' in request.resource.data
+          && request.resource.data.agentId != null
+          && request.resource.data.agentId != '');
       allow read: if isAdmin()
         || (isSme() && resource.data.smeId == request.auth.uid)
         || (isYouthAgent() && (
           resource.data.agentId == request.auth.uid
+          || resource.data.get('assignedAgentId', '') == request.auth.uid
           || ('notifiedAgents' in resource.data
             && request.auth.uid in resource.data.notifiedAgents)
         ));
+      // Client updates cannot escalate payment, assignment, or workflow status.
+      // Lifecycle mutations go through Admin SDK APIs.
       allow update: if isAdmin()
-        || (isYouthAgent() && resource.data.agentId == request.auth.uid)
-        || (isSme() && resource.data.smeId == request.auth.uid);
+        || (isSme()
+          && resource.data.smeId == request.auth.uid
+          && attendancePrivilegedKeysUnchanged())
+        || (isYouthAgent()
+          && (
+            resource.data.agentId == request.auth.uid
+            || resource.data.get('assignedAgentId', '') == request.auth.uid
+          )
+          && attendancePrivilegedKeysUnchanged());
     }
 
     match /briefingReports/{reportId} {

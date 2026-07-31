@@ -1,3 +1,11 @@
+/**
+ * Best-effort in-memory sliding-window rate limiter.
+ *
+ * IMPORTANT (horizontal scale): Cloud Run may run multiple instances. This map
+ * is process-local and is NOT a global quota. Use Cloud Armor / Redis for
+ * enterprise-grade shared rate limiting. Suitable for abuse dampening only.
+ */
+
 type Bucket = { count: number; resetAt: number }
 
 const buckets = new Map<string, Bucket>()
