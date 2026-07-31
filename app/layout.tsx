@@ -42,14 +42,14 @@ export const metadata: Metadata = {
     title: 'Tender Briefing South Africa | Compulsory Government Tender Briefings',
     description:
       'Discover compulsory government tender briefings across South Africa. Free for SMEs — R249 only when requesting a Youth Agent.',
-    images: ['/logo.png'],
+    images: ['/brand/og-logo.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Tender Briefing South Africa | TenderBriefing',
     description:
       'Compulsory tender briefings, official eTenders data and Youth Agent attendance support for South African SMEs.',
-    images: ['/logo.png'],
+    images: ['/brand/og-logo.png'],
   },
   robots: { index: true, follow: true },
   alternates: {

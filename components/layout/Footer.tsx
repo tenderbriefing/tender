@@ -12,10 +12,11 @@ const Footer = () => {
           <div>
             <div className="flex items-center">
               <Image
-                src="/logo.png"
+                src="/brand/logo.png"
                 alt="TenderBriefing"
                 width={192}
                 height={128}
+                unoptimized
                 className="h-12 w-auto"
               />
             </div>

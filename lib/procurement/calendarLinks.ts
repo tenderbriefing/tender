@@ -1,4 +1,16 @@
-import type { TenderBriefing } from '@/lib/tenderBriefing/types'
+/** Minimal tender fields needed for Google / ICS export (full TenderBriefing also works). */
+export type CalendarExportInput = {
+  id?: string
+  title?: string
+  tenderNumber?: string
+  department?: string
+  detailUrl?: string
+  briefingDate?: string | null
+  briefingTime?: string | null
+  briefingVenue?: string | null
+  province?: string | null
+  closingDate?: string | null
+}
 
 function pad(n: number): string {
   return n.toString().padStart(2, '0')
@@ -31,7 +43,7 @@ function parseTime(time?: string | null): { hours: number; minutes: number } | n
   return { hours, minutes }
 }
 
-function briefingDateTime(tender: TenderBriefing): { start: Date; end: Date } | null {
+function briefingDateTime(tender: CalendarExportInput): { start: Date; end: Date } | null {
   if (!tender.briefingDate) return null
   const base = new Date(tender.briefingDate)
   if (Number.isNaN(base.getTime())) return null
@@ -46,12 +58,45 @@ function briefingDateTime(tender: TenderBriefing): { start: Date; end: Date } | 
   return { start: base, end }
 }
 
-export function buildGoogleCalendarUrl(tender: TenderBriefing): string | null {
-  const range = briefingDateTime(tender)
+function closingDateTime(tender: CalendarExportInput): { start: Date; end: Date } | null {
+  if (!tender.closingDate) return null
+  const base = new Date(tender.closingDate)
+  if (Number.isNaN(base.getTime())) return null
+  // All-day-ish window: noon local for visibility in calendars
+  if (base.getHours() === 0 && base.getMinutes() === 0) {
+    base.setHours(12, 0, 0, 0)
+  }
+  const end = new Date(base)
+  end.setHours(end.getHours() + 1)
+  return { start: base, end }
+}
+
+export function toCalendarExportInput(tender: CalendarExportInput): CalendarExportInput {
+  return {
+    id: tender.id,
+    title: tender.title,
+    tenderNumber: tender.tenderNumber,
+    department: tender.department,
+    detailUrl: tender.detailUrl,
+    briefingDate: tender.briefingDate,
+    briefingTime: tender.briefingTime,
+    briefingVenue: tender.briefingVenue,
+    province: tender.province,
+    closingDate: tender.closingDate,
+  }
+}
+
+export function buildGoogleCalendarUrl(
+  tender: CalendarExportInput,
+  eventType: 'briefing' | 'closing' = 'briefing'
+): string | null {
+  const range =
+    eventType === 'closing' ? closingDateTime(tender) : briefingDateTime(tender)
   if (!range) return null
+  const label = eventType === 'closing' ? 'Closing' : 'Briefing'
   const params = new URLSearchParams({
     action: 'TEMPLATE',
-    text: `Briefing — ${tender.title || tender.tenderNumber || 'Tender briefing'}`,
+    text: `${label} — ${tender.title || tender.tenderNumber || 'Tender briefing'}`,
     dates: `${formatGoogleDate(range.start)}/${formatGoogleDate(range.end)}`,
     details: [
       tender.department,
@@ -60,15 +105,23 @@ export function buildGoogleCalendarUrl(tender: TenderBriefing): string | null {
     ]
       .filter(Boolean)
       .join('\n'),
-    location: tender.briefingVenue || tender.province || '',
+    location:
+      eventType === 'closing'
+        ? tender.province || ''
+        : tender.briefingVenue || tender.province || '',
   })
   return `https://www.google.com/calendar/render?${params.toString()}`
 }
 
-export function buildIcsContent(tender: TenderBriefing): string | null {
-  const range = briefingDateTime(tender)
+export function buildIcsContent(
+  tender: CalendarExportInput,
+  eventType: 'briefing' | 'closing' = 'briefing'
+): string | null {
+  const range =
+    eventType === 'closing' ? closingDateTime(tender) : briefingDateTime(tender)
   if (!range) return null
-  const uid = `${tender.id || tender.tenderNumber || 'tender'}@tenderbriefing.co.za`
+  const label = eventType === 'closing' ? 'Closing' : 'Briefing'
+  const uid = `${tender.id || tender.tenderNumber || 'tender'}-${eventType}@tenderbriefing.co.za`
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -78,10 +131,32 @@ export function buildIcsContent(tender: TenderBriefing): string | null {
     `DTSTAMP:${formatGoogleDate(new Date())}`,
     `DTSTART:${formatGoogleDate(range.start)}`,
     `DTEND:${formatGoogleDate(range.end)}`,
-    `SUMMARY:Briefing — ${tender.title || tender.tenderNumber || 'Tender briefing'}`,
-    `LOCATION:${tender.briefingVenue || tender.province || ''}`,
+    `SUMMARY:${label} — ${tender.title || tender.tenderNumber || 'Tender briefing'}`,
+    `LOCATION:${
+      eventType === 'closing'
+        ? tender.province || ''
+        : tender.briefingVenue || tender.province || ''
+    }`,
     `DESCRIPTION:${tender.department || ''}${tender.detailUrl ? ` — ${tender.detailUrl}` : ''}`,
     'END:VEVENT',
     'END:VCALENDAR',
   ].join('\r\n')
+}
+
+export function downloadIcsFile(
+  tender: CalendarExportInput,
+  eventType: 'briefing' | 'closing' = 'briefing'
+): boolean {
+  const ics = buildIcsContent(tender, eventType)
+  if (!ics) return false
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${tender.tenderNumber || tender.id || 'tender'}-${eventType}.ics`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  return true
 }

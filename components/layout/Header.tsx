@@ -10,7 +10,6 @@ import { auth } from '@/lib/firebase'
 import { toast } from 'react-hot-toast'
 import { Menu, X } from 'lucide-react'
 import NotificationCenter from '@/components/notifications/NotificationCenter'
-import WhatsAppIconLink from '@/components/ui/WhatsAppIconLink'
 import {
   ADMIN_NAV,
   AGENT_NAV,
@@ -81,11 +80,12 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
         <div className="flex h-16 items-center justify-between lg:h-[72px]">
           <Link href="/" className="group flex items-center" aria-label="TenderBriefing home">
             <Image
-              src="/logo.png"
+              src="/brand/logo.png"
               alt="TenderBriefing"
               width={192}
               height={128}
               priority
+              unoptimized
               className="h-10 w-auto transition group-hover:opacity-90 sm:h-12"
             />
           </Link>
@@ -130,10 +130,6 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
           </nav>
 
           <div className="flex items-center gap-2">
-            <WhatsAppIconLink
-              className="hidden h-9 w-9 items-center justify-center rounded-full bg-[#25D366] text-white transition hover:bg-[#1ebe57] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366] sm:inline-flex"
-              iconClassName="h-4 w-4"
-            />
             {showAccountChrome && <NotificationCenter />}
             {showAccountChrome ? (
               <div className="relative hidden sm:block">
@@ -264,13 +260,6 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
                   </Link>
                 </>
               )}
-              <div className="mx-3 mt-3 flex items-center gap-3 border-t border-slate-100 pt-3 sm:hidden">
-                <WhatsAppIconLink
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-white transition hover:bg-[#1ebe57]"
-                  iconClassName="h-4 w-4"
-                />
-                <span className="text-sm text-slate-600">Chat on WhatsApp</span>
-              </div>
             </div>
           </nav>
         )}

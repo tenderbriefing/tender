@@ -78,6 +78,10 @@ export default function SmeDashboardPage() {
         </div>
 
         <div className="mt-8">
+          <CalendarIntegration userType="sme" userEmail={sessionUser.email || undefined} />
+        </div>
+
+        <div className="mt-8">
           <SmeProcurementWorkspace />
         </div>
 
@@ -86,9 +90,6 @@ export default function SmeDashboardPage() {
         </div>
         <div className="mt-8">
           <RecentActivity userType="sme" />
-        </div>
-        <div className="mt-8">
-          <CalendarIntegration userType="sme" userEmail={sessionUser.email || undefined} />
         </div>
       </main>
       <Footer />

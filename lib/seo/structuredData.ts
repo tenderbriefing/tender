@@ -6,7 +6,7 @@ export function organizationJsonLd() {
     '@type': 'Organization',
     name: SITE_NAME,
     url: SITE_URL,
-    logo: absoluteUrl('/logo.png'),
+    logo: absoluteUrl('/brand/logo.png'),
     description: ORG_DESCRIPTION,
     areaServed: {
       '@type': 'Country',

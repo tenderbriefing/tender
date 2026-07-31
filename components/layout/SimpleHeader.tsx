@@ -26,11 +26,12 @@ const SimpleHeader = () => {
           <div className="flex items-center">
             <Link href="/" className="flex items-center" aria-label="TenderBriefing home">
               <Image
-                src="/logo.png"
+                src="/brand/logo.png"
                 alt="TenderBriefing"
                 width={192}
                 height={128}
                 priority
+                unoptimized
                 className="h-9 w-auto sm:h-10"
               />
             </Link>

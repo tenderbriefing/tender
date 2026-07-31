@@ -56,11 +56,12 @@ export default function AuthShell({
 
           <Link href="/" className="relative flex items-center" aria-label="TenderBriefing home">
             <Image
-              src="/logo.png"
+              src="/brand/logo.png"
               alt="TenderBriefing"
               width={220}
               height={147}
               priority
+              unoptimized
               className="h-12 w-auto"
             />
           </Link>
@@ -107,11 +108,12 @@ export default function AuthShell({
             aria-label="TenderBriefing home"
           >
             <Image
-              src="/logo.png"
+              src="/brand/logo.png"
               alt="TenderBriefing"
               width={220}
               height={147}
               priority
+              unoptimized
               className="h-12 w-auto"
             />
           </Link>

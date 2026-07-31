@@ -490,7 +490,7 @@ export default function TenderIntelligence({ tender }: TenderIntelligenceProps) 
           title="What happens next"
           hint="Procurement journey"
         />
-        <ol className="relative space-y-5 border-l-2 border-dashed border-brand-200 pl-7">
+        <ol className="mt-1">
           {[
             'Review the briefing and closing dates above. Set a calendar reminder.',
             tender.briefingCompulsory
@@ -498,14 +498,31 @@ export default function TenderIntelligence({ tender }: TenderIntelligenceProps) 
               : 'Confirm whether attendance at the briefing is required for your bid.',
             'Prepare your compliance documents (CSD registration, tax clearance, BBBEE).',
             'Submit your tender response through the official government procurement portal.',
-          ].map((step, idx) => (
-            <li key={step} className="relative">
-              <span className="absolute -left-[2.05rem] flex h-8 w-8 items-center justify-center rounded-xl bg-brand-900 text-xs font-bold text-accent-400 ring-4 ring-white">
-                {idx + 1}
-              </span>
-              <p className="text-sm leading-relaxed text-brand-900">{step}</p>
-            </li>
-          ))}
+          ].map((step, idx, steps) => {
+            const isLast = idx === steps.length - 1
+            return (
+              <li key={step} className="relative flex gap-4">
+                <div className="relative flex w-9 shrink-0 flex-col items-center">
+                  <span className="relative z-10 flex h-9 w-9 items-center justify-center rounded-xl bg-brand-900 text-sm font-bold tabular-nums text-accent-400 shadow-soft">
+                    {idx + 1}
+                  </span>
+                  {!isLast ? (
+                    <span
+                      aria-hidden
+                      className="absolute top-9 bottom-0 left-1/2 w-px -translate-x-1/2 bg-gradient-to-b from-brand-300 via-brand-200 to-brand-100"
+                    />
+                  ) : null}
+                </div>
+                <p
+                  className={`min-w-0 flex-1 pt-2 text-sm leading-relaxed text-brand-900 ${
+                    isLast ? 'pb-0' : 'pb-7'
+                  }`}
+                >
+                  {step}
+                </p>
+              </li>
+            )
+          })}
         </ol>
       </Card>
     </div>

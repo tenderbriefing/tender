@@ -36,11 +36,12 @@ export default function Hero() {
         {/* Soft brand mark as visual plane */}
         <div className="absolute inset-x-0 bottom-0 top-[18%] flex items-center justify-center opacity-[0.12]">
           <Image
-            src="/icon.png"
+            src="/brand/mark.png"
             alt=""
             width={640}
             height={640}
             priority
+            unoptimized
             className="h-[min(70vw,520px)] w-[min(70vw,520px)] object-contain"
           />
         </div>
@@ -55,11 +56,12 @@ export default function Hero() {
           className="flex flex-col items-center"
         >
           <Image
-            src="/logo.png"
+            src="/brand/logo.png"
             alt="TenderBriefing — Find. Track. Win."
             width={480}
             height={320}
             priority
+            unoptimized
             className="h-auto w-[min(88vw,420px)] object-contain"
           />
         </motion.div>

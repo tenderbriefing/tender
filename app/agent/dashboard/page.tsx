@@ -12,6 +12,7 @@ import DashboardWelcome from '@/components/dashboard/DashboardWelcome'
 import DashboardKpiGrid from '@/components/dashboard/DashboardKpiGrid'
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
 import AgentTrustIndicators from '@/components/operations/AgentTrustIndicators'
+import CalendarIntegration from '@/components/dashboard/CalendarIntegration'
 import { ArrowRight, MapPin } from 'lucide-react'
 
 export default function AgentDashboardPage() {
@@ -52,6 +53,13 @@ export default function AgentDashboardPage() {
             userType="youth-agent"
             metrics={metrics}
             loading={metricsLoading}
+          />
+        </div>
+
+        <div className="mt-8">
+          <CalendarIntegration
+            userType="youth-agent"
+            userEmail={sessionUser.email || undefined}
           />
         </div>
 

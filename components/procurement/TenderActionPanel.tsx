@@ -18,7 +18,7 @@ import { useSmeWorkspaceActions } from '@/hooks/useSmeWorkspaceActions'
 import { ATTENDANCE_FEE_LABEL } from '@/lib/payments/attendanceFee'
 import {
   buildGoogleCalendarUrl,
-  buildIcsContent,
+  downloadIcsFile,
 } from '@/lib/procurement/calendarLinks'
 import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
@@ -37,20 +37,9 @@ const PRICING_HIGHLIGHTS = [
 ]
 
 function downloadIcs(tender: TenderBriefing) {
-  const ics = buildIcsContent(tender)
-  if (!ics) {
+  if (!downloadIcsFile(tender)) {
     toast.error('Briefing date not available — cannot add to calendar')
-    return
   }
-  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${tender.tenderNumber || 'tender-briefing'}.ics`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
 }
 
 export default function TenderActionPanel({
