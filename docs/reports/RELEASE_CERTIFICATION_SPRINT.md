@@ -2,7 +2,7 @@
 
 **Start RC:** `816433f`  
 **Pre-recovery CI-green:** `5e2811c`  
-**Final SHA:**   
+**Final SHA:** `3e6c76016abd031d439b541a05e7652fd5a2a014`  
 **Verdict:** PASS WITH CONDITIONS  
 
 ## Phase 0 — Integrity
@@ -37,4 +37,4 @@ Recovery forensics found clean `master` at `5e2811c` matching origin; prior abor
 
 ## Deployment
 
-CI green on  (https://github.com/tenderbriefing/tender/actions/runs/30642978184). **Deploy with conditions** only via manual workflow_dispatch after explicit approval. No automatic production deploy.
+CI evidence: https://github.com/tenderbriefing/tender/actions/runs/30644069811. Certified tip `aacb00a3136ec26e09b7ef8e0f0ae8a6c0184e79`. Deploy with conditions only via manual workflow_dispatch after explicit approval. No automatic production deploy.
