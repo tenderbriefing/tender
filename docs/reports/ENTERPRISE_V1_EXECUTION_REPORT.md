@@ -65,10 +65,10 @@
 | Field | Value |
 |-------|--------|
 | Starting production baseline | `6e6597264faf4cfcd25c09060d93bc5e406c008b` (`enterprise-v1.0.0`) |
-| Final feature SHA | `2c42d8d5678e09727c7f9aa5feae46081350551f` |
+| Final feature SHA | `ca3e3d15673392643adf857fa4db76fa08a89460` |
 | Branch | `feature/procurement-intelligence-phase-1` |
 | PR | https://github.com/tenderbriefing/tender/pull/9 |
-| Ahead of baseline | 1 feature commit |
+| Ahead of baseline | 2 commits (feature + execution report) |
 
 ## 7–8. Files
 
@@ -93,7 +93,7 @@
 | Lint | PASS (1 legacy warning) |
 | Firestore rules QA | PASS |
 | Local build | (see CI / local run) |
-| CI on PR #9 | triggered on `2c42d8d` |
+| CI on PR #9 | **success** on `2c42d8d` ([30655291489](https://github.com/tenderbriefing/tender/actions/runs/30655291489)) and tip `ca3e3d1` ([30656125753](https://github.com/tenderbriefing/tender/actions/runs/30656125753)) |
 
 ## 18–24. Performance / cost / migration / deploy / risks / rollback / next
 
