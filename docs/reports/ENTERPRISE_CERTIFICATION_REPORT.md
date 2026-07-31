@@ -21,9 +21,10 @@ No unresolved *code* P0 remains that we can close without infrastructure (Java l
 | Field | Value |
 |-------|--------|
 | Sprint start RC | `816433f42b3eb50448e07ad85e36ea53994597df` |
-| Final SHA | *(see HEAD after commits)* |
+| Final SHA | `9244f44faf25b6b628464fc1ffd1c9377883976c` |
+| Remote SHA | `9244f44faf25b6b628464fc1ffd1c9377883976c` (pushed to `origin/master`) |
 | Branch | `master` |
-| Remote | push intended to `origin/master` (no production deploy) |
+| Ahead/behind after push | in sync with origin (verify with `git status`) |
 | Pre-programme LKG | `27a5463` |
 
 ---
