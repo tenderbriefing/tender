@@ -1,7 +1,6 @@
 /**
  * TypeScript bridge to support ticket CommonJS service (bundled/traced for Cloud Run).
  */
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const support = require('../../backend/services/supportTicketService.js')
 
 export const COL = support.COL as string

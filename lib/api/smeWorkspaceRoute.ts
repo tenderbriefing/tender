@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { backend } from '@/lib/backend/loadServices'
 import { verifyApiUser, unauthorizedResponse } from '@/lib/auth/verifyApiUser'
 
-/* eslint-disable @typescript-eslint/no-require-imports */
 const smeWorkspace = () =>
   require('../../backend/services/smeWorkspaceService.js') as {
     saveTender: (uid: string, tender: Record<string, unknown>) => Promise<{ workspace: unknown }>
@@ -14,7 +13,6 @@ const smeWorkspace = () =>
     unfollowDepartment: (uid: string, department: string) => Promise<{ workspace: unknown }>
     unfollowProvince: (uid: string, province: string) => Promise<{ workspace: unknown }>
   }
-/* eslint-enable @typescript-eslint/no-require-imports */
 
 export async function requireSmeUser(request: NextRequest) {
   const user = await verifyApiUser(request.headers.get('authorization'), ['sme'])

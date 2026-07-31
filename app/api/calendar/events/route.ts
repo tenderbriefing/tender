@@ -87,14 +87,12 @@ async function resolveSmeTenderIds(
   uid: string,
   storage: { getAttendanceRequests: (filters?: Record<string, unknown>) => Promise<AttendanceRequest[]> }
 ): Promise<{ ids: Set<string>; meta: Map<string, { requestId?: string; scopeSource?: ScopedCalendarEvent['scopeSource'] }> }> {
-  /* eslint-disable @typescript-eslint/no-require-imports */
   const smeWorkspace = require('../../../../backend/services/smeWorkspaceService.js') as {
     getWorkspaceDoc: (userId: string) => Promise<{
       savedTenderIds?: string[]
       trackedTenderIds?: string[]
     }>
   }
-  /* eslint-enable @typescript-eslint/no-require-imports */
 
   const [workspace, requests] = await Promise.all([
     smeWorkspace.getWorkspaceDoc(uid),

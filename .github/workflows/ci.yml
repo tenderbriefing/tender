@@ -1,4 +1,4 @@
-# Lightweight PR checks for auth/registration safety.
+# Lightweight PR checks for enterprise release confidence.
 name: CI
 
 on:
@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  auth_rules_qa:
-    name: Auth & Firestore rules QA
+  verify:
+    name: Typecheck, lint, unit tests, auth & rules QA
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,5 +22,10 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
       - run: npm run qa:firestore-rules
       - run: npm run qa:google-auth
+      - name: Dependency audit (high+; non-blocking known Next/Firebase advisories)
+        run: npm audit --omit=dev --audit-level=high || true

@@ -42,6 +42,26 @@ TenderBriefing connects SMEs who need briefing attendance with Youth Agents who 
 - Firebase project
 - PayFast merchant credentials (for payments)
 
+### Enterprise governance
+
+- Constitution: `docs/governance/ENGINEERING_CONSTITUTION.md`
+- Release gates: `docs/governance/RELEASE_STANDARD.md`
+- Security: `docs/governance/SECURITY_STANDARD.md`
+- ADRs: `docs/adr/`
+- Env vars: `docs/operations/ENVIRONMENT_VARIABLES.md`
+- Rollback: `docs/runbooks/ROLLBACK.md`
+- PayFast: `docs/runbooks/PAYFAST.md`
+
+### Verification
+
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run qa:firestore-rules
+npm run qa:google-auth
+```
+
 ### Installation
 
 1. **Clone the repository**

@@ -12,9 +12,7 @@ export async function GET(
     if ('error' in access) return access.error
 
     const uid = context.params.uid
-    /* eslint-disable @typescript-eslint/no-require-imports */
     const svc = require('../../../../../backend/services/founderIntelligenceService.js')
-    /* eslint-enable @typescript-eslint/no-require-imports */
 
     const data = await svc.getUserDetail(uid)
     if (!data) {

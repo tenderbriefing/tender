@@ -15,9 +15,7 @@ export async function GET(request: NextRequest) {
     const q = searchParams.get('q') || ''
     const province = searchParams.get('province') || ''
 
-    /* eslint-disable @typescript-eslint/no-require-imports */
     const svc = require('../../../../backend/services/founderIntelligenceService.js')
-    /* eslint-enable @typescript-eslint/no-require-imports */
 
     const data = await svc.buildFounderIntelligence({ page, pageSize, role, q, province })
     return NextResponse.json({ success: true, data })

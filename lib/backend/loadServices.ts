@@ -8,7 +8,6 @@ import type {
   UsersService,
 } from './types'
 
-/* eslint-disable @typescript-eslint/no-require-imports */
 function loadStorageAdapter(): StorageAdapterModule {
   return require('../../backend/services/storageAdapter.js')
 }
@@ -32,7 +31,6 @@ function loadCalendar(): CalendarService {
 function loadUsers(): UsersService {
   return require('../../backend/services/usersService.js')
 }
-/* eslint-enable @typescript-eslint/no-require-imports */
 
 export function loadBackendService<T = Record<string, unknown>>(
   serviceName: string

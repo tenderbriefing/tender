@@ -1,7 +1,6 @@
 /**
  * TypeScript bridge to Firebase Admin (CommonJS config module).
  */
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const firebaseAdmin = require('../../backend/config/firebaseAdmin')
 
 export const getFirebaseAdmin = firebaseAdmin.getFirebaseAdmin

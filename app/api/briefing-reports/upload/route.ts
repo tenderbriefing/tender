@@ -60,9 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
-    /* eslint-disable @typescript-eslint/no-require-imports */
     const storageService = require('../../../../backend/services/integrations/firebaseStorageService.js')
-    /* eslint-enable @typescript-eslint/no-require-imports */
 
     const upload = await storageService.uploadBriefingProof({
       requestId,

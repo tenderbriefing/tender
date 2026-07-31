@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 
 export type IntegrationStatus = 'configured' | 'missing' | 'error'
 

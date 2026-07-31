@@ -8,9 +8,7 @@ import {
 
 export const dynamic = 'force-dynamic'
 
-/* eslint-disable @typescript-eslint/no-require-imports */
 const smeWorkspace = () => require('../../../../../backend/services/smeWorkspaceService.js')
-/* eslint-enable @typescript-eslint/no-require-imports */
 
 export async function POST(request: NextRequest) {
   try {

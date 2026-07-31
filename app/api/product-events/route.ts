@@ -29,9 +29,7 @@ export async function POST(request: NextRequest) {
     if (!user) return unauthorizedResponse()
 
     const body = await request.json()
-    /* eslint-disable @typescript-eslint/no-require-imports */
     const productEvents = require('../../../backend/services/productEventService.js')
-    /* eslint-enable @typescript-eslint/no-require-imports */
 
     // Actor identity always from verified token — never from client body
     const result = await productEvents.ingestProductEvent(
@@ -83,9 +81,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'uid required' }, { status: 400 })
   }
 
-  /* eslint-disable @typescript-eslint/no-require-imports */
   const productEvents = require('../../../backend/services/productEventService.js')
-  /* eslint-enable @typescript-eslint/no-require-imports */
   const events = await productEvents.listEventsForUser(uid, { limit: 50 })
   return NextResponse.json({ success: true, data: events })
 }

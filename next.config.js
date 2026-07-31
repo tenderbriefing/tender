@@ -60,9 +60,9 @@ const nextConfig = {
 
   output: 'standalone',
 
-  // Repo historically had no ESLint config; disable build-blocking lint until a full config is adopted.
+  // ESLint config is present (.eslintrc.json); keep builds honest.
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
 
   typescript: {
