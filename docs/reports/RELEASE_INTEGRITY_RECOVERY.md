@@ -112,3 +112,5 @@ Remaining: R1 final-CI confirm (P0 until green), R2 UI auth E2E secrets (P1), Ar
 ## 14. Deployment recommendation
 
 **do not deploy** until final CI green → then **deploy with conditions** via manual workflow_dispatch only.
+
+**Release tip SHA** (includes SHA-record commit): `3f95360c1e6686375b9bff97d1f11e2e8bddd3d4` — use this for CI/deploy gates. Table Final certified SHA points at the docs evidence commit `5f93d52`.
