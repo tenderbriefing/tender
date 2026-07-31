@@ -10,6 +10,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:firestore-emulator": "firebase emulators:exec --only firestore --project demo-tenderbriefing \"vitest run --config vitest.firestore.config.ts\"",
+    "test:firestore-rules-emulator": "firebase emulators:exec --only firestore --project demo-tenderbriefing \"vitest run tests/firestore --config vitest.firestore.config.ts\"",
+    "test:e2e": "playwright test",
+    "qa:route-retirement": "node scripts/route-retirement-qa.js",
+    "qa:config": "node scripts/config-validation-qa.js",
+    "qa:secrets-scan": "node scripts/secrets-scan-qa.js",
     "deploy": "npm run build && firebase deploy",
     "deploy:hosting": "firebase deploy --only hosting",
     "deploy:firestore": "firebase deploy --only firestore",
@@ -54,13 +60,13 @@
     "cheerio": "^1.1.2",
     "cloudinary": "^2.7.0",
     "date-fns": "^2.30.0",
-    "firebase": "^9.23.0",
+    "firebase": "10.14.1",
     "firebase-admin": "^12.7.0",
     "framer-motion": "^10.16.16",
     "googleapis": "^160.0.0",
     "jose": "^6.2.3",
     "lucide-react": "^0.294.0",
-    "next": "14.0.4",
+    "next": "14.2.35",
     "pdf-parse": "^1.1.1",
     "postcss": "^8",
     "puppeteer-core": "^24.22.0",
@@ -73,8 +79,12 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "@playwright/test": "^1.49.1",
     "eslint": "^8",
-    "eslint-config-next": "14.0.4",
+    "eslint-config-next": "14.2.35",
+    "firebase-tools": "^15.25.1",
     "vitest": "^2.1.9"
   }
 }
