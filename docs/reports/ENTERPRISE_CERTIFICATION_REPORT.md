@@ -27,9 +27,9 @@ Critical security boundaries, PayFast hardening, attendance/payment domain model
 |-------|--------|
 | Starting SHA (Phase 0) | `27a5463ea2b10395f9963d16772264c256c22377` |
 | Batch 0 SHA | `d228dc663d4e958407f1e545f9ca8af6fd895848` |
+| Final SHA | `d4063eb` (+ docs amendment commits if any) |
 | Branch | `master` |
-| Ahead of origin (after Batch 0, before remaining commits) | 1 |
-| Working tree at certification drafting | Dirty with Batches 1–9 pending commit |
+| Ahead of origin | 4+ (not pushed; no deploy) |
 | Excluded unrelated files | None (prior audit tree classified intended and committed in Batch 0) |
 
 Commit list for this programme (after final commits): see `git log 27a5463..HEAD`.
@@ -132,7 +132,7 @@ Commit list for this programme (after final commits): see `git log 27a5463..HEAD
 | `npm run qa:google-auth` | **PASS** |
 | Firestore emulator | Not run (no new emulator suite) |
 | E2E | Not automated this sprint |
-| `npm run build` | Not completed in certification window — **CONDITION** |
+| `npm run build` | **PASS** (standalone Next build completed successfully) |
 
 ## 11. Dependency audit
 
@@ -193,7 +193,7 @@ Governance/ADR/ops docs; `lib/domain/*`; `lib/security/accessControl.ts`; `lib/c
 
 1. Remaining programme commits are pushed  
 2. CI goes green on the release SHA (typecheck/lint/test/QA)  
-3. Optional: `npm run build` green on CI  
+3. Optional: `npm run build` green on CI — **local build already PASS**
 4. Explicit human approval  
 
 Then: **deploy with conditions** (monitor ITN + auth; WhatsApp remains disabled unless secrets set).
@@ -235,15 +235,15 @@ Then: **deploy with conditions** (monitor ITN + auth; WhatsApp remains disabled 
 | Testing | 5 |
 | Observability | 6 |
 | Reliability | 6 |
-| Performance | 5 |
+| Performance | 6 |
 | Accessibility | 4 |
 | Developer experience | 7 |
 | Deployment maturity | 7 |
 | Operational readiness | 7 |
 
-**Overall: 6.3 / 10**
+**Overall: 6.4 / 10**
 
-**Largest remaining gap:** automated integration/E2E + Firestore emulator IDOR coverage and dependency advisory remediation — without these, enterprise “PASS” cannot be unqualified.
+**Largest remaining gap:** Firestore emulator IDOR matrix + full E2E journeys and Next/Firebase advisory upgrades — without these, enterprise “PASS” cannot be unqualified.
 
 ---
 
