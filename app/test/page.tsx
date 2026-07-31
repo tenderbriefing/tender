@@ -43,7 +43,7 @@ const TestPage = () => {
         },
         body: JSON.stringify({ 
           action: 'check-availability',
-          connectorEmail: 'test@example.com',
+          connectorEmail: '',
           startTime: new Date().toISOString(),
           endTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
         }),
