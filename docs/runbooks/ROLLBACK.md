@@ -6,6 +6,7 @@
 |-------|-----|
 | Pre enterprise programme | `27a5463ea2b10395f9963d16772264c256c22377` |
 | Prior certification RC | `816433f42b3eb50448e07ad85e36ea53994597df` |
+| Last CI-green release candidate (pre this certify commit) | `5e2811c4f7a73b42a3ce579823a3f7e5052d557a` |
 
 ## Trigger conditions
 

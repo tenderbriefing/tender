@@ -1,29 +1,30 @@
 # Release Certification Sprint — Final Report
 
 **Start RC:** `816433f`  
-**Final SHA:** recorded at commit time on `master`  
+**Pre-recovery CI-green:** `5e2811c`  
+**Final SHA:** `PENDING_PUSH_TIP`  
 **Verdict:** PASS WITH CONDITIONS  
 
 ## Phase 0 — Integrity
 
-Confirmed clean match to `816433f`, ahead 5 of origin, no unrelated dirty files at sprint start.
+Recovery forensics found clean `master` at `5e2811c` matching origin; prior aborted worker left no dirty tree. Deploy remains manual (`workflow_dispatch`).
 
-## Work completed
+## Work completed (sprint + recovery)
 
-1. **Lifecycle enforcement** — `backend/services/domain/lifecycleEnforcement.js` authoritative; wired into payment, assignment, auto-dispatch.
-2. **Firestore IDOR suite** — `tests/firestore/rules.idor.test.ts` + CI Java emulator job.
-3. **Integration workflows** — pay→accept→complete + idempotent ITN + no payment downgrade.
+1. **Lifecycle enforcement** — authoritative JS module; payment/assignment/dispatch wired; checkout re-pending asserted; TS mirror parity for assigned→assigned.
+2. **Firestore IDOR suite** — 24 emulator tests; local OpenJDK 21 + CI Java 21.
+3. **Integration workflows** — pay→accept→complete + idempotent ITN + no payment downgrade + unpaid assign deny.
 4. **Next 14.2.35 / Firebase 10.14.1** — advisory path closed; production build PASS.
-5. **Distributed rate limiting** — Firestore buckets + payment/attendance/PDF handlers; Armor documented.
+5. **Distributed rate limiting** — Firestore buckets + memory unit tests; Armor documented.
 6. **Observability / rollback / rate-limit docs** updated.
-7. **Playwright** public retirement + axe a11y floor; optional auth tokens.
-8. **CI** expanded: verify, emulator, build, e2e_public + route/config/secrets QA.
+7. **Playwright** public retirement + axe a11y + negative auth API; optional auth tokens.
+8. **CI** verify + emulator + build + e2e_public; deploy not auto-triggered.
 
-## Local verification evidence
+## Local verification evidence (recovery)
 
 | Command | Exit |
 |---------|------|
-| `npm test` | 0 (25 tests) |
+| `npm test` | 0 (28 tests) |
 | `npm run typecheck` | 0 |
 | `npm run lint` | 0 (1 legacy warning) |
 | `npm run qa:firestore-rules` | 0 |
@@ -32,8 +33,8 @@ Confirmed clean match to `816433f`, ahead 5 of origin, no unrelated dirty files 
 | `npm run qa:config` | 0 |
 | `npm run qa:secrets-scan` | 0 |
 | `npm run build` | 0 |
-| `npm run test:firestore-emulator` | **not run locally** (no JRE) |
+| `npm run test:firestore-emulator` | 0 (24 tests, OpenJDK 21) |
 
 ## Deployment
 
-Do **not** deploy until CI green on pushed SHA. No automatic production deploy from this sprint.
+Do **not** deploy until CI green on final pushed SHA. No automatic production deploy from this sprint.
