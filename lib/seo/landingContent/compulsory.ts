@@ -72,7 +72,7 @@ export const compulsoryBriefingsConfig: SeoLandingConfig = {
     paragraphs: [
       'Public procurement in South Africa is governed by fairness, transparency and value-for-money principles under the Preferential Procurement Policy Framework Act and related treasury regulations. Briefings give procuring entities a controlled forum to ensure all bidders receive the same information — especially for complex or site-dependent work.',
       'For SMEs entering government supply chains, compulsory briefings are often the first real interaction with the entity’s project team. Attendance signals seriousness, reduces frivolous bids and helps smaller firms price accurately when they see actual site conditions.',
-      'TenderBriefing does not replace official channels. We make them usable for businesses without dedicated tender departments — surfacing mandatory sessions early, linking to real tender detail pages and offering affordable attendance support when geography or capacity would otherwise force a pass.',
+      'TenderBriefing makes official channels usable for businesses without dedicated tender departments — surfacing mandatory sessions early, linking to real tender detail pages and offering affordable attendance support when geography or capacity would otherwise force a pass.',
     ],
   },
   smeGuidance: {

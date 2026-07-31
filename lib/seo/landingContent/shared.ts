@@ -15,7 +15,7 @@ export const R249_FAQ: SeoFaqItem = {
 export const ETENDERS_FAQ: SeoFaqItem = {
   question: 'Does TenderBriefing replace the National Treasury eTenders portal?',
   answer:
-    'No. TenderBriefing organises and enriches official eTenders data with a focus on compulsory briefings, SME-friendly workflows and optional agent attendance. You still submit bids through the official channels specified in each tender document.',
+    'No. TenderBriefing organises and enriches official eTenders data with a focus on compulsory briefings, SME-friendly workflows and optional agent attendance.',
 }
 
 export const COMPULSORY_DISQUALIFICATION_FAQ: SeoFaqItem = {

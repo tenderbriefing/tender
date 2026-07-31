@@ -8,7 +8,7 @@ import Footer from '@/components/layout/Footer'
 import TenderTableSkeleton from '@/components/ui/TenderTableSkeleton'
 import ProcurementEmptyState from '@/components/operations/ProcurementEmptyState'
 import ProcurementPageHeader from '@/components/procurement/ProcurementPageHeader'
-import { TrustStrip, ProcurementDisclaimer } from '@/components/procurement/TrustDisclaimer'
+import { TrustStrip } from '@/components/procurement/TrustDisclaimer'
 import TenderDashboardStats from '@/components/tenders/TenderDashboardStats'
 import TenderFiltersBar from '@/components/tenders/TenderFiltersBar'
 import TenderTable from '@/components/tenders/TenderTable'
@@ -307,9 +307,6 @@ export default function TenderOpportunitiesPage() {
           </>
         )}
 
-        <div className="mt-10">
-          <ProcurementDisclaimer />
-        </div>
       </main>
 
       <Footer />

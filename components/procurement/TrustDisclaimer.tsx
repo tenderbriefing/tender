@@ -36,19 +36,7 @@ export function TrustStrip({
       {(syncHealth || isRunning) && (
         <SyncHealthBadge health={syncHealth} isRunning={isRunning} />
       )}
-      <span>Does not replace official submission channels</span>
     </div>
-  )
-}
-
-export function ProcurementDisclaimer({ compact = false }: { compact?: boolean }) {
-  return (
-    <p
-      className={`border-l-4 border-brand-500 pl-4 text-slate-600 ${compact ? 'text-xs' : 'text-sm'}`}
-    >
-      TenderBriefing helps SMEs monitor and manage tender briefing opportunities. Final tender
-      submissions must still be completed through the relevant official procurement channels.
-    </p>
   )
 }
 

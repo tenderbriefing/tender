@@ -30,8 +30,6 @@ import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
 
 import CountdownBadge from './CountdownBadge'
 
-import { ProcurementDisclaimer } from './TrustDisclaimer'
-
 import { Copy, Printer, Share2 } from 'lucide-react'
 
 import TenderDocumentsSection from './TenderDocumentsSection'
@@ -489,14 +487,6 @@ export default function TenderDetailView({ tender }: TenderDetailViewProps) {
           </section>
 
         </aside>
-
-      </div>
-
-
-
-      <div className="mt-10">
-
-        <ProcurementDisclaimer />
 
       </div>
 

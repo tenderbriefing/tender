@@ -11,7 +11,6 @@ import EmptyState from '@/components/ui/EmptyState'
 import TenderHero from '@/components/procurement/TenderHero'
 import TenderIntelligence from '@/components/procurement/TenderIntelligence'
 import TenderActionPanel from '@/components/procurement/TenderActionPanel'
-import { ProcurementDisclaimer } from '@/components/procurement/TrustDisclaimer'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 
 export default function TenderDetailsPage() {
@@ -83,8 +82,7 @@ export default function TenderDetailsPage() {
         </div>
 
         <div className="mt-10 rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
-          <ProcurementDisclaimer />
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="text-xs text-slate-500">
             Source: Official eTenders data ·{' '}
             <Link
               href="/tenders"
