@@ -238,10 +238,15 @@ export default function SmeRequestDetailPage() {
                 </div>
               ) : (
                 <div className="mt-5 rounded-2xl border border-dashed border-brand-200 bg-brand-50/40 p-5 text-sm text-brand-900">
-                  <p className="font-semibold">Pending dispatch</p>
+                  <p className="font-semibold">
+                    {request.paymentStatus === 'paid' || request.paymentStatus === 'not_required'
+                      ? 'Finding your Youth Agent'
+                      : 'Waiting for payment'}
+                  </p>
                   <p className="mt-1 text-slate-600">
-                    A verified Youth Agent will be matched to this briefing based on province,
-                    availability, and reliability score.
+                    {request.paymentStatus === 'paid' || request.paymentStatus === 'not_required'
+                      ? 'Nearby agents have been notified. You will see the assigned agent here as soon as someone accepts.'
+                      : 'Complete payment above and we will automatically notify nearby Youth Agents to accept this briefing.'}
                   </p>
                 </div>
               )}

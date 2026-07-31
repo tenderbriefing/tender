@@ -80,10 +80,10 @@ export default function SmeProcurementWorkspace() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link
-          href="/tenders"
+          href="/tenders?briefing=compulsory"
           className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-lg bg-accent-500 px-4 py-2.5 text-sm font-bold text-brand-900 shadow-sm hover:bg-accent-400"
         >
-          Browse tenders & request attendance
+          Browse tenders & book an agent
         </Link>
         <Link
           href="/sme/requests"
@@ -164,9 +164,9 @@ export default function SmeProcurementWorkspace() {
             <ProcurementEmptyState
               icon={Calendar}
               title="No upcoming briefings"
-              description="Request Youth Agent attendance from a compulsory briefing tender."
-              actionLabel="Browse opportunities"
-              actionHref="/tenders"
+              description="Book a Youth Agent from a compulsory briefing tender — one step, fixed fee."
+              actionLabel="Book an agent"
+              actionHref="/tenders?briefing=compulsory"
             />
           ) : (
             <ul className="space-y-2 text-sm">

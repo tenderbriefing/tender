@@ -92,11 +92,11 @@ export default function DashboardWelcome({ userProfile, email }: DashboardWelcom
 
         <div className="mt-7 flex flex-wrap gap-3">
           <Link
-            href="/tenders"
+            href="/tenders?briefing=compulsory"
             className="inline-flex items-center gap-2 rounded-xl bg-accent-500 px-5 py-3 text-sm font-bold text-brand-900 shadow-gold transition hover:bg-accent-400"
           >
             <Sparkles className="h-4 w-4" />
-            Browse tenders & request attendance
+            Browse tenders & book an agent
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link

@@ -105,7 +105,7 @@ export default function Hero() {
                   href="/tenders"
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/5 px-8 py-4 text-base font-semibold text-white backdrop-blur-sm transition hover:border-white/40 hover:bg-white/10"
                 >
-                  Request Youth Agent
+                  Book an agent
                 </Link>
               )}
             </>

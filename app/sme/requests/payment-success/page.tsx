@@ -41,10 +41,10 @@ function PaymentSuccessContent() {
         if (json.success) {
           setRequest(json.data.request)
           if (json.data.request.paymentStatus === 'paid') {
-            setMessage('Payment received. Youth Agents can now view your request.')
+            setMessage('Payment received. Nearby Youth Agents can now accept your booking.')
           } else {
             setMessage(
-              'Payment is being processed. Refresh My Requests in a moment if status is still pending.'
+              'Payment is processing. Open your booking in a moment if status is still pending.'
             )
           }
         }
@@ -72,7 +72,7 @@ function PaymentSuccessContent() {
       <main className="mx-auto max-w-lg px-4 py-12">
         <div className="rounded-2xl border border-accent-200 bg-white p-8 shadow-sm text-center">
           <CheckCircleIcon className="mx-auto h-12 w-12 text-accent-500" />
-          <h1 className="mt-4 text-2xl font-bold text-slate-900">Payment received</h1>
+          <h1 className="mt-4 text-2xl font-bold text-slate-900">You&apos;re booked</h1>
           <p className="mt-2 text-slate-600">{message}</p>
           {request && (
             <dl className="mt-6 text-left text-sm space-y-2 rounded-lg bg-slate-50 p-4">
@@ -93,7 +93,7 @@ function PaymentSuccessContent() {
               href={requestId ? `/sme/requests/${requestId}` : '/sme/requests'}
               className="rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700"
             >
-              View request
+              View this booking
             </Link>
             <Link
               href="/sme/requests"

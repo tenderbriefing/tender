@@ -8,7 +8,7 @@ const STEPS = [
   'Browse opportunities for free',
   'Get matched to relevant tenders based on your categories and commodities',
   'Track compulsory briefings',
-  'Request a verified Youth Agent',
+  'Book a verified Youth Agent in one step',
   `Fixed fee: ${ATTENDANCE_FEE_LABEL} per briefing attended`,
 ]
 
@@ -26,7 +26,7 @@ export default function SmeHowItWorksCard() {
           href="/tenders"
           className="mt-2 text-sm font-semibold text-brand-800 hover:text-accent-600 hover:underline sm:mt-0"
         >
-          Request Youth Agent →
+          Book an agent →
         </Link>
       </div>
       <ul className="mt-4 space-y-3">

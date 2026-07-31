@@ -17,6 +17,10 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { useSmeWorkspaceActions } from '@/hooks/useSmeWorkspaceActions'
 import { ATTENDANCE_FEE_LABEL } from '@/lib/payments/attendanceFee'
 import {
+  BOOK_AGENT_CTA,
+  BOOK_AGENT_CTA_WITH_FEE,
+} from '@/lib/booking/labels'
+import {
   buildGoogleCalendarUrl,
   downloadIcsFile,
 } from '@/lib/procurement/calendarLinks'
@@ -116,7 +120,7 @@ export default function TenderActionPanel({
             className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-accent-500 px-4 text-sm font-bold text-brand-900 shadow-gold transition hover:bg-accent-400 disabled:opacity-60"
           >
             <Sparkles className="h-4 w-4" />
-            Request Agent
+            {BOOK_AGENT_CTA}
           </button>
         </div>
       </div>
@@ -149,13 +153,13 @@ export default function TenderActionPanel({
             className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent-500 px-4 py-3.5 text-sm font-bold text-brand-900 shadow-gold transition hover:bg-accent-400 disabled:opacity-60"
           >
             <Sparkles className="h-4 w-4" />
-            {isClosed ? 'Tender closed' : 'Request Youth Agent'}
+            {isClosed ? 'Tender closed' : BOOK_AGENT_CTA_WITH_FEE}
           </button>
 
           {!user && (
             <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-brand-100/70">
               <Lock className="h-3 w-3" />
-              SME sign-in required to submit a request
+              Sign in as an SME to book — takes under a minute
             </p>
           )}
         </div>

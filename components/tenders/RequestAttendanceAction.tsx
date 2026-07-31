@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
+import {
+  BOOK_AGENT_CTA,
+  BOOK_AGENT_SIGN_IN_CTA,
+} from '@/lib/booking/labels'
 
 interface RequestAttendanceActionProps {
   tender: TenderBriefing
@@ -14,8 +18,8 @@ interface RequestAttendanceActionProps {
 }
 
 /**
- * Role-aware request CTA for tender list surfaces.
- * SME → request-agent; guest → sign-in; youth agent / admin → null (no misleading request).
+ * Role-aware book-agent CTA for tender list surfaces.
+ * SME → request-agent; guest → sign-in; youth agent / admin → null (no misleading CTA).
  */
 export default function RequestAttendanceAction({
   tender,
@@ -51,7 +55,7 @@ export default function RequestAttendanceAction({
         href={requestHref}
         className={`${base} bg-accent-500 text-brand-900 shadow-sm hover:bg-accent-400`}
       >
-        Request Youth Agent
+        {BOOK_AGENT_CTA}
       </Link>
     )
   }
@@ -65,7 +69,7 @@ export default function RequestAttendanceAction({
         }
         className={`${base} border border-brand-600 bg-white text-brand-800 hover:bg-brand-50`}
       >
-        Sign in to request
+        {BOOK_AGENT_SIGN_IN_CTA}
       </button>
     )
   }

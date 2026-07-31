@@ -63,7 +63,7 @@ export default function TenderBriefingCard({ tender }: { tender: TenderBriefing 
               className="px-4 py-2 text-center rounded-xl bg-brand-600 text-white hover:bg-brand-700 text-sm font-medium inline-flex items-center justify-center gap-1"
             >
               <SparklesIcon className="h-4 w-4" />
-              Request Youth Agent
+              Book an agent
             </Link>
           )}
         </div>

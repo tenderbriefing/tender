@@ -65,10 +65,10 @@ export default function SmeRequestsPage() {
         breadcrumb={{ label: 'SME dashboard', href: '/sme/dashboard' }}
         actions={
           <Link
-            href="/tenders"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+            href="/tenders?briefing=compulsory"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-accent-500 px-5 py-2.5 text-sm font-semibold text-brand-900 shadow-sm hover:bg-accent-400"
           >
-            Browse tender opportunities
+            Book an agent
           </Link>
         }
       />
@@ -98,10 +98,10 @@ export default function SmeRequestsPage() {
         ) : requests.length === 0 ? (
           <ProcurementEmptyState
             icon={ClipboardList}
-            title="No attendance requests yet"
-            description="Browse tender opportunities and request Youth Agent attendance for a compulsory briefing session."
-            actionLabel="View tender opportunities"
-            actionHref="/tenders"
+            title="No agent bookings yet"
+            description="Browse compulsory briefing tenders and book a Youth Agent in one step — fixed fee, clear next steps."
+            actionLabel="Book an agent"
+            actionHref="/tenders?briefing=compulsory"
           />
         ) : (
           <div className="space-y-4">

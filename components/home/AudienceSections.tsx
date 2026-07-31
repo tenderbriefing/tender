@@ -18,7 +18,7 @@ const smeBenefits = [
   { icon: Banknote, title: 'Save travel costs', text: 'Attend briefings virtually through verified agents without costly trips.' },
   { icon: Bell, title: 'Never miss briefing deadlines', text: 'Automated alerts for compulsory sessions, site visits, and clarifications.' },
   { icon: ClipboardList, title: 'Access structured meeting reports', text: 'Receive consistent briefing documentation you can use in your bid.' },
-  { icon: Globe, title: 'Request Youth Agents nationwide', text: 'Match attendance support across provinces from a single platform.' },
+  { icon: Globe, title: 'Book Youth Agents nationwide', text: 'Match attendance support across provinces from a single platform.' },
   { icon: LayoutDashboard, title: 'Track opportunities centrally', text: 'Monitor tenders, meetings, and agent requests in one dashboard.' },
 ]
 

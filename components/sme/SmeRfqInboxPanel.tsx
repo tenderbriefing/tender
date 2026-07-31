@@ -186,7 +186,7 @@ export default function SmeRfqInboxPanel() {
                       href={`/tenders/${item.convertedTenderId}/request-agent`}
                       className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white"
                     >
-                      Request youth agent
+                      Book an agent
                     </Link>
                   )}
                 </div>

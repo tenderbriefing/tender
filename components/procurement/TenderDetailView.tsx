@@ -10,6 +10,8 @@ import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 
 import { useAuth } from '@/components/providers/AuthProvider'
 
+import { BOOK_AGENT_CTA_WITH_FEE } from '@/lib/booking/labels'
+
 import {
 
   countdownLabel,
@@ -326,13 +328,13 @@ export default function TenderDetailView({ tender }: TenderDetailViewProps) {
 
         >
 
-          Request Youth Agent Attendance
+          {BOOK_AGENT_CTA_WITH_FEE}
 
         </button>
 
         {!user && (
 
-          <p className="mt-2 text-xs text-slate-600">SME sign-in required to request attendance</p>
+          <p className="mt-2 text-xs text-slate-600">Sign in as an SME to book an agent</p>
 
         )}
 
@@ -480,7 +482,7 @@ export default function TenderDetailView({ tender }: TenderDetailViewProps) {
 
             >
 
-              Request Youth Agent Attendance
+              {BOOK_AGENT_CTA_WITH_FEE}
 
             </button>
 
