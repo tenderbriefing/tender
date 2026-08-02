@@ -53,10 +53,12 @@ describe('procurement intelligence phase 1', () => {
 
   it('feature flag fails closed by default', () => {
     delete process.env.PROCUREMENT_INTELLIGENCE_ENABLED
+    delete process.env.PROCUREMENT_INTELLIGENCE_PILOT_UIDS
     expect(isProcurementIntelligenceEnabled()).toBe(false)
     process.env.PROCUREMENT_INTELLIGENCE_ENABLED = 'true'
     expect(isProcurementIntelligenceEnabled()).toBe(true)
-    expect(isProcurementIntelligencePilotUser('u1')).toBe(true)
+    // Empty pilot list is deny-all for SMEs (controlled pilot)
+    expect(isProcurementIntelligencePilotUser('u1')).toBe(false)
     process.env.PROCUREMENT_INTELLIGENCE_PILOT_UIDS = 'u2'
     expect(isProcurementIntelligencePilotUser('u1')).toBe(false)
     expect(isProcurementIntelligencePilotUser('u2')).toBe(true)

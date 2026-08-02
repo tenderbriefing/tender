@@ -12,9 +12,10 @@ Transform tender listings into explainable SME decision support: what the tender
 |----------|------|
 | `PROCUREMENT_INTELLIGENCE_ENABLED` | Server API gate |
 | `NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED` | Client UI visibility |
-| `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` | Optional SME allow-list |
+| `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` | Comma-separated approved SME UIDs (**required** for SME access when enabled; empty = deny-all) |
 
-Default: **disabled**. Enable for pilot only.
+Default: **disabled**. Empty pilot list is fail-closed (no SME access).  
+To activate a pilot later: set `PROCUREMENT_INTELLIGENCE_ENABLED=true`, set `NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED=true` only if UI should show, and set `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` to approved Firebase Auth UIDs in Cloud Run env / Secret Manager — never invent UIDs.
 
 ## Architecture
 

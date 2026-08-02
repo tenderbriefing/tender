@@ -40,6 +40,10 @@ steps:
 
       - NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=false
 
+      - --build-arg
+
+      - NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED=false
+
       - .
 
 
@@ -88,7 +92,7 @@ steps:
 
       - --allow-unauthenticated
 
-      - --set-env-vars=STORAGE_ADAPTER=firestore,FIREBASE_PROJECT_ID=tenderbriefing-34679,NODE_ENV=production,NEXT_PUBLIC_SITE_URL=https://www.tenderbriefing.co.za,PAYFAST_MODE=live,FOUNDER_USER_INTELLIGENCE_ENABLED=true,NEXT_PUBLIC_FOUNDER_USER_INTELLIGENCE=true,FOUNDER_EMAIL_ALLOWLIST=info@tenderbriefing.co.za,NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=false
+      - --set-env-vars=STORAGE_ADAPTER=firestore,FIREBASE_PROJECT_ID=tenderbriefing-34679,NODE_ENV=production,NEXT_PUBLIC_SITE_URL=https://www.tenderbriefing.co.za,PAYFAST_MODE=live,FOUNDER_USER_INTELLIGENCE_ENABLED=true,NEXT_PUBLIC_FOUNDER_USER_INTELLIGENCE=true,FOUNDER_EMAIL_ALLOWLIST=info@tenderbriefing.co.za,NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=false,PROCUREMENT_INTELLIGENCE_ENABLED=false,NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED=false,PROCUREMENT_INTELLIGENCE_PILOT_UIDS=
 
       - --set-secrets=SYNC_SECRET=tenderbriefing-sync-secret:latest,FIREBASE_SERVICE_ACCOUNT_JSON=tenderbriefing-firebase-sa:latest,TWILIO_ACCOUNT_SID=TWILIO_ACCOUNT_SID:latest,TWILIO_AUTH_TOKEN=TWILIO_AUTH_TOKEN:latest,TWILIO_WHATSAPP_FROM=TWILIO_WHATSAPP_FROM:latest,PAYFAST_MERCHANT_ID=payfast-merchant-id:latest,PAYFAST_MERCHANT_KEY=payfast-merchant-key:latest,PAYFAST_PASSPHRASE=payfast-passphrase:latest,RESEND_API_KEY=Resend_API:latest
 

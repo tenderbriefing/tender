@@ -27,7 +27,11 @@ export function isProcurementIntelligenceUiEnabled(): boolean {
   )
 }
 
-/** Pilot allow-list (comma-separated UIDs). Empty = no extra restriction when flag on. */
+/**
+ * Pilot allow-list (comma-separated UIDs).
+ * Fail-closed: empty list means no SME is authorised (admins may still use API).
+ * Add approved UIDs via PROCUREMENT_INTELLIGENCE_PILOT_UIDS in Secret Manager / Cloud Run env.
+ */
 export function isProcurementIntelligencePilotUser(uid: string | null | undefined): boolean {
   if (!isProcurementIntelligenceEnabled()) return false
   const raw = process.env.PROCUREMENT_INTELLIGENCE_PILOT_UIDS || ''
@@ -35,7 +39,7 @@ export function isProcurementIntelligencePilotUser(uid: string | null | undefine
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
-  if (list.length === 0) return true
+  if (list.length === 0) return false
   if (!uid) return false
   return list.includes(uid)
 }
