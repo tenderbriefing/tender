@@ -11,6 +11,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import TenderHero from '@/components/procurement/TenderHero'
 import TenderIntelligence from '@/components/procurement/TenderIntelligence'
 import TenderActionPanel from '@/components/procurement/TenderActionPanel'
+import SmeProcurementIntelligencePanel from '@/components/procurement/SmeProcurementIntelligencePanel'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 
 export default function TenderDetailsPage() {
@@ -77,7 +78,10 @@ export default function TenderDetailsPage() {
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
         <div className="grid gap-8 lg:grid-cols-[1fr,360px]">
-          <TenderIntelligence tender={tender} />
+          <div className="space-y-8">
+            <SmeProcurementIntelligencePanel tenderId={tender.id} />
+            <TenderIntelligence tender={tender} />
+          </div>
           <TenderActionPanel tender={tender} />
         </div>
 

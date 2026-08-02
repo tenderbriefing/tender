@@ -530,6 +530,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // SME checklist / bid-decision progress — never mutate source tender truth.
+    match /smeTenderIntelligence/{smeId} {
+      allow read, write: if isAdmin()
+        || (isSme() && request.auth.uid == smeId);
+      match /tenders/{tenderId} {
+        allow read, write: if isAdmin()
+          || (isSme() && request.auth.uid == smeId
+            && !request.resource.data.keys().hasAny(['paymentStatus', 'userType', 'role']));
+      }
+    }
+
     match /dailyProcurementBriefs/{docId} {
       allow read: if isAuthenticated();
       allow write: if false;
