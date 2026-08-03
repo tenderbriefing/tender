@@ -408,3 +408,57 @@ describe('users — privilege escalation', () => {
     )
   })
 })
+
+describe('smeTenderIntelligence progress — tenant isolation', () => {
+  const tenderId = 'tender-pi-1'
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore()
+      await setDoc(doc(db, 'smeTenderIntelligence', SME_A, 'tenders', tenderId), {
+        checklistProgress: { item1: true },
+        ownerUid: SME_A,
+      })
+      await setDoc(doc(db, 'smeTenderIntelligence', SME_B, 'tenders', tenderId), {
+        checklistProgress: { item1: false },
+        ownerUid: SME_B,
+      })
+    })
+  })
+
+  it('SME A can read own progress', async () => {
+    await assertSucceeds(
+      getDoc(doc(firestoreAs(SME_A), 'smeTenderIntelligence', SME_A, 'tenders', tenderId))
+    )
+  })
+
+  it('SME A cannot read SME B progress (IDOR)', async () => {
+    await assertFails(
+      getDoc(doc(firestoreAs(SME_A), 'smeTenderIntelligence', SME_B, 'tenders', tenderId))
+    )
+  })
+
+  it('SME A can write own checklist progress', async () => {
+    await assertSucceeds(
+      setDoc(doc(firestoreAs(SME_A), 'smeTenderIntelligence', SME_A, 'tenders', tenderId), {
+        checklistProgress: { item1: true, item2: false },
+        ownerUid: SME_A,
+      })
+    )
+  })
+
+  it('SME A cannot write SME B progress (IDOR)', async () => {
+    await assertFails(
+      setDoc(doc(firestoreAs(SME_A), 'smeTenderIntelligence', SME_B, 'tenders', tenderId), {
+        checklistProgress: { hijacked: true },
+        ownerUid: SME_B,
+      })
+    )
+  })
+
+  it('unauthenticated cannot read progress', async () => {
+    await assertFails(
+      getDoc(doc(firestoreAs(null), 'smeTenderIntelligence', SME_A, 'tenders', tenderId))
+    )
+  })
+})

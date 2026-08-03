@@ -535,7 +535,10 @@ service cloud.firestore {
       allow read, write: if isAdmin()
         || (isSme() && request.auth.uid == smeId);
       match /tenders/{tenderId} {
-        allow read, write: if isAdmin()
+        // Reads must not require request.resource (write-only); cross-tenant denied.
+        allow read: if isAdmin()
+          || (isSme() && request.auth.uid == smeId);
+        allow write: if isAdmin()
           || (isSme() && request.auth.uid == smeId
             && !request.resource.data.keys().hasAny(['paymentStatus', 'userType', 'role']));
       }
