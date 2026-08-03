@@ -19,7 +19,7 @@ Workspace is implemented end-to-end on a feature branch, fail-closed behind `you
 
 ## 3. Final tip SHA
 
-Recorded at certification commit time on branch `feature/youth-agent-workspace-v1` (see git log / PR). Pre-cert tip before this report commit: `83988f0` (+ path-fix commit). Final SHA after this report is pinned in the PR description and §5 CI once green.
+`90c4f0636f6522b9bb822fecd1002679872cf528` on branch `feature/youth-agent-workspace-v1`.
 
 ## 4. Branch and PR
 
