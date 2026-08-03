@@ -32,7 +32,7 @@ Release Manager / on-call SRE with Firebase + Cloud Run access.
 ## Sequence
 
 1. Announce rollback in ops channel.
-2. **PI-only incident (preferred first):** set `PROCUREMENT_INTELLIGENCE_ENABLED=false`, clear or empty `PROCUREMENT_INTELLIGENCE_PILOT_UIDS`, keep public flag false — see `docs/runbooks/PROCUREMENT_INTELLIGENCE_FLAGS.md`.
+2. **PI-only incident (preferred first):** keep both global flags `false`; write non-matching placeholder UID to GSM `procurement-intelligence-pilot-uids` (empty payloads rejected) and `gcloud run services update --update-secrets=PROCUREMENT_INTELLIGENCE_PILOT_UIDS=procurement-intelligence-pilot-uids:latest` — see `docs/runbooks/PROCUREMENT_INTELLIGENCE_FLAGS.md`.
 3. **Full app rollback:** Redeploy via Actions → **Deploy TenderBriefing** → Run workflow → ref **`enterprise-v1.0.0`** (preferred) or SHA `6e6597264faf4cfcd25c09060d93bc5e406c008b`.
 4. Optional: shift Cloud Run traffic to revision `tenderbriefing-00089-zv9` if that revision is still retained and image matches digest above.
 5. If `firestore.rules` changed in bad release: deploy rules from last-good tree.

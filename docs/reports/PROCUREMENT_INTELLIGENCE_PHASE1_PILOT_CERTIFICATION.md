@@ -1,247 +1,350 @@
-# Procurement Intelligence Phase 1 — Pilot Certification
+# Procurement Intelligence Phase 1 — Authenticated Pilot Certification
 
-> **Superseded runtime (2026-08-03):** Authenticated pilot is live on SHA `3c177dd` / revision `tenderbriefing-00095-g97` with GSM allow-list (**2** UIDs), both global flags **false**. See `docs/reports/PROCUREMENT_INTELLIGENCE_PILOT_RESULTS.md` and `docs/reports/PRODUCTION_BASELINE_PI_PILOT_3C177DD.md`.
-
-**Certified (evidence collected):** 2026-08-03T07:40:39Z (post-deploy verification)  
-**Deploy completed:** 2026-08-02T18:18:39Z  
+**Certified:** 2026-08-03T13:16:44Z (UTC) / 2026-08-03T15:16:44+02:00 (SAST)  
 **Verdict:** **PASS WITH CONDITIONS**
+
+Consolidated 49-section report for authenticated pilot activation while **both global flags remain false**.
 
 ---
 
 ## 1. Executive verdict
 
-**PASS WITH CONDITIONS**
+**PASS WITH CONDITIONS** — Authenticated pilot is live. Exact UIDs on GSM allow-list access PI; non-listed users denied; both `PROCUREMENT_INTELLIGENCE_ENABLED` and `NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED` are **false**. Tenant isolation and revoke/restore verified. Residuals: no full production Playwright UI matrix; structural fact harness (not PDF OCR adjudication).
 
-Production runs merge SHA `91a7871` with Procurement Intelligence Phase 1 code present and **globally disabled**. Empty `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` → approved pilot UID count = **0** → authenticated pilot validation **BLOCKED** (by design). No redeploy performed; live revision matched required SHA provenance.
+## 2. Semantics implemented
 
-## 2. Certified starting SHA
+| Control | Meaning |
+|---------|---------|
+| `PROCUREMENT_INTELLIGENCE_ENABLED=false` | Not globally enabled |
+| `NEXT_PUBLIC_…=false` | Advisory UI mirror off; pilots discover panel via API **200** |
+| Non-empty `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` | Exact UIDs may access (pilot path) even when flags false |
+| Empty / non-matching list + flags false | Deny-all (503 if empty+disabled; 403 if list non-empty but UID not listed) |
 
-`6e6597264faf4cfcd25c09060d93bc5e406c008b` (`enterprise-v1.0.0`) — pre-PI production baseline.
+Code: `lib/procurement/intelligence/featureFlag.ts` (`canAccessProcurementIntelligence`). Prior design required ENABLED=true before pilot check — **impossible** for this mandate; fixed in PR #10.
 
-## 3. Deployed SHA
-
-`91a787103cef2f76372a47761ee65d944824199f` (merge of PR #9; contains `f94b51b` fail-closed pilot allow-list).
-
-**SHA proof (not branch inference alone):**
-
-| Evidence | Result |
-|----------|--------|
-| Deploy workflow `headSha` | `91a787103cef2f76372a47761ee65d944824199f` |
-| Checkout in all deploy jobs | `HEAD is now at 91a7871` |
-| Annotated tag `pi-phase1-91a7871` peeled | `91a787103cef2f76372a47761ee65d944824199f` |
-| Cloud Build source tarball file hashes | Match workspace at `91a7871` for `featureFlag.ts`, intelligence route, `cloudbuild.yaml`, `package.json`, `firestore.rules` |
-| Revision env `GIT_SHA` / `COMMIT` | **Not set** on Cloud Run (build does not inject commit env); provenance is workflow + source tarball + image tag = build ID |
-
-## 4. Branch and tag
-
-- Branch: `master` @ `91a7871`
-- Tag: `pi-phase1-91a7871` (annotated; peeled → `91a7871`)
-- PR: [#9](https://github.com/tenderbriefing/tender/pull/9) merged 2026-08-02T17:53:20Z
-- Security fix tip in merge: `f94b51b25c62b0e0cf00f80f99acdad4a281369f`
-
-## 5. Workflow run ID
-
-| Run | Role | Conclusion | Updated UTC |
-|-----|------|------------|-------------|
-| [30759869282](https://github.com/tenderbriefing/tender/actions/runs/30759869282) | Post-merge CI | **success** | 2026-08-02T18:02:00Z |
-| [30760212862](https://github.com/tenderbriefing/tender/actions/runs/30760212862) | Deploy TenderBriefing (`workflow_dispatch`) | **success** | 2026-08-02T18:18:39Z |
-
-Deploy jobs (all success): Auth & Firestore rules QA; Firebase (rules, indexes, storage, hosting); Cloud Run africa-south1; Hosting proxy europe-west1; Verify domains & health.
-
-## 6. Build ID
-
-`44c4a235-fac9-4d1c-82b0-5513686161ef`  
-Created 2026-08-02T18:06:19Z · finished 2026-08-02T18:15:59Z · duration 8M48S · STATUS SUCCESS  
-Region: `africa-south1` · project `tenderbriefing-34679`
-
-## 7. Revision or hosting release
-
-- Cloud Run latestReady: **`tenderbriefing-00090-tgb`**
-- Hosting: Firebase Hosting release complete for `tenderbriefing-34679` (URL https://tenderbriefing-34679.web.app)
-- Hosting proxy: europe-west1 job success (2026-08-02T18:18:19Z)
-
-## 8. Image digest
-
-`sha256:529cb09dedaf730cb1da0a81b0551d33929d23c0f12949d30d11eac3a1287e3b`  
-
-FQDN: `africa-south1-docker.pkg.dev/tenderbriefing-34679/tenderbriefing/tenderbriefing@sha256:529cb09dedaf730cb1da0a81b0551d33929d23c0f12949d30d11eac3a1287e3b`  
-
-Tag: `44c4a235-fac9-4d1c-82b0-5513686161ef` (= Cloud Build ID)
-
-## 9. Traffic allocation
-
-**100%** → `tenderbriefing-00090-tgb` (`latestRevision: true`)
-
-## 10. Firestore rules and indexes status
-
-From deploy job logs (2026-08-02T18:05:22Z–18:05:36Z):
-
-- ✔ `firestore.rules` compiled and **released** to `cloud.firestore`
-- ✔ indexes from `firestore.indexes.json` **deployed successfully** for `(default)` database
-- ✔ `storage.rules` released
-- ✔ Hosting version finalized / release complete — **Deploy complete!**
-
-## 11. Auth smoke results by scenario
-
-| Scenario | Result | Evidence |
-|----------|--------|----------|
-| `/api/health/firestore` www | **PASS** 200 `{"status":"ok","connected":true}` | curl 2026-08-03T07:40:42Z |
-| Health apex / web.app / Cloud Run | **PASS** 200 ok/connected | curl same window |
-| Deploy verify domains | **PASS** health 200; www/apex/web.app 200 | job 91530833879 |
-| PI API unauth | **PASS fail-closed** 401 middleware (`Unauthorized — sign in required`) before route; route would return 503 `feature_disabled` when enabled-check runs | curl + `middleware.ts` + route source |
-| Tender detail HTML panel leakage | **PASS** no rendered Opportunity Fit / eligibility panel in SSR HTML; client gate baked `false&&false` | curl + chunk inspect |
-| `/bookings` retirement | **PASS** 307 (server `redirect('/sme/requests')`) | curl + `app/bookings/page.tsx` |
-| `/api/bookings` retirement | **PASS** 404 `This API is not available in production` | curl |
-| `/auth/signin` | **PASS** 200 | curl |
-| Admin PI page unauth HTML | 200 shell (client auth); admin PI API **401** | curl |
-| Email/password / Google IdP / session E2E | **MANUAL / BLOCKED** (no smoke credentials; no invented pilot UIDs) | — |
-| Authenticated PI pilot | **BLOCKED** — pilot UID count = 0 | Cloud Run env |
-| Live PayFast | **NOT RUN** (non-destructive cert) | — |
-
-## 12. Production runtime evidence
-
-| Flag / env on `tenderbriefing-00090-tgb` | Value |
-|------------------------------------------|-------|
-| `PROCUREMENT_INTELLIGENCE_ENABLED` | `false` |
-| `NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED` | `false` |
-| `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` | empty (key present, no value) |
-| Approved pilot UID count | **0** |
-
-PI AI/enrichment cost with flags off: **~0** (no OpenAI required for Phase 1 scoring; API gated).
-
-## 13. Rollback baseline
+## 3. Pre-activation baseline (Phase 1)
 
 | Field | Value |
 |-------|--------|
-| Tag | `enterprise-v1.0.0` (**do not modify/delete**) |
+| SHA | `91a787103cef2f76372a47761ee65d944824199f` |
+| Tag | `pi-phase1-91a7871` |
+| Revision | `tenderbriefing-00090-tgb` @ 100% |
+| Digest | `sha256:529cb09dedaf730cb1da0a81b0551d33929d23c0f12949d30d11eac3a1287e3b` |
+| Flags | both **false** |
+| Pilot count | **0** |
+| Deploy | [30760212862](https://github.com/tenderbriefing/tender/actions/runs/30760212862) |
+| Health | 200 ok/connected |
+| Unauth PI | 401 |
+| Baseline UTC/SAST | 2026-08-03T11:53:29Z / 13:53:29+0200 |
+
+## 4. Certified starting SHA (enterprise rollback)
+
+`6e6597264faf4cfcd25c09060d93bc5e406c008b` (`enterprise-v1.0.0`)
+
+## 5. Final deployed code SHA
+
+`a6d2b922e634efc64e8ebe1b5886f4b46006a087` (includes PR #10 pilot-with-flags-false + PR #11 progress read rules)
+
+## 6. Intermediate pilot activation SHA
+
+`3c177dd73595f3325672626603dbae4e06fd2063` (`pi-pilot-3c177dd`) — first authenticated pilot image digest `sha256:fd66ab379a202aec3f182a0479f3eae96b073c8bcef21d7f29532a079627b866`
+
+## 7. Branch and tags
+
+| Ref | SHA |
+|-----|-----|
+| `master` | `a6d2b92…` |
+| Tag `pi-pilot-3c177dd` | `3c177dd…` |
+| Tag `pi-pilot-rules-a6d2b92` | `a6d2b92…` |
+| Tag `pi-phase1-91a7871` | `91a7871…` |
+| Tag `enterprise-v1.0.0` | `6e65972…` (**preserve**) |
+
+## 8. Pull requests
+
+| PR | Purpose | CI |
+|----|---------|-----|
+| [#10](https://github.com/tenderbriefing/tender/pull/10) | Pilot allow-list independent of global flags; GSM binding; UI API probe | [30811591073](https://github.com/tenderbriefing/tender/actions/runs/30811591073) success |
+| [#11](https://github.com/tenderbriefing/tender/pull/11) | Fix progress doc reads (`request.resource` write-only); IDOR tests | [30814049322](https://github.com/tenderbriefing/tender/actions/runs/30814049322) success |
+
+## 9. Workflow run IDs (deploy)
+
+| Run | Ref | Conclusion | Finished UTC |
+|-----|-----|------------|--------------|
+| [30812294505](https://github.com/tenderbriefing/tender/actions/runs/30812294505) | `pi-pilot-3c177dd` | success | ~2026-08-03T12:23Z |
+| [30814718880](https://github.com/tenderbriefing/tender/actions/runs/30814718880) | `pi-pilot-rules-a6d2b92` | success | 2026-08-03T12:59:28Z |
+
+Manual `workflow_dispatch` only — no auto-deploy.
+
+## 10. Cloud Build IDs
+
+| Build | Role |
+|-------|------|
+| `9625b2fd-aefc-474e-bdbc-007117841557` | Pilot code image (`3c177dd`) |
+| `04107842-040e-4bc0-980f-fdd1bc2d4d04` | Rules+code image (`a6d2b92`) |
+
+## 11. Current Cloud Run revision
+
+**`tenderbriefing-00096-h4h`** @ **100%** traffic (`latestRevision: true`)
+
+## 12. Image digest (current)
+
+`sha256:853b9d5e003f60c7a6f02295a520b031132254032c43ebd4b19642c24e1954d5`
+
+## 13. Traffic allocation
+
+100% → `tenderbriefing-00096-h4h`
+
+## 14. Feature flags (live)
+
+| Variable | Value |
+|----------|--------|
+| `PROCUREMENT_INTELLIGENCE_ENABLED` | `false` |
+| `NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED` | `false` |
+
+## 15. Pilot allow-list configuration
+
+| Field | Value |
+|-------|--------|
+| Source | GSM secret `procurement-intelligence-pilot-uids` → Cloud Run env (secretKeyRef `:latest`) |
+| Count | **2** |
+| Masks | `DT64…ag53`, `dGkf…s9e2` |
+| Survive redeploy | Yes (bound in `cloudbuild.yaml` `--set-secrets`) |
+
+## 16. Identity discovery (Phase 2)
+
+Preferred existing ops-smoke / tenderbriefing.co.za QA accounts — no ordinary customer subjects.
+
+## 17. Pilot A (internal/admin)
+
+| Field | Value |
+|-------|--------|
+| Email | ops-smoke-admin@tenderbriefing.co.za |
+| UID mask | `DT64…ag53` |
+| Type | admin |
+| Synthetic | no |
+
+## 18. Pilot B (SME)
+
+| Field | Value |
+|-------|--------|
+| Email | ops-smoke-sme@tenderbriefing.co.za |
+| UID mask | `dGkf…s9e2` |
+| Type | sme |
+| Synthetic | no |
+
+## 19. Control C (SME non-pilot)
+
+| Field | Value |
+|-------|--------|
+| Email | ops-smoke-sme-control@tenderbriefing.co.za |
+| UID mask | `p0ox…z2P2` |
+| Type | sme |
+| Synthetic | **yes** (`cleanupTag=pi-phase1-pilot-synthetic`) |
+| On allow-list | **no** |
+
+## 20. Synthetic identity registry
+
+Masked registry in gitignored `.qa-pi-pilot-identity-registry.json`. Passwords only in gitignored `.qa-*` files / never committed. GSM holds UID CSV only.
+
+## 21. Secret Manager operations
+
+- Created `procurement-intelligence-pilot-uids`
+- IAM: `9058655644-compute@developer.gserviceaccount.com` → `secretAccessor`
+- Versions: v1=pilots, v2=revoke placeholder `__PILOT_REVOKED__`, v3=restored pilots (latest)
+
+## 22. Release gates (local + CI)
+
+| Gate | Result |
+|------|--------|
+| typecheck / lint / vitest | PASS (35 unit/integration after flag tests) |
+| secrets-scan / config QA | PASS |
+| CI PR #10 | SUCCESS |
+| CI PR #11 (incl. Firestore emulator IDOR) | SUCCESS |
+
+## 23. Manual deploy posture
+
+No percentage rollout. No auto-deploy. `workflow_dispatch` on exact tags only.
+
+## 24. Health after final deploy
+
+`GET /api/health/firestore` → **200** `{"status":"ok","connected":true}` (2026-08-03T13:16:44Z)
+
+## 25. Unauthenticated acceptance
+
+`GET /api/procurement/intelligence/{id}` without Bearer → **401**
+
+## 26. Authenticated Pilot A acceptance
+
+Admin on allow-list → **200**; eligibility + Opportunity Fit + checklist present; `definitiveEligible: false`
+
+## 27. Authenticated Pilot B acceptance
+
+SME on allow-list → **200** on bounded sample; machine-assisted; non-definitive eligibility classes; Opportunity Fit score present
+
+## 28. Control C denial
+
+Authenticated SME **not** on list → **403** `Pilot access required`
+
+## 29. Forged / wrong-role denial
+
+Youth-agent token → **401** (role not in SME/admin allow set for route)
+
+## 30. Bounded tender sample
+
+**8** tenders (within 5–10). Pilot B **8/8** HTTP 200 with structured intelligence. No unrestricted AI backfill.
+
+Sample manifest (masked ids): `tb-155…` Eastern Cape; `tb-156…` Free State / Gauteng / Western Cape / Mpumalanga (×4 more) — titles recorded in `.qa-pi-acceptance-results.json` (gitignored).
+
+## 31. Facts / eligibility / Opportunity Fit / docs gaps
+
+| Check | Result |
+|-------|--------|
+| Structured facts / summary | Present |
+| Eligibility classification | Enum (e.g. `likely_ineligible`) — non-definitive |
+| Opportunity Fit | Numeric score + factors |
+| Checklist | Length ≥ 1 (observed 5) |
+| Missing tender | **404** |
+| Missing profile fields | Surfaced in eligibility when applicable |
+
+## 32. Checklist persistence
+
+After rules fix: Pilot B **read own** + **write own** progress under `smeTenderIntelligence/{uid}/tenders/{tenderId}` via Firebase client SDK — **PASS**
+
+## 33. UI visibility with public flag false
+
+`SmeProcurementIntelligencePanel` probes API; shows on **200**; hides on 401/403/503 when `NEXT_PUBLIC_…=false`. No global public flag flip.
+
+## 34. Tenant isolation live matrix
+
+| Case | Result |
+|------|--------|
+| Pilot B API payload leaks Control UID | **No** |
+| Control denied API while pilot allowed | **403** |
+| Pilot B reads own progress | **PASS** |
+| Pilot B reads Control progress | **DENIED** |
+| Control reads Pilot progress | **DENIED** |
+| Control reads own progress | **PASS** |
+
+**HOLD threshold:** any cross-tenant exposure → HOLD. **None observed.**
+
+## 35. Defect found and fixed (Phase 11)
+
+Progress subcollection rules applied write-only `request.resource` guard to **reads**, failing closed for legitimate own reads. Fixed in PR #11; redeployed via [30814718880](https://github.com/tenderbriefing/tender/actions/runs/30814718880). Emulator IDOR tests added.
+
+## 36. Revoke evidence (kill-switch)
+
+| Step | Result |
+|------|--------|
+| GSM version with non-matching placeholder | Created (empty payload rejected by GSM) |
+| `gcloud run services update --update-secrets=…:latest` | `tenderbriefing-00092-ndr` |
+| Pilot B after revoke | **403** |
+| Unauth | **401** |
+| Flags | remained **false** |
+
+## 37. Restore evidence
+
+| Step | Result |
+|------|--------|
+| Restore 2-UID secret version | Created |
+| Service update | `tenderbriefing-00093-twh` (later superseded by rules deploy → `00096-h4h`) |
+| Pilot B | **200** |
+| Control C | still **403** |
+
+## 38. Observability / cost (bounded sample)
+
+| Signal | Result |
+|--------|--------|
+| `intelligence_completed` logs | Present around acceptance window |
+| Unrestricted backfill | **Not executed** |
+| Global flags | false → non-pilots cannot invoke |
+| Incremental AI cost | Phase 1 deterministic scoring; no required OpenAI call for sample |
+| Pilot API latency (prior harness) | avg ~2.7s on sample (acceptable for cert; not SLO breach) |
+
+## 39. Firestore rules & indexes status
+
+Deployed successfully in final workflow Firebase job (`firestore.rules` + indexes). Progress read/write isolation covered by emulator tests in CI.
+
+## 40. Hosting / proxy
+
+Deploy jobs for Firebase Hosting + europe-west1 proxy **success** on final run.
+
+## 41. Security posture summary
+
+- Fail-closed empty list
+- Server authz only (Bearer + Firestore userType)
+- No client role trust
+- UIDs never in git; masked in docs
+- No invented real-person approval
+- No ordinary customer pilots
+
+## 42. Rollback baseline (preserve)
+
+| Field | Value |
+|-------|--------|
+| Tag | `enterprise-v1.0.0` |
 | SHA | `6e6597264faf4cfcd25c09060d93bc5e406c008b` |
 | Revision | `tenderbriefing-00089-zv9` |
-| Image digest | `sha256:ad6eeb8c8afb86c9ae1aa61d1d3100cbb2c4e7cc190a862236828bceecf898b3` |
-| Prior deploy | [30653868712](https://github.com/tenderbriefing/tender/actions/runs/30653868712) |
-| Procedure | `docs/runbooks/ROLLBACK.md` + `docs/runbooks/PROCUREMENT_INTELLIGENCE_FLAGS.md` |
+| Digest | `sha256:ad6eeb8c8afb86c9ae1aa61d1d3100cbb2c4e7cc190a862236828bceecf898b3` |
 
-## 14. Conditions or manual residuals
+PI-only kill: placeholder GSM UID + service update (flags stay false). Full app: redeploy `enterprise-v1.0.0`.
 
-1. **Authenticated pilot validation BLOCKED** until real Firebase Auth UIDs are added to `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` (Cloud Run env / Secret Manager) and server flag enabled under controlled change.
-2. No `GIT_SHA` env on revision — commit provenance via Actions checkout + source tarball hash match (documented above).
-3. Residual P1: secret-gated full authenticated UI E2E (enterprise programme carry-forward).
-4. Ops: Cloud Armor / monitoring alert attachment still operational residual from enterprise baseline.
-5. Build source tarball historically included a runner creds filename under upload contents — treat as ops hygiene (ensure `.gcloudignore` / upload exclusions); do not commit secrets.
+## 43. Conditions / residuals
 
-## 15. Certification document locations
+1. Full browser Playwright production UI / a11y matrix not re-executed (API + client SDK path certified).
+2. Fact checks are structural — not issuer-document OCR adjudication.
+3. GSM cannot store truly empty secret payloads — revoke uses non-matching placeholder.
+4. Cloud Armor / monitoring attachment remains enterprise ops residual.
+5. Synthetic Control C should be cleaned up after pilot window (`cleanupTag=pi-phase1-pilot-synthetic`).
 
-- `docs/reports/PROCUREMENT_INTELLIGENCE_PHASE1_PILOT_CERTIFICATION.md` (this file)
-- `docs/reports/ENTERPRISE_V1_EXECUTION_REPORT.md`
+## 44. Recommended next actions
+
+1. Keep flags **false**; manage membership only via GSM secret.
+2. After pilot window: empty/placeholder secret + update service, or remove synthetic Control C.
+3. Optional: attach dashboards/alerts for `intelligence_completed` rate by UID hash.
+4. Do **not** set global ENABLED=true without explicit product decision.
+
+## 45. Document index
+
+- This file
+- `docs/reports/PROCUREMENT_INTELLIGENCE_PILOT_RESULTS.md`
+- `docs/reports/PRODUCTION_BASELINE_PI_PILOT_A6D2B92.md`
+- `docs/reports/PRODUCTION_BASELINE_PI_PILOT_3C177DD.md` (intermediate)
 - `docs/releases/REGISTRY.md`
 - `docs/runbooks/PROCUREMENT_INTELLIGENCE_FLAGS.md`
+- `docs/runbooks/PROCUREMENT_INTELLIGENCE_PILOT.md`
 - `docs/runbooks/ROLLBACK.md`
 - `docs/architecture/PROCUREMENT_INTELLIGENCE_PHASE1.md`
-- `docs/adr/009-procurement-intelligence-phase1.md`
 
----
+## 46. Architecture summary
 
-## Workstream 2 — Feature delivery (post-merge production)
+Listing fields → eligibility → Opportunity Fit → checklist → actions; API `GET /api/procurement/intelligence/[tenderId]`; panel API-probed.
 
-### 1. Executive verdict
+## 47. Data model
 
-**PASS WITH CONDITIONS** — code merged and deployed disabled; pilot auth blocked.
+Source truth: `tenderBriefings`. Progress: `smeTenderIntelligence/{smeId}/tenders/{tenderId}` (owner SME / admin).
 
-### 2. Starting production baseline SHA
+## 48. Tests inventory (final tip)
 
-`6e6597264faf4cfcd25c09060d93bc5e406c008b`
+| Suite | Notes |
+|-------|-------|
+| Unit PI flags | 7 tests incl. pilot-with-flags-false + parser edges |
+| Firestore IDOR | Includes smeTenderIntelligence own/cross matrix |
+| Release CI | PR #10 + #11 green before deploys |
 
-### 3. Final feature SHA
+## 49. Sign-off snapshot
 
-`91a787103cef2f76372a47761ee65d944824199f` (merge); tip of feature before merge `f94b51b25c62b0e0cf00f80f99acdad4a281369f`
-
-### 4. Branch
-
-`feature/procurement-intelligence-phase-1` → merged to `master`
-
-### 5. Ahead/behind status
-
-`master` matches `origin/master` at `91a7871` at certification time (pre-docs commit).
-
-### 6. Commits created (feature lineage into merge)
-
-`2c42d8d` feat → `ca3e3d1` docs → `ac21827` docs → `f94b51b` fail-closed fix → `91a7871` merge PR #9
-
-### 7. Files created (representative)
-
-`lib/procurement/intelligence/*`, `app/api/procurement/intelligence/[tenderId]/route.ts`, `components/procurement/SmeProcurementIntelligencePanel.tsx`, `tests/unit/procurementIntelligence.test.ts`, ADR-009, architecture doc
-
-### 8. Files modified (representative)
-
-Tender detail page, `firestore.rules` (`smeTenderIntelligence`), `cloudbuild.yaml` (flags pinned false), `.env.local.example`
-
-### 9. Architecture summary
-
-Deterministic pipeline: listing facts → eligibility → Opportunity Fit → checklist → actions; API `GET /api/procurement/intelligence/[tenderId]`; SME panel gated by public+server flags.
-
-### 10. Data model summary
-
-Source: `tenderBriefings`. Optional progress: `smeTenderIntelligence/{smeId}/tenders/{tenderId}` (owner/admin rules).
-
-### 11. Intelligence capabilities delivered
-
-Structured summary, non-definitive eligibility classes, Opportunity Fit 0–100, compliance checklist, recommended actions (including book-agent). Schema `pi-phase1-1.0.0`.
-
-### 12. Eligibility and scoring methodology
-
-Rule-based; `definitiveEligible: false` always; rules version `opportunity-fit-1.0.0`; never award probability.
-
-### 13. Security and tenant-isolation controls
-
-Bearer SME/admin; pilot allow-list fail-closed when empty; middleware auth on non-public APIs; Firestore rules for progress docs; no invented UIDs used in cert.
-
-### 14. Prompt-injection protections
-
-Phase 1 uses structured listing fields + fixed rules (no document-driven LLM system override).
-
-### 15. Feature-flag and pilot status
-
-**Disabled globally.** Pilot UID list empty → count **0**. Enable path documented in `docs/runbooks/PROCUREMENT_INTELLIGENCE_FLAGS.md`.
-
-### 16. Tests run and exact results
-
-| Suite | Result | Source |
-|-------|--------|--------|
-| Unit + integration (vitest) | **31 passed** / 8 files | CI [30759869282](https://github.com/tenderbriefing/tender/actions/runs/30759869282) + local reconfirm 2026-08-03 |
-| PI unit subset | **3 passed** | `tests/unit/procurementIntelligence.test.ts` |
-| Firestore emulator IDOR | **24 passed** / 1 file | CI job Firestore emulator |
-| Playwright public/a11y | **10 passed** | CI Playwright job |
-| Typecheck / lint / production build | SUCCESS (CI jobs) | 30759869282 |
-
-### 17. CI run and status
-
-[30759869282](https://github.com/tenderbriefing/tender/actions/runs/30759869282) **success** on `91a7871`
-
-### 18. Performance findings
-
-No unrestricted backfill; Phase 1 scoring is in-process deterministic (no external AI call required).
-
-### 19. AI usage and cost controls
-
-Flags off → no PI API computation for clients; ~0 incremental AI cost.
-
-### 20. Migration or backfill status
-
-Additive only; no destructive migration; no tender backfill executed.
-
-### 21. Deployment status
-
-**Deployed** via [30760212862](https://github.com/tenderbriefing/tender/actions/runs/30760212862) to revision `tenderbriefing-00090-tgb` @ 100%, feature disabled.
-
-### 22. Known residual risks
-
-Pilot not exercised live; authenticated E2E secret-gated; ops monitoring/Armor residuals.
-
-### 23. Rollback instructions
-
-1. Kill switch: keep/set PI flags `false` (already false).  
-2. Traffic rollback: redeploy tag `enterprise-v1.0.0` or route to `tenderbriefing-00089-zv9` per `docs/runbooks/ROLLBACK.md`.  
-3. Do not delete `enterprise-v1.0.0`.
-
-### 24. Recommended next action
-
-Provision **real** approved SME Firebase Auth UIDs into Cloud Run / Secret Manager `PROCUREMENT_INTELLIGENCE_PILOT_UIDS`, enable server flag only for that allow-list, run bounded authenticated pilot validation — **do not** globally enable without explicit product decision.
+| Item | Value |
+|------|--------|
+| Verdict | **PASS WITH CONDITIONS** |
+| Code SHA | `a6d2b922e634efc64e8ebe1b5886f4b46006a087` |
+| Tag | `pi-pilot-rules-a6d2b92` |
+| Deploy | [30814718880](https://github.com/tenderbriefing/tender/actions/runs/30814718880) |
+| Build | `04107842-040e-4bc0-980f-fdd1bc2d4d04` |
+| Revision | `tenderbriefing-00096-h4h` @ 100% |
+| Digest | `sha256:853b9d5e003f60c7a6f02295a520b031132254032c43ebd4b19642c24e1954d5` |
+| Flags | false / false |
+| Pilot count | 2 |
+| Isolation | PASS (no cross-tenant exposure) |
+| Revoke/restore | PASS |
+| Certified UTC | 2026-08-03T13:16:44Z |
+| Certified SAST | 2026-08-03T15:16:44+02:00 |
