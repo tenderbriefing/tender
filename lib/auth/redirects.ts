@@ -15,13 +15,15 @@ export function dashboardPathForRole(userType?: UserProfile['userType']): string
 export const SME_NAV = [
   { name: 'Tender Opportunities', href: '/tenders' },
   { name: 'My Requests', href: '/sme/requests' },
+  { name: 'Verify reports', href: '/sme/verify' },
   { name: 'Profile', href: '/settings' },
 ] as const
 
 export const AGENT_NAV = [
+  { name: 'Workspace', href: '/agent/workspace/today' },
   { name: 'Available Assignments', href: '/jobs' },
   { name: 'Assigned Briefings', href: '/agent/dashboard' },
-  { name: 'Completed Reports', href: '/agent/dashboard' },
+  { name: 'Field app', href: '/agent/mobile/dispatch' },
   { name: 'Profile', href: '/settings' },
 ] as const
 
@@ -30,6 +32,7 @@ export const ADMIN_NAV = [
   { name: 'Registrations', href: '/admin/registrations' },
   { name: 'Operations', href: '/admin/operations' },
   { name: 'Dispatch', href: '/admin/dispatch' },
+  { name: 'Agent Workspace', href: '/admin/agent-workspace' },
   { name: 'AI Insights', href: '/admin/ai-insights' },
   { name: 'Procurement Intel', href: '/admin/procurement-intelligence' },
   { name: 'RFQ Inbox', href: '/admin/procurement-inbox' },
