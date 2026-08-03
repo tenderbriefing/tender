@@ -19,7 +19,8 @@ Workspace is implemented end-to-end on a feature branch, fail-closed behind `you
 
 ## 3. Final tip SHA
 
-`6d65e562bfae336ad7ca798cb3e55a48ee749a2c` on branch `feature/youth-agent-workspace-v1`.
+Implementation tip: `90c4f0636f6522b9bb822fecd1002679872cf528`  
+Branch tip at PR open: see GitHub PR / `git rev-parse origin/feature/youth-agent-workspace-v1` (docs commits follow implementation tip).
 
 ## 4. Branch and PR
 
