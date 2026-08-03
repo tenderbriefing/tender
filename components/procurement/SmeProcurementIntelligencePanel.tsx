@@ -29,10 +29,12 @@ export default function SmeProcurementIntelligencePanel({ tenderId }: Props) {
   const [data, setData] = useState<ProcurementIntelligenceResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const enabled = isProcurementIntelligenceUiEnabled()
+  /** Public env is advisory only; pilots discover UI via authenticated API 200. */
+  const publicEnabled = isProcurementIntelligenceUiEnabled()
+  const [serverVisible, setServerVisible] = useState(publicEnabled)
 
   useEffect(() => {
-    if (!enabled || !tenderId) return
+    if (!tenderId) return
     let active = true
     const run = async () => {
       setLoading(true)
@@ -40,23 +42,45 @@ export default function SmeProcurementIntelligencePanel({ tenderId }: Props) {
       try {
         const user = auth.currentUser
         if (!user) {
-          setError('Sign in as an SME to view opportunity intelligence.')
+          if (publicEnabled) {
+            setServerVisible(true)
+            setError('Sign in as an SME to view opportunity intelligence.')
+          } else {
+            setServerVisible(false)
+          }
+          setData(null)
           return
         }
         const token = await user.getIdToken()
         const res = await fetch(`/api/procurement/intelligence/${encodeURIComponent(tenderId)}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
-        const json = await res.json()
+        const json = await res.json().catch(() => ({}))
         if (!active) return
-        if (!res.ok) {
-          setError(json?.error?.message || json?.error || 'Intelligence unavailable')
-          setData(null)
+        if (res.ok) {
+          setServerVisible(true)
+          setData(json.data)
           return
         }
-        setData(json.data)
+        // Fail-closed for non-pilots when public flag is false: hide panel entirely.
+        if (!publicEnabled && (res.status === 401 || res.status === 403 || res.status === 503)) {
+          setServerVisible(false)
+          setData(null)
+          setError(null)
+          return
+        }
+        setServerVisible(publicEnabled)
+        setError(json?.error?.message || json?.error || 'Intelligence unavailable')
+        setData(null)
       } catch {
-        if (active) setError('Failed to load procurement intelligence')
+        if (active) {
+          if (publicEnabled) {
+            setServerVisible(true)
+            setError('Failed to load procurement intelligence')
+          } else {
+            setServerVisible(false)
+          }
+        }
       } finally {
         if (active) setLoading(false)
       }
@@ -65,9 +89,9 @@ export default function SmeProcurementIntelligencePanel({ tenderId }: Props) {
     return () => {
       active = false
     }
-  }, [enabled, tenderId])
+  }, [publicEnabled, tenderId])
 
-  if (!enabled) return null
+  if (!serverVisible) return null
 
   return (
     <section

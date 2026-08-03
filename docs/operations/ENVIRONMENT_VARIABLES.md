@@ -24,9 +24,9 @@ Never commit real secret values. Rotate via Google Secret Manager / hosting env.
 | `SYNC_SECRET` | Sync/automation auth | ops | Yes | string | Ops | Sync denied |
 | `SMOKE_TEST_PASSWORD` | Smoke scripts | CI/smoke only | Yes | string | QA | Smoke cannot run |
 | `FOUNDER_USER_INTELLIGENCE_ENABLED` | Founder UI flag | optional | No | true/false | Founder | Feature hidden |
-| `PROCUREMENT_INTELLIGENCE_ENABLED` | Server gate for PI Phase 1 API | optional (default false) | No | true/false | Product/Platform | API 503 when false |
-| `NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED` | Client UI panel visibility (build-time) | optional (default false) | No | true/false | Product | Panel hidden when false |
-| `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` | Comma-separated approved SME Firebase Auth UIDs; empty = deny-all | optional | Prefer secret | uid,uid | Product/Ops | SME PI forbidden when empty |
+| `PROCUREMENT_INTELLIGENCE_ENABLED` | Global enablement for PI Phase 1 (`false` = not globally enabled; pilots may still access via allow-list) | optional (default false) | No | true/false | Product/Platform | Without pilot UIDs → 503 |
+| `NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED` | Advisory client UI mirror only (must stay false for pilot-only); panel also appears on authenticated API 200 | optional (default false) | No | true/false | Product | Non-pilots see no panel |
+| `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` | Comma-separated approved Firebase Auth UIDs; pilot path works while ENABLED=false; empty = deny-all | optional | Yes (GSM `procurement-intelligence-pilot-uids`) | uid,uid | Product/Ops | Deny-all when empty + flag false |
 
 Pilot enablement procedure: `docs/runbooks/PROCUREMENT_INTELLIGENCE_FLAGS.md`.
 
