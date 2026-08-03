@@ -65,7 +65,11 @@ export async function GET(request: NextRequest) {
       hasMore: limit ? offset + page.length < visible.length : false,
       lastUpdated: publicSync.lastUpdated,
       syncStatus: publicSync,
-      policy: { compulsoryBriefingsOnly: !includeOptional },
+      policy: {
+        compulsoryBriefingsOnly: !includeOptional,
+        // Non-admins: hide tenders whose briefing datetime has passed (SAST).
+        upcomingBriefingsOnly: viewer?.userType !== 'admin',
+      },
     })
   } catch (error) {
     return NextResponse.json(

@@ -1,4 +1,5 @@
 import { backend } from '@/lib/backend/loadServices'
+import { hasUpcomingBriefing } from '@/lib/procurement/dates'
 import { toPublicTenderStats, type PublicTenderStats } from '@/lib/security/publicTender'
 import type { AdminDashboardStats, SyncStatus } from '@/lib/tenderBriefing/types'
 
@@ -18,8 +19,12 @@ export async function buildPublicProcurementStats(): Promise<AdminDashboardStats
     syncService.getSyncStatus(),
   ])
 
+  // Align public KPIs with catalogue policy: compulsory + upcoming briefing datetime.
   const compulsoryPublicTenders = tenders.filter(
-    (t) => t.visibility !== 'private' && t.briefingCompulsory === true
+    (t) =>
+      t.visibility !== 'private' &&
+      t.briefingCompulsory === true &&
+      hasUpcomingBriefing(t.briefingDate, t.briefingTime)
   )
 
   const departmentCounts: Record<string, number> = {}

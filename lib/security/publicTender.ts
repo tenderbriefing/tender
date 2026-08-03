@@ -1,9 +1,13 @@
+import { hasUpcomingBriefing } from '@/lib/procurement/dates'
 import type { AdminDashboardStats, SyncStatus, TenderBriefing } from '@/lib/tenderBriefing/types'
 
 /**
  * Platform policy: TenderBriefing only surfaces compulsory briefing opportunities.
- * Private RFQs (visibility === 'private') are always visible to their owner and admins
- * regardless of briefing status.
+ * Public catalogue cut-off is the briefing datetime (Africa/Johannesburg): once it
+ * has passed, the tender is hidden from the website / public APIs. Closing-date and
+ * OCDS `status` remain separate (display/sync); they are not the public list cut-off.
+ * Private RFQs stay visible to their owner and admins regardless of briefing date.
+ * Records are filtered at list time (not hard-deleted).
  */
 export type PlatformViewer =
   | { userType: 'admin'; uid: string }
@@ -17,7 +21,7 @@ export function isCompulsoryBriefingTender(tender: TenderBriefing): boolean {
 export function isPlatformVisibleToViewer(
   tender: TenderBriefing,
   viewer: PlatformViewer,
-  options: { allowOptionalForAdmin?: boolean } = {}
+  options: { allowOptionalForAdmin?: boolean; now?: Date } = {}
 ): boolean {
   if (viewer?.userType === 'admin') {
     return options.allowOptionalForAdmin === true ? true : isCompulsoryBriefingTender(tender)
@@ -25,13 +29,14 @@ export function isPlatformVisibleToViewer(
   if (tender.visibility === 'private') {
     return viewer?.userType === 'sme' && tender.ownerUid === viewer.uid
   }
-  return isCompulsoryBriefingTender(tender)
+  if (!isCompulsoryBriefingTender(tender)) return false
+  return hasUpcomingBriefing(tender.briefingDate, tender.briefingTime, options.now)
 }
 
 export function filterPlatformVisible(
   tenders: TenderBriefing[],
   viewer: PlatformViewer,
-  options: { allowOptionalForAdmin?: boolean } = {}
+  options: { allowOptionalForAdmin?: boolean; now?: Date } = {}
 ): TenderBriefing[] {
   return tenders.filter((t) => isPlatformVisibleToViewer(t, viewer, options))
 }
