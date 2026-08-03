@@ -33,9 +33,16 @@ Branch tip at PR open: see GitHub PR / `git rev-parse origin/feature/youth-agent
 
 ## 5. CI run ID and result
 
-Pending first push — attach CI run ID when `verify` / `firestore_rules_emulator` / `build` / `e2e_public` complete on the PR tip.
+| Field | Value |
+|-------|--------|
+| CI run | [30852406125](https://github.com/tenderbriefing/tender/actions/runs/30852406125) |
+| Result | **success** |
+| PR | [#13](https://github.com/tenderbriefing/tender/pull/13) |
+| Branch tip | `0ac7d1e` |
 
-Local pre-push gates:
+Jobs: verify (typecheck/lint/unit/QA) · Firestore emulator IDOR · production build · Playwright public/a11y — all green.
+
+Local pre-push gates (also green):
 
 | Gate | Result |
 |------|--------|
