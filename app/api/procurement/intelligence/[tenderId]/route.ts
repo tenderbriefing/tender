@@ -5,8 +5,9 @@ import {
   forbiddenResponse,
 } from '@/lib/auth/verifyApiUser'
 import {
+  canAccessProcurementIntelligence,
   isProcurementIntelligenceEnabled,
-  isProcurementIntelligencePilotUser,
+  parseProcurementIntelligencePilotUids,
 } from '@/lib/procurement/intelligence/featureFlag'
 import { buildProcurementIntelligence } from '@/lib/procurement/intelligence/buildIntelligence'
 import { logEvent, newRequestId } from '@/lib/observability/logger'
@@ -19,18 +20,6 @@ export async function GET(
   { params }: { params: { tenderId: string } }
 ) {
   const requestId = newRequestId()
-  if (!isProcurementIntelligenceEnabled()) {
-    return NextResponse.json(
-      {
-        error: {
-          code: 'feature_disabled',
-          message: 'Procurement Intelligence is not enabled',
-          requestId,
-        },
-      },
-      { status: 503 }
-    )
-  }
 
   const user = await verifyApiUser(request.headers.get('authorization'), [
     'sme',
@@ -38,7 +27,20 @@ export async function GET(
   ])
   if (!user) return unauthorizedResponse('Sign-in required')
 
-  if (user.userType === 'sme' && !isProcurementIntelligencePilotUser(user.uid)) {
+  if (!canAccessProcurementIntelligence({ uid: user.uid, userType: user.userType })) {
+    const pilotsConfigured = parseProcurementIntelligencePilotUids().length > 0
+    if (!isProcurementIntelligenceEnabled() && !pilotsConfigured) {
+      return NextResponse.json(
+        {
+          error: {
+            code: 'feature_disabled',
+            message: 'Procurement Intelligence is not enabled',
+            requestId,
+          },
+        },
+        { status: 503 }
+      )
+    }
     return forbiddenResponse('Pilot access required')
   }
 

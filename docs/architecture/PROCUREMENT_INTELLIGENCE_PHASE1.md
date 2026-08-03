@@ -10,12 +10,12 @@ Transform tender listings into explainable SME decision support: what the tender
 
 | Variable | Role |
 |----------|------|
-| `PROCUREMENT_INTELLIGENCE_ENABLED` | Server API gate |
-| `NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED` | Client UI visibility |
-| `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` | Comma-separated approved SME UIDs (**required** for SME access when enabled; empty = deny-all) |
+| `PROCUREMENT_INTELLIGENCE_ENABLED` | Global enablement (`false` = not globally on) |
+| `NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED` | Advisory client mirror only — must not authorize |
+| `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` | Comma-separated approved Firebase Auth UIDs; **pilot path works while ENABLED=false**; empty = deny-all |
 
-Default: **disabled**. Empty pilot list is fail-closed (no SME access).  
-To activate a pilot later: set `PROCUREMENT_INTELLIGENCE_ENABLED=true`, set `NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED=true` only if UI should show, and set `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` to approved Firebase Auth UIDs in Cloud Run env / Secret Manager — never invent UIDs.
+Default: **disabled** globally. Empty pilot list is fail-closed (deny everyone when flag false).
+To activate authenticated pilots **without** global enable: keep both flags `false`, set `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` via Secret Manager (`procurement-intelligence-pilot-uids`) to approved Firebase Auth UIDs — never invent UIDs. SME panel appears when the authenticated API returns 200 for that user.
 
 ## Architecture
 

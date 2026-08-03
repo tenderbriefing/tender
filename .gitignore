@@ -48,6 +48,9 @@ service-account.json
 *-service-account*.json
 **/service-account*.json
 .qa-smoke-admin.txt
+.qa-smoke-pi-control.txt
+.qa-pi-pilot-uids.secret
+.qa-pi-pilot-identity-registry.json
 .admin-password-reset-link.txt
 .admin-password-reset-branded.txt
 
