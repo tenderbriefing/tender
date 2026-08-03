@@ -1,5 +1,7 @@
 # Procurement Intelligence Phase 1 — Pilot Certification
 
+> **Superseded runtime (2026-08-03):** Authenticated pilot is live on SHA `3c177dd` / revision `tenderbriefing-00095-g97` with GSM allow-list (**2** UIDs), both global flags **false**. See `docs/reports/PROCUREMENT_INTELLIGENCE_PILOT_RESULTS.md` and `docs/reports/PRODUCTION_BASELINE_PI_PILOT_3C177DD.md`.
+
 **Certified (evidence collected):** 2026-08-03T07:40:39Z (post-deploy verification)  
 **Deploy completed:** 2026-08-02T18:18:39Z  
 **Verdict:** **PASS WITH CONDITIONS**

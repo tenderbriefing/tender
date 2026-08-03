@@ -63,5 +63,6 @@ service-account.json
 # OS
 Thumbs.db
 .qa-pi-pilot-cert-results.json
+.qa-pi-revoke-restore.json
 .qa-smoke-sme.txt
 .qa-pi-acceptance-results.json
