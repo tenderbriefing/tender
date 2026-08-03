@@ -66,3 +66,5 @@ Thumbs.db
 .qa-pi-revoke-restore.json
 .qa-smoke-sme.txt
 .qa-pi-acceptance-results.json
+.qa-pi-isolation-final.json
+.qa-pi-isolation-revoke.json
