@@ -24,6 +24,11 @@ Never commit real secret values. Rotate via Google Secret Manager / hosting env.
 | `SYNC_SECRET` | Sync/automation auth | ops | Yes | string | Ops | Sync denied |
 | `SMOKE_TEST_PASSWORD` | Smoke scripts | CI/smoke only | Yes | string | QA | Smoke cannot run |
 | `FOUNDER_USER_INTELLIGENCE_ENABLED` | Founder UI flag | optional | No | true/false | Founder | Feature hidden |
+| `PROCUREMENT_INTELLIGENCE_ENABLED` | Server gate for PI Phase 1 API | optional (default false) | No | true/false | Product/Platform | API 503 when false |
+| `NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED` | Client UI panel visibility (build-time) | optional (default false) | No | true/false | Product | Panel hidden when false |
+| `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` | Comma-separated approved SME Firebase Auth UIDs; empty = deny-all | optional | Prefer secret | uid,uid | Product/Ops | SME PI forbidden when empty |
+
+Pilot enablement procedure: `docs/runbooks/PROCUREMENT_INTELLIGENCE_FLAGS.md`.
 
 ## Rotation
 

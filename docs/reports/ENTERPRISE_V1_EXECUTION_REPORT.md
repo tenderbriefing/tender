@@ -54,55 +54,54 @@
 
 ---
 
-# Workstream 2 — Procurement Intelligence Phase 1
+# Workstream 2 — Procurement Intelligence Phase 1 (pre-merge snapshot)
 
 ## 1. Executive verdict
 
-**PASS WITH CONDITIONS** (code-complete, **production-disabled**, PR open)
+**PASS WITH CONDITIONS** (code-complete historically; **superseded by production deploy section below**)
 
-## 2–6. Git
+## 2–6. Git (pre-merge)
 
 | Field | Value |
 |-------|--------|
 | Starting production baseline | `6e6597264faf4cfcd25c09060d93bc5e406c008b` (`enterprise-v1.0.0`) |
-| Final feature SHA | `ca3e3d15673392643adf857fa4db76fa08a89460` |
-| Branch | `feature/procurement-intelligence-phase-1` |
-| PR | https://github.com/tenderbriefing/tender/pull/9 |
-| Ahead of baseline | 2 commits (feature + execution report) |
+| Feature tip before merge | `f94b51b25c62b0e0cf00f80f99acdad4a281369f` (fail-closed empty pilot list) |
+| Merge commit | `91a787103cef2f76372a47761ee65d944824199f` |
+| Branch | `feature/procurement-intelligence-phase-1` → `master` |
+| PR | https://github.com/tenderbriefing/tender/pull/9 (merged 2026-08-02T17:53:20Z) |
 
 ## 7–8. Files
 
 **Created:** intelligence types/flag/builder, API route, SME UI panel, unit tests, ADR-009, architecture doc  
-**Modified:** tender detail page, firestore.rules (`smeTenderIntelligence`), `.env.local.example`
+**Modified:** tender detail page, firestore.rules (`smeTenderIntelligence`), `.env.local.example`, `cloudbuild.yaml` (flags pinned false)
 
 ## 9–15. Architecture / security / flags
 
 - Deterministic decision-support pipeline (facts → eligibility → Opportunity Fit → checklist → actions)
 - Eligibility classes with `definitiveEligible: false` always
-- Fail-closed flags; optional pilot UID allow-list
+- Fail-closed flags; empty pilot UID allow-list = deny-all for SMEs
 - API: SME/admin Bearer; 503 when disabled; pilot deny
 - Prompt-injection: Phase 1 uses structured listing fields + fixed rules (no document-driven system override)
-- Feature **not** globally enabled
+- Feature **not** globally enabled in production
 
 ## 16–17. Tests / CI
 
 | Gate | Result |
 |------|--------|
-| Unit + integration | **31 passed** (includes 3 new PI tests) |
-| Typecheck | PASS |
-| Lint | PASS (1 legacy warning) |
-| Firestore rules QA | PASS |
-| Local build | (see CI / local run) |
-| CI on PR #9 | **success** on `2c42d8d` ([30655291489](https://github.com/tenderbriefing/tender/actions/runs/30655291489)) and tip `ca3e3d1` ([30656125753](https://github.com/tenderbriefing/tender/actions/runs/30656125753)) |
+| Unit + integration | **31 passed** (includes 3 PI tests) on `91a7871` CI |
+| Firestore emulator IDOR | **24 passed** |
+| Playwright public/a11y | **10 passed** |
+| Typecheck / lint / build | PASS (CI 30759869282) |
+| CI on merge | **success** [30759869282](https://github.com/tenderbriefing/tender/actions/runs/30759869282) |
 
 ## 18–24. Performance / cost / migration / deploy / risks / rollback / next
 
 - No unrestricted AI backfill; no OpenAI required for Phase 1 scoring
 - No destructive migration; additive rules only
-- **Deployment status:** not piloted to production; leave disabled
-- Residual: attach Cloud Armor/alerts; provision E2E secrets; optional OpenAI enrichment later; merge PR after CI green; pilot via env on staging/allow-list only
-- Rollback: flags off; prod baseline `enterprise-v1.0.0`
-- **Recommended next action:** Wait for PR CI green → merge when ready → enable flags only for pilot UIDs on a controlled environment → bounded sample validation → no global enable
+- **Deployment status:** see update section below (deployed disabled 2026-08-02)
+- Residual: authenticated pilot BLOCKED (0 UIDs); attach Cloud Armor/alerts; provision E2E secrets
+- Rollback: flags off; tag `enterprise-v1.0.0` / revision `tenderbriefing-00089-zv9`
+- **Recommended next action:** Add real pilot UIDs via Cloud Run / Secret Manager only when approved → bounded auth validation → no global enable
 
 ---
 
