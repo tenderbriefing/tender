@@ -4,10 +4,10 @@
 
 | Label | SHA / tag |
 |-------|-----------|
-| **Current production** | tag `pi-pilot-3c177dd` → `3c177dd73595f3325672626603dbae4e06fd2063` |
-| Cloud Run revision (current) | `tenderbriefing-00095-g97` @ 100% |
-| Image digest (current) | `sha256:fd66ab379a202aec3f182a0479f3eae96b073c8bcef21d7f29532a079627b866` |
-| Prior PI deploy (flags off, empty list) | `pi-phase1-91a7871` / `tenderbriefing-00090-tgb` / digest `sha256:529cb09…` |
+| **Current production** | tag `pi-pilot-rules-a6d2b92` → `a6d2b922e634efc64e8ebe1b5886f4b46006a087` |
+| Cloud Run revision (current) | `tenderbriefing-00096-h4h` @ 100% |
+| Image digest (current) | `sha256:853b9d5e003f60c7a6f02295a520b031132254032c43ebd4b19642c24e1954d5` |
+| Prior authenticated pilot app | `pi-pilot-3c177dd` / `tenderbriefing-00095-g97` |
 | **Rollback baseline** | tag `enterprise-v1.0.0` → `6e6597264faf4cfcd25c09060d93bc5e406c008b` |
 | Cloud Run revision (Enterprise v1) | `tenderbriefing-00089-zv9` |
 | Image digest (Enterprise v1) | `sha256:ad6eeb8c8afb86c9ae1aa61d1d3100cbb2c4e7cc190a862236828bceecf898b3` |
