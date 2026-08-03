@@ -1,5 +1,5 @@
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
-import { daysUntil, isClosingSoon } from './dates'
+import { daysUntil, isBriefingPast, isClosingSoon } from './dates'
 
 export type TenderDisplayStatus =
   | 'open'
@@ -12,6 +12,10 @@ export function getTenderDisplayStatus(tender: TenderBriefing): TenderDisplaySta
   if (tender.status === 'closed' || tender.status === 'cancelled') return 'closed'
   const daysLeft = daysUntil(tender.closingDate)
   if (daysLeft !== null && daysLeft < 0) return 'closed'
+  // Briefing datetime is the public catalogue cut-off; treat past briefings as closed in UX.
+  if (tender.briefingDate && isBriefingPast(tender.briefingDate, tender.briefingTime)) {
+    return 'closed'
+  }
   if (tender.briefingCompulsory) return 'compulsory_briefing'
   if (isClosingSoon(tender.closingDate)) return 'closing_soon'
   if (tender.briefingDate) return 'briefing_available'
