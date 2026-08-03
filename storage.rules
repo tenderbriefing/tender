@@ -36,6 +36,25 @@ service firebase.storage {
         && exists(/databases/(default)/documents/users/$(request.auth.uid))
         && get(/databases/(default)/documents/users/$(request.auth.uid)).data.userType in ['admin', 'youth-agent'];
     }
+
+    // Youth Agent Workspace evidence (not public; assignment-scoped)
+    match /workspace-evidence/{requestId}/{agentId}/{allPaths=**} {
+      allow read: if request.auth != null
+        && exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && (
+          get(/databases/(default)/documents/users/$(request.auth.uid)).data.userType == 'admin'
+          || request.auth.uid == agentId
+          || (
+            exists(/databases/(default)/documents/attendanceRequests/$(requestId))
+            && get(/databases/(default)/documents/attendanceRequests/$(requestId)).data.smeId == request.auth.uid
+          )
+        );
+      allow write: if request.auth != null
+        && request.auth.uid == agentId
+        && exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && get(/databases/(default)/documents/users/$(request.auth.uid)).data.userType in ['admin', 'youth-agent']
+        && exists(/databases/(default)/documents/attendanceRequests/$(requestId));
+    }
     
     // Allow public read access to profile pictures and public documents
     match /public/{allPaths=**} {
