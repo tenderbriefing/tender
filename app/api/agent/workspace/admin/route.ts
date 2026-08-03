@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   if (denied) return denied
 
   try {
-    const ws = require('../../../../../../backend/services/agentWorkspace/workspaceService')
+    const ws = require('../../../../../backend/services/agentWorkspace/workspaceService')
     const limit = Number(request.nextUrl.searchParams.get('limit') || 40)
     const data = await ws.adminOverview({ limit })
     return NextResponse.json({ success: true, data })

@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}))
-    const ws = require('../../../../../backend/services/agentWorkspace/workspaceService')
+    const ws = require('../../../../backend/services/agentWorkspace/workspaceService')
     const agentId = user.userType === 'admin' && body.agentId ? body.agentId : user.uid
     const data = await ws.getTodayBoard(agentId)
     await ws.recordAnalytics(agentId, 'today_view', {})

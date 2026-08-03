@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   if (denied) return denied
 
   try {
-    const ws = require('../../../../../../backend/services/agentWorkspace/workspaceService')
+    const ws = require('../../../../../backend/services/agentWorkspace/workspaceService')
     const agentId =
       user.userType === 'admin'
         ? request.nextUrl.searchParams.get('agentId') || user.uid
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    const ws = require('../../../../../../backend/services/agentWorkspace/workspaceService')
+    const ws = require('../../../../../backend/services/agentWorkspace/workspaceService')
     const data = await ws.appendEarningsEntry(body.agentId, {
       type: body.type,
       amountCents: body.amountCents,

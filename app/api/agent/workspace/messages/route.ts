@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   if (denied) return denied
 
   try {
-    const ws = require('../../../../../../backend/services/agentWorkspace/workspaceService')
+    const ws = require('../../../../../backend/services/agentWorkspace/workspaceService')
     const requestId = request.nextUrl.searchParams.get('requestId')
     const data = await ws.listMessages(user.uid, requestId)
     return NextResponse.json({ success: true, data })
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const ws = require('../../../../../../backend/services/agentWorkspace/workspaceService')
+    const ws = require('../../../../../backend/services/agentWorkspace/workspaceService')
     const data = await ws.sendMessage(
       { uid: user.uid, userType: user.userType },
       {

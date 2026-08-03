@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
     })
 
-    const ws = require('../../../../../../backend/services/agentWorkspace/workspaceService')
+    const ws = require('../../../../../backend/services/agentWorkspace/workspaceService')
     await ws.appendAuditEvent({
       type: 'evidence_uploaded',
       actorUid: agentId,

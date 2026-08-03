@@ -2,8 +2,8 @@
  * Youth Agent Workspace — server service (Admin SDK).
  * Assignment lifecycle reuses attendanceLifecycle / lifecycleEnforcement.
  */
-const { getFirestore } = require('../config/firebaseAdmin')
-const { sanitizeFirestoreData } = require('../utils/sanitizeFirestoreData')
+const { getFirestore } = require('../../config/firebaseAdmin')
+const { sanitizeFirestoreData } = require('../../utils/sanitizeFirestoreData')
 const { nowIso } = require('../ai/_shared')
 const lifecycle = require('../domain/lifecycleEnforcement')
 const mobileField = require('../mobile/mobileFieldService')

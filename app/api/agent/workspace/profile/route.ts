@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   if (denied) return denied
 
   try {
-    const ws = require('../../../../../../backend/services/agentWorkspace/workspaceService')
+    const ws = require('../../../../../backend/services/agentWorkspace/workspaceService')
     const agentId =
       user.userType === 'admin'
         ? request.nextUrl.searchParams.get('agentId') || user.uid

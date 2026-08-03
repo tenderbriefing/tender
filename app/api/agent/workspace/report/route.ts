@@ -15,7 +15,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const ws = require('../../../../../../backend/services/agentWorkspace/workspaceService')
+    const ws = require('../../../../../backend/services/agentWorkspace/workspaceService')
     const agentId = user.userType === 'admin' && body.agentId ? body.agentId : user.uid
     const data = await ws.saveFieldReportDraft(agentId, body)
     return NextResponse.json({ success: true, data })
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (!body.requestId) {
       return NextResponse.json({ success: false, error: 'requestId required' }, { status: 400 })
     }
-    const ws = require('../../../../../../backend/services/agentWorkspace/workspaceService')
+    const ws = require('../../../../../backend/services/agentWorkspace/workspaceService')
     const agentId = user.userType === 'admin' && body.agentId ? body.agentId : user.uid
     const data = await ws.submitFieldReport(agentId, body.requestId)
     return NextResponse.json({ success: true, data })

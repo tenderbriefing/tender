@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const ws = require('../../../../../../backend/services/agentWorkspace/workspaceService')
+    const ws = require('../../../../../backend/services/agentWorkspace/workspaceService')
     const data = await ws.recordAnalytics(user.uid, body.event || 'workspace_event', body.metadata || {})
     return NextResponse.json({ success: true, data })
   } catch (error) {

@@ -16,11 +16,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    const ws = require('../../../../../../backend/services/agentWorkspace/workspaceService')
+    const ws = require('../../../../../backend/services/agentWorkspace/workspaceService')
     const smeId = user.userType === 'admin' && body.smeId ? body.smeId : user.uid
     if (user.userType === 'admin' && !body.smeId) {
       // Admin can verify as system by using request ownership check bypass via admin path
-      const db = require('../../../../../../backend/config/firebaseAdmin').getFirestore()
+      const db = require('../../../../../backend/config/firebaseAdmin').getFirestore()
       const reqSnap = await db.collection('attendanceRequests').doc(body.requestId).get()
       if (!reqSnap.exists) {
         return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })

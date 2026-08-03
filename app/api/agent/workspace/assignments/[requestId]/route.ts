@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, { params }: Ctx) {
   if (denied) return denied
 
   try {
-    const ws = require('../../../../../../../backend/services/agentWorkspace/workspaceService')
+    const ws = require('../../../../../../backend/services/agentWorkspace/workspaceService')
     const agentId =
       user.userType === 'admin'
         ? request.nextUrl.searchParams.get('agentId') || user.uid
@@ -51,7 +51,7 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
     if (!toStatus) {
       return NextResponse.json({ success: false, error: 'toStatus required' }, { status: 400 })
     }
-    const ws = require('../../../../../../../backend/services/agentWorkspace/workspaceService')
+    const ws = require('../../../../../../backend/services/agentWorkspace/workspaceService')
     const agentId = user.userType === 'admin' && body.agentId ? body.agentId : user.uid
     const data = await ws.transitionAssignment(params.requestId, agentId, toStatus, {
       note: body.note,
