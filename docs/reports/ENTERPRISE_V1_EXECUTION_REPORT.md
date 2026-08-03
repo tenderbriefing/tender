@@ -108,6 +108,37 @@
 
 ## Overall programme stance
 
-1. **Enterprise v1 is live** on exact SHA `6e65972` / tag `enterprise-v1.0.0`.
-2. **Procurement Intelligence Phase 1** is on a separate branch/PR, fail-closed, ready for gated pilot after CI.
-3. **Do not auto-deploy** feature work; keep Workstream 1 production baseline intact.
+1. **Enterprise v1** remains the immutable rollback tag `enterprise-v1.0.0` / SHA `6e65972` / revision `tenderbriefing-00089-zv9`.
+2. **Procurement Intelligence Phase 1** was merged (PR #9) and manually deployed; see Workstream 3 below.
+3. **Do not auto-deploy**; keep PI globally disabled until approved pilot UIDs exist.
+
+---
+
+# Workstream 3 — PI Phase 1 merge + controlled production deploy (2026-08-02)
+
+## Executive verdict
+
+**PASS WITH CONDITIONS**
+
+## Evidence summary
+
+| Field | Value |
+|-------|--------|
+| Verified PR head (merge tip) | `f94b51b` (post–fail-closed fix; original tip `ac21827`) |
+| Merge strategy | Merge commit |
+| Production SHA | `91a787103cef2f76372a47761ee65d944824199f` |
+| Post-merge CI | [30759869282](https://github.com/tenderbriefing/tender/actions/runs/30759869282) success |
+| Deploy | [30760212862](https://github.com/tenderbriefing/tender/actions/runs/30760212862) success |
+| Build ID | `44c4a235-fac9-4d1c-82b0-5513686161ef` |
+| Revision | `tenderbriefing-00090-tgb` @ 100% |
+| Digest | `sha256:529cb09dedaf730cb1da0a81b0551d33929d23c0f12949d30d11eac3a1287e3b` |
+| Global PI flag | `false` |
+| Pilot UID count | **0** (authenticated pilot **BLOCKED**) |
+| Unauth PI API | 401 |
+| Firestore health | 200 ok |
+| Rollback | `enterprise-v1.0.0` / `00089-zv9` |
+
+Full certification: `docs/reports/PROCUREMENT_INTELLIGENCE_PHASE1_PILOT_CERTIFICATION.md`  
+Baseline sheet: `docs/reports/PRODUCTION_BASELINE_PI_PHASE1_91A7871.md`  
+Flag/pilot runbook: `docs/runbooks/PROCUREMENT_INTELLIGENCE_FLAGS.md`  
+Pilot activation notes: `docs/runbooks/PROCUREMENT_INTELLIGENCE_PILOT.md`

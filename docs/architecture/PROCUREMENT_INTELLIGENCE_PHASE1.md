@@ -37,7 +37,8 @@ Trust: server authz; pilot check; no client role trust. Tender documents treated
 
 1. Set flags to `false` (kill switch).
 2. Redeploy previous revision if needed.
-3. Production baseline remains `enterprise-v1.0.0` / `6e65972`.
+3. Platform rollback target for the PI Phase 1 production deploy: tag `enterprise-v1.0.0` / SHA `6e65972` / historical revision `tenderbriefing-00089-zv9` (see `docs/runbooks/ROLLBACK.md`).
+4. Current production (code present, flags off): tag `pi-phase1-91a7871` / SHA `91a7871` / revision `tenderbriefing-00090-tgb`.
 
 ## Scoring
 
