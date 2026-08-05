@@ -1,3 +1,5 @@
+import { parseBriefingTimeParts, resolveBriefingDateTime } from './dates'
+
 /** Minimal tender fields needed for Google / ICS export (full TenderBriefing also works). */
 export type CalendarExportInput = {
   id?: string
@@ -29,46 +31,39 @@ function formatGoogleDate(date: Date): string {
   )
 }
 
-function parseTime(time?: string | null): { hours: number; minutes: number } | null {
-  if (!time) return null
-  const cleaned = time.trim().toUpperCase()
-  const match = cleaned.match(/^(\d{1,2})[:.](\d{2})\s*(AM|PM)?/)
-  if (!match) return null
-  let hours = parseInt(match[1], 10)
-  const minutes = parseInt(match[2], 10)
-  const meridian = match[3]
-  if (meridian === 'PM' && hours < 12) hours += 12
-  if (meridian === 'AM' && hours === 12) hours = 0
-  if (hours > 23 || minutes > 59) return null
-  return { hours, minutes }
-}
+/** Slot used when the feed gives a date but no usable clock. */
+const DEFAULT_BRIEFING_TIME = '10:00'
+const DEFAULT_CLOSING_TIME = '12:00'
+const BRIEFING_DURATION_MS = 2 * 60 * 60 * 1000
+const CLOSING_DURATION_MS = 60 * 60 * 1000
 
 function briefingDateTime(tender: CalendarExportInput): { start: Date; end: Date } | null {
-  if (!tender.briefingDate) return null
-  const base = new Date(tender.briefingDate)
-  if (Number.isNaN(base.getTime())) return null
-  const time = parseTime(tender.briefingTime)
-  if (time) {
-    base.setHours(time.hours, time.minutes, 0, 0)
-  } else {
-    base.setHours(10, 0, 0, 0)
-  }
-  const end = new Date(base)
-  end.setHours(end.getHours() + 2)
-  return { start: base, end }
+  const raw = tender.briefingDate?.trim()
+  if (!raw) return null
+
+  const hasOwnClock =
+    parseBriefingTimeParts(tender.briefingTime) !== null || /T\d{2}:\d{2}/.test(raw)
+  const start = resolveBriefingDateTime(
+    raw,
+    hasOwnClock ? tender.briefingTime : DEFAULT_BRIEFING_TIME
+  )
+  if (!start) return null
+
+  return { start, end: new Date(start.getTime() + BRIEFING_DURATION_MS) }
 }
 
 function closingDateTime(tender: CalendarExportInput): { start: Date; end: Date } | null {
-  if (!tender.closingDate) return null
-  const base = new Date(tender.closingDate)
-  if (Number.isNaN(base.getTime())) return null
-  // All-day-ish window: noon local for visibility in calendars
-  if (base.getHours() === 0 && base.getMinutes() === 0) {
-    base.setHours(12, 0, 0, 0)
-  }
-  const end = new Date(base)
-  end.setHours(end.getHours() + 1)
-  return { start: base, end }
+  const raw = tender.closingDate?.trim()
+  if (!raw) return null
+
+  // A midnight or absent clock means the feed only gave a date; use a midday slot so
+  // the reminder stays visible instead of collapsing to the start of the day.
+  const clock = raw.match(/T(\d{2}):(\d{2})/)
+  const dateOnly = !clock || (clock[1] === '00' && clock[2] === '00')
+  const start = resolveBriefingDateTime(raw, dateOnly ? DEFAULT_CLOSING_TIME : null)
+  if (!start) return null
+
+  return { start, end: new Date(start.getTime() + CLOSING_DURATION_MS) }
 }
 
 export function toCalendarExportInput(tender: CalendarExportInput): CalendarExportInput {
