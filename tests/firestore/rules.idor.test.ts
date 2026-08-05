@@ -462,3 +462,74 @@ describe('smeTenderIntelligence progress — tenant isolation', () => {
     )
   })
 })
+
+describe('Youth Agent Workspace collections — IDOR matrix', () => {
+  it('agent A cannot read agent B earnings ledger', async () => {
+    const id = uid('ledger')
+    await seed('agentEarningsLedger', id, {
+      agentId: AGENT_B,
+      amountCents: 1000,
+      currency: 'ZAR',
+      type: 'earned',
+      immutable: true,
+    })
+    await assertFails(getDoc(doc(firestoreAs(AGENT_A), 'agentEarningsLedger', id)))
+    await assertSucceeds(getDoc(doc(firestoreAs(AGENT_B), 'agentEarningsLedger', id)))
+  })
+
+  it('client cannot create or update earnings ledger (Admin SDK only)', async () => {
+    const id = uid('ledger')
+    await assertFails(
+      setDoc(doc(firestoreAs(AGENT_A), 'agentEarningsLedger', id), {
+        agentId: AGENT_A,
+        amountCents: 99999,
+        currency: 'ZAR',
+        type: 'earned',
+        immutable: true,
+      })
+    )
+  })
+
+  it('agent A cannot read agent B field report draft', async () => {
+    const id = uid('draft')
+    await seed('fieldReportDrafts', id, {
+      agentId: AGENT_B,
+      smeId: SME_A,
+      requestId: 'req-1',
+      status: 'draft',
+    })
+    await assertFails(getDoc(doc(firestoreAs(AGENT_A), 'fieldReportDrafts', id)))
+    await assertSucceeds(getDoc(doc(firestoreAs(AGENT_B), 'fieldReportDrafts', id)))
+    await assertSucceeds(getDoc(doc(firestoreAs(SME_A), 'fieldReportDrafts', id)))
+  })
+
+  it('client cannot write field report drafts or audit events', async () => {
+    await assertFails(
+      setDoc(doc(firestoreAs(AGENT_A), 'fieldReportDrafts', uid('d')), {
+        agentId: AGENT_A,
+        smeId: SME_A,
+        requestId: 'r1',
+        status: 'draft',
+      })
+    )
+    await assertFails(
+      setDoc(doc(firestoreAs(AGENT_A), 'agentWorkspaceAuditEvents', uid('a')), {
+        actorUid: AGENT_A,
+        type: 'message_sent',
+      })
+    )
+  })
+
+  it('assignment message readable only by sender or recipient', async () => {
+    const id = uid('msg')
+    await seed('assignmentMessages', id, {
+      requestId: 'req-1',
+      senderId: AGENT_A,
+      recipientId: SME_A,
+      body: 'hello',
+    })
+    await assertSucceeds(getDoc(doc(firestoreAs(AGENT_A), 'assignmentMessages', id)))
+    await assertSucceeds(getDoc(doc(firestoreAs(SME_A), 'assignmentMessages', id)))
+    await assertFails(getDoc(doc(firestoreAs(AGENT_B), 'assignmentMessages', id)))
+  })
+})

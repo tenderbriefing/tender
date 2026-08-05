@@ -80,6 +80,21 @@ export default function AgentDashboardPage() {
           </div>
 
           <div className="rounded-2xl border border-brand-200 bg-brand-50/40 p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900">Agent Workspace</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Today, assignments, messages, earnings, performance, and profile — mobile-first field
+              ops (feature-flagged).
+            </p>
+            <Link
+              href="/agent/workspace/today"
+              className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+            >
+              Open workspace
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="rounded-2xl border border-brand-200 bg-brand-50/40 p-6 shadow-sm">
             <h2 className="text-lg font-bold text-slate-900">Field app (PWA)</h2>
             <p className="mt-2 text-sm text-slate-600">
               Install the mobile field app for live dispatch, GPS check-in, uploads, and offline sync.

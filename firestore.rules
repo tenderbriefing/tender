@@ -594,5 +594,39 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false;
     }
+
+    // Youth Agent Workspace v1 — client reads scoped; privileged writes via Admin SDK
+    match /agentWorkspaceAuditEvents/{eventId} {
+      allow read: if isAdmin()
+        || (isYouthAgent() && resource.data.actorUid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    match /fieldReportDrafts/{draftId} {
+      allow read: if isAdmin()
+        || (isYouthAgent() && resource.data.agentId == request.auth.uid)
+        || (isSme() && resource.data.smeId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    match /assignmentMessages/{messageId} {
+      allow read: if isAdmin()
+        || (isAuthenticated()
+          && (resource.data.senderId == request.auth.uid
+            || resource.data.recipientId == request.auth.uid));
+      allow create, update, delete: if false;
+    }
+
+    match /agentEarningsLedger/{entryId} {
+      allow read: if isAdmin()
+        || (isYouthAgent() && resource.data.agentId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    match /agentWorkspaceAnalytics/{eventId} {
+      allow read: if isAdmin()
+        || (isYouthAgent() && resource.data.agentId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
   }
 }

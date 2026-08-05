@@ -27,8 +27,12 @@ Never commit real secret values. Rotate via Google Secret Manager / hosting env.
 | `PROCUREMENT_INTELLIGENCE_ENABLED` | Global enablement for PI Phase 1 (`false` = not globally enabled; pilots may still access via allow-list) | optional (default false) | No | true/false | Product/Platform | Without pilot UIDs → 503 |
 | `NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED` | Advisory client UI mirror only (must stay false for pilot-only); panel also appears on authenticated API 200 | optional (default false) | No | true/false | Product | Non-pilots see no panel |
 | `PROCUREMENT_INTELLIGENCE_PILOT_UIDS` | Comma-separated approved Firebase Auth UIDs; pilot path works while ENABLED=false; empty = deny-all | optional | Yes (GSM `procurement-intelligence-pilot-uids`) | uid,uid | Product/Ops | Deny-all when empty + flag false |
+| `YOUTH_AGENT_WORKSPACE_ENABLED` | Global enablement for Youth Agent Workspace v1 (`youth_agent_workspace_v1`); default false (fail-closed) | optional (default false) | No | true/false | Product/Platform | Without pilot UIDs → workspace APIs 403 |
+| `NEXT_PUBLIC_YOUTH_AGENT_WORKSPACE_ENABLED` | Advisory client UI mirror only; must never authorize data | optional (default false) | No | true/false | Product | Non-pilots see gate denial |
+| `YOUTH_AGENT_WORKSPACE_PILOT_UIDS` | Comma-separated approved youth-agent/admin Firebase Auth UIDs; pilot path works while ENABLED=false | optional | Yes (prefer GSM) | uid,uid | Product/Ops | Deny-all when empty + flag false |
 
-Pilot enablement procedure: `docs/runbooks/PROCUREMENT_INTELLIGENCE_FLAGS.md`.
+Pilot enablement procedure: `docs/runbooks/PROCUREMENT_INTELLIGENCE_FLAGS.md`.  
+Youth Agent Workspace flags: `docs/runbooks/YOUTH_AGENT_WORKSPACE_FLAGS.md`.
 
 ## Rotation
 
