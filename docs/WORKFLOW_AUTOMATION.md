@@ -35,6 +35,27 @@ curl -X POST https://www.tenderbriefing.co.za/api/automation/run \
   -d '{"job":"all"}'
 ```
 
+## Run budget and rotation
+
+`{"job":"all"}` sweeps every job in `SCHEDULED_JOBS` under a wall-clock budget
+(`AUTOMATION_BUDGET_MS`, default **240000** — below the 300s Cloud Run request
+timeout). Jobs run in order from a stored cursor:
+
+- Anything that will not fit in the remaining budget is **deferred**, and the
+  next run starts at the first deferred job, so no job starves.
+- A job that outlives its slice is aborted, reported under `timedOutJobs`, and
+  the cursor moves past it.
+- Response `status` is `completed`, `partial`, or `skipped`.
+
+Only one sweep runs at a time. Cloud Scheduler retries an attempt that is still
+in flight; an overlapping run returns `status: "skipped"` with reason
+`automation_already_running` instead of piling more work onto the instance. The
+lock lives in `workflowAutomationState/scheduler` and is treated as abandoned
+after 6 minutes (longer than the Cloud Run request ceiling).
+
+A single named job (`{"job":"sla_escalations"}`) bypasses the cursor, the budget,
+and the lock.
+
 ## SLA
 
 - **15 min** — unpaid assignment queue: notify additional agents
@@ -43,6 +64,9 @@ curl -X POST https://www.tenderbriefing.co.za/api/automation/run \
 ## Firestore
 
 Collection `workflowEvents/{id}` — type, status, payload, retries, channels.
+
+Collection `workflowAutomationState/scheduler` — run lock, job cursor, and last
+run status / per-job durations. Admin-readable, server-write only.
 
 ## Admin
 

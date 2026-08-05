@@ -292,6 +292,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /workflowAutomationState/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     match /pilotLeads/{leadId} {
       allow read, write: if isAdmin();
     }

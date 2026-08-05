@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       job,
+      status: results?.status ?? 'completed',
       results,
       ranAt: new Date().toISOString(),
     })

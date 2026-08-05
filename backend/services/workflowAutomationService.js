@@ -8,12 +8,38 @@ const { getStorage } = require('./storageAdapter')
 const pushNotificationService = require('./pushNotificationService')
 
 const WORKFLOW_COLLECTION = 'workflowEvents'
+const AUTOMATION_STATE_COLLECTION = 'workflowAutomationState'
+const AUTOMATION_STATE_DOC = 'scheduler'
 const MAX_RETRIES = 3
 const SLA_ACCEPT_MINUTES = 15
 const SLA_ADMIN_ESCALATION_MINUTES = 60
 const MISSED_BRIEFING_HOURS_AFTER = 4
 const BRIEFING_REMINDER_HOURS_BEFORE = 2
 const TENDER_CLOSING_HOURS = 24
+
+/** Cloud Run request timeout is 300s — respond well before the edge gives up. */
+const DEFAULT_AUTOMATION_BUDGET_MS = 240 * 1000
+/** Never start another job with less than this left; defer it to the next run instead. */
+const MIN_JOB_SLICE_MS = 5 * 1000
+/** A run lock older than the Cloud Run request ceiling belongs to a killed instance. */
+const STALE_RUN_LOCK_MS = 6 * 60 * 1000
+
+const SCHEDULED_JOBS = [
+  'tender_closing_reminders',
+  'briefing_reminders',
+  'missed_briefing_detection',
+  'retry_failed_whatsapp',
+  'sla_escalations',
+  'smart_dispatch',
+  'smart_escalation',
+  'no_show_prediction',
+  'daily_procurement_brief',
+  'procurement_watchlists',
+  'procurement_memory',
+  'procurement_forecasting',
+  'calendar_intelligence',
+  'smart_procurement_ingestion',
+]
 
 const SUPPORTED_EVENTS = new Set([
   'attendance_requested',
@@ -231,6 +257,28 @@ function parseDate(value) {
   return Number.isNaN(d.getTime()) ? null : d
 }
 
+/**
+ * Index every tracked tender by the ids a listing can match on, so the closing
+ * sweep reads the `trackedTenders` collection group once instead of once per tender.
+ */
+function buildTrackedTenderIndex(docs) {
+  const index = new Map()
+  for (const doc of docs) {
+    const entry = doc.data() || {}
+    const smeId = doc.ref.parent.parent?.id
+    if (!smeId) continue
+    const keys = new Set()
+    if (entry.tenderId) keys.add(entry.tenderId)
+    if (entry.id) keys.add(entry.id)
+    for (const key of keys) {
+      const existing = index.get(key)
+      if (existing) existing.push(smeId)
+      else index.set(key, [smeId])
+    }
+  }
+  return index
+}
+
 async function runTenderClosingReminders() {
   const storage = getStorage()
   const tenders =
@@ -241,21 +289,22 @@ async function runTenderClosingReminders() {
   const windowEnd = now + TENDER_CLOSING_HOURS * 60 * 60 * 1000
   let triggered = 0
 
-  const db = await getWorkflowDb()
-  for (const tender of tenders) {
+  const closingSoon = tenders.filter((tender) => {
     const closing = parseDate(tender.closingDate || tender.submissionDeadline)
-    if (!closing) continue
+    if (!closing) return false
     const t = closing.getTime()
-    if (t <= now || t > windowEnd) continue
+    return t > now && t <= windowEnd
+  })
+  if (!closingSoon.length) return { job: 'tender_closing_reminders', triggered }
 
-    const workspaceSnap = await db.collectionGroup('trackedTenders').get().catch(() => null)
-    if (!workspaceSnap) continue
+  const db = await getWorkflowDb()
+  const workspaceSnap = await db.collectionGroup('trackedTenders').get().catch(() => null)
+  if (!workspaceSnap) return { job: 'tender_closing_reminders', triggered }
+  const trackedBySme = buildTrackedTenderIndex(workspaceSnap.docs)
 
-    for (const doc of workspaceSnap.docs) {
-      const entry = doc.data()
-      if (entry.tenderId !== tender.id && entry.id !== tender.id) continue
-      const smeId = doc.ref.parent.parent?.id
-      if (!smeId) continue
+  for (const tender of closingSoon) {
+    const closing = parseDate(tender.closingDate || tender.submissionDeadline)
+    for (const smeId of trackedBySme.get(tender.id) || []) {
       await dispatchWorkflowEvent('tender_closing_soon', {
         smeId,
         tenderId: tender.id,
@@ -483,97 +532,269 @@ async function runSlaEscalations() {
   }
 }
 
-async function runScheduledAutomation(jobName = 'all') {
-  const results = {}
-  const jobs =
-    jobName === 'all'
-      ? [
-          'tender_closing_reminders',
-          'briefing_reminders',
-          'missed_briefing_detection',
-          'retry_failed_whatsapp',
-          'sla_escalations',
-          'smart_dispatch',
-          'smart_escalation',
-          'no_show_prediction',
-          'daily_procurement_brief',
-          'procurement_watchlists',
-          'procurement_memory',
-          'procurement_forecasting',
-          'calendar_intelligence',
-          'smart_procurement_ingestion',
-        ]
-      : [jobName]
+async function runSingleJob(job) {
+  switch (job) {
+    case 'tender_closing_reminders':
+      return runTenderClosingReminders()
+    case 'briefing_reminders':
+      return runBriefingReminders()
+    case 'missed_briefing_detection':
+      return runMissedBriefingDetection()
+    case 'retry_failed_whatsapp':
+      return retryFailedWhatsApp()
+    case 'sla_escalations':
+      return runSlaEscalations()
+    case 'smart_dispatch': {
+      const liveDispatchService = require('./liveDispatchService')
+      return liveDispatchService.runSmartDispatchAutomation()
+    }
+    case 'smart_procurement_ingestion': {
+      const aggregation = require('./procurement/procurementAggregationService')
+      return aggregation.runSmartProcurementIngestion({ includeEtenders: false })
+    }
+    case 'smart_escalation': {
+      const smartEscalation = require('./ai/smartEscalationService')
+      return smartEscalation.runSmartEscalations()
+    }
+    case 'no_show_prediction': {
+      const noShow = require('./ai/noShowPredictionService')
+      return noShow.runNoShowSweep()
+    }
+    case 'daily_procurement_brief': {
+      const dailyBrief = require('./ai/dailyProcurementBriefService')
+      return dailyBrief.runDailyProcurementBrief({ skipNotifications: false })
+    }
+    case 'procurement_watchlists': {
+      const watchlist = require('./ai/procurementWatchlistService')
+      return watchlist.refreshAllWatchlists()
+    }
+    case 'procurement_memory': {
+      const memory = require('./ai/procurementMemoryService')
+      return memory.refreshProcurementMemory()
+    }
+    case 'procurement_forecasting': {
+      const forecasting = require('./ai/procurementForecastingService')
+      return forecasting.runProcurementForecasting()
+    }
+    case 'calendar_intelligence': {
+      const calendarIntel = require('./calendarIntelligenceService')
+      return calendarIntel.analyzeCalendar()
+    }
+    default:
+      return { error: 'Unknown job' }
+  }
+}
 
-  for (const job of jobs) {
-    switch (job) {
-      case 'tender_closing_reminders':
-        results[job] = await runTenderClosingReminders()
-        break
-      case 'briefing_reminders':
-        results[job] = await runBriefingReminders()
-        break
-      case 'missed_briefing_detection':
-        results[job] = await runMissedBriefingDetection()
-        break
-      case 'retry_failed_whatsapp':
-        results[job] = await retryFailedWhatsApp()
-        break
-      case 'sla_escalations':
-        results[job] = await runSlaEscalations()
-        break
-      case 'smart_dispatch': {
-        const liveDispatchService = require('./liveDispatchService')
-        results[job] = await liveDispatchService.runSmartDispatchAutomation()
-        break
+function automationBudgetMs() {
+  const configured = Number(process.env.AUTOMATION_BUDGET_MS)
+  if (Number.isFinite(configured) && configured > 0) return configured
+  return DEFAULT_AUTOMATION_BUDGET_MS
+}
+
+/** Start the sweep where the previous run ran out of budget, so no job starves. */
+function rotateJobs(jobs, cursor) {
+  if (!jobs.length) return []
+  const parsed = Number(cursor)
+  const normalized = Number.isFinite(parsed) ? Math.trunc(parsed) : 0
+  const start = ((normalized % jobs.length) + jobs.length) % jobs.length
+  return [...jobs.slice(start), ...jobs.slice(0, start)]
+}
+
+class AutomationJobTimeout extends Error {
+  constructor(job, timeoutMs) {
+    super(`Automation job ${job} exceeded its ${timeoutMs}ms slice`)
+    this.name = 'AutomationJobTimeout'
+    this.code = 'AUTOMATION_JOB_TIMEOUT'
+  }
+}
+
+function withJobTimeout(work, timeoutMs, job) {
+  let timer = null
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new AutomationJobTimeout(job, timeoutMs)), timeoutMs)
+    if (typeof timer.unref === 'function') timer.unref()
+  })
+  return Promise.race([Promise.resolve().then(work), timeout]).finally(() => {
+    if (timer) clearTimeout(timer)
+  })
+}
+
+function isStaleRunLock(state, now) {
+  if (!state || state.isRunning !== true) return false
+  const startedAt = new Date(state.runStartedAt || 0).getTime()
+  if (!startedAt || Number.isNaN(startedAt)) return true
+  return now - startedAt > STALE_RUN_LOCK_MS
+}
+
+/**
+ * Cloud Scheduler retries an in-flight attempt, so overlapping sweeps used to
+ * multiply load on a single instance. Only one sweep may hold the lock.
+ */
+async function acquireRunLock(now) {
+  try {
+    const db = await getWorkflowDb()
+    const ref = db.collection(AUTOMATION_STATE_COLLECTION).doc(AUTOMATION_STATE_DOC)
+    return await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref)
+      const state = (snap.exists && snap.data()) || {}
+      if (state.isRunning === true && !isStaleRunLock(state, now)) {
+        return {
+          acquired: false,
+          runStartedAt: state.runStartedAt || null,
+        }
       }
-      case 'smart_procurement_ingestion': {
-        const aggregation = require('./procurement/procurementAggregationService')
-        results[job] = await aggregation.runSmartProcurementIngestion({
-          includeEtenders: false,
-        })
-        break
-      }
-      case 'smart_escalation': {
-        const smartEscalation = require('./ai/smartEscalationService')
-        results[job] = await smartEscalation.runSmartEscalations()
-        break
-      }
-      case 'no_show_prediction': {
-        const noShow = require('./ai/noShowPredictionService')
-        results[job] = await noShow.runNoShowSweep()
-        break
-      }
-      case 'daily_procurement_brief': {
-        const dailyBrief = require('./ai/dailyProcurementBriefService')
-        results[job] = await dailyBrief.runDailyProcurementBrief({ skipNotifications: false })
-        break
-      }
-      case 'procurement_watchlists': {
-        const watchlist = require('./ai/procurementWatchlistService')
-        results[job] = await watchlist.refreshAllWatchlists()
-        break
-      }
-      case 'procurement_memory': {
-        const memory = require('./ai/procurementMemoryService')
-        results[job] = await memory.refreshProcurementMemory()
-        break
-      }
-      case 'procurement_forecasting': {
-        const forecasting = require('./ai/procurementForecastingService')
-        results[job] = await forecasting.runProcurementForecasting()
-        break
-      }
-      case 'calendar_intelligence': {
-        const calendarIntel = require('./calendarIntelligenceService')
-        results[job] = await calendarIntel.analyzeCalendar()
-        break
-      }
-      default:
-        results[job] = { error: 'Unknown job' }
+      tx.set(
+        ref,
+        sanitizeFirestoreData({
+          isRunning: true,
+          runStartedAt: new Date(now).toISOString(),
+          updatedAt: nowIso(),
+        }),
+        { merge: true }
+      )
+      return { acquired: true, cursor: Number(state.cursor) || 0 }
+    })
+  } catch {
+    return { acquired: true, cursor: 0, lockUnavailable: true }
+  }
+}
+
+async function releaseRunLock(patch) {
+  try {
+    const db = await getWorkflowDb()
+    await db
+      .collection(AUTOMATION_STATE_COLLECTION)
+      .doc(AUTOMATION_STATE_DOC)
+      .set(
+        sanitizeFirestoreData({
+          isRunning: false,
+          runStartedAt: null,
+          updatedAt: nowIso(),
+          ...patch,
+        }),
+        { merge: true }
+      )
+  } catch {
+    /* non-blocking */
+  }
+}
+
+/**
+ * Run the scheduled sweep inside a wall-clock budget. Whatever does not fit is
+ * deferred to the next run instead of holding the request open until Cloud Run
+ * returns a 504.
+ */
+async function runScheduledAutomation(jobName = 'all', options = {}) {
+  const runJob = options.runJob || runSingleJob
+  const clock = typeof options.now === 'function' ? options.now : Date.now
+  const startedAtMs = clock()
+  const startedAt = new Date(startedAtMs).toISOString()
+
+  if (jobName !== 'all') {
+    const jobs = {}
+    jobs[jobName] = await runJob(jobName)
+    return {
+      status: 'completed',
+      startedAt,
+      durationMs: clock() - startedAtMs,
+      completedJobs: [jobName],
+      deferredJobs: [],
+      timedOutJobs: [],
+      jobs,
     }
   }
-  return results
+
+  const budgetMs =
+    Number.isFinite(options.budgetMs) && options.budgetMs > 0
+      ? options.budgetMs
+      : automationBudgetMs()
+  const minJobSliceMs = Number.isFinite(options.minJobSliceMs)
+    ? options.minJobSliceMs
+    : MIN_JOB_SLICE_MS
+  const deadline = startedAtMs + budgetMs
+
+  const lock = options.lock === false ? { acquired: true, cursor: 0 } : await acquireRunLock(startedAtMs)
+  if (!lock.acquired) {
+    return {
+      status: 'skipped',
+      reason: 'automation_already_running',
+      startedAt,
+      runStartedAt: lock.runStartedAt || null,
+      durationMs: clock() - startedAtMs,
+      completedJobs: [],
+      deferredJobs: [...SCHEDULED_JOBS],
+      timedOutJobs: [],
+      jobs: {},
+    }
+  }
+
+  const cursor = Number.isFinite(options.cursor) ? options.cursor : lock.cursor
+  const ordered = rotateJobs(SCHEDULED_JOBS, cursor)
+  const jobs = {}
+  const durationsMs = {}
+  const completedJobs = []
+  const timedOutJobs = []
+  let deferredJobs = []
+
+  for (let i = 0; i < ordered.length; i += 1) {
+    const job = ordered[i]
+    const remainingMs = deadline - clock()
+    if (remainingMs <= minJobSliceMs) {
+      deferredJobs = ordered.slice(i)
+      break
+    }
+
+    const jobStartedMs = clock()
+    try {
+      jobs[job] = await withJobTimeout(() => runJob(job), remainingMs, job)
+      completedJobs.push(job)
+    } catch (error) {
+      if (error instanceof AutomationJobTimeout || error?.code === 'AUTOMATION_JOB_TIMEOUT') {
+        jobs[job] = { job, timedOut: true, budgetMs: remainingMs }
+        timedOutJobs.push(job)
+        durationsMs[job] = clock() - jobStartedMs
+        deferredJobs = ordered.slice(i + 1)
+        break
+      }
+      jobs[job] = { job, error: error instanceof Error ? error.message : 'Job failed' }
+      completedJobs.push(job)
+    }
+    durationsMs[job] = clock() - jobStartedMs
+  }
+
+  // A job that blew its slice is not retried first next run — that would starve the rest.
+  const firstUnfinished = deferredJobs[0] || null
+  const nextCursor = firstUnfinished ? SCHEDULED_JOBS.indexOf(firstUnfinished) : cursor
+  const status = deferredJobs.length || timedOutJobs.length ? 'partial' : 'completed'
+  const durationMs = clock() - startedAtMs
+
+  if (options.lock !== false) {
+    await releaseRunLock({
+      cursor: nextCursor,
+      lastRunAt: startedAt,
+      lastRunStatus: status,
+      lastRunDurationMs: durationMs,
+      lastRunBudgetMs: budgetMs,
+      lastRunCompletedJobs: completedJobs,
+      lastRunDeferredJobs: deferredJobs,
+      lastRunTimedOutJobs: timedOutJobs,
+      lastRunJobDurationsMs: durationsMs,
+    })
+  }
+
+  return {
+    status,
+    startedAt,
+    durationMs,
+    budgetMs,
+    cursor,
+    nextCursor,
+    completedJobs,
+    deferredJobs,
+    timedOutJobs,
+    durationsMs,
+    jobs,
+  }
 }
 
 async function getWorkflowTelemetry({ limit = 50 } = {}) {
@@ -599,6 +820,13 @@ async function getWorkflowTelemetry({ limit = 50 } = {}) {
 
 module.exports = {
   SUPPORTED_EVENTS,
+  SCHEDULED_JOBS,
+  DEFAULT_AUTOMATION_BUDGET_MS,
+  STALE_RUN_LOCK_MS,
+  automationBudgetMs,
+  rotateJobs,
+  isStaleRunLock,
+  buildTrackedTenderIndex,
   dispatchWorkflowEvent,
   runScheduledAutomation,
   runTenderClosingReminders,
