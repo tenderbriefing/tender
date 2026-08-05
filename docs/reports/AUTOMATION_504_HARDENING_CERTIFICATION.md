@@ -2,7 +2,9 @@
 
 **Prepared:** 2026-08-05  
 **Branch:** `fix/automation-run-time-budget`  
+**Tip SHA:** `b3fd56cd2c12df5ffc455a0231282d596e0aa9ac`  
 **PR:** [#15](https://github.com/tenderbriefing/tender/pull/15)  
+**CI:** [31039774034](https://github.com/tenderbriefing/tender/actions/runs/31039774034) success  
 **Deployment:** **NOT DEPLOYED**
 
 ## 1. Executive verdict
@@ -182,20 +184,18 @@ both automation control-plane collections.
 
 ## 39. Quality gates
 
-Local gates on this tip before push:
+Exact tip: `b3fd56cd2c12df5ffc455a0231282d596e0aa9ac`
+
+CI run: [31039774034](https://github.com/tenderbriefing/tender/actions/runs/31039774034) — **success**
 
 | Gate | Result |
 |------|--------|
-| `npm test` | **99 passed / 15 files** |
-| `npm run typecheck` | pass |
-| `npm run lint` | pass (pre-existing ConnectorMatching warning only) |
-| `npm run build` | pass |
-| `qa:firestore-rules` / `qa:google-auth` / `qa:route-retirement` / `qa:config` / `qa:secrets-scan` | pass |
-| `npm run workflow:qa` | pass |
-| Local Firestore emulator suite | **blocked** — Java runtime missing on this workstation |
-| Local Playwright UI suite | **partial** — 6 API auth/route tests passed; 4 UI tests blocked by missing Chromium binary after download timeout; CI owns full browser matrix |
-
-Exact CI run URL/SHA are filled after the tip is green on the PR.
+| Typecheck / lint / unit / integration / QA | success |
+| Firestore emulator IDOR matrix | success |
+| Production build | success |
+| Playwright public/a11y gates | success |
+| Local `npm test` | **99 passed / 15 files** |
+| Local typecheck / lint / build / QA / workflow:qa | pass |
 
 ## 40. Deployment governance
 
@@ -209,5 +209,9 @@ does not deploy.
 merge, select the exact merged SHA/tag in `Deploy TenderBriefing`, verify the
 revision/digest, then compare post-deploy 504s against the 109/48h baseline.
 Underlying timed-out work cannot be cancelled in JavaScript after
-`Promise.race`; deterministic keys/lease prevent duplicate external effects,
-but external clients should gain abort signals in a later improvement.
+`Promise.race`; deterministic keys plus lease retention until expiry prevent
+duplicate external effects from Scheduler retries, but external clients should
+gain abort signals in a later improvement.
+
+Unrelated local dirty files (`.gitignore`, health/sync route CRLF noise,
+procurement certification CRLF) were intentionally left unstaged.
