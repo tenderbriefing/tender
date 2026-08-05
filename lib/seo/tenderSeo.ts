@@ -1,5 +1,10 @@
 import type { Metadata } from 'next'
-import { formatProcurementDate, formatProcurementDateTime } from '@/lib/procurement/dates'
+import {
+  formatProcurementDate,
+  formatProcurementDateTime,
+  resolveBriefingDateTime,
+  toSastIsoString,
+} from '@/lib/procurement/dates'
 import { getOfficialEtendersScope } from '@/lib/procurement/tenderDescription'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import { buildPageMetadata } from './metadata'
@@ -54,7 +59,11 @@ export function buildTenderEventJsonLd(tender: TenderBriefing) {
       ? `Compulsory tender briefing — ${scope || tender.title}`
       : `Tender briefing — ${scope || tender.title}`,
     description: scope || tender.description || tender.title,
-    startDate: tender.briefingDate || undefined,
+    // The feed's `Z` stamps carry SA wall clock, so emit an explicit +02:00 instant
+    // rather than the raw value search engines would read two hours late.
+    startDate:
+      toSastIsoString(resolveBriefingDateTime(tender.briefingDate, tender.briefingTime)) ??
+      undefined,
     eventAttendanceMode: tender.meetingLink
       ? 'https://schema.org/OnlineEventAttendanceMode'
       : 'https://schema.org/OfflineEventAttendanceMode',

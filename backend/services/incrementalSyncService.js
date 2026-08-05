@@ -79,13 +79,28 @@ function mapStatus(status) {
   return 'active'
 }
 
+/**
+ * OCDS stamps SA wall-clock briefing times with a `Z` designator (an 11:00 briefing
+ * arrives as `...T11:00:00Z`), so the literal clock in the string is already SAST.
+ * Reading it directly keeps the stored value identical no matter which timezone the
+ * sync container runs in.
+ */
 function extractTime(isoDate) {
-  try {
-    const d = new Date(isoDate)
-    return d.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
-  } catch {
-    return ''
+  const raw = String(isoDate || '').trim()
+  const wallClock = raw.match(/T(\d{2}):(\d{2})/)
+  if (wallClock && !/[+-]\d{2}:?\d{2}$/.test(raw)) {
+    return `${wallClock[1]}:${wallClock[2]}`
   }
+
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return ''
+
+  return new Intl.DateTimeFormat('en-ZA', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Africa/Johannesburg',
+  }).format(d)
 }
 
 async function fetchOcdsPage(dateFrom, dateTo, pageNumber = 1) {

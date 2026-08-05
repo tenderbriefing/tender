@@ -42,11 +42,36 @@ function sastCalendarDate(d: Date): string {
   }).format(d)
 }
 
+function sastInstant(
+  ymd: string,
+  time: { hours: number; minutes: number }
+): Date | null {
+  return parseProcurementDate(
+    `${ymd}T${pad2(time.hours)}:${pad2(time.minutes)}:00${SAST_OFFSET}`
+  )
+}
+
+/**
+ * The eTenders OCDS feed publishes SA wall-clock times stamped with a `Z`
+ * designator — an 11:00 briefing arrives as `2026-08-12T11:00:00Z`, not as
+ * 09:00Z. Values carrying no explicit offset are therefore read as SA wall
+ * clock; only an explicit offset is trusted as a real instant.
+ */
+function carriesSaWallClock(raw: string): boolean {
+  return !/[+-]\d{2}:?\d{2}$/.test(raw)
+}
+
+function isoDatePart(raw: string): string | null {
+  const match = raw.match(/^(\d{4}-\d{2}-\d{2})T/)
+  return match ? match[1] : null
+}
+
 /**
  * Resolve the briefing instant used for public catalogue cut-off.
- * Prefer a full ISO `briefingDate`; date-only values (+ optional `briefingTime`)
- * are interpreted in Africa/Johannesburg. Date-only without time remains listable
- * until end of that SAST calendar day.
+ * Everything is anchored in Africa/Johannesburg: `briefingTime` is the wall clock
+ * shown to users, so a tender leaves the catalogue exactly when the briefing time
+ * on its card passes. Date-only values without a time remain listable until the
+ * end of that SAST calendar day.
  */
 export function resolveBriefingDateTime(
   briefingDate?: string | null,
@@ -57,29 +82,34 @@ export function resolveBriefingDateTime(
   const time = parseBriefingTimeParts(briefingTime)
 
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-    if (time) {
-      const iso = `${raw}T${pad2(time.hours)}:${pad2(time.minutes)}:00${SAST_OFFSET}`
-      return parseProcurementDate(iso)
-    }
+    if (time) return sastInstant(raw, time)
     return parseProcurementDate(`${raw}T23:59:59${SAST_OFFSET}`)
   }
 
   const parsed = parseProcurementDate(raw)
   if (!parsed) return null
 
-  const hasExplicitClock = /T\d{2}:\d{2}/.test(raw)
-  const isUtcMidnight =
-    parsed.getUTCHours() === 0 &&
-    parsed.getUTCMinutes() === 0 &&
-    parsed.getUTCSeconds() === 0
+  const wallClockDate = carriesSaWallClock(raw) ? isoDatePart(raw) : null
 
-  if (time && (!hasExplicitClock || isUtcMidnight)) {
-    const ymd = sastCalendarDate(parsed)
-    const iso = `${ymd}T${pad2(time.hours)}:${pad2(time.minutes)}:00${SAST_OFFSET}`
-    return parseProcurementDate(iso)
+  if (time) {
+    return sastInstant(wallClockDate ?? sastCalendarDate(parsed), time)
+  }
+
+  if (wallClockDate) {
+    return sastInstant(wallClockDate, {
+      hours: parsed.getUTCHours(),
+      minutes: parsed.getUTCMinutes(),
+    })
   }
 
   return parsed
+}
+
+/** ISO-8601 with an explicit SAST offset, for schema.org and calendar consumers. */
+export function toSastIsoString(instant?: Date | null): string | null {
+  if (!instant || Number.isNaN(instant.getTime())) return null
+  const shifted = new Date(instant.getTime() + 2 * 60 * 60 * 1000)
+  return `${shifted.toISOString().slice(0, 19)}${SAST_OFFSET}`
 }
 
 /**
@@ -125,18 +155,20 @@ export function formatBriefingTime(date?: string | null, time?: string | null): 
   const explicit = time?.trim()
   if (explicit && explicit !== '—') return explicit
 
-  const d = parseProcurementDate(date)
-  if (!d) return ''
+  const raw = date?.trim()
+  if (!raw || !/T\d{2}:\d{2}/.test(raw)) return ''
 
-  const hours = d.getUTCHours()
-  const minutes = d.getUTCMinutes()
-  if (hours === 0 && minutes === 0) return ''
+  const instant = resolveBriefingDateTime(raw, null)
+  if (!instant) return ''
 
-  return d.toLocaleTimeString('en-ZA', {
+  const formatted = new Intl.DateTimeFormat('en-ZA', {
     hour: '2-digit',
     minute: '2-digit',
-    timeZone: 'Africa/Johannesburg',
-  })
+    hour12: false,
+    timeZone: PROCUREMENT_TIMEZONE,
+  }).format(instant)
+
+  return formatted === '00:00' ? '' : formatted
 }
 
 export function formatProcurementDateTime(date?: string | null, time?: string | null): string {
