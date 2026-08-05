@@ -11,7 +11,7 @@
 
 **PASS WITH CONDITIONS**
 
-Workspace is implemented end-to-end on a feature branch, fail-closed behind `youth_agent_workspace_v1`, with unit + Firestore IDOR coverage, typecheck/lint/build green locally. **Not deployed to production.** Residual conditions: CI green on PR tip; pilot UID provisioning via GSM; authenticated browser matrix secret-gated; rules deploy only with release manager approval.
+Workspace is implemented end-to-end, fail-closed behind `youth_agent_workspace_v1`, with unit + Firestore IDOR coverage. **Deployed to production** as merge `960441a` / tag `yaw-v1-960441a` / revision `tenderbriefing-00098-ws7` (workflow [31020326730](https://github.com/tenderbriefing/tender/actions/runs/31020326730)); global YAW and PI flags remain disabled. Residual conditions: pilot UID provisioning via GSM when enabling; authenticated browser matrix secret-gated.
 
 ## 2. Starting SHA
 
