@@ -29,15 +29,7 @@ export async function GET(request: NextRequest) {
           ...waStats,
         },
         push: pushNotificationService.getStatus(),
-        jobs: [
-          'tender_closing_reminders',
-          'briefing_reminders',
-          'missed_briefing_detection',
-          'retry_failed_whatsapp',
-          'sla_escalations',
-          'smart_dispatch',
-          'smart_procurement_ingestion',
-        ],
+        jobs: workflow.listJobs(),
         checkedAt: new Date().toISOString(),
       },
     })

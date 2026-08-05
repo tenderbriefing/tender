@@ -223,9 +223,12 @@ async function ingestNormalizedRecords(records, options = {}) {
 
 async function runEnabledSourceScrapes(options = {}) {
   await syncSourceRegistry()
-  const sources = options.sourceIds
+  const eligibleSources = options.sourceIds
     ? options.sourceIds.map(getSourceById).filter(Boolean)
     : getEnabledSources().filter((s) => s.scrapeMethod !== 'ocds_api' || options.includeEtenders)
+  const sourceOffset = Math.max(0, Number(options.sourceOffset) || 0)
+  const sourceBatchSize = Math.max(1, Math.min(Number(options.sourceBatchSize) || 2, 5))
+  const sources = eligibleSources.slice(sourceOffset, sourceOffset + sourceBatchSize)
 
   const results = []
   const allRecords = []
@@ -247,6 +250,9 @@ async function runEnabledSourceScrapes(options = {}) {
     results,
     ingest,
     totalRecords: allRecords.length,
+    continuation: sourceOffset + sources.length < eligibleSources.length
+      ? { sourceOffset: sourceOffset + sources.length }
+      : null,
   }
 }
 
@@ -257,11 +263,13 @@ async function runSmartProcurementIngestion(options = {}) {
     enrich: true,
     persist: true,
   })
-  const graph = await graphService.refreshGraphMetrics()
+  const graph = aggregate.continuation
+    ? null
+    : await graphService.refreshGraphMetrics()
   return {
     job: 'smart_procurement_ingestion',
     ...aggregate,
-    graphMetricsId: graph.id,
+    graphMetricsId: graph?.id || null,
   }
 }
 

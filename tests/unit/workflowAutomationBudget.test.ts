@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createRequire } from 'module'
 
 const require = createRequire(import.meta.url)
 const workflow = require('../../backend/services/workflowAutomationService')
+const stateStore = require('../../backend/services/automation/automationStateStore')
 
 const {
   SCHEDULED_JOBS,
@@ -34,8 +35,14 @@ function trackedDoc(smeId: string | undefined, data: Record<string, unknown>) {
 }
 
 describe('automation run budget', () => {
+  beforeEach(() => {
+    process.env.AUTOMATION_STATE_ADAPTER = 'memory'
+    stateStore.resetMemoryState()
+  })
+
   afterEach(() => {
     delete process.env.AUTOMATION_BUDGET_MS
+    delete process.env.AUTOMATION_STATE_ADAPTER
   })
 
   it('defaults to a budget below the 300s Cloud Run request timeout', () => {
