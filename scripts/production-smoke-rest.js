@@ -175,8 +175,6 @@ async function main() {
     province: 'Gauteng',
     city: 'Johannesburg',
     location: 'Johannesburg, Gauteng',
-    availabilityRadiusKm: 25,
-    transportAvailable: true,
     preferredServiceAreas: ['Gauteng'],
     verificationStatus: 'verified',
     reliabilityScore: 100,

@@ -53,7 +53,8 @@ function agentPerformanceScore(agent, context = {}) {
   score += clamp((reportingQuality - 50) / 5, -10, 10)
 
   if (agent.verified) score += 4
-  if (agent.transportAvailable) score += 2
+  // Optional legacy field — bonus only when explicitly true.
+  if (agent.transportAvailable === true) score += 2
 
   return clamp(Math.round(score), 0, 100)
 }

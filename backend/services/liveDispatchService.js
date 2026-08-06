@@ -64,7 +64,8 @@ function estimateArrivalProbability(distanceKm, tier, transportAvailable) {
   if (distanceKm > 30) p -= 0.15
   if (distanceKm > 60) p -= 0.2
   if (tier === 'At Risk') p -= 0.25
-  if (!transportAvailable) p -= 0.12
+  // Missing transport flag (new registrations) is treated as unknown — no penalty.
+  if (transportAvailable === false) p -= 0.12
   return Math.max(0.15, Math.min(0.98, p))
 }
 
@@ -113,8 +114,9 @@ function computeDispatchScore(agent, request, context = {}) {
   if (agent.availability === 'available') score += 8
   else if (agent.availability === 'busy') score -= 10
 
-  if (agent.transportAvailable) score += 6
-  else score -= 4
+  // Optional legacy field — only score when explicitly set on the agent profile.
+  if (agent.transportAvailable === true) score += 6
+  else if (agent.transportAvailable === false) score -= 4
 
   score -= activeWorkload * 3
   score += briefingUrgencyScore(request)
@@ -141,7 +143,9 @@ function enrichCandidateScores(agent, request, base, context) {
     activeWorkload: base.activeWorkload,
   })
   const travelFeasible =
-    base.distanceKm == null || base.distanceKm <= 60 || agent.transportAvailable
+    base.distanceKm == null ||
+    base.distanceKm <= 60 ||
+    agent.transportAvailable !== false
 
   return {
     ...base,
@@ -246,7 +250,8 @@ async function findBestAgentsForRequest(request, options = {}) {
       tier: perf.tier ?? 'Silver',
       performanceScore: perf.score ?? 50,
       availability: agent.availability,
-      transportAvailable: !!agent.transportAvailable,
+      transportAvailable:
+        typeof agent.transportAvailable === 'boolean' ? agent.transportAvailable : null,
       activeWorkload: workload,
       acceptanceRate,
     }

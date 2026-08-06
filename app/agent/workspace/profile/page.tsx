@@ -13,7 +13,7 @@ type Profile = {
   province: string | null
   verified: boolean
   verificationStatus: string
-  transportAvailable: boolean
+  transportAvailable?: boolean
   reliabilityScore: number | null
   userType: string
 }

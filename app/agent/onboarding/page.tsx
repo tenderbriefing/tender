@@ -23,7 +23,6 @@ export default function AgentOnboardingPage() {
     province: '',
     city: '',
     whatsAppNumber: '',
-    transportAvailable: true,
     preferredAreas: '',
     idVerificationNote: '',
     codeOfConductAccepted: false,
@@ -41,7 +40,6 @@ export default function AgentOnboardingPage() {
         province: userProfile.province || p.province,
         city: userProfile.city || p.city,
         whatsAppNumber: userProfile.whatsAppNumber || userProfile.phoneNumber || p.whatsAppNumber,
-        transportAvailable: userProfile.transportAvailable !== false,
         preferredAreas: (userProfile.preferredServiceAreas || []).join(', '),
         idVerificationNote: userProfile.idVerificationNote || p.idVerificationNote,
         codeOfConductAccepted: userProfile.codeOfConductAccepted === true,
@@ -80,7 +78,6 @@ export default function AgentOnboardingPage() {
         province: form.province,
         city: form.city,
         whatsAppNumber: form.whatsAppNumber,
-        transportAvailable: form.transportAvailable,
         preferredServiceAreas: areas.length ? areas : [form.province],
         idVerificationNote: form.idVerificationNote,
         codeOfConductAccepted: form.codeOfConductAccepted,
@@ -168,17 +165,6 @@ export default function AgentOnboardingPage() {
               required
             />
           </div>
-          <label className="flex items-center gap-3 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={form.transportAvailable}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, transportAvailable: e.target.checked }))
-              }
-              className="h-4 w-4 rounded border-slate-300 text-brand-600"
-            />
-            I have reliable transport to attend briefings
-          </label>
           <div>
             <label className="block text-sm font-semibold text-slate-700">Preferred areas</label>
             <input
