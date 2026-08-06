@@ -292,6 +292,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /workflowAutomationState/{docId} {
+      allow read, write: if false;
+    }
+
+    // Automation control-plane records are only exposed through founder-authenticated
+    // server routes; clients never access leases or run metadata directly.
+    match /automationRuns/{runId} {
+      allow read, write: if false;
+    }
+
+    match /automationLeases/{leaseId} {
+      allow read, write: if false;
+    }
+
     match /pilotLeads/{leadId} {
       allow read, write: if isAdmin();
     }

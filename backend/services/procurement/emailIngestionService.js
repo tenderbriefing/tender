@@ -231,6 +231,16 @@ async function ingestEmail(payload) {
   await ref.set(doc)
 
   try {
+    const rfqIngestNotify = require('./rfqIngestNotificationService')
+    await rfqIngestNotify.notifyRfqIngestedSafe(doc)
+  } catch (err) {
+    console.error(
+      '[emailIngestion] founder notify failed (ingest ok):',
+      err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+    )
+  }
+
+  try {
     const rfqTriage = require('../ai/rfqTriageService')
     await rfqTriage.triageIngestedEmail(doc)
   } catch {

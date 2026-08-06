@@ -286,6 +286,23 @@ describe('attendanceRequests — IDOR matrix', () => {
   })
 })
 
+describe('automation control plane — server only', () => {
+  for (const collectionName of ['automationRuns', 'automationLeases']) {
+    it(`${collectionName} denies reads and writes to every client role`, async () => {
+      const id = uid('automation')
+      await seed(collectionName, id, { status: 'completed', ownerId: 'server' })
+      for (const actor of [null, SME_A, AGENT_A, ADMIN]) {
+        await assertFails(getDoc(doc(firestoreAs(actor), collectionName, id)))
+        await assertFails(
+          setDoc(doc(firestoreAs(actor), collectionName, uid('write')), {
+            status: 'forged',
+          })
+        )
+      }
+    })
+  }
+})
+
 describe('briefingReports — IDOR matrix', () => {
   it('SME A cannot read SME B briefingReports', async () => {
     const reportId = uid('report')
