@@ -11,8 +11,7 @@ export const metadata: Metadata = {
 }
 
 const requirements = [
-  '18+ with reliable transport (where possible)',
-  'Based in South Africa — all provinces needed',
+  '18+ and based in South Africa — all provinces needed',
   'Professional conduct at briefing venues',
   'Upload structured reports within 24 hours',
   'Accept platform code of conduct',

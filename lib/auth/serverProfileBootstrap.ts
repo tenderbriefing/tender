@@ -174,8 +174,12 @@ export async function createPlatformProfile(
         province: userProfile.province || '',
         city: userProfile.city || '',
         location: userProfile.location || '',
-        availabilityRadiusKm: userProfile.availabilityRadiusKm ?? 25,
-        transportAvailable: userProfile.transportAvailable !== false,
+        ...(userProfile.availabilityRadiusKm != null
+          ? { availabilityRadiusKm: userProfile.availabilityRadiusKm }
+          : {}),
+        ...(typeof userProfile.transportAvailable === 'boolean'
+          ? { transportAvailable: userProfile.transportAvailable }
+          : {}),
         preferredServiceAreas: userProfile.preferredServiceAreas || [],
         whatsAppNumber: userProfile.whatsAppNumber || userProfile.phoneNumber || '',
         idVerificationNote: userProfile.idVerificationNote || '',

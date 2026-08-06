@@ -76,7 +76,8 @@ function mapAgent(id: string, data: DocData) {
     reliabilityScore: Number(data.reliabilityScore ?? 100),
     completedBriefingCount: Number(data.completedBriefingCount ?? 0),
     acceptedBriefingCount: Number(data.acceptedBriefingCount ?? 0),
-    transportAvailable: data.transportAvailable !== false,
+    transportAvailable:
+      typeof data.transportAvailable === 'boolean' ? data.transportAvailable : null,
     preferredServiceAreas: areas,
     onboardingCompleted: data.onboardingCompleted === true,
     createdAt: toIso(data.createdAt) || toIso(data.onboardingCompletedAt),

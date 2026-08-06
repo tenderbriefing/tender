@@ -44,8 +44,6 @@ function SignUpForm() {
     csdNumber: '',
     categories: [] as string[],
     commodities: [] as string[],
-    availabilityRadiusKm: 25,
-    transportAvailable: true,
     preferredServiceAreas: [] as string[],
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -133,8 +131,6 @@ function SignUpForm() {
             province: formData.province,
             city: formData.city,
             location: `${formData.city}, ${formData.province}`,
-            availabilityRadiusKm: formData.availabilityRadiusKm,
-            transportAvailable: formData.transportAvailable,
             preferredServiceAreas: formData.preferredServiceAreas.length
               ? formData.preferredServiceAreas
               : [formData.province],
@@ -321,48 +317,17 @@ function SignUpForm() {
         </div>
 
         {!isSme && (
-          <>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700">City / town</label>
-              <input
-                name="city"
-                autoComplete="address-level2"
-                value={formData.city}
-                onChange={(e) => setFormData((p) => ({ ...p, city: e.target.value }))}
-                className={`mt-1 ${inputClass}`}
-              />
-              {errors.city && <p className="mt-1 text-sm text-red-600">{errors.city}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700">
-                Availability radius (km)
-              </label>
-              <input
-                type="number"
-                min={5}
-                max={200}
-                value={formData.availabilityRadiusKm}
-                onChange={(e) =>
-                  setFormData((p) => ({
-                    ...p,
-                    availabilityRadiusKm: Number(e.target.value),
-                  }))
-                }
-                className={`mt-1 ${inputClass}`}
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={formData.transportAvailable}
-                onChange={(e) =>
-                  setFormData((p) => ({ ...p, transportAvailable: e.target.checked }))
-                }
-                className="rounded border-slate-300 text-brand-600"
-              />
-              I have transport available for briefing attendance
-            </label>
-          </>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700">City / town</label>
+            <input
+              name="city"
+              autoComplete="address-level2"
+              value={formData.city}
+              onChange={(e) => setFormData((p) => ({ ...p, city: e.target.value }))}
+              className={`mt-1 ${inputClass}`}
+            />
+            {errors.city && <p className="mt-1 text-sm text-red-600">{errors.city}</p>}
+          </div>
         )}
 
         {isSme && (

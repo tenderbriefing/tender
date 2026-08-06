@@ -38,7 +38,7 @@ export type RegisteredAgent = {
   reliabilityScore: number
   completedBriefingCount: number
   acceptedBriefingCount: number
-  transportAvailable: boolean
+  transportAvailable?: boolean | null
   preferredServiceAreas: string[]
   onboardingCompleted: boolean
   createdAt: string | null

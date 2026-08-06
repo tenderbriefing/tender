@@ -52,7 +52,7 @@ const agentSteps: Step[] = [
   {
     step: '01',
     title: 'Register as a Youth Agent',
-    text: 'Complete onboarding with province, transport availability, and code of conduct acceptance.',
+    text: 'Complete onboarding with province, city, and code of conduct acceptance.',
   },
   {
     step: '02',

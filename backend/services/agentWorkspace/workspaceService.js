@@ -583,7 +583,7 @@ async function getProfile(agentId) {
     province: agent.province || user.province || null,
     verified: Boolean(agent.verified || verification.status === 'verified'),
     verificationStatus: verification.status || (agent.verified ? 'verified' : 'pending'),
-    transportAvailable: Boolean(agent.transportAvailable),
+    transportAvailable: agent.transportAvailable === true,
     reliabilityScore: agent.reliabilityScore ?? null,
     userType: 'youth-agent',
   }

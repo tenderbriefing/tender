@@ -41,7 +41,7 @@ export function explainPerformanceScore(inputs: PerformanceInputs = {}): {
     reportUploadHours = null,
     reportingQuality = 50,
     verified = false,
-    transportAvailable = false,
+    transportAvailable,
   } = inputs
 
   const factors: PerformanceFactor[] = []
@@ -138,7 +138,8 @@ export function explainPerformanceScore(inputs: PerformanceInputs = {}): {
       detail: 'Identity / onboarding verified',
     })
   }
-  if (transportAvailable) {
+  // Optional legacy field — bonus only when explicitly true on the profile.
+  if (transportAvailable === true) {
     score += 2
     factors.push({
       key: 'transport',

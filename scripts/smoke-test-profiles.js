@@ -23,8 +23,12 @@ function buildSmokeUserDoc({ uid, email, displayName, userType, timestamp, extra
     sectors: userType === 'sme' ? extra.categories || ['information-technology'] : [],
     provincesOfInterest: userType === 'sme' ? [extra.province || 'Gauteng'] : [],
     city: userType === 'youth-agent' ? extra.city || 'Johannesburg' : undefined,
-    availabilityRadiusKm: userType === 'youth-agent' ? extra.availabilityRadiusKm ?? 25 : undefined,
-    transportAvailable: userType === 'youth-agent' ? true : undefined,
+    ...(userType === 'youth-agent' && extra.availabilityRadiusKm != null
+      ? { availabilityRadiusKm: extra.availabilityRadiusKm }
+      : {}),
+    ...(userType === 'youth-agent' && typeof extra.transportAvailable === 'boolean'
+      ? { transportAvailable: extra.transportAvailable }
+      : {}),
     preferredServiceAreas:
       userType === 'youth-agent' ? extra.preferredServiceAreas || ['Gauteng'] : undefined,
     verificationStatus: userType === 'youth-agent' ? 'verified' : undefined,
@@ -84,10 +88,18 @@ function buildSmokeAgentDoc({ uid, email, displayName, timestamp, extra = {} }) 
     province,
     city,
     location: extra.location || `${city}, ${province}`,
-    availabilityRadiusKm: extra.availabilityRadiusKm ?? 25,
-    availabilityRadius: extra.availabilityRadiusKm ?? 25,
-    transportAvailable: true,
-    transportAvailability: true,
+    ...(extra.availabilityRadiusKm != null
+      ? {
+          availabilityRadiusKm: extra.availabilityRadiusKm,
+          availabilityRadius: extra.availabilityRadiusKm,
+        }
+      : {}),
+    ...(typeof extra.transportAvailable === 'boolean'
+      ? {
+          transportAvailable: extra.transportAvailable,
+          transportAvailability: extra.transportAvailable,
+        }
+      : {}),
     preferredServiceAreas: extra.preferredServiceAreas || [province],
     preferredAreas: extra.preferredServiceAreas || [province],
     verificationStatus: 'verified',

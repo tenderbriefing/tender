@@ -18,7 +18,6 @@ export interface AgentOnboardingInput {
   province: string
   city: string
   whatsAppNumber: string
-  transportAvailable: boolean
   preferredServiceAreas: string[]
   idVerificationNote: string
   codeOfConductAccepted: boolean
