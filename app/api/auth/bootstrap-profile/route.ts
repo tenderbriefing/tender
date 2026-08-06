@@ -196,6 +196,22 @@ export async function POST(request: NextRequest) {
       onboardingCompleted,
     })
 
+    // Founder/ops alert — fail-soft; never block registration
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const founderOps = require('../../../../backend/services/founderOpsNotificationService') as {
+        notifyUserRegisteredSafe: (p: unknown) => Promise<unknown>
+      }
+      await founderOps.notifyUserRegisteredSafe(userProfile)
+    } catch (founderNotifyErr) {
+      console.warn(
+        '[auth/bootstrap-profile] founder ops notify failed (non-blocking):',
+        founderNotifyErr instanceof Error
+          ? founderNotifyErr.message.slice(0, 160)
+          : 'unknown'
+      )
+    }
+
     if (email && !onboardingCompleted) {
       try {
         const welcome = await sendWelcomeEmailSafe({
