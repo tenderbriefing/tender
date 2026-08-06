@@ -12,15 +12,17 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10)
 }
 
-async function buildSmeBrief(smeUid) {
+async function buildSmeBrief(smeUid, datasets = {}) {
   const storage = getStorage()
-  const tenders = (await storage.getAllTenders()).filter(
+  const allTenders = datasets.tenders || await storage.getAllTenders()
+  const allRequests = datasets.requests || await storage.getAttendanceRequests()
+  const tenders = allTenders.filter(
     (t) => t.visibility !== 'private' || t.ownerUid === smeUid
   )
-  const requests = (await storage.getAttendanceRequests()).filter((r) => r.smeId === smeUid)
+  const requests = allRequests.filter((r) => r.smeId === smeUid)
   let wl = null
   try {
-    wl = await watchlist.buildWatchlistForSme(smeUid)
+    wl = await watchlist.buildWatchlistForSme(smeUid, { tenders: allTenders, requests: allRequests })
   } catch {
     wl = { matchingOpportunities: [] }
   }
@@ -53,9 +55,10 @@ async function buildSmeBrief(smeUid) {
   }
 }
 
-async function buildAgentBrief(agentId) {
+async function buildAgentBrief(agentId, datasets = {}) {
   const storage = getStorage()
-  const requests = (await storage.getAttendanceRequests()).filter(
+  const allRequests = datasets.requests || await storage.getAttendanceRequests()
+  const requests = allRequests.filter(
     (r) =>
       (r.assignedAgentId === agentId || r.agentId === agentId) &&
       ['assigned', 'accepted', 'pending'].includes(r.status)
@@ -89,18 +92,27 @@ async function runDailyProcurementBrief(options = {}) {
   const storage = getStorage()
   const db = getFirestore()
   const date = todayKey()
-  const briefId = `daily-${date}`
+  const offset = Math.max(0, Number(options.offset) || 0)
+  const batchSize = Math.max(1, Math.min(Number(options.batchSize) || 5, 20))
+  const briefId = `daily-${date}-${offset}`
 
-  const smeSnap = await db.collection('users').where('userType', '==', 'sme').limit(options.smeLimit || 30).get().catch(() => ({ docs: [] }))
-  const agentSnap = await db.collection('agents').limit(options.agentLimit || 30).get().catch(() => ({ docs: [] }))
+  const [smeSnap, agentSnap, tenders, requests] = await Promise.all([
+    db.collection('users').where('userType', '==', 'sme').limit(offset + batchSize + 1).get().catch(() => ({ docs: [] })),
+    db.collection('agents').limit(offset + batchSize + 1).get().catch(() => ({ docs: [] })),
+    storage.getAllTenders(),
+    storage.getAttendanceRequests(),
+  ])
+  const smeDocs = smeSnap.docs.slice(offset, offset + batchSize)
+  const agentDocs = agentSnap.docs.slice(offset, offset + batchSize)
+  const hasMore = smeSnap.docs.length > offset + batchSize || agentSnap.docs.length > offset + batchSize
 
   const smeBriefs = []
-  for (const doc of smeSnap.docs) {
-    smeBriefs.push(await buildSmeBrief(doc.id))
+  for (const doc of smeDocs) {
+    smeBriefs.push(await buildSmeBrief(doc.id, { tenders, requests }))
   }
   const agentBriefs = []
-  for (const doc of agentSnap.docs) {
-    agentBriefs.push(await buildAgentBrief(doc.id))
+  for (const doc of agentDocs) {
+    agentBriefs.push(await buildAgentBrief(doc.id, { requests }))
   }
 
   const payload = {
@@ -110,6 +122,7 @@ async function runDailyProcurementBrief(options = {}) {
     agentBriefs,
     channels: ['dashboard', 'whatsapp', 'push', 'email'],
     generatedAt: nowIso(),
+    batch: { offset, batchSize, hasMore },
     aiProvider: 'rule-based',
   }
 
@@ -131,7 +144,12 @@ async function runDailyProcurementBrief(options = {}) {
     }
   }
 
-  return { ...payload, id: briefId }
+  return {
+    ...payload,
+    id: briefId,
+    continuation: hasMore ? { offset: offset + batchSize } : null,
+    storageCallCounts: { getAllTenders: 1, getAttendanceRequests: 1 },
+  }
 }
 
 module.exports = {

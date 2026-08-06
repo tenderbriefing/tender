@@ -10,6 +10,9 @@ const requiredNames = [
   'NEXT_PUBLIC_FIREBASE_APP_ID',
   'PAYFAST_MERCHANT_ID',
   'PAYFAST_MERCHANT_KEY',
+  'AUTOMATION_REQUEST_TIMEOUT_MS',
+  'AUTOMATION_SAFETY_MARGIN_MS',
+  'AUTOMATION_BUDGET_MS',
 ]
 
 for (const name of requiredNames) {

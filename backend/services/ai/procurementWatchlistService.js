@@ -43,10 +43,12 @@ function scoreTenderMatch(tender, prefs) {
   return score
 }
 
-async function buildWatchlistForSme(smeUid) {
+async function buildWatchlistForSme(smeUid, datasets = {}) {
   const storage = getStorage()
-  const requests = (await storage.getAttendanceRequests()).filter((r) => r.smeId === smeUid)
-  const tenders = (await storage.getAllTenders()).filter(
+  const allRequests = datasets.requests || await storage.getAttendanceRequests()
+  const allTenders = datasets.tenders || await storage.getAllTenders()
+  const requests = allRequests.filter((r) => r.smeId === smeUid)
+  const tenders = allTenders.filter(
     (t) => t.visibility !== 'private' || t.ownerUid === smeUid
   )
   const prefs = inferPreferencesFromHistory(requests, tenders)
@@ -83,15 +85,30 @@ async function buildWatchlistForSme(smeUid) {
   return watchlist
 }
 
-async function refreshAllWatchlists(limit = 50) {
+async function refreshAllWatchlists(options = {}) {
+  if (typeof options === 'number') options = { batchSize: options }
   const db = getFirestore()
-  const snap = await db.collection('users').where('userType', '==', 'sme').limit(limit).get().catch(() => ({ docs: [] }))
+  const storage = getStorage()
+  const offset = Math.max(0, Number(options.offset) || 0)
+  const batchSize = Math.max(1, Math.min(Number(options.batchSize) || 5, 20))
+  const [snap, tenders, requests] = await Promise.all([
+    db.collection('users').where('userType', '==', 'sme').limit(offset + batchSize + 1).get().catch(() => ({ docs: [] })),
+    storage.getAllTenders(),
+    storage.getAttendanceRequests(),
+  ])
+  const docs = snap.docs.slice(offset, offset + batchSize)
   let updated = 0
-  for (const doc of snap.docs) {
-    await buildWatchlistForSme(doc.id)
+  for (const doc of docs) {
+    await buildWatchlistForSme(doc.id, { tenders, requests })
     updated += 1
   }
-  return { job: 'procurement_watchlists', updated }
+  const hasMore = snap.docs.length > offset + batchSize
+  return {
+    job: 'procurement_watchlists',
+    updated,
+    continuation: hasMore ? { offset: offset + batchSize } : null,
+    storageCallCounts: { getAllTenders: 1, getAttendanceRequests: 1 },
+  }
 }
 
 module.exports = {
