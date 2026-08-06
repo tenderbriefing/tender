@@ -160,6 +160,17 @@ async function createRequest(payload, agents = []) {
 
   await storage.saveAttendanceRequest(request)
 
+  // Founder/ops alert on create (paid or unpaid) — fail-soft
+  try {
+    const founderOps = require('./founderOpsNotificationService')
+    await founderOps.notifyAttendanceRequestCreatedSafe(request)
+  } catch (err) {
+    console.error(
+      '[agentAssignment] founder ops notify failed:',
+      err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+    )
+  }
+
   if (isPaidForAgents(request.paymentStatus)) {
     await workflowAutomationService.dispatchWorkflowEvent('attendance_requested', {
       ...request,

@@ -175,6 +175,17 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
     checkoutId: checkoutId || null,
   })
 
+  // Founder/ops alert on successful payment — fail-soft; skip if already paid above
+  try {
+    const founderOps = require('../founderOpsNotificationService')
+    await founderOps.notifyAttendanceRequestPaidSafe(updated)
+  } catch (err) {
+    console.error(
+      '[attendancePayment] founder ops notify failed:',
+      err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+    )
+  }
+
   return { request: updated, alreadyPaid: false }
 }
 
