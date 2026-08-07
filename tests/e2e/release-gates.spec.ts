@@ -89,6 +89,31 @@ test.describe('API auth negative gates (no secrets required)', () => {
   })
 })
 
+test.describe('SME book-agent shareable funnel', () => {
+  test('guests hitting /sme/book-agent are sent to sign-in with return URL', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/sme/book-agent')
+    await page.waitForLoadState('domcontentloaded')
+    await page.waitForURL(/\/auth\/signin/, { timeout: 15_000 })
+    const url = new URL(page.url())
+    expect(url.pathname).toBe('/auth/signin')
+    expect(url.searchParams.get('redirect')).toBe('/sme/book-agent')
+  })
+
+  test('book-agent deep-link preserves tender checkout return path', async ({ page }) => {
+    await page.goto('/sme/book-agent?tenderId=sample-tender-id')
+    await page.waitForLoadState('domcontentloaded')
+    await page.waitForURL(/\/auth\/signin/, { timeout: 15_000 })
+    const url = new URL(page.url())
+    expect(url.pathname).toBe('/auth/signin')
+    expect(url.searchParams.get('redirect')).toBe(
+      '/tenders/sample-tender-id/request-agent'
+    )
+  })
+})
+
 test.describe('Post-registration welcome (public gates)', () => {
   test('welcome without session redirects away (no fake registration)', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
