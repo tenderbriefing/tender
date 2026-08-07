@@ -9,6 +9,7 @@ import {
   type GoogleSignInResult,
 } from '@/lib/auth/googleAuth'
 import { isGoogleAuthEnabled } from '@/lib/auth/googleAuthEnabled'
+import { markPostRegistrationWelcomePending } from '@/lib/auth/postRegistrationWelcome'
 import type { UserProfile } from '@/lib/auth'
 import type { ProductEventName } from '@/lib/founder/eventSchema'
 
@@ -22,6 +23,8 @@ export type BootstrapResponse = {
     needsRoleSelection?: boolean
     onboardingRequired?: boolean
     redirectPath?: string
+    continuePath?: string
+    dashboardPath?: string
     blocked?: boolean
     blockReason?: string
     profile?: Partial<UserProfile> | null
@@ -104,12 +107,15 @@ export async function continueWithGoogle(input: {
   registrationJourney: RegistrationJourney
   intendedRole?: 'sme' | 'youth-agent'
   pagePath: string
+  /** When true, newly created profiles may land on the post-registration welcome page. */
+  allowWelcome?: boolean
 }): Promise<{
   ok: boolean
   message?: string
   needsAccountLink?: boolean
   email?: string
   redirectPath?: string
+  created?: boolean
   profile?: Partial<UserProfile> | null
 }> {
   if (!isGoogleAuthEnabled()) {
@@ -129,6 +135,7 @@ export async function finishGoogleRedirect(input: {
   registrationJourney: RegistrationJourney
   intendedRole?: 'sme' | 'youth-agent'
   pagePath: string
+  allowWelcome?: boolean
 }) {
   if (!isGoogleAuthEnabled()) return null
 
@@ -150,6 +157,7 @@ async function finishGoogleResult(
     registrationJourney: RegistrationJourney
     intendedRole?: 'sme' | 'youth-agent'
     pagePath: string
+    allowWelcome?: boolean
   }
 ) {
   if (!result.ok) {
@@ -213,9 +221,29 @@ async function finishGoogleResult(
     return { ok: false, message: boot.data.blockReason || 'Access denied.' }
   }
 
+  const created = boot.data?.created === true
+  const allowWelcome = input.allowWelcome === true
+  // Sign-in / link / recover must never arm the welcome gate — even if redirectPath is welcome.
+  if (created && allowWelcome && result.user?.uid) {
+    markPostRegistrationWelcomePending(result.user.uid)
+  }
+
+  let redirectPath = boot.data?.redirectPath || '/auth/role-selection?recover=1'
+  if (created && !allowWelcome) {
+    redirectPath =
+      boot.data?.continuePath ||
+      boot.data?.dashboardPath ||
+      (boot.data?.onboardingRequired
+        ? input.intendedRole === 'youth-agent'
+          ? '/agent/onboarding'
+          : '/sme/onboarding'
+        : '/sme/dashboard')
+  }
+
   return {
     ok: true,
-    redirectPath: boot.data?.redirectPath || '/auth/role-selection?recover=1',
+    created,
+    redirectPath,
     profile: boot.data?.profile || null,
   }
 }

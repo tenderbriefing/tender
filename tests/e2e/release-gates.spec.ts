@@ -89,6 +89,34 @@ test.describe('API auth negative gates (no secrets required)', () => {
   })
 })
 
+test.describe('Post-registration welcome (public gates)', () => {
+  test('welcome without session redirects away (no fake registration)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/auth/welcome')
+    await page.waitForLoadState('domcontentloaded')
+    await page.waitForURL(/\/auth\/(signin|welcome)/, { timeout: 15_000 })
+    // Unauthenticated visitors must not remain on a success welcome with CTA.
+    const url = page.url()
+    if (url.includes('/auth/welcome')) {
+      await expect(page.getByRole('button', { name: /Go to Dashboard/i })).toHaveCount(0)
+    } else {
+      expect(url).toMatch(/\/auth\/signin/)
+    }
+  })
+
+  test('signup pages remain reachable on mobile viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/auth/signup?type=sme')
+    await page.waitForLoadState('domcontentloaded')
+    await expect(page.getByText(/SME Registration/i).first()).toBeVisible({ timeout: 15_000 })
+    await page.goto('/auth/signup?type=youth-agent')
+    await page.waitForLoadState('domcontentloaded')
+    await expect(page.getByText(/Youth Agent Registration/i).first()).toBeVisible({
+      timeout: 15_000,
+    })
+  })
+})
+
 /**
  * Full authenticated E2E requires E2E_SME_TOKEN / E2E_AGENT_TOKEN / E2E_ADMIN_TOKEN.
  * Skipped in CI unless secrets are provided — service-layer integration covers workflow.

@@ -6,9 +6,14 @@ import Link from 'next/link'
 import { signUp } from '@/lib/auth'
 import { getAuthErrorMessage, normalizeAuthEmail } from '@/lib/auth/errors'
 import { dashboardPathForRole } from '@/lib/auth/redirects'
+import { resolvePostAuthDestination } from '@/lib/auth/googleAuthFlow'
 import { continueWithGoogle, finishGoogleRedirect } from '@/lib/auth/continueWithGoogle'
 import { isGoogleAuthEnabled } from '@/lib/auth/googleAuthEnabled'
 import { requestWelcomeEmail } from '@/lib/auth/requestWelcomeEmail'
+import {
+  markPostRegistrationWelcomePending,
+  POST_REGISTRATION_WELCOME_PATH,
+} from '@/lib/auth/postRegistrationWelcome'
 import { SA_PROVINCES } from '@/lib/procurement/provinces'
 import { toast } from 'react-hot-toast'
 import AuthShell from '@/components/auth/AuthShell'
@@ -61,6 +66,7 @@ function SignUpForm() {
         registrationJourney: journey,
         intendedRole: journey,
         pagePath: `/auth/signup?type=${journey}`,
+        allowWelcome: true,
       })
       if (cancelled || !result) return
       if (!result.ok) {
@@ -72,8 +78,12 @@ function SignUpForm() {
         if (result.message && !/redirecting/i.test(result.message)) toast.error(result.message)
         return
       }
-      toast.success('Continue onboarding to finish your profile')
-      router.replace(result.redirectPath || (journey === 'sme' ? '/sme/onboarding' : '/agent/onboarding'))
+      if (result.created) {
+        router.replace(result.redirectPath || POST_REGISTRATION_WELCOME_PATH)
+        return
+      }
+      toast.success('Signed in with Google')
+      router.replace(result.redirectPath || (journey === 'sme' ? '/sme/dashboard' : '/agent/dashboard'))
     })()
     return () => {
       cancelled = true
@@ -142,7 +152,7 @@ function SignUpForm() {
             onboardingCompleted: true,
           }
 
-      const { userProfile } = await signUp(
+      const { user, userProfile, created } = await signUp(
         normalizeAuthEmail(formData.email),
         formData.password,
         formData.displayName.trim(),
@@ -151,11 +161,24 @@ function SignUpForm() {
       )
 
       // Non-blocking — registration succeeds even if mail fails / Resend is unset.
-      void requestWelcomeEmail()
+      if (created) void requestWelcomeEmail()
 
-      const destination = dashboardPathForRole(userProfile?.userType || formData.userType)
-      toast.success("You're signed in — welcome to TenderBriefing")
-      router.replace(destination)
+      if (created) {
+        markPostRegistrationWelcomePending(user.uid)
+        router.replace(POST_REGISTRATION_WELCOME_PATH)
+        return
+      }
+
+      // Existing account recovery (orphaned Auth with profile) — treat as sign-in, not welcome.
+      const dest = userProfile
+        ? resolvePostAuthDestination(userProfile)
+        : { path: dashboardPathForRole(formData.userType), blocked: false as const }
+      if (dest.blocked) {
+        toast.error('Access denied.')
+        return
+      }
+      toast.success('Signed in successfully')
+      router.replace(dest.path || dashboardPathForRole(userProfile?.userType || formData.userType))
     } catch (error: unknown) {
       toast.error(getAuthErrorMessage(error, 'Registration failed. Please try again.'))
     } finally {
@@ -173,6 +196,7 @@ function SignUpForm() {
         registrationJourney: journey,
         intendedRole: journey,
         pagePath: `/auth/signup?type=${journey}`,
+        allowWelcome: true,
       })
       if (!result.ok) {
         if (result.needsAccountLink) {
@@ -183,13 +207,13 @@ function SignUpForm() {
         if (result.message && !/redirecting/i.test(result.message)) toast.error(result.message)
         return
       }
-      // Existing users keep their role; first-time users go to onboarding for this journey.
-      toast.success(
-        result.profile?.onboardingCompleted
-          ? 'Signed in with Google'
-          : 'Continue onboarding to finish your profile'
-      )
-      router.replace(result.redirectPath || (isSme ? '/sme/onboarding' : '/agent/onboarding'))
+      if (result.created) {
+        router.replace(result.redirectPath || POST_REGISTRATION_WELCOME_PATH)
+        return
+      }
+      // Existing users keep their role — never show post-registration welcome.
+      toast.success('Signed in with Google')
+      router.replace(result.redirectPath || (isSme ? '/sme/dashboard' : '/agent/dashboard'))
     } catch (error: unknown) {
       toast.error(getAuthErrorMessage(error, 'Google registration failed.'))
     } finally {

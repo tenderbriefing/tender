@@ -9,6 +9,7 @@ import {
   type GoogleBootstrapRole,
 } from '@/lib/auth/googleAuthFlow'
 import { dashboardPathForRole } from '@/lib/auth/redirects'
+import { POST_REGISTRATION_WELCOME_PATH } from '@/lib/auth/postRegistrationWelcome'
 import { sendWelcomeEmailSafe } from '@/lib/services/welcomeEmail'
 import {
   createPlatformProfile,
@@ -224,9 +225,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const redirectPath = onboardingCompleted
-      ? dashboardPathForRole(role)
-      : onboardingPathForRole(role)
+    // New profile creation → welcome (not onboarding wizard / not login destination).
+    // Existing login path above never sets created:true or this welcome redirect.
+    const dashboardPath = dashboardPathForRole(role)
+    const continuePath = onboardingCompleted ? dashboardPath : onboardingPathForRole(role)
 
     return NextResponse.json({
       success: true,
@@ -244,8 +246,10 @@ export async function POST(request: NextRequest) {
           authenticationProvider: authProvider,
         },
         onboardingRequired: !onboardingCompleted,
-        redirectPath,
-        dashboardPath: dashboardPathForRole(role),
+        redirectPath: POST_REGISTRATION_WELCOME_PATH,
+        /** Destination after welcome CTA (or when a client intentionally skips welcome). */
+        continuePath,
+        dashboardPath,
       },
     })
   } catch (error) {

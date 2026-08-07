@@ -327,6 +327,66 @@ const continueFlow = fs.readFileSync(
   'utf8'
 )
 check('continueWithGoogle gates on flag', continueFlow.includes('isGoogleAuthEnabled()'))
+check(
+  'continueWithGoogle arms welcome only when allowWelcome',
+  continueFlow.includes('allowWelcome') &&
+    continueFlow.includes('markPostRegistrationWelcomePending')
+)
+
+const welcomeLib = fs.readFileSync(
+  path.join(__dirname, '../lib/auth/postRegistrationWelcome.ts'),
+  'utf8'
+)
+check('post-registration welcome path exists', welcomeLib.includes("'/auth/welcome'"))
+check('SME welcome CTA label', welcomeLib.includes('Go to Dashboard'))
+check(
+  'agent welcome uses dashboard not workspace as CTA target helper note',
+  welcomeLib.includes('fail-closed') && welcomeLib.includes('dashboardPathForRole')
+)
+
+const welcomePage = fs.readFileSync(
+  path.join(__dirname, '../app/auth/welcome/page.tsx'),
+  'utf8'
+)
+check('welcome page uses trusted profile role', welcomePage.includes('userProfile.userType'))
+check(
+  'welcome page does not read client role query',
+  !/searchParams.*get\(\s*['"]role['"]\s*\)/.test(welcomePage)
+)
+
+const bootstrapRoute = fs.readFileSync(
+  path.join(__dirname, '../app/api/auth/bootstrap-profile/route.ts'),
+  'utf8'
+)
+check(
+  'bootstrap create redirects to welcome',
+  bootstrapRoute.includes('POST_REGISTRATION_WELCOME_PATH') &&
+    bootstrapRoute.includes('continuePath')
+)
+check(
+  'bootstrap existing profile stays created:false',
+  /if \(snap\.exists\)[\s\S]*created:\s*false/.test(bootstrapRoute)
+)
+
+const roleSelection = fs.readFileSync(
+  path.join(__dirname, '../app/auth/role-selection/page.tsx'),
+  'utf8'
+)
+check(
+  'role-selection recovery skips welcome page',
+  roleSelection.includes('continuePath') &&
+    !roleSelection.includes('markPostRegistrationWelcomePending')
+)
+
+const linkAccount = fs.readFileSync(
+  path.join(__dirname, '../app/auth/link-account/page.tsx'),
+  'utf8'
+)
+check(
+  'link-account does not arm welcome',
+  !linkAccount.includes('markPostRegistrationWelcomePending') &&
+    !linkAccount.includes('allowWelcome')
+)
 
 const dockerfile = fs.readFileSync(path.join(__dirname, '../Dockerfile'), 'utf8')
 check(
