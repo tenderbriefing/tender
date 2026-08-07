@@ -10,7 +10,9 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-production
+  # Bumped off deploy-production after Actions outage left a zombie queued run
+  # holding that group lock (cannot cancel/delete). Same single-flight intent.
+  group: deploy-production-v2
   cancel-in-progress: false
 
 env:
