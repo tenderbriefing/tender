@@ -65,7 +65,7 @@ export default function SmeRequestsPage() {
         breadcrumb={{ label: 'SME dashboard', href: '/sme/dashboard' }}
         actions={
           <Link
-            href="/tenders?briefing=compulsory"
+            href="/sme/book-agent"
             className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-accent-500 px-5 py-2.5 text-sm font-semibold text-brand-900 shadow-sm hover:bg-accent-400"
           >
             Book an agent
