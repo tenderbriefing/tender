@@ -34,4 +34,4 @@
 | Prior deploy | [30653868712](https://github.com/tenderbriefing/tender/actions/runs/30653868712) |
 | PI-only kill | Replace GSM pilot secret with non-matching placeholder + `gcloud run services update --update-secrets=…:latest` (flags stay false) |
 | YAW-only kill | Keep `YOUTH_AGENT_WORKSPACE_ENABLED` unset/false and leave pilot UIDs empty (already production posture) |
-| Immediate prior | `tenderbriefing-00102-hkn` / `book-agent-537bda4` / digest `sha256:d4d555ad14c878c04479b6ab33755e81fe2d8f15b8a58b97b21e9402411bee52` |
+| Immediate prior | `tenderbriefing-00101-25g` / `welcome-c1fe68e` / digest `sha256:c7a97dea693a744ff004d8954cbdfd3235846a25b71af0883fb6d1b5e70a7188` |
