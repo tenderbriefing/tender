@@ -18,6 +18,7 @@ Never commit real secret values. Rotate via Google Secret Manager / hosting env.
 | `PAYFAST_MERCHANT_KEY` | PayFast key | prod payments | Yes | string | Payments | Checkout fails |
 | `PAYFAST_PASSPHRASE` | ITN/signature | prod payments | Yes | string | Payments | ITN reject |
 | `PAYFAST_SANDBOX` | Sandbox mode | optional | No | true/false | Payments | Wrong PayFast host |
+| `PAYFAST_MERCHANT_EMAIL` | Merchant profile email (same-account guard) | optional | No | email | Payments | Prefills buyer as merchant → PayFast 400 |
 | `WHATSAPP_WEBHOOK_ENABLED` | Enable WhatsApp webhook | optional | No | true/false | Comms | 503 in prod if false |
 | `WHATSAPP_VERIFY_TOKEN` | Meta verify | if WhatsApp on | Yes | string | Comms | Verify fails |
 | `WHATSAPP_APP_SECRET` | HMAC signature | prod WhatsApp | Yes | string | Comms | Unsigned rejected |
