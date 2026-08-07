@@ -16,6 +16,7 @@ import {
   logProfileSetupFailure,
 } from '@/lib/auth/serverProfileBootstrap'
 import type { UserProfile } from '@/lib/auth'
+import { notifyUserRegisteredSafe } from '../../../../backend/services/founderOpsNotificationService'
 
 export const dynamic = 'force-dynamic'
 
@@ -198,11 +199,7 @@ export async function POST(request: NextRequest) {
 
     // Founder/ops alert — fail-soft; never block registration
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const founderOps = require('../../../../backend/services/founderOpsNotificationService') as {
-        notifyUserRegisteredSafe: (p: unknown) => Promise<unknown>
-      }
-      await founderOps.notifyUserRegisteredSafe(userProfile)
+      await notifyUserRegisteredSafe(userProfile)
     } catch (founderNotifyErr) {
       console.warn(
         '[auth/bootstrap-profile] founder ops notify failed (non-blocking):',
