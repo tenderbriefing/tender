@@ -12,6 +12,9 @@ describe('SME book-agent shareable path helpers', () => {
 
   it('builds request-agent checkout path for a tender', () => {
     expect(requestAgentPath('abc-123')).toBe('/tenders/abc-123/request-agent')
+    expect(requestAgentPath('tb-PRIVATE-1', { invite: 'inv' })).toBe(
+      '/tenders/tb-PRIVATE-1/request-agent?invite=inv'
+    )
   })
 
   it('preserves return URL for guests (picker or deep-link checkout)', () => {
@@ -20,6 +23,9 @@ describe('SME book-agent shareable path helpers', () => {
     )
     expect(smeBookAgentSignInHref('tender-9')).toBe(
       `/auth/signin?redirect=${encodeURIComponent('/tenders/tender-9/request-agent')}`
+    )
+    expect(smeBookAgentSignInHref('tb-PRIVATE-1', { invite: 'tok' })).toBe(
+      `/auth/signin?redirect=${encodeURIComponent('/tenders/tb-PRIVATE-1/request-agent?invite=tok')}`
     )
   })
 })

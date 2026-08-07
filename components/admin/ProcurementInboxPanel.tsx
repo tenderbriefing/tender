@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { authFetch } from '@/lib/api/authenticatedFetch'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { toast } from 'react-hot-toast'
 
 type IngestedEmail = {
   id: string
@@ -23,12 +24,19 @@ type IngestedEmail = {
   convertedTenderId?: string
 }
 
+type PaymentLinkResult = {
+  paymentUrl: string
+  whatsappUrl: string
+  expiresAt?: string
+}
+
 export default function ProcurementInboxPanel() {
   const [items, setItems] = useState<IngestedEmail[]>([])
   const [loading, setLoading] = useState(true)
   const [subject, setSubject] = useState('')
   const [rawEmail, setRawEmail] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
+  const [linkBusy, setLinkBusy] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const res = await authFetch('/api/procurement/email-ingestion')
@@ -67,6 +75,42 @@ export default function ProcurementInboxPanel() {
     } finally {
       setBusy(null)
     }
+  }
+
+  const mintPaymentLink = async (tenderId: string): Promise<PaymentLinkResult | null> => {
+    setLinkBusy(tenderId)
+    try {
+      const res = await authFetch('/api/procurement/private-payment-link', {
+        method: 'POST',
+        body: JSON.stringify({ tenderId }),
+      })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error || 'Failed to create payment link')
+      return json.data as PaymentLinkResult
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to create payment link')
+      return null
+    } finally {
+      setLinkBusy(null)
+    }
+  }
+
+  const copyPaymentLink = async (tenderId: string) => {
+    const data = await mintPaymentLink(tenderId)
+    if (!data?.paymentUrl) return
+    try {
+      await navigator.clipboard.writeText(data.paymentUrl)
+      toast.success('Payment link copied — paste into WhatsApp')
+    } catch {
+      toast.error('Could not copy — select the URL manually')
+      window.prompt('Copy payment link', data.paymentUrl)
+    }
+  }
+
+  const shareWhatsApp = async (tenderId: string) => {
+    const data = await mintPaymentLink(tenderId)
+    if (!data?.whatsappUrl) return
+    window.open(data.whatsappUrl, '_blank', 'noopener,noreferrer')
   }
 
   if (loading) return <LoadingSpinner />
@@ -166,6 +210,26 @@ export default function ProcurementInboxPanel() {
                 >
                   Convert to private opportunity
                 </button>
+                {item.convertedTenderId && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={linkBusy === item.convertedTenderId}
+                      onClick={() => copyPaymentLink(item.convertedTenderId!)}
+                      className="rounded border border-brand-300 bg-brand-50 px-2 py-1 text-xs font-semibold text-brand-800"
+                    >
+                      {linkBusy === item.convertedTenderId ? '…' : 'Copy payment link'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={linkBusy === item.convertedTenderId}
+                      onClick={() => shareWhatsApp(item.convertedTenderId!)}
+                      className="rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-900"
+                    >
+                      WhatsApp share
+                    </button>
+                  </>
+                )}
               </div>
             </li>
           ))}

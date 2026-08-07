@@ -86,8 +86,32 @@ export async function POST(request: NextRequest) {
       ? await storage.getTenderBriefingById(body.tenderId)
       : null
 
-    if (tender?.visibility === 'private' && tender.ownerUid !== user.uid) {
-      return forbiddenResponse('This private RFQ belongs to another SME')
+    if (body.tenderId && !tender) {
+      return NextResponse.json(
+        { success: false, error: 'Tender briefing not found' },
+        { status: 404 }
+      )
+    }
+
+    if (tender?.visibility === 'private') {
+      const { smeHasPrivateBookAccess } = await import(
+        '@/lib/security/privateTenderInvite'
+      )
+      const invite =
+        typeof body.invite === 'string'
+          ? body.invite
+          : request.headers.get('x-private-invite')
+      if (
+        !smeHasPrivateBookAccess({
+          tender,
+          smeUid: user.uid,
+          inviteToken: invite,
+        })
+      ) {
+        return forbiddenResponse(
+          'This private RFQ is not accessible — use a valid payment invite link'
+        )
+      }
     }
 
     const agents = await users.getYouthAgents()

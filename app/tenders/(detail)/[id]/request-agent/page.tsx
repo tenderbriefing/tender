@@ -1,7 +1,7 @@
 'use client'
 
-import { FormEvent, useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { FormEvent, Suspense, useEffect, useState } from 'react'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -40,8 +40,18 @@ import {
   ATTENDANCE_PRICING_HIGHLIGHTS,
 } from '@/lib/booking/copy'
 
-export default function RequestYouthAgentPage() {
+function RequestAgentFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <LoadingSpinner size="lg" />
+    </div>
+  )
+}
+
+function RequestYouthAgentContent() {
   const { id } = useParams<{ id: string }>()
+  const searchParams = useSearchParams()
+  const inviteToken = searchParams?.get('invite')?.trim() || null
   const { user, userProfile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [tender, setTender] = useState<TenderBriefing | null>(null)
@@ -54,23 +64,32 @@ export default function RequestYouthAgentPage() {
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
-        router.push(`/auth/signin?redirect=/tenders/${id}/request-agent`)
+        const returnPath = inviteToken
+          ? `/tenders/${id}/request-agent?invite=${encodeURIComponent(inviteToken)}`
+          : `/tenders/${id}/request-agent`
+        router.push(`/auth/signin?redirect=${encodeURIComponent(returnPath)}`)
       } else if (userProfile?.userType !== 'sme') {
         router.push('/dashboard')
       }
     }
-  }, [authLoading, user, userProfile, router, id])
+  }, [authLoading, user, userProfile, router, id, inviteToken])
 
   useEffect(() => {
-    if (!id) return
+    if (!id || authLoading || !user) return
+    if (userProfile && userProfile.userType !== 'sme') return
     setTenderLoading(true)
-    fetch(`/api/tender-briefings/${id}`)
+    const qs = inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : ''
+    authFetch(`/api/tender-briefings/${id}${qs}`, {
+      headers: inviteToken ? { 'x-private-invite': inviteToken } : undefined,
+    })
       .then((r) => r.json())
       .then((j) => {
         if (j.success) setTender(j.data)
+        else setTender(null)
       })
+      .catch(() => setTender(null))
       .finally(() => setTenderLoading(false))
-  }, [id])
+  }, [id, user, userProfile, authLoading, inviteToken])
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -84,10 +103,12 @@ export default function RequestYouthAgentPage() {
     try {
       const res = await authFetch('/api/attendance-requests', {
         method: 'POST',
+        headers: inviteToken ? { 'x-private-invite': inviteToken } : undefined,
         body: JSON.stringify({
           tenderId: tender.id,
           notes,
           responsibilityAcknowledged: true,
+          ...(inviteToken ? { invite: inviteToken } : {}),
         }),
       })
       const json = await res.json()
@@ -158,7 +179,7 @@ export default function RequestYouthAgentPage() {
           <EmptyState
             icon={FileText}
             title="Tender not found"
-            description="We could not load this opportunity. It may have been removed from the official feed."
+            description="We could not load this opportunity. Private WhatsApp / RFQ links require the signed invite from your payment link, and you must be signed in as an SME."
             action={{ label: 'Browse opportunities', href: '/tenders' }}
           />
         </main>
@@ -490,5 +511,13 @@ export default function RequestYouthAgentPage() {
       </main>
       <Footer />
     </div>
+  )
+}
+
+export default function RequestYouthAgentPage() {
+  return (
+    <Suspense fallback={<RequestAgentFallback />}>
+      <RequestYouthAgentContent />
+    </Suspense>
   )
 }
