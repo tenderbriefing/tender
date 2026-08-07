@@ -2,7 +2,8 @@
 
 | Version / tag | SHA | Deployed UTC | Workflow | Cloud Run revision | Status |
 |---------------|-----|--------------|----------|-------------------|--------|
-| `briefing-tz-2e72c6c` | `2e72c6ca4e001f08843e5511f00062f0b15d01d7` | 2026-08-05T18:02:33Z | [31031359926](https://github.com/tenderbriefing/tender/actions/runs/31031359926) | `tenderbriefing-00099-j82` (100%) | **Current production** — eTenders briefing times resolved as SA wall clock; YAW flag off; PI flags false |
+| `notify-ux-7eab86a` | `7eab86a7110f61d465e350b5b17fa081a5bd2005` | 2026-08-07T04:26:02Z | [31146427000](https://github.com/tenderbriefing/tender/actions/runs/31146427000) | `tenderbriefing-00100-zb2` (100%) | **Current production** — automation budget + founder/ops notify (RFQ/register/attendance) + youth agent registration cleanup; YAW flag off; PI flags false |
+| `briefing-tz-2e72c6c` | `2e72c6ca4e001f08843e5511f00062f0b15d01d7` | 2026-08-05T18:02:33Z | [31031359926](https://github.com/tenderbriefing/tender/actions/runs/31031359926) | `tenderbriefing-00099-j82` (100%) | Prior — eTenders briefing times resolved as SA wall clock; YAW flag off; PI flags false |
 | `yaw-v1-960441a` | `960441a01c7a782351a7d9bd008b929b9820dd63` | 2026-08-05T15:47:51Z | [31020326730](https://github.com/tenderbriefing/tender/actions/runs/31020326730) | `tenderbriefing-00098-ws7` | Prior — Youth Agent Workspace v1 code shipped; `youth_agent_workspace_v1` globally disabled (fail-closed); PI flags false |
 | `briefing-cutoff-4d78d20` | `4d78d20d14ee2e997fe30c1473c5675552fa33a7` | 2026-08-03T18:58Z | [30842478067](https://github.com/tenderbriefing/tender/actions/runs/30842478067) | `tenderbriefing-00097-gd6` | Prior production (briefing-date public cutoff) |
 | `pi-pilot-rules-a6d2b92` | `a6d2b922e634efc64e8ebe1b5886f4b46006a087` | 2026-08-03T12:59:28Z | [30814718880](https://github.com/tenderbriefing/tender/actions/runs/30814718880) | `tenderbriefing-00096-h4h` | Prior — PI pilot allow-list (2 UIDs via GSM); flags false; progress read rules fixed |
@@ -10,17 +11,17 @@
 | `pi-phase1-91a7871` | `91a787103cef2f76372a47761ee65d944824199f` | 2026-08-02T18:18:39Z | [30760212862](https://github.com/tenderbriefing/tender/actions/runs/30760212862) | `tenderbriefing-00090-tgb` | Prior PI code (flags off, empty list) |
 | `enterprise-v1.0.0` | `6e6597264faf4cfcd25c09060d93bc5e406c008b` | 2026-07-31T18:22:44Z | [30653868712](https://github.com/tenderbriefing/tender/actions/runs/30653868712) | `tenderbriefing-00089-zv9` | **Rollback baseline** (do not modify/delete tag) |
 
-## Current production image (briefing timezone fix)
+## Current production image (notify / automation / registration UX)
 
 | Field | Value |
 |-------|--------|
-| Image digest | `sha256:4cc83afe1af21f329dc3eab08fd224eab3ce1c6ec6b9088719db8e36ce167d94` |
-| Cloud Build ID | `6b6434dc-b58b-47e2-bba4-4eb8a23f61a8` |
-| Merge | PR [#14](https://github.com/tenderbriefing/tender/pull/14) → `2e72c6c` |
-| Pre-deploy CI | [31030211283](https://github.com/tenderbriefing/tender/actions/runs/31030211283) |
+| Image digest | `sha256:fb9039ce995f70c9f177e494456da7677a5966543db6be0758366f00996b0ca8` |
+| Cloud Build ID | `4c2c4584-53e1-4a92-8cee-f81433dd9444` |
+| Merges | PRs [#15](https://github.com/tenderbriefing/tender/pull/15), [#16](https://github.com/tenderbriefing/tender/pull/16), [#17](https://github.com/tenderbriefing/tender/pull/17), [#18](https://github.com/tenderbriefing/tender/pull/18) → tip `7eab86a` |
+| Pre-deploy CI | [31145794666](https://github.com/tenderbriefing/tender/actions/runs/31145794666) |
 | YAW flag | `youth_agent_workspace_v1` — `YOUTH_AGENT_WORKSPACE_*` env **absent** (defaults false / empty; fail-closed) |
 | PI flags | `PROCUREMENT_INTELLIGENCE_ENABLED` / `NEXT_PUBLIC_…` both **false** |
-| Fix | eTenders OCDS wall-clock-as-`Z` briefing times resolved in Africa/Johannesburg; catalogue cut-off, calendar export, and Event JSON-LD aligned |
+| Shipped | Automation Cloud Run time budget; immediate founder/ops notify on RFQ ingest, registration, and attendance create/paid; youth agent registration drops radius/transport |
 
 ## Rollback target (enterprise-v1.0.0)
 
@@ -31,4 +32,4 @@
 | Prior deploy | [30653868712](https://github.com/tenderbriefing/tender/actions/runs/30653868712) |
 | PI-only kill | Replace GSM pilot secret with non-matching placeholder + `gcloud run services update --update-secrets=…:latest` (flags stay false) |
 | YAW-only kill | Keep `YOUTH_AGENT_WORKSPACE_ENABLED` unset/false and leave pilot UIDs empty (already production posture) |
-| Immediate prior | `tenderbriefing-00098-ws7` / `yaw-v1-960441a` / digest `sha256:0f4a46945d1fabfce184fddaba2d53f0d455430e3909db3524e9ff379690a14f` |
+| Immediate prior | `tenderbriefing-00099-j82` / `briefing-tz-2e72c6c` / digest `sha256:4cc83afe1af21f329dc3eab08fd224eab3ce1c6ec6b9088719db8e36ce167d94` |
