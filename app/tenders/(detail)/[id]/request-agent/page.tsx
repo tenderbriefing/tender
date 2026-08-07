@@ -113,6 +113,14 @@ function RequestYouthAgentContent() {
       })
       const json = await res.json()
       if (!json.success) {
+        if (json.code === 'ACTIVE_REQUEST_EXISTS' && json.data?.resumeUrl) {
+          toast.error(
+            json.error ||
+              'You already have an active booking for this tender. Opening your request…'
+          )
+          router.push(json.data.resumeUrl)
+          return
+        }
         if (json.code === 'PAYFAST_NOT_CONFIGURED' && json.data?.request?.id) {
           toast.error(
             json.error ||
@@ -137,20 +145,32 @@ function RequestYouthAgentContent() {
 
       if (payment?.formAction && payment?.fields) {
         const { startPayFastFromApiPayload } = await import('@/lib/payments/payfastClient')
-        toast.success('Redirecting to secure PayFast checkout…')
+        toast.success(
+          json.data?.resumed
+            ? 'Continuing payment for your existing request…'
+            : 'Redirecting to secure PayFast checkout…'
+        )
         startPayFastFromApiPayload(payment)
         return
       }
 
       const redirectUrl = payment?.redirectUrl
       if (redirectUrl) {
-        toast.success('Redirecting to secure PayFast checkout…')
+        toast.success(
+          json.data?.resumed
+            ? 'Continuing payment for your existing request…'
+            : 'Redirecting to secure PayFast checkout…'
+        )
         window.location.href = redirectUrl
         return
       }
 
       const requestId = json.data?.request?.id
-      toast.success('Agent booking submitted')
+      toast.success(
+        json.data?.resumed
+          ? 'Opening your existing attendance request'
+          : 'Agent booking submitted'
+      )
       router.push(
         requestId
           ? `/sme/requests/confirmation?requestId=${requestId}&tenderId=${tender.id}`

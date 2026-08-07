@@ -136,4 +136,46 @@ describe('SME → Pay → Agent → Complete workflow', () => {
     expect(assigned.status).toBe('assigned')
     expect(assigned.lastTransitionRole).toBe('youth-agent')
   })
+
+  it('resumes unpaid active request instead of creating a duplicate', async () => {
+    const tenderId = `t-resume-${Date.now()}`
+    const first = await agentService.createRequest({
+      tenderId,
+      smeId: 'sme-resume',
+      tenderTitle: 'Resume me',
+    })
+    expect(first.resumed).toBeFalsy()
+    expect(first.request.paymentStatus).toBe('pending')
+
+    const second = await agentService.createRequest({
+      tenderId,
+      smeId: 'sme-resume',
+      tenderTitle: 'Should not create another',
+    })
+    expect(second.resumed).toBe(true)
+    expect(second.request.id).toBe(first.request.id)
+    expect(second.request.paymentStatus).toBe('pending')
+
+    const storage = require('../../backend/services/storageAdapter').getStorage()
+    const all = await storage.getAttendanceRequests({ smeId: 'sme-resume' })
+    expect(all.filter((r: any) => r.tenderId === tenderId)).toHaveLength(1)
+  })
+
+  it('throws ACTIVE_REQUEST_EXISTS when a paid booking already exists', async () => {
+    const tenderId = `t-paid-${Date.now()}`
+    const { request } = await agentService.createRequest({
+      tenderId,
+      smeId: 'sme-paid',
+    })
+    await paymentService.markRequestPaid(request.id, { pfPaymentId: 'PF-PAID' })
+
+    try {
+      await agentService.createRequest({ tenderId, smeId: 'sme-paid' })
+      expect.unreachable('should have thrown')
+    } catch (err: any) {
+      expect(err.code).toBe('ACTIVE_REQUEST_EXISTS')
+      expect(err.existingRequest?.id).toBe(request.id)
+      expect(err.message).toMatch(/already exists/)
+    }
+  })
 })

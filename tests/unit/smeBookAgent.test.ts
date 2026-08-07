@@ -64,3 +64,19 @@ describe('SME book-agent page auth and selection contracts', () => {
     expect(page).toContain('No upcoming compulsory briefings')
   })
 })
+
+describe('request-agent duplicate active request UX', () => {
+  it('resumes PayFast or redirects to existing request instead of dead-end toast', async () => {
+    const fs = await import('node:fs')
+    const path = await import('node:path')
+    const page = fs.readFileSync(
+      path.join(process.cwd(), 'app/tenders/(detail)/[id]/request-agent/page.tsx'),
+      'utf8'
+    )
+
+    expect(page).toContain("json.code === 'ACTIVE_REQUEST_EXISTS'")
+    expect(page).toContain('json.data?.resumeUrl')
+    expect(page).toContain('Continuing payment for your existing request')
+    expect(page).toContain("json.data?.resumed")
+  })
+})
