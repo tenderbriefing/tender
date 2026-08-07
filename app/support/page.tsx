@@ -42,7 +42,7 @@ const faqs = [
   },
   {
     q: 'What if payment fails?',
-    a: 'Your attendance request is saved. You can retry payment when PayFast checkout is enabled, or contact support during the pilot for manual coordination.',
+    a: 'Your attendance request is saved — open My Requests and tap Pay with PayFast to continue. If PayFast says the merchant cannot receive payments from the same account, complete checkout with a different email / PayFast login than the merchant receiving funds (PayFast blocks merchants from paying themselves). Contact support during the pilot for manual coordination if needed.',
   },
   {
     q: 'How do I get dispatch updates?',

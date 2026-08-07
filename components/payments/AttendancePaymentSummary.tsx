@@ -3,6 +3,7 @@
 import PaymentStatusBadge from '@/components/payments/PaymentStatusBadge'
 import RetryPaymentButton from '@/components/payments/RetryPaymentButton'
 import { ATTENDANCE_FEE_LABEL, formatAttendanceFeeZar } from '@/lib/payments/attendanceFee'
+import { PAYFAST_SAME_ACCOUNT_SHORT } from '@/lib/payments/payfastUserErrors'
 import type { EnrichedAttendanceRequest } from '@/lib/tenderBriefing/enrichment'
 
 export default function AttendancePaymentSummary({
@@ -54,6 +55,9 @@ export default function AttendancePaymentSummary({
             />
           </div>
         )}
+        <p className="mt-3 text-xs leading-relaxed text-amber-900/80">
+          {PAYFAST_SAME_ACCOUNT_SHORT}
+        </p>
       </div>
     )
   }
