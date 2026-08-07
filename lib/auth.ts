@@ -168,7 +168,7 @@ async function completeRegistrationProfile(
   displayName: string,
   userType: 'sme' | 'youth-agent',
   additionalData?: Partial<UserProfile>
-): Promise<UserProfile> {
+): Promise<{ userProfile: UserProfile; created: boolean }> {
   await user.getIdToken(true)
   await waitForAuthSession(user)
   const token = await user.getIdToken()
@@ -194,7 +194,11 @@ async function completeRegistrationProfile(
   const payload = (await res.json().catch(() => null)) as {
     success?: boolean
     error?: string
-    data?: { userProfile?: UserProfile; profile?: UserProfile }
+    data?: {
+      created?: boolean
+      userProfile?: UserProfile
+      profile?: UserProfile
+    }
   } | null
 
   const profile = payload?.data?.userProfile || payload?.data?.profile
@@ -216,7 +220,10 @@ async function completeRegistrationProfile(
     throw err
   }
 
-  return profile as UserProfile
+  return {
+    userProfile: profile as UserProfile,
+    created: payload?.data?.created === true,
+  }
 }
 
 export const signUp = async (
@@ -251,19 +258,19 @@ export const signUp = async (
     user = existing.user
     const existingProfile = await getUserProfile(user.uid)
     if (existingProfile?.userType) {
-      return { user, userProfile: existingProfile }
+      return { user, userProfile: existingProfile, created: false }
     }
   }
 
   try {
     await updateProfile(user, { displayName: displayName.trim() })
-    const userProfile = await completeRegistrationProfile(
+    const { userProfile, created } = await completeRegistrationProfile(
       user,
       displayName,
       userType,
       additionalData
     )
-    return { user, userProfile }
+    return { user, userProfile, created }
   } catch (error) {
     if (createdAuthUser) {
       try {

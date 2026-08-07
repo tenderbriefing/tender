@@ -8,6 +8,8 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { Building2, Users } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { bootstrapGoogleProfile } from '@/lib/auth/continueWithGoogle'
+import { onboardingPathForRole } from '@/lib/auth/googleAuthFlow'
+import { dashboardPathForRole } from '@/lib/auth/redirects'
 import { toast } from 'react-hot-toast'
 
 function RoleSelectionContent() {
@@ -66,10 +68,18 @@ function RoleSelectionContent() {
       } catch {
         /* non-blocking */
       }
-      toast.success('Continue onboarding to finish your profile')
-      router.replace(
-        boot.data?.redirectPath || (role === 'sme' ? '/sme/onboarding' : '/agent/onboarding')
+      // Missing-profile / Google recovery — never show "account created" welcome.
+      const continuePath =
+        boot.data?.continuePath ||
+        (boot.data?.onboardingRequired
+          ? onboardingPathForRole(role)
+          : dashboardPathForRole(role))
+      toast.success(
+        boot.data?.onboardingRequired
+          ? 'Continue onboarding to finish your profile'
+          : 'Signed in successfully'
       )
+      router.replace(continuePath)
     } catch {
       toast.error('Could not complete registration')
     } finally {
