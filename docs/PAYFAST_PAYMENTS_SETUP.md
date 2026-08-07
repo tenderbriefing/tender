@@ -21,6 +21,7 @@ Sandbox (optional): [https://sandbox.payfast.co.za/](https://sandbox.payfast.co.
 | `PAYFAST_MERCHANT_KEY` | Merchant key |
 | `PAYFAST_PASSPHRASE` | Salt passphrase (required for signed ITNs) |
 | `PAYFAST_MODE` | `live` (default in Cloud Run) or `sandbox` |
+| `PAYFAST_MERCHANT_EMAIL` | Optional. Merchant profile email; when set, checkout omits `email_address` if the SME email matches (avoids PayFast same-account prefill). Not a secret. |
 | `NEXT_PUBLIC_ATTENDANCE_FEE_CENTS` | Default `24900` |
 | `NEXT_PUBLIC_ATTENDANCE_FEE_LABEL` | Default `R249.00` |
 

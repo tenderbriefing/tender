@@ -112,6 +112,21 @@ test.describe('SME book-agent shareable funnel', () => {
       '/tenders/sample-tender-id/request-agent'
     )
   })
+
+  test('private payment invite deep-link preserves invite on sign-in return', async ({
+    page,
+  }) => {
+    await page.goto(
+      '/sme/book-agent?tenderId=tb-PRIVATE-ABCDEF12&invite=sample-invite-token'
+    )
+    await page.waitForLoadState('domcontentloaded')
+    await page.waitForURL(/\/auth\/signin/, { timeout: 15_000 })
+    const url = new URL(page.url())
+    expect(url.pathname).toBe('/auth/signin')
+    expect(url.searchParams.get('redirect')).toBe(
+      '/tenders/tb-PRIVATE-ABCDEF12/request-agent?invite=sample-invite-token'
+    )
+  })
 })
 
 test.describe('Post-registration welcome (public gates)', () => {

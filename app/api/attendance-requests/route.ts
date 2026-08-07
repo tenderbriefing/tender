@@ -86,8 +86,32 @@ export async function POST(request: NextRequest) {
       ? await storage.getTenderBriefingById(body.tenderId)
       : null
 
-    if (tender?.visibility === 'private' && tender.ownerUid !== user.uid) {
-      return forbiddenResponse('This private RFQ belongs to another SME')
+    if (body.tenderId && !tender) {
+      return NextResponse.json(
+        { success: false, error: 'Tender briefing not found' },
+        { status: 404 }
+      )
+    }
+
+    if (tender?.visibility === 'private') {
+      const { smeHasPrivateBookAccess } = await import(
+        '@/lib/security/privateTenderInvite'
+      )
+      const invite =
+        typeof body.invite === 'string'
+          ? body.invite
+          : request.headers.get('x-private-invite')
+      if (
+        !smeHasPrivateBookAccess({
+          tender,
+          smeUid: user.uid,
+          inviteToken: invite,
+        })
+      ) {
+        return forbiddenResponse(
+          'This private RFQ is not accessible — use a valid payment invite link'
+        )
+      }
     }
 
     const agents = await users.getYouthAgents()
@@ -151,6 +175,8 @@ export async function POST(request: NextRequest) {
           data: {
             request: result.request,
             nearbyAgents: [],
+            resumed: Boolean(result.resumed),
+            resumeUrl: `/sme/requests/${result.request.id}`,
             payment,
           },
         })
@@ -160,7 +186,12 @@ export async function POST(request: NextRequest) {
           success: false,
           error: checkout.error || 'Payment checkout failed',
           code,
-          data: { request: result.request, payment },
+          data: {
+            request: result.request,
+            resumed: Boolean(result.resumed),
+            resumeUrl: `/sme/requests/${result.request.id}`,
+            payment,
+          },
         },
         { status: 400 }
       )
@@ -171,6 +202,8 @@ export async function POST(request: NextRequest) {
       data: {
         request: checkout.request,
         nearbyAgents: [],
+        resumed: Boolean(result.resumed),
+        resumeUrl: `/sme/requests/${checkout.request.id}`,
         payment: {
           required: true,
           formAction: checkout.formAction,
@@ -184,6 +217,27 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
+    const err = error as {
+      code?: string
+      message?: string
+      existingRequest?: { id?: string; paymentStatus?: string }
+    }
+    if (err?.code === 'ACTIVE_REQUEST_EXISTS' && err.existingRequest?.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'ACTIVE_REQUEST_EXISTS',
+          error:
+            'You already have an active booking for this tender. Open your request to view status.',
+          data: {
+            request: err.existingRequest,
+            resumeUrl: `/sme/requests/${err.existingRequest.id}`,
+            paymentStatus: err.existingRequest.paymentStatus || null,
+          },
+        },
+        { status: 409 }
+      )
+    }
     return NextResponse.json(
       {
         success: false,

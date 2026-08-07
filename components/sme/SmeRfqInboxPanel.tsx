@@ -28,6 +28,7 @@ export default function SmeRfqInboxPanel() {
   const [subject, setSubject] = useState('')
   const [rawEmail, setRawEmail] = useState('')
   const [busy, setBusy] = useState(false)
+  const [linkBusy, setLinkBusy] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const res = await authFetch('/api/procurement/email-ingestion')
@@ -81,6 +82,42 @@ export default function SmeRfqInboxPanel() {
       toast.error(e instanceof Error ? e.message : 'Action failed')
     } finally {
       setBusy(false)
+    }
+  }
+
+  const mintAndCopyPaymentLink = async (tenderId: string) => {
+    setLinkBusy(tenderId)
+    try {
+      const res = await authFetch('/api/procurement/private-payment-link', {
+        method: 'POST',
+        body: JSON.stringify({ tenderId }),
+      })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error)
+      const paymentUrl = json.data?.paymentUrl as string
+      await navigator.clipboard.writeText(paymentUrl)
+      toast.success('Payment link copied — paste into WhatsApp')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not create payment link')
+    } finally {
+      setLinkBusy(null)
+    }
+  }
+
+  const shareWhatsApp = async (tenderId: string) => {
+    setLinkBusy(tenderId)
+    try {
+      const res = await authFetch('/api/procurement/private-payment-link', {
+        method: 'POST',
+        body: JSON.stringify({ tenderId }),
+      })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error)
+      window.open(json.data.whatsappUrl, '_blank', 'noopener,noreferrer')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not open WhatsApp')
+    } finally {
+      setLinkBusy(null)
     }
   }
 
@@ -172,22 +209,40 @@ export default function SmeRfqInboxPanel() {
                     </>
                   )}
                   {item.status === 'approved' && !item.convertedTenderId && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => run(item.id, 'convert')}
+                      className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white"
+                    >
+                      Create private opportunity
+                    </button>
+                  )}
+                  {item.convertedTenderId && (
+                    <>
+                      <Link
+                        href={`/tenders/${item.convertedTenderId}/request-agent`}
+                        className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white"
+                      >
+                        Book an agent
+                      </Link>
                       <button
                         type="button"
-                        disabled={busy}
-                        onClick={() => run(item.id, 'convert')}
-                        className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white"
+                        disabled={linkBusy === item.convertedTenderId}
+                        onClick={() => mintAndCopyPaymentLink(item.convertedTenderId!)}
+                        className="rounded-lg border border-brand-300 bg-brand-50 px-3 py-1.5 text-sm font-semibold text-brand-800"
                       >
-                        Create private opportunity
+                        {linkBusy === item.convertedTenderId ? '…' : 'Copy payment link'}
                       </button>
-                    )}
-                  {item.convertedTenderId && (
-                    <Link
-                      href={`/tenders/${item.convertedTenderId}/request-agent`}
-                      className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white"
-                    >
-                      Book an agent
-                    </Link>
+                      <button
+                        type="button"
+                        disabled={linkBusy === item.convertedTenderId}
+                        onClick={() => shareWhatsApp(item.convertedTenderId!)}
+                        className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-900"
+                      >
+                        WhatsApp share
+                      </button>
+                    </>
                   )}
                 </div>
               </li>

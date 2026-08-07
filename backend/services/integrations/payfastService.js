@@ -202,7 +202,21 @@ function createCheckoutPayload({
   }
 
   if (itemDescription) fields.item_description = String(itemDescription).slice(0, 255)
-  if (email) fields.email_address = String(email).slice(0, 100)
+  // PayFast rejects checkout when payer email matches the merchant profile email
+  // ("unable to receive payments from the same account"). Omit colliding email so
+  // the hosted page can collect a different payer address. Still blocked if the
+  // user logs into PayFast with the merchant account.
+  const buyerEmail = email ? String(email).trim().slice(0, 100) : ''
+  const merchantEmail = String(env('PAYFAST_MERCHANT_EMAIL') || '').trim().toLowerCase()
+  if (buyerEmail) {
+    if (merchantEmail && buyerEmail.toLowerCase() === merchantEmail) {
+      console.warn(
+        '[payfast] omitting email_address: buyer email matches PAYFAST_MERCHANT_EMAIL (same-account risk)'
+      )
+    } else {
+      fields.email_address = buyerEmail
+    }
+  }
   if (nameFirst) fields.name_first = String(nameFirst).slice(0, 100)
   if (nameLast) fields.name_last = String(nameLast).slice(0, 100)
   if (cellNumber) fields.cell_number = String(cellNumber).replace(/\D/g, '').slice(0, 20)

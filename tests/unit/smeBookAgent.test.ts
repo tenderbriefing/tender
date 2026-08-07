@@ -12,6 +12,9 @@ describe('SME book-agent shareable path helpers', () => {
 
   it('builds request-agent checkout path for a tender', () => {
     expect(requestAgentPath('abc-123')).toBe('/tenders/abc-123/request-agent')
+    expect(requestAgentPath('tb-PRIVATE-1', { invite: 'inv' })).toBe(
+      '/tenders/tb-PRIVATE-1/request-agent?invite=inv'
+    )
   })
 
   it('preserves return URL for guests (picker or deep-link checkout)', () => {
@@ -20,6 +23,9 @@ describe('SME book-agent shareable path helpers', () => {
     )
     expect(smeBookAgentSignInHref('tender-9')).toBe(
       `/auth/signin?redirect=${encodeURIComponent('/tenders/tender-9/request-agent')}`
+    )
+    expect(smeBookAgentSignInHref('tb-PRIVATE-1', { invite: 'tok' })).toBe(
+      `/auth/signin?redirect=${encodeURIComponent('/tenders/tb-PRIVATE-1/request-agent?invite=tok')}`
     )
   })
 })
@@ -56,5 +62,21 @@ describe('SME book-agent page auth and selection contracts', () => {
     expect(page).not.toContain('/api/payments/yoco')
     expect(page).not.toContain('startPayFastFromApiPayload')
     expect(page).toContain('No upcoming compulsory briefings')
+  })
+})
+
+describe('request-agent duplicate active request UX', () => {
+  it('resumes PayFast or redirects to existing request instead of dead-end toast', async () => {
+    const fs = await import('node:fs')
+    const path = await import('node:path')
+    const page = fs.readFileSync(
+      path.join(process.cwd(), 'app/tenders/(detail)/[id]/request-agent/page.tsx'),
+      'utf8'
+    )
+
+    expect(page).toContain("json.code === 'ACTIVE_REQUEST_EXISTS'")
+    expect(page).toContain('json.data?.resumeUrl')
+    expect(page).toContain('Continuing payment for your existing request')
+    expect(page).toContain("json.data?.resumed")
   })
 })

@@ -49,7 +49,11 @@ export interface AgentAssignmentService {
   createRequest: (
     payload: Record<string, unknown>,
     agents?: unknown[]
-  ) => Promise<{ request: AttendanceRequest; nearbyAgents?: unknown[] }>
+  ) => Promise<{
+    request: AttendanceRequest
+    nearbyAgents?: unknown[]
+    resumed?: boolean
+  }>
   getRequestById: (requestId: string) => Promise<AttendanceRequest | null>
   acceptRequest: (
     requestId: string,

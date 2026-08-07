@@ -87,6 +87,17 @@ function createAttendanceRequest(payload) {
 
 const ACTIVE_REQUEST_STATUSES = new Set(['pending', 'assigned', 'accepted'])
 
+class ActiveRequestExistsError extends Error {
+  constructor(existingRequest) {
+    super(
+      `An active attendance request already exists for this tender (${existingRequest.id})`
+    )
+    this.name = 'ActiveRequestExistsError'
+    this.code = 'ACTIVE_REQUEST_EXISTS'
+    this.existingRequest = existingRequest
+  }
+}
+
 async function findActiveRequestForSmeTender(smeId, tenderId) {
   const storage = getStorage()
   const requests = await storage.getAttendanceRequests({ smeId })
@@ -95,6 +106,13 @@ async function findActiveRequestForSmeTender(smeId, tenderId) {
       r.tenderId === tenderId &&
       ACTIVE_REQUEST_STATUSES.has(normalizeStatus(r.status))
   )
+}
+
+function isUnpaidResumable(request) {
+  if (!request) return false
+  if (isPaidForAgents(request.paymentStatus)) return false
+  if (request.paymentStatus === 'cancelled') return false
+  return true
 }
 
 function scoreAgent(agent, request) {
@@ -141,9 +159,18 @@ async function createRequest(payload, agents = []) {
   const storage = getStorage()
   const existing = await findActiveRequestForSmeTender(payload.smeId, payload.tenderId)
   if (existing) {
-    throw new Error(
-      `An active attendance request already exists for this tender (${existing.id})`
-    )
+    // Unpaid active request: resume the same booking instead of dead-ending the SME.
+    if (isUnpaidResumable(existing)) {
+      return {
+        request: { ...existing, status: normalizeStatus(existing.status) },
+        nearbyAgents: [],
+        resumed: true,
+      }
+    }
+    throw new ActiveRequestExistsError({
+      ...existing,
+      status: normalizeStatus(existing.status),
+    })
   }
 
   const request = createAttendanceRequest(payload)
@@ -365,6 +392,8 @@ module.exports = {
   findNearbyAgents,
   getRequestById,
   findActiveRequestForSmeTender,
+  ActiveRequestExistsError,
+  isUnpaidResumable,
   createRequest,
   acceptRequest,
   assignRequestToAgent,

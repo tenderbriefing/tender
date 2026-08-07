@@ -44,6 +44,7 @@ function SmeBookAgentContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tenderIdParam = searchParams?.get('tenderId')?.trim() || null
+  const inviteParam = searchParams?.get('invite')?.trim() || null
 
   const isSme = userProfile?.userType === 'sme'
   const wrongRole =
@@ -62,15 +63,15 @@ function SmeBookAgentContent() {
   useEffect(() => {
     if (authLoading) return
     if (!user) {
-      router.replace(smeBookAgentSignInHref(tenderIdParam))
+      router.replace(smeBookAgentSignInHref(tenderIdParam, { invite: inviteParam }))
       return
     }
     if (!userProfile) return
     if (userProfile.userType !== 'sme') return
     if (tenderIdParam) {
-      router.replace(requestAgentPath(tenderIdParam))
+      router.replace(requestAgentPath(tenderIdParam, { invite: inviteParam }))
     }
-  }, [authLoading, user, userProfile, router, tenderIdParam])
+  }, [authLoading, user, userProfile, router, tenderIdParam, inviteParam])
 
   if (authLoading || (user && !userProfile)) {
     return (
