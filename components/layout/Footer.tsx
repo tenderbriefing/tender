@@ -1,134 +1,134 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { Mail, MapPin } from 'lucide-react'
-import WhatsAppIconLink from '@/components/ui/WhatsAppIconLink'
-import { SUPPORT_EMAIL } from '@/lib/contact'
+import WhatsAppIcon from '@/components/ui/WhatsAppIcon'
+import { publicWhatsAppLink, SUPPORT_EMAIL } from '@/lib/contact'
+
+const PLATFORM_LINKS = [
+  { href: '/tenders', label: 'Tender Opportunities' },
+  { href: '/compulsory-tender-briefings', label: 'Compulsory Briefings' },
+  { href: '/how-it-works', label: 'How It Works' },
+  { href: '/pricing', label: 'Pricing' },
+] as const
+
+const COMPANY_LINKS = [
+  { href: '/about', label: 'About' },
+  { href: '/youth-agents', label: 'Youth Agents' },
+  { href: '/contact', label: 'Contact' },
+  { href: '/support', label: 'Support' },
+] as const
+
+const linkClass =
+  'text-[14px] leading-snug text-slate-300 transition hover:text-brand-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400'
+
+const headingClass =
+  'text-[13px] font-semibold uppercase tracking-wider text-white sm:text-[14px]'
 
 const Footer = () => {
   return (
-    <footer className="border-t border-slate-200 bg-slate-900 text-slate-300">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid gap-8 md:grid-cols-3">
-          <div>
-            <div className="flex items-center">
+    <footer className="border-t border-slate-800 bg-slate-900 text-slate-300">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+          {/* Brand */}
+          <div className="max-w-sm">
+            <Link href="/" className="inline-flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400">
               <Image
                 src="/brand/logo.png"
                 alt="TenderBriefing"
-                width={192}
-                height={128}
+                width={130}
+                height={87}
                 unoptimized
-                className="h-12 w-auto"
+                className="h-auto w-[110px] sm:w-[120px] lg:w-[130px]"
               />
-            </div>
-            <p className="mt-3 max-w-sm text-sm leading-relaxed text-slate-400">
-              South Africa&apos;s procurement intelligence platform for compulsory tender
-              briefings — connecting SMEs with verified Youth Agents nationwide. Free for SMEs;
-              R249 only when requesting a Youth Agent.
+            </Link>
+            <p className="mt-2.5 text-[14px] leading-snug text-slate-400 line-clamp-3">
+              Procurement intelligence connecting South African SMEs with tender
+              opportunities and verified Youth Agents.
             </p>
           </div>
 
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white">
-              Platform
-            </h3>
-            <ul className="mt-3 space-y-1.5 text-sm">
-              <li>
-                <Link href="/tenders" className="hover:text-brand-400 transition">
-                  Tender Opportunities
-                </Link>
-              </li>
-              <li>
-                <Link href="/compulsory-tender-briefings" className="hover:text-brand-400 transition">
-                  Compulsory Briefings
-                </Link>
-              </li>
-              <li>
-                <Link href="/tender-briefing-agent" className="hover:text-brand-400 transition">
-                  Briefing Agent
-                </Link>
-              </li>
-              <li>
-                <Link href="/how-it-works" className="hover:text-brand-400 transition">
-                  How It Works
-                </Link>
-              </li>
-              <li>
-                <Link href="/pricing" className="hover:text-brand-400 transition">
-                  Pricing
-                </Link>
-              </li>
-              <li>
-                <Link href="/resources" className="hover:text-brand-400 transition">
-                  Resources
-                </Link>
-              </li>
-              <li>
-                <Link href="/support" className="hover:text-brand-400 transition">
-                  Support
-                </Link>
-              </li>
+          {/* Platform */}
+          <nav aria-label="Platform">
+            <h3 className={headingClass}>Platform</h3>
+            <ul className="mt-3 space-y-2">
+              {PLATFORM_LINKS.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className={linkClass}>
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
-          </div>
+          </nav>
 
+          {/* Company */}
+          <nav aria-label="Company">
+            <h3 className={headingClass}>Company</h3>
+            <ul className="mt-3 space-y-2">
+              {COMPANY_LINKS.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className={linkClass}>
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* Contact */}
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white">
-              Company
-            </h3>
-            <ul className="mt-3 space-y-1.5 text-sm">
+            <h3 className={headingClass}>Contact</h3>
+            <ul className="mt-3 space-y-2.5 text-[14px]">
               <li>
-                <Link href="/about" className="hover:text-brand-400 transition">
-                  About
-                </Link>
+                <a
+                  href={`mailto:${SUPPORT_EMAIL}`}
+                  className={`inline-flex items-center gap-2 ${linkClass}`}
+                >
+                  <Mail className="h-4 w-4 shrink-0 text-brand-500" aria-hidden />
+                  <span>{SUPPORT_EMAIL}</span>
+                </a>
               </li>
               <li>
-                <Link href="/sme-solutions" className="hover:text-brand-400 transition">
-                  SME Solutions
-                </Link>
+                <a
+                  href={publicWhatsAppLink()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center gap-2 ${linkClass}`}
+                  aria-label="Chat on WhatsApp"
+                >
+                  <WhatsAppIcon className="h-4 w-4 shrink-0 text-[#25D366]" />
+                  <span>WhatsApp</span>
+                </a>
               </li>
-              <li>
-                <Link href="/youth-agents" className="hover:text-brand-400 transition">
-                  Youth Agents
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="hover:text-brand-400 transition">
-                  Contact
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="hover:text-brand-400 transition">
-                  Terms
-                </Link>
-              </li>
-              <li>
-                <Link href="/privacy" className="hover:text-brand-400 transition">
-                  Privacy
-                </Link>
+              <li className="inline-flex items-start gap-2 text-slate-300">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" aria-hidden />
+                <span>Midrand, Gauteng</span>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-slate-800 pt-5 text-sm sm:justify-between">
-          <a
-            href={`mailto:${SUPPORT_EMAIL}`}
-            className="flex items-center gap-2 hover:text-brand-400 transition"
-          >
-            <Mail className="h-4 w-4 text-brand-500" />
-            <span>{SUPPORT_EMAIL}</span>
-          </a>
-
-          <WhatsAppIconLink className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#25D366] text-white transition hover:bg-[#1ebe57] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366]" />
-
-          <div className="flex items-start gap-2">
-            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
-            <span>Midrand, Gauteng, South Africa</span>
-          </div>
+        {/* Utility bar */}
+        <div className="mt-6 flex flex-col gap-2 border-t border-slate-800 pt-4 text-[12px] text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:text-[13px]">
+          <p>© {new Date().getFullYear()} TenderBriefing</p>
+          <nav aria-label="Legal" className="flex items-center gap-2">
+            <Link
+              href="/privacy"
+              className="transition hover:text-brand-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+            >
+              Privacy
+            </Link>
+            <span aria-hidden className="text-slate-600">
+              ·
+            </span>
+            <Link
+              href="/terms"
+              className="transition hover:text-brand-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+            >
+              Terms
+            </Link>
+          </nav>
         </div>
-
-        <p className="mt-5 text-center text-xs text-slate-500">
-          © {new Date().getFullYear()} TenderBriefing. All rights reserved.
-        </p>
       </div>
     </footer>
   )
