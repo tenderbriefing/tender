@@ -126,11 +126,11 @@ export default function SmeRfqInboxPanel() {
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-brand-200 bg-brand-50/50 p-6">
-        <h2 className="text-lg font-bold text-slate-900">Forward RFQs to TenderBriefing</h2>
+        <h2 className="text-lg font-bold text-slate-900">Submit RFQs to TenderBriefing</h2>
         <p className="mt-2 text-sm text-slate-700">
-          Forward tender invitations, briefing notices, and RFQ emails to{' '}
-          <strong>rfq@tenderbriefing.co.za</strong> from your registered company email. Or paste
-          the email below as a fallback.
+          Paste tender invitations, briefing notices, and RFQ emails below. Automatic mailbox
+          ingest for <strong>rfq@tenderbriefing.co.za</strong> is not live yet — use paste/upload
+          for now.
         </p>
       </div>
 

@@ -1,17 +1,16 @@
 # Automation 504 hardening — 41-section release certification
 
 **Prepared:** 2026-08-05  
-**Branch:** `fix/automation-run-time-budget`  
-**Tip SHA:** `b3fd56cd2c12df5ffc455a0231282d596e0aa9ac`  
+**Updated:** 2026-08-08 (audit remediation — deploy status corrected)  
+**Branch (original):** `fix/automation-run-time-budget`  
+**Original tip SHA:** `b3fd56cd2c12df5ffc455a0231282d596e0aa9ac`  
 **PR:** [#15](https://github.com/tenderbriefing/tender/pull/15)  
-**CI:** [31039774034](https://github.com/tenderbriefing/tender/actions/runs/31039774034) success  
-**Deployment:** **NOT DEPLOYED**
+**CI (original):** [31039774034](https://github.com/tenderbriefing/tender/actions/runs/31039774034) success  
+**Deployment:** **DEPLOYED** — automation budget env (`AUTOMATION_BUDGET_MS=240000`, safety margin, 300s timeout) is live on Cloud Run lineage since `notify-ux-7eab86a` / later (confirmed on `tenderbriefing-00106-gh8`).
 
 ## 1. Executive verdict
 
-Code-complete and locally verified; production effect is not claimed until a
-release manager manually deploys the exact merged SHA and post-deploy evidence
-is collected.
+Hardening is **in production**. Residual: non-cooperative legacy job bodies may still drain CPU after slice timeout; AbortSignal cooperative cancel is wired for batched jobs (audit remediation). Lease `keepUntilExpiry` still applies after timed-out slices.
 
 ## 2. Incident
 

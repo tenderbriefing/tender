@@ -6,6 +6,7 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import SmeCategoryCommoditySelector from '@/components/sme/SmeCategoryCommoditySelector'
+import { authFetch } from '@/lib/api/authenticatedFetch'
 import { toast } from 'react-hot-toast'
 import { 
   UserIcon,
@@ -21,7 +22,7 @@ import {
 } from '@heroicons/react/24/outline'
 
 const ProfilePage = () => {
-  const { user, userProfile, loading } = useAuth()
+  const { user, userProfile, loading, refreshProfile } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
     displayName: '',
@@ -105,16 +106,28 @@ const ProfilePage = () => {
 
     setSaving(true)
     try {
-      // TODO: Implement profile update API call
-      console.log('Updating profile:', formData)
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      const res = await authFetch('/api/auth/update-profile', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          displayName: formData.displayName.trim(),
+          companyName: formData.companyName.trim(),
+          phoneNumber: formData.phoneNumber.trim(),
+          location: formData.location.trim(),
+          skills: formData.skills,
+          categories: formData.categories,
+          commodities: formData.commodities,
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to update profile')
+      }
+      await refreshProfile()
       toast.success('Profile updated successfully!')
       setIsEditing(false)
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update profile')
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to update profile'
+      toast.error(message)
     } finally {
       setSaving(false)
     }

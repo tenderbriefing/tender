@@ -30,8 +30,8 @@ jobs:
       - run: npm run qa:route-retirement
       - run: npm run qa:config
       - run: npm run qa:secrets-scan
-      - name: Dependency audit (report; Next/Firebase majors tracked)
-        run: npm audit --omit=dev --audit-level=critical || true
+      - name: Dependency audit (critical gate + allowlist)
+        run: node scripts/npm-audit-gate.js
 
   firestore_rules_emulator:
     name: Firestore emulator IDOR matrix

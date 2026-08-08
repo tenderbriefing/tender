@@ -176,17 +176,17 @@ export default function AgentOnboardingPage() {
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-700">
-              ID verification (placeholder)
+              ID reference (pending review — not verified)
             </label>
             <input
               value={form.idVerificationNote}
               onChange={(e) => setForm((p) => ({ ...p, idVerificationNote: e.target.value }))}
-              placeholder="ID number or reference — full verification during pilot review"
+              placeholder="Optional ID number or reference for admin review"
               className={`mt-1 ${inputClass}`}
             />
             <p className="mt-1 text-xs text-slate-500">
-              Admin will verify identity before elevating your agent tier. Do not upload documents
-              here during pilot.
+              Submitting a note marks verification as <strong>pending</strong> only. You are not
+              verified until an admin approves. Do not upload documents here during pilot.
             </p>
           </div>
           <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">

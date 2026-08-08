@@ -140,6 +140,10 @@ Hosting → Custom domains → status must show **Connected** and certificate **
 
 ## Phase 3 — Root domain (`tenderbriefing.co.za`)
 
+**Verified 2026-08-08:** apex `https://tenderbriefing.co.za` currently returns **HTTP 200** (same app as www) — no DNS/Afrihost redirect yet. Canonical SEO uses `www`.
+
+**App-level mitigation (shipped):** production middleware issues a **308** redirect from host `tenderbriefing.co.za` → `https://www.tenderbriefing.co.za` for non-API HTML navigations. Prefer also configuring Afrihost/Firebase apex redirect so the hop happens at the edge.
+
 ### Option A — Afrihost redirect (preferred when available)
 
 1. Afrihost ClientZone → domain → **Redirect** or **Forwarding**
@@ -154,6 +158,7 @@ Cons: apex may not serve the app directly (redirect only).
 1. Firebase Hosting → **Add custom domain** → `tenderbriefing.co.za`
 2. Add **only** the A / AAAA records Firebase displays for apex
 3. Do not guess IPs — use console output
+4. Optionally add Hosting `redirects` from apex paths to www if dual-hosting
 
 Pros: apex serves the same Hosting → Cloud Run stack.  
 Cons: more DNS records; must not conflict with Afrihost mail (MX) records.

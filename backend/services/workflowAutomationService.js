@@ -525,8 +525,12 @@ async function runSlaEscalations() {
 }
 
 async function runSingleJob(job, options = {}) {
+  if (options.signal?.aborted) {
+    return { job, aborted: true, continuation: options.continuation || null }
+  }
   const continuation = decodeContinuation(options.continuation) || {}
   const definition = getJobDefinition(job) || {}
+  const signal = options.signal
   switch (job) {
     case 'tender_closing_reminders':
       return runTenderClosingReminders()
@@ -548,6 +552,7 @@ async function runSingleJob(job, options = {}) {
         includeEtenders: false,
         sourceOffset: continuation.sourceOffset,
         sourceBatchSize: definition.batchSize,
+        signal,
       })
     }
     case 'smart_escalation': {
@@ -565,6 +570,7 @@ async function runSingleJob(job, options = {}) {
         offset: continuation.offset,
         batchSize: definition.batchSize,
         runId: options.runId,
+        signal,
       })
     }
     case 'procurement_watchlists': {
@@ -572,6 +578,7 @@ async function runSingleJob(job, options = {}) {
       return watchlist.refreshAllWatchlists({
         offset: continuation.offset,
         batchSize: definition.batchSize,
+        signal,
       })
     }
     case 'procurement_memory': {
@@ -588,6 +595,7 @@ async function runSingleJob(job, options = {}) {
         offset: continuation.offset,
         batchSize: definition.batchSize,
         docId: 'global',
+        signal,
       })
     }
     default:
@@ -616,10 +624,19 @@ class AutomationJobTimeout extends Error {
   }
 }
 
-function withJobTimeout(work, timeoutMs, job) {
+function withJobTimeout(work, timeoutMs, job, signal) {
   let timer = null
   const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new AutomationJobTimeout(job, timeoutMs)), timeoutMs)
+    timer = setTimeout(() => {
+      try {
+        if (signal && typeof signal.abort === 'function' && !signal.aborted) {
+          signal.abort()
+        }
+      } catch {
+        // abort must never block timeout rejection
+      }
+      reject(new AutomationJobTimeout(job, timeoutMs))
+    }, timeoutMs)
     if (typeof timer.unref === 'function') timer.unref()
   })
   return Promise.race([Promise.resolve().then(work), timeout]).finally(() => {
@@ -698,12 +715,14 @@ async function runScheduledAutomation(jobName = 'all', options = {}) {
       jobs: {},
     }
     await automationState.saveRun({ ...result, job: 'all', completedAt: nowIso() })
-    console.info(JSON.stringify({
+    const { logEvent } = require('./observabilityBridge')
+    logEvent({
       event: 'automation_run_skipped_overlap',
       runId,
       status: result.status,
       durationMs: result.durationMs,
-    }))
+      outcome: 'ignored',
+    })
     return result
   }
 
@@ -733,6 +752,8 @@ async function runScheduledAutomation(jobName = 'all', options = {}) {
     }
 
     const jobStartedMs = clock()
+    const abortController =
+      typeof AbortController !== 'undefined' ? new AbortController() : null
     try {
       const sliceMs = budget.remainingMs()
       jobs[job] = await withJobTimeout(
@@ -740,9 +761,11 @@ async function runScheduledAutomation(jobName = 'all', options = {}) {
           runId,
           continuation: continuations[job] || null,
           idempotencyKey: `automation:${job}:${runId}`,
+          signal: abortController?.signal,
         }),
         sliceMs,
-        job
+        job,
+        abortController
       )
       const next = jobs[job]?.continuation
       if (next) continuations[job] = encodeContinuation(next)
@@ -795,13 +818,15 @@ async function runScheduledAutomation(jobName = 'all', options = {}) {
       ownerId: runId,
       continuations,
       now: clock(),
-      // Promise.race cannot cancel arbitrary legacy work. Keep the lease until
-      // expiry after a slice timeout so Scheduler retries cannot overlap it.
+      // Slice timeout aborts the AbortSignal for cooperative jobs. Keep the lease
+      // until expiry after a slice timeout so Scheduler retries cannot overlap
+      // residual non-cooperative work that may still be draining.
       keepUntilExpiry: timedOutJobs.length > 0,
     })
   }
   await automationState.saveRun({ ...result, job: 'all' })
-  console.info(JSON.stringify({
+  const { logEvent } = require('./observabilityBridge')
+  logEvent({
     event: 'automation_run_completed',
     runId,
     status,
@@ -810,7 +835,8 @@ async function runScheduledAutomation(jobName = 'all', options = {}) {
     deferredJobCount: deferredJobs.length,
     timedOutJobCount: timedOutJobs.length,
     errorCount: errors.length,
-  }))
+    outcome: status === 'completed' ? 'success' : 'ignored',
+  })
   return result
 }
 

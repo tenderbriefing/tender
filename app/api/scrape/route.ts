@@ -287,16 +287,53 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get('action')
     
     if (action === 'status') {
-      return NextResponse.json({
-        success: true,
-        stats: {
-          totalTenders: 0,
-          briefingsTenders: 0,
-          lastScrapeTime: null,
-          isRunning: false,
-          recentJobs: []
+      // Prefer truthful OCDS/Firestore catalog stats over hardcoded zeros.
+      try {
+        const { backend } = await import('@/lib/backend/loadServices')
+        const storage = backend.getStorage()
+        const tenders = await storage.getTenderBriefings({})
+        const withBriefing = tenders.filter(
+          (t: { briefingDate?: string | null }) => Boolean(t.briefingDate)
+        )
+        let lastScrapeTime: string | null = null
+        try {
+          const admin = (await import('@/lib/backend/firebaseAdmin')).getFirebaseAdmin()
+          const snap = await admin
+            .firestore()
+            .collection('syncJobs')
+            .orderBy('completedAt', 'desc')
+            .limit(1)
+            .get()
+          if (!snap.empty) {
+            lastScrapeTime = String(snap.docs[0].data()?.completedAt || null)
+          }
+        } catch {
+          // syncJobs index may be unavailable — still return tender counts
         }
-      })
+        return NextResponse.json({
+          success: true,
+          stats: {
+            source: 'tenderBriefings',
+            totalTenders: tenders.length,
+            briefingsTenders: withBriefing.length,
+            lastScrapeTime,
+            isRunning: false,
+            note: 'HTML scrape status is derived from catalog storage; primary ingest is OCDS sync.',
+          },
+        })
+      } catch (error) {
+        return NextResponse.json(
+          {
+            success: false,
+            code: 'STATUS_UNAVAILABLE',
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Could not load scrape/catalog status',
+          },
+          { status: 503 }
+        )
+      }
     }
     
     if (action === 'tenders') {

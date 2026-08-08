@@ -22,8 +22,10 @@ async function submitVerification(agentId, payload) {
   const data = sanitizeFirestoreData({
     agentId,
     status: 'pending',
+    idDocumentPlaceholder: true,
     idNumberPlaceholder: payload.idNumberPlaceholder || '',
     documentUploadPlaceholder: true,
+    adminApproved: false,
     notes: payload.notes || '',
     submittedAt: nowIso(),
     updatedAt: nowIso(),

@@ -159,17 +159,48 @@ test.describe('Post-registration welcome (public gates)', () => {
 
 /**
  * Full authenticated E2E requires E2E_SME_TOKEN / E2E_AGENT_TOKEN / E2E_ADMIN_TOKEN.
- * Skipped in CI unless secrets are provided — service-layer integration covers workflow.
+ * When secrets are present, the suite runs. When absent:
+ * - Local / PR without secrets: skip (integration tests cover workflow).
+ * - CI on master/main with REQUIRE_E2E_AUTH=true: fail closed so secrets must be configured.
+ *
+ * Configure GitHub Actions repository secrets (never commit tokens):
+ *   E2E_SME_TOKEN, E2E_AGENT_TOKEN (optional), E2E_ADMIN_TOKEN (optional)
  */
+const hasSmeToken = Boolean(process.env.E2E_SME_TOKEN)
+const requireAuthE2E =
+  process.env.REQUIRE_E2E_AUTH === '1' || process.env.REQUIRE_E2E_AUTH === 'true'
+
 test.describe('Authenticated workflows (optional secrets)', () => {
-  test.skip(!process.env.E2E_SME_TOKEN, 'Requires E2E_SME_TOKEN')
+  test('CI auth-secret posture', () => {
+    if (requireAuthE2E && !hasSmeToken) {
+      throw new Error(
+        'REQUIRE_E2E_AUTH is set but E2E_SME_TOKEN is missing. Add the GitHub Actions secret.'
+      )
+    }
+    if (!hasSmeToken) {
+      test.info().annotations.push({
+        type: 'note',
+        description: 'E2E_SME_TOKEN absent — authenticated API checks skipped',
+      })
+    }
+    expect(true).toBe(true)
+  })
 
   test('SME can list attendance requests with token', async ({ request }) => {
+    test.skip(!hasSmeToken, 'Requires E2E_SME_TOKEN')
     const res = await request.get('/api/attendance-requests', {
       headers: { Authorization: `Bearer ${process.env.E2E_SME_TOKEN}` },
     })
     expect(res.status()).toBe(200)
     const json = await res.json()
     expect(json.success).toBe(true)
+  })
+
+  test('SME token cannot call admin scrape status', async ({ request }) => {
+    test.skip(!hasSmeToken, 'Requires E2E_SME_TOKEN')
+    const res = await request.get('/api/scrape?action=status', {
+      headers: { Authorization: `Bearer ${process.env.E2E_SME_TOKEN}` },
+    })
+    expect([401, 403]).toContain(res.status())
   })
 })
