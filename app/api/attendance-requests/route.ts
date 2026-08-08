@@ -168,6 +168,17 @@ export async function POST(request: NextRequest) {
         code,
         message: checkout.error || 'PayFast is not configured',
       }
+      logEvent({
+        event: 'attendance_request_created',
+        requestId,
+        userId: user.uid,
+        role: 'sme',
+        attendanceRequestId: result.request.id,
+        tenderId: body.tenderId || undefined,
+        outcome: code === 'PAYFAST_NOT_CONFIGURED' ? 'success' : 'failure',
+        errorCode: code,
+        severity: code === 'PAYFAST_NOT_CONFIGURED' ? 'warn' : 'error',
+      })
       // Request is saved; return success so SME can view pending payment + retry
       if (code === 'PAYFAST_NOT_CONFIGURED') {
         return NextResponse.json({
@@ -197,6 +208,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    logEvent({
+      event: 'attendance_request_created',
+      requestId,
+      userId: user.uid,
+      role: 'sme',
+      attendanceRequestId: checkout.request.id,
+      tenderId: body.tenderId || undefined,
+      outcome: 'success',
+    })
+
     return NextResponse.json({
       success: true,
       data: {
@@ -223,6 +244,13 @@ export async function POST(request: NextRequest) {
       existingRequest?: { id?: string; paymentStatus?: string }
     }
     if (err?.code === 'ACTIVE_REQUEST_EXISTS' && err.existingRequest?.id) {
+      logEvent({
+        event: 'attendance_request_created',
+        requestId,
+        outcome: 'denied',
+        errorCode: 'ACTIVE_REQUEST_EXISTS',
+        attendanceRequestId: err.existingRequest.id,
+      })
       return NextResponse.json(
         {
           success: false,

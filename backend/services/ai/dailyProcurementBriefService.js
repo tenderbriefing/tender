@@ -89,6 +89,13 @@ async function buildAgentBrief(agentId, datasets = {}) {
 }
 
 async function runDailyProcurementBrief(options = {}) {
+  if (options.signal?.aborted) {
+    return {
+      job: 'daily_procurement_brief',
+      aborted: true,
+      continuation: { offset: Math.max(0, Number(options.offset) || 0) },
+    }
+  }
   const storage = getStorage()
   const db = getFirestore()
   const date = todayKey()
@@ -102,16 +109,40 @@ async function runDailyProcurementBrief(options = {}) {
     storage.getAllTenders(),
     storage.getAttendanceRequests(),
   ])
+  if (options.signal?.aborted) {
+    return {
+      job: 'daily_procurement_brief',
+      aborted: true,
+      continuation: { offset },
+    }
+  }
   const smeDocs = smeSnap.docs.slice(offset, offset + batchSize)
   const agentDocs = agentSnap.docs.slice(offset, offset + batchSize)
   const hasMore = smeSnap.docs.length > offset + batchSize || agentSnap.docs.length > offset + batchSize
 
   const smeBriefs = []
   for (const doc of smeDocs) {
+    if (options.signal?.aborted) {
+      return {
+        job: 'daily_procurement_brief',
+        aborted: true,
+        continuation: { offset },
+        partialSmeCount: smeBriefs.length,
+      }
+    }
     smeBriefs.push(await buildSmeBrief(doc.id, { tenders, requests }))
   }
   const agentBriefs = []
   for (const doc of agentDocs) {
+    if (options.signal?.aborted) {
+      return {
+        job: 'daily_procurement_brief',
+        aborted: true,
+        continuation: { offset },
+        partialSmeCount: smeBriefs.length,
+        partialAgentCount: agentBriefs.length,
+      }
+    }
     agentBriefs.push(await buildAgentBrief(doc.id, { requests }))
   }
 

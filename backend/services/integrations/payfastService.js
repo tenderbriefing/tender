@@ -71,15 +71,22 @@ function getConfig() {
 
 function getStatus() {
   const config = getConfig()
+  const merchantEmailConfigured = Boolean(String(env('PAYFAST_MERCHANT_EMAIL') || '').trim())
   return integrationResult({
     id: 'payfast',
     name: 'PayFast Payments',
     status: statusFromConfig(config.configured),
     requiredEnv: [...REQUIRED_ENV, 'PAYFAST_MODE'],
     missing: config.missing,
-    setupNotes: config.sandbox
-      ? 'Sandbox mode — register ITN notify_url to /api/webhooks/payfast'
-      : 'Live mode — register ITN notify_url https://www.tenderbriefing.co.za/api/webhooks/payfast',
+    merchantEmailConfigured,
+    setupNotes: [
+      config.sandbox
+        ? 'Sandbox mode — register ITN notify_url to /api/webhooks/payfast'
+        : 'Live mode — register ITN notify_url https://www.tenderbriefing.co.za/api/webhooks/payfast',
+      merchantEmailConfigured
+        ? 'PAYFAST_MERCHANT_EMAIL set — same-account email omit guard active'
+        : 'PAYFAST_MERCHANT_EMAIL unset — same-account prefill guard inactive',
+    ].join('; '),
   })
 }
 
@@ -209,6 +216,11 @@ function createCheckoutPayload({
   const buyerEmail = email ? String(email).trim().slice(0, 100) : ''
   const merchantEmail = String(env('PAYFAST_MERCHANT_EMAIL') || '').trim().toLowerCase()
   if (buyerEmail) {
+    if (!merchantEmail && process.env.NODE_ENV === 'production') {
+      console.warn(
+        '[payfast] PAYFAST_MERCHANT_EMAIL unset — cannot omit colliding merchant buyer email'
+      )
+    }
     if (merchantEmail && buyerEmail.toLowerCase() === merchantEmail) {
       console.warn(
         '[payfast] omitting email_address: buyer email matches PAYFAST_MERCHANT_EMAIL (same-account risk)'
