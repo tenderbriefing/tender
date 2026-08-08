@@ -1,4 +1,5 @@
 import type { UserProfile } from '@/lib/auth'
+import { ADMIN_HEADER_NAV } from '@/lib/admin/controlCentre'
 
 export function dashboardPathForRole(userType?: UserProfile['userType']): string {
   switch (userType) {
@@ -27,17 +28,8 @@ export const AGENT_NAV = [
   { name: 'Profile', href: '/settings' },
 ] as const
 
-export const ADMIN_NAV = [
-  { name: 'Dashboard', href: '/admin/dashboard' },
-  { name: 'Registrations', href: '/admin/registrations' },
-  { name: 'Operations', href: '/admin/operations' },
-  { name: 'Dispatch', href: '/admin/dispatch' },
-  { name: 'Agent Workspace', href: '/admin/agent-workspace' },
-  { name: 'AI Insights', href: '/admin/ai-insights' },
-  { name: 'Procurement Intel', href: '/admin/procurement-intelligence' },
-  { name: 'RFQ Inbox', href: '/admin/procurement-inbox' },
-  { name: 'Pilot', href: '/admin/pilot' },
-] as const
+/** Lean authenticated header nav — full catalogue lives in control centre Modules. */
+export const ADMIN_NAV = ADMIN_HEADER_NAV
 
 export const PUBLIC_NAV = [
   { name: 'Home', href: '/' },
