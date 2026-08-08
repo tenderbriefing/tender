@@ -15,15 +15,41 @@ function read(p) {
 const bookings = read('app/api/bookings/route.ts')
 assert.match(bookings, /410/, 'bookings route must return 410')
 
+const matching = read('app/api/matching/route.ts')
+assert.match(matching, /410/, 'matching route must return 410')
+assert.match(matching, /LEGACY_MATCHING_DISABLED/, 'matching must expose retirement code')
+
+const connector = read('app/api/connector-response/route.ts')
+assert.match(connector, /410/, 'connector-response route must return 410')
+assert.match(
+  connector,
+  /LEGACY_CONNECTOR_RESPONSE_DISABLED/,
+  'connector-response must expose retirement code'
+)
+
 const yocoCreate = read('app/api/payments/yoco/create-checkout/route.ts')
 assert.match(yocoCreate, /410/, 'yoco create-checkout must return 410')
 
 const yocoConfirm = read('app/api/payments/yoco/confirm/route.ts')
 assert.match(yocoConfirm, /410/, 'yoco confirm must return 410')
 
+assert.ok(
+  fs.existsSync(path.join(root, '_legacy/services/bookingService.ts')),
+  'legacy bookingService must be quarantined under _legacy/'
+)
+assert.ok(
+  fs.existsSync(path.join(root, '_legacy/services/yocoService.js')),
+  'legacy yocoService must be quarantined under _legacy/'
+)
+
 const policy = read('lib/security/apiRoutePolicy.ts')
 assert.match(policy, /\/api\/bookings/, 'apiRoutePolicy must block bookings in production')
-
+assert.match(policy, /\/api\/matching/, 'apiRoutePolicy must block matching in production')
+assert.match(
+  policy,
+  /\/api\/connector-response/,
+  'apiRoutePolicy must block connector-response in production'
+)
 const lifecycle = read('backend/services/domain/lifecycleEnforcement.js')
 assert.match(lifecycle, /assertWorkflowTransition/, 'lifecycle enforcement module must exist')
 assert.match(
