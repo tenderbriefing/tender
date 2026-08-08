@@ -250,6 +250,13 @@ a {
   @apply min-h-screen bg-slate-50 text-slate-900;
 }
 
+/* Founder/admin control centre — dense, calm ops chrome */
+.admin-control-centre {
+  --admin-surface: #ffffff;
+  --admin-border: rgb(226 232 240);
+  --admin-ink: #0F1E3D;
+}
+
 .procurement-stat-chip {
   @apply inline-flex items-center rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800;
 }

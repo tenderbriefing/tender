@@ -268,7 +268,7 @@ curl -X POST http://localhost:3000/api/sync/run \
   -d '{"force":true}'
 ```
 
-Admins can also use **Run Sync Now** on `/admin/dashboard` (Firebase admin auth).
+Admins can also use **Run sync** on the `/admin/dashboard` control centre (Firebase admin auth).
 
 ### Sync security
 
