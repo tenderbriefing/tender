@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "policy": "Fail CI on critical npm audit findings unless explicitly allowlisted with reason and review-by date. Do not allowlist without tracking an upgrade path.",
+  "allowlist": [
+    {
+      "url": "https://github.com/advisories/GHSA-mp7j-qc5w-4988",
+      "package": "websocket-driver",
+      "severity": "critical",
+      "reason": "Transitive via firebase-admin / faye-websocket stack used for Firestore listen paths. No direct app WebSocket server; upgrade blocked on firebase-admin major until Next/Firebase upgrade window.",
+      "reviewBy": "2026-09-30",
+      "owner": "platform"
+    },
+    {
+      "url": "https://github.com/advisories/GHSA-xv26-6w52-cph6",
+      "package": "websocket-driver",
+      "severity": "critical",
+      "reason": "Same firebase-admin transitive chain as GHSA-mp7j-qc5w-4988. Tracked with Firebase major upgrade programme; not exposed as a public TenderBriefing WebSocket endpoint.",
+      "reviewBy": "2026-09-30",
+      "owner": "platform"
+    }
+  ]
+}
