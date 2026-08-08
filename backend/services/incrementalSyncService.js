@@ -4,8 +4,18 @@ const { findDuplicateInList } = require('./deduplicationService')
 const { processTender } = require('./tenderPipeline')
 const auditLogService = require('./auditLogService')
 const { SOURCE_LABEL } = require('./tenderModel')
+const {
+  DEFAULT_OCDS_API_BASE,
+  CONNECT_TIMEOUT_MS,
+  REQUEST_TIMEOUT_MS,
+  MAX_ATTEMPTS,
+  getOcdsApiBase,
+  formatFetchError,
+  fetchWithRetry,
+} = require('./ocdsHttpClient')
 
-const OCDS_API_BASE = 'https://ocds-api.etenders.gov.za/api/OCDSReleases'
+/** @deprecated Prefer getOcdsApiBase() — kept for callers/tests expecting a constant. */
+const OCDS_API_BASE = DEFAULT_OCDS_API_BASE
 const PAGE_SIZE = 100
 const MAX_PAGES_INCREMENTAL = 20
 const MAX_PAGES_FULL = 200
@@ -104,23 +114,22 @@ function extractTime(isoDate) {
 }
 
 async function fetchOcdsPage(dateFrom, dateTo, pageNumber = 1) {
-  const url = `${OCDS_API_BASE}?dateFrom=${dateFrom}&dateTo=${dateTo}&PageNumber=${pageNumber}&PageSize=${PAGE_SIZE}`
+  const base = getOcdsApiBase()
+  const url = `${base}?dateFrom=${dateFrom}&dateTo=${dateTo}&PageNumber=${pageNumber}&PageSize=${PAGE_SIZE}`
 
-  const response = await fetch(url, {
-    headers: { Accept: 'application/json' },
-    signal: AbortSignal.timeout(120000),
-  })
+  const response = await fetchWithRetry(url)
 
   if (!response.ok) {
-    throw new Error(`OCDS API error ${response.status}: ${await response.text()}`)
+    const body = await response.text().catch(() => '')
+    const snippet = body ? body.slice(0, 300) : ''
+    throw new Error(
+      snippet
+        ? `OCDS API error ${response.status}: ${snippet}`
+        : `OCDS API error ${response.status}`
+    )
   }
 
   return response.json()
-}
-
-function formatFetchError(error) {
-  const cause = error?.cause?.message || error?.cause?.code
-  return cause ? `${error.message} (${cause})` : error.message
 }
 
 function shouldIncludeTender(tender) {
@@ -415,7 +424,11 @@ async function getSyncStatus() {
 
 module.exports = {
   OCDS_API_BASE,
+  CONNECT_TIMEOUT_MS,
+  REQUEST_TIMEOUT_MS,
+  MAX_FETCH_ATTEMPTS: MAX_ATTEMPTS,
   STALE_LOCK_MS,
+  getOcdsApiBase,
   parseOcdsRelease,
   fetchOcdsPage,
   fetchReleasesInRange,
@@ -424,4 +437,5 @@ module.exports = {
   shouldIncludeTender,
   isStaleRunningLock,
   clearStaleRunningLock,
+  formatFetchError,
 }
