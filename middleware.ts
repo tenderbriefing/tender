@@ -54,7 +54,12 @@ function withHtmlDeploySafeCache(response: NextResponse) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const host = (request.headers.get('host') || '').split(':')[0].toLowerCase()
+  const rawHost =
+    request.headers.get('x-fh-requested-host') ||
+    request.headers.get('x-forwarded-host') ||
+    request.headers.get('host') ||
+    ''
+  const host = rawHost.split(',')[0].trim().split(':')[0].toLowerCase()
 
   // Canonicalize apex → www to avoid duplicate SEO indexing (production only).
   if (
@@ -65,6 +70,7 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.host = 'www.tenderbriefing.co.za'
     url.protocol = 'https'
+    url.port = ''
     return NextResponse.redirect(url, 308)
   }
 
