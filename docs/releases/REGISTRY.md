@@ -2,7 +2,8 @@
 
 | Version / tag | SHA | Deployed UTC | Workflow | Cloud Run revision | Status |
 |---------------|-----|--------------|----------|-------------------|--------|
-| `ocds-sync-88dd033` | `88dd0334445ff5af476d341184c8024c264dd2fe` | 2026-08-08T05:58:06Z | [31242228722](https://github.com/tenderbriefing/tender/actions/runs/31242228722) | `tenderbriefing-00105-7p7` (100%) | **Current production** — eTenders OCDS connect-timeout resilience (PR #23); YAW flag off; PI flags false |
+| `admin-cc-a7b0d58` | `a7b0d58199742ce2a6c484c2873340b98a6e8d4a` | 2026-08-08T06:14:27Z | [31242832641](https://github.com/tenderbriefing/tender/actions/runs/31242832641) | `tenderbriefing-00106-gh8` (100%) | **Current production** — admin control centre redesign (PR #24) + OCDS sync timeout harden (PR #23); YAW flag off; PI flags false |
+| `ocds-sync-88dd033` | `88dd0334445ff5af476d341184c8024c264dd2fe` | 2026-08-08T05:58:06Z | [31242228722](https://github.com/tenderbriefing/tender/actions/runs/31242228722) | `tenderbriefing-00105-7p7` (100%) | Prior — eTenders OCDS connect-timeout resilience (PR #23); YAW flag off; PI flags false |
 | `footer-947b92e` | `947b92ec2b0719f439447b8d45b34d17c5be55f0` | 2026-08-07T16:15:33Z | [31195137719](https://github.com/tenderbriefing/tender/actions/runs/31195137719) | `tenderbriefing-00104-mf4` (100%) | Prior — compact public footer (PR #22); YAW flag off; PI flags false |
 | `private-pay-689ea1d` | `689ea1d8326d7c329330289df23b2ebe98f4b80f` | 2026-08-07T12:19:34Z | [31176610573](https://github.com/tenderbriefing/tender/actions/runs/31176610573) | `tenderbriefing-00103-tqr` (100%) | Prior — private RFQ WhatsApp payment links + resume unpaid PayFast (PR #21); YAW flag off; PI flags false |
 | `book-agent-537bda4` | `537bda44f041261238c3dacf532659e357584d39` | 2026-08-07T11:13:41Z | [31171963531](https://github.com/tenderbriefing/tender/actions/runs/31171963531) | `tenderbriefing-00102-hkn` (100%) | Prior — shareable SME `/sme/book-agent` funnel (PR #20); YAW flag off; PI flags false |
@@ -16,17 +17,17 @@
 | `pi-phase1-91a7871` | `91a787103cef2f76372a47761ee65d944824199f` | 2026-08-02T18:18:39Z | [30760212862](https://github.com/tenderbriefing/tender/actions/runs/30760212862) | `tenderbriefing-00090-tgb` | Prior PI code (flags off, empty list) |
 | `enterprise-v1.0.0` | `6e6597264faf4cfcd25c09060d93bc5e406c008b` | 2026-07-31T18:22:44Z | [30653868712](https://github.com/tenderbriefing/tender/actions/runs/30653868712) | `tenderbriefing-00089-zv9` | **Rollback baseline** (do not modify/delete tag) |
 
-## Current production image (eTenders OCDS sync resilience)
+## Current production image (admin control centre)
 
 | Field | Value |
 |-------|--------|
-| Image digest | `sha256:5caf7afc044663310e855bce2c7e35659ec4fe76cee5252f2a30b58472761123` |
-| Cloud Build ID | `43784198-3ee9-4ec0-857f-dc7a70e2d656` |
-| Merges | PR [#23](https://github.com/tenderbriefing/tender/pull/23) → tip `88dd033` |
-| Pre-deploy CI | [31241953982](https://github.com/tenderbriefing/tender/actions/runs/31241953982) |
+| Image digest | `sha256:0d6aac8bca0ed2683149f54a5490845b4f387063a58610b2b538e193a2ccda6e` |
+| Cloud Build ID | `fc3b65c0-3565-4558-a8c5-8bbb28608457` |
+| Merges | PR [#23](https://github.com/tenderbriefing/tender/pull/23) → `88dd033`; PR [#24](https://github.com/tenderbriefing/tender/pull/24) → tip `a7b0d58` |
+| Pre-deploy CI | [#24](https://github.com/tenderbriefing/tender/actions/runs/31242284045) (CI green); [#23](https://github.com/tenderbriefing/tender/actions/runs/31241953982) already merged |
 | YAW flag | `youth_agent_workspace_v1` — `YOUTH_AGENT_WORKSPACE_*` env **absent** (defaults false / empty; fail-closed) |
 | PI flags | `PROCUREMENT_INTELLIGENCE_ENABLED` / `NEXT_PUBLIC_…` both **false** |
-| Shipped | OCDS connect timeout 25s + 3× backoff retries for `ocds-api.etenders.gov.za` (PR #23). |
+| Shipped | Founder/admin SaaS control centre (PR #24); OCDS connect-timeout resilience (PR #23). |
 
 ## Rollback target (enterprise-v1.0.0)
 
@@ -37,4 +38,4 @@
 | Prior deploy | [30653868712](https://github.com/tenderbriefing/tender/actions/runs/30653868712) |
 | PI-only kill | Replace GSM pilot secret with non-matching placeholder + `gcloud run services update --update-secrets=…:latest` (flags stay false) |
 | YAW-only kill | Keep `YOUTH_AGENT_WORKSPACE_ENABLED` unset/false and leave pilot UIDs empty (already production posture) |
-| Immediate prior | `tenderbriefing-00104-mf4` / `footer-947b92e` / digest `sha256:f74f964d6a0c2514c1416be43bf4bc7f7e03795a34bf3f5ba51c6524caf6f673` |
+| Immediate prior | `tenderbriefing-00105-7p7` / `ocds-sync-88dd033` / digest `sha256:5caf7afc044663310e855bce2c7e35659ec4fe76cee5252f2a30b58472761123` |
