@@ -277,6 +277,20 @@ Admins can also use **Run Sync Now** on `/admin/dashboard` (Firebase admin auth)
 | Development (`NODE_ENV` ≠ `production`) | Allowed without `x-sync-secret` |
 | Production | Requires header `x-sync-secret: $SYNC_SECRET` or returns **401** |
 
+### OCDS resilience (connect timeouts)
+
+The official host `ocds-api.etenders.gov.za` occasionally fails TCP connect from Cloud Run (`africa-south1`). Node/undici’s default **10s connect timeout** is too aggressive for that path; TenderBriefing overrides it and retries:
+
+| Setting | Value |
+|---------|--------|
+| Connect timeout | **25s** (undici Agent) |
+| Request timeout | **120s** (headers/body + `AbortSignal`) |
+| Retries | **3** attempts, exponential backoff (~1s / 2s / 4s) on connect timeouts, socket resets, and 429/502/503/504 |
+| Fail-soft | Sync failure preserves existing `tenderBriefings`; admin shows **Last failed sync** + error text |
+| Optional override | `OCDS_API_BASE` — alternate base URL if a documented fallback exists (default remains the official OCDS releases URL) |
+
+There is no second public OCDS mirror today; longer connect timeout + bounded retries is the production mitigation. Multi-source procurement scrapes still isolate eTenders failures from other sources.
+
 ## 📁 Project Structure
 
 ```

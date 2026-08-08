@@ -23,6 +23,7 @@ Never commit real secret values. Rotate via Google Secret Manager / hosting env.
 | `WHATSAPP_VERIFY_TOKEN` | Meta verify | if WhatsApp on | Yes | string | Comms | Verify fails |
 | `WHATSAPP_APP_SECRET` | HMAC signature | prod WhatsApp | Yes | string | Comms | Unsigned rejected |
 | `SYNC_SECRET` | Sync/automation auth | ops | Yes | string | Ops | Sync denied |
+| `OCDS_API_BASE` | Optional eTenders OCDS releases base URL override (no trailing slash required) | optional | No | URL | Ops | Falls back to official `https://ocds-api.etenders.gov.za/api/OCDSReleases` |
 | `SMOKE_TEST_PASSWORD` | Smoke scripts | CI/smoke only | Yes | string | QA | Smoke cannot run |
 | `FOUNDER_USER_INTELLIGENCE_ENABLED` | Founder UI flag | optional | No | true/false | Founder | Feature hidden |
 | `PROCUREMENT_INTELLIGENCE_ENABLED` | Global enablement for PI Phase 1 (`false` = not globally enabled; pilots may still access via allow-list) | optional (default false) | No | true/false | Product/Platform | Without pilot UIDs → 503 |
