@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import JsonLd from '@/components/seo/JsonLd'
 import { buildPageMetadata } from '@/lib/seo/metadata'
 import { getPublicTenderById } from '@/lib/seo/publicTenders'
@@ -33,15 +34,12 @@ export default async function TenderDetailLayout({
   params: { id: string }
 }) {
   const tender = await getPublicTenderById(params.id)
+  if (!tender) notFound()
 
   return (
     <>
-      {tender && (
-        <>
-          <JsonLd data={buildTenderBreadcrumbJsonLd(tender)} />
-          {tender.briefingDate ? <JsonLd data={buildTenderEventJsonLd(tender)} /> : null}
-        </>
-      )}
+      <JsonLd data={buildTenderBreadcrumbJsonLd(tender)} />
+      {tender.briefingDate ? <JsonLd data={buildTenderEventJsonLd(tender)} /> : null}
       {children}
     </>
   )

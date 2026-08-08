@@ -54,6 +54,19 @@ function withHtmlDeploySafeCache(response: NextResponse) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const host = (request.headers.get('host') || '').split(':')[0].toLowerCase()
+
+  // Canonicalize apex → www to avoid duplicate SEO indexing (production only).
+  if (
+    isProduction &&
+    host === 'tenderbriefing.co.za' &&
+    !pathname.startsWith('/api/')
+  ) {
+    const url = request.nextUrl.clone()
+    url.host = 'www.tenderbriefing.co.za'
+    url.protocol = 'https'
+    return NextResponse.redirect(url, 308)
+  }
 
   if (isProduction && isDevOnlyPage(pathname)) {
     return new NextResponse(null, { status: 404 })

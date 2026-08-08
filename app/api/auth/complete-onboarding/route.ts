@@ -163,6 +163,19 @@ export async function POST(request: NextRequest) {
         },
         { merge: true }
       )
+
+      // Record pending verification explicitly — never implies admin-verified.
+      try {
+        const agentVerification = require('../../../backend/services/trust/agentVerificationService')
+        await agentVerification.submitVerification(uid, {
+          notes: (input.idVerificationNote || '').trim(),
+          idNumberPlaceholder: (input.idVerificationNote || '').trim(),
+        })
+      } catch (verifyErr) {
+        logProfileSetupFailure('agent-verification-submit', {
+          message: verifyErr instanceof Error ? verifyErr.message : 'submit failed',
+        })
+      }
     }
 
     return NextResponse.json({ success: true, data: { onboardingCompleted: true } })

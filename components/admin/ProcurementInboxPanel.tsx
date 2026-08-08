@@ -120,7 +120,9 @@ export default function ProcurementInboxPanel() {
       <div className="rounded-xl border bg-white p-6">
         <h3 className="font-semibold text-slate-900">Manual RFQ upload</h3>
         <p className="mt-1 text-sm text-slate-600">
-          Paste forwarded email content until mailbox webhook for rfq@tenderbriefing.co.za is connected.
+          Paste forwarded email content here. Mailbox auto-ingest for{' '}
+          <code className="text-xs">rfq@tenderbriefing.co.za</code> is not connected —
+          this panel is paste/manual upload only.
         </p>
         <input
           className="mt-3 w-full rounded-lg border px-3 py-2 text-sm"
