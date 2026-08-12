@@ -111,7 +111,11 @@ function generateSignature(fields, passphrase) {
 }
 
 /**
- * Verify ITN signature — exclude signature key; use posted key order.
+ * Verify ITN signature — PayFast ITN algorithm (not checkout):
+ * - Use posted key order up to (but not including) `signature`
+ * - Include empty string fields (checkout signatures skip empties; ITN does not)
+ * - Append passphrase when configured
+ * Docs: Instant Transaction Notification → Verify the signature
  */
 function verifyItnSignature(posted, passphrase) {
   if (!posted || typeof posted !== 'object') {
@@ -129,9 +133,9 @@ function verifyItnSignature(posted, passphrase) {
 
   let paramString = ''
   for (const [key, value] of Object.entries(posted)) {
-    if (key === 'signature') continue
-    if (value === undefined || value === null || String(value).trim() === '') continue
-    paramString += `${key}=${pfEncode(value)}&`
+    if (key === 'signature') break
+    const raw = value === undefined || value === null ? '' : String(value)
+    paramString += `${key}=${pfEncode(raw)}&`
   }
   paramString = paramString.slice(0, -1)
   if (phrase) {
@@ -162,6 +166,90 @@ async function validateItnWithPayfast(posted) {
     return { ok: text.startsWith('VALID'), raw: text }
   } catch (error) {
     return { ok: false, raw: error instanceof Error ? error.message : 'validate failed' }
+  }
+}
+
+function apiBaseUrl() {
+  return 'https://api.payfast.co.za'
+}
+
+/**
+ * PayFast API signature (alphabetical keys, non-empty only) — not ITN/checkout format.
+ */
+function generateApiSignature(fields, passphrase) {
+  const phrase = passphrase || env('PAYFAST_PASSPHRASE')
+  const data = { ...fields }
+  if (phrase) data.passphrase = phrase
+  const parts = []
+  for (const key of Object.keys(data).sort()) {
+    const value = data[key]
+    if (value === undefined || value === null || String(value) === '') continue
+    parts.push(`${key}=${pfEncode(value)}`)
+  }
+  return crypto.createHash('md5').update(parts.join('&')).digest('hex')
+}
+
+/**
+ * Authoritative transaction query by pf_payment_id (PayFast process/query API).
+ * Never logs secrets. Returns COMPLETE/amount/m_payment_id when available.
+ */
+async function queryTransactionByPfPaymentId(pfPaymentId) {
+  const merchantId = String(env('PAYFAST_MERCHANT_ID') || '').trim()
+  const phrase = env('PAYFAST_PASSPHRASE')
+  if (!merchantId || !phrase) {
+    return { ok: false, reason: 'PayFast merchant credentials not configured' }
+  }
+  const id = String(pfPaymentId || '').trim()
+  if (!/^\d+$/.test(id)) {
+    return { ok: false, reason: 'Invalid pf_payment_id' }
+  }
+
+  const timestamp = new Date().toISOString().split('.')[0]
+  const headerFields = {
+    'merchant-id': merchantId,
+    version: 'v1',
+    timestamp,
+  }
+  const signature = generateApiSignature(headerFields, phrase)
+
+  try {
+    const response = await fetch(`${apiBaseUrl()}/process/query/${id}`, {
+      method: 'GET',
+      headers: {
+        'merchant-id': merchantId,
+        version: 'v1',
+        timestamp,
+        signature,
+      },
+    })
+    const text = await response.text()
+    let json
+    try {
+      json = JSON.parse(text)
+    } catch {
+      return { ok: false, reason: 'PayFast query returned non-JSON', raw: text.slice(0, 200) }
+    }
+    const row = json?.data?.response
+    if (!response.ok || !row) {
+      return {
+        ok: false,
+        reason: json?.data?.message || json?.status || `HTTP ${response.status}`,
+        raw: text.slice(0, 200),
+      }
+    }
+    return {
+      ok: true,
+      pfPaymentId: String(row.pf_payment_id ?? id),
+      mPaymentId: row.m_payment_id != null ? String(row.m_payment_id) : null,
+      status: String(row.status || '').toUpperCase(),
+      amountCents: Number(row.amount),
+      transactionToken: row.transaction_token || null,
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      reason: error instanceof Error ? error.message : 'PayFast query failed',
+    }
   }
 }
 
@@ -258,6 +346,8 @@ module.exports = {
   generateSignature,
   verifyItnSignature,
   validateItnWithPayfast,
+  generateApiSignature,
+  queryTransactionByPfPaymentId,
   createCheckoutPayload,
   processUrl,
   validateUrl,

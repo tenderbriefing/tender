@@ -306,6 +306,107 @@ async function findRequestByCheckoutId(checkoutId) {
 /**
  * Process PayFast ITN (form-urlencoded fields as object).
  */
+/**
+ * Authoritative reconciliation when PayFast confirms COMPLETE but ITN failed locally.
+ * Requires matching request, m_payment_id, R249 amount, COMPLETE status, no prior paid entitlement.
+ */
+async function reconcileAuthoritativePayfastPayment({
+  requestId,
+  pfPaymentId,
+  reason = 'itn_signature_mismatch_reconciliation',
+  actorId = 'payfast_reconcile',
+} = {}) {
+  if (!requestId || !pfPaymentId) {
+    return { ok: false, reason: 'requestId and pfPaymentId are required' }
+  }
+
+  const request = await getRequestById(String(requestId))
+  if (!request) {
+    return { ok: false, reason: 'Attendance request not found' }
+  }
+
+  if (request.paymentStatus === 'paid') {
+    if (
+      request.payfastPaymentId &&
+      String(request.payfastPaymentId) === String(pfPaymentId)
+    ) {
+      return {
+        ok: true,
+        alreadyPaid: true,
+        duplicate: true,
+        requestId: request.id,
+        paymentStatus: 'paid',
+      }
+    }
+    return {
+      ok: false,
+      reason: 'Request already paid under a different PayFast transaction',
+      paymentStatus: 'paid',
+      existingPfPaymentId: request.payfastPaymentId || null,
+    }
+  }
+
+  const query = await payfastService.queryTransactionByPfPaymentId(pfPaymentId)
+  if (!query.ok) {
+    return { ok: false, reason: `PayFast query failed: ${query.reason || 'unknown'}` }
+  }
+  if (query.status !== 'COMPLETE') {
+    return {
+      ok: false,
+      reason: `PayFast status is ${query.status || 'unknown'}, not COMPLETE`,
+      payfastStatus: query.status,
+    }
+  }
+
+  const expectedRef = paymentReferenceForRequest(request.id)
+  if (!query.mPaymentId || String(query.mPaymentId) !== expectedRef) {
+    return {
+      ok: false,
+      reason: 'PayFast m_payment_id does not match attendance request',
+      expected: expectedRef,
+      got: query.mPaymentId,
+    }
+  }
+
+  const expectedCents = request.quotedFee || request.paymentAmount || EFFECTIVE_FEE_CENTS
+  if (!Number.isFinite(query.amountCents) || Math.abs(query.amountCents - expectedCents) > 1) {
+    return {
+      ok: false,
+      reason: `Amount mismatch: expected ${expectedCents} cents, got ${query.amountCents}`,
+    }
+  }
+
+  const paidAtProvider = null
+  const result = await markRequestPaid(request.id, {
+    pfPaymentId: String(query.pfPaymentId),
+    checkoutId: query.mPaymentId,
+    source: actorId,
+  })
+
+  await auditLogService.logEvent({
+    type: 'payment_reconciled',
+    entityId: request.id,
+    provider: 'payfast',
+    pfPaymentId: String(query.pfPaymentId),
+    mPaymentId: query.mPaymentId,
+    amountCents: query.amountCents,
+    originalPaymentTimestamp: paidAtProvider,
+    reconciliationTimestamp: new Date().toISOString(),
+    reason,
+    verificationSource: 'payfast_process_query',
+    actorId,
+  })
+
+  return {
+    ok: true,
+    requestId: request.id,
+    paymentStatus: 'paid',
+    alreadyPaid: result.alreadyPaid,
+    pfPaymentId: String(query.pfPaymentId),
+    amountCents: query.amountCents,
+  }
+}
+
 async function processPayfastItn(posted) {
   const signatureCheck = payfastService.verifyItnSignature(posted)
   if (!signatureCheck.ok) {
@@ -422,6 +523,7 @@ module.exports = {
   markRequestPaid,
   markRequestFailed,
   markRequestCancelled,
+  reconcileAuthoritativePayfastPayment,
   processPayfastItn,
   processWebhookEvent,
   verifyCheckoutStatus,
