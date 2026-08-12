@@ -2,7 +2,8 @@
 
 | Version / tag | SHA | Deployed UTC | Workflow | Cloud Run revision | Status |
 |---------------|-----|--------------|----------|-------------------|--------|
-| `audit-remed-bd16ca4` | `bd16ca447b23c137bf0b30293a68176a0873425a` | 2026-08-08T08:44:21Z | [31248485891](https://github.com/tenderbriefing/tender/actions/runs/31248485891) | `tenderbriefing-00108-vqr` (100%) | **Current production** — audit remediation (PR #25) + apex forwarded-host redirect (PR #26); YAW off; PI false; Google Auth false; PayFast merchant email set |
+| `payfast-csp-7d2ee45` | `7d2ee4506473d265b592cafaa50c6d11ccf37506` | 2026-08-12T21:02:38Z | [31639344236](https://github.com/tenderbriefing/tender/actions/runs/31639344236) | `tenderbriefing-00109-h6m` (100%) | **Current production** — PayFast CSP `form-action` allows `payment.payfast.io` (PR #28); live payment page reachable; YAW off; PI false; Google Auth false |
+| `audit-remed-bd16ca4` | `bd16ca447b23c137bf0b30293a68176a0873425a` | 2026-08-08T08:44:21Z | [31248485891](https://github.com/tenderbriefing/tender/actions/runs/31248485891) | `tenderbriefing-00108-vqr` (100%) | Prior — audit remediation (PR #25) + apex forwarded-host redirect (PR #26); YAW off; PI false; Google Auth false; PayFast merchant email set |
 | `admin-cc-a7b0d58` | `a7b0d58199742ce2a6c484c2873340b98a6e8d4a` | 2026-08-08T06:14:27Z | [31242832641](https://github.com/tenderbriefing/tender/actions/runs/31242832641) | `tenderbriefing-00106-gh8` (100%) | Prior — admin control centre redesign (PR #24) + OCDS sync timeout harden (PR #23); YAW flag off; PI flags false |
 | `ocds-sync-88dd033` | `88dd0334445ff5af476d341184c8024c264dd2fe` | 2026-08-08T05:58:06Z | [31242228722](https://github.com/tenderbriefing/tender/actions/runs/31242228722) | `tenderbriefing-00105-7p7` (100%) | Prior — eTenders OCDS connect-timeout resilience (PR #23); YAW flag off; PI flags false |
 | `footer-947b92e` | `947b92ec2b0719f439447b8d45b34d17c5be55f0` | 2026-08-07T16:15:33Z | [31195137719](https://github.com/tenderbriefing/tender/actions/runs/31195137719) | `tenderbriefing-00104-mf4` (100%) | Prior — compact public footer (PR #22); YAW flag off; PI flags false |
@@ -18,19 +19,20 @@
 | `pi-phase1-91a7871` | `91a787103cef2f76372a47761ee65d944824199f` | 2026-08-02T18:18:39Z | [30760212862](https://github.com/tenderbriefing/tender/actions/runs/30760212862) | `tenderbriefing-00090-tgb` | Prior PI code (flags off, empty list) |
 | `enterprise-v1.0.0` | `6e6597264faf4cfcd25c09060d93bc5e406c008b` | 2026-07-31T18:22:44Z | [30653868712](https://github.com/tenderbriefing/tender/actions/runs/30653868712) | `tenderbriefing-00089-zv9` | **Rollback baseline** (do not modify/delete tag) |
 
-## Current production image (audit remediation)
+## Current production image (PayFast CSP)
 
 | Field | Value |
 |-------|--------|
-| Image digest | `sha256:6bce2b7a46cc6983fdf5aff7b867e4a624a887d27425c57e9510a05f8d35580a` |
-| Cloud Build ID | `9da67852-118c-4e04-a5bc-28d865459f83` |
-| Merges | PR [#25](https://github.com/tenderbriefing/tender/pull/25) → `a24d313`; PR [#26](https://github.com/tenderbriefing/tender/pull/26) → tip `bd16ca4` |
-| Pre-deploy CI | [#25](https://github.com/tenderbriefing/tender/actions/runs/31247095060) green; [#26](https://github.com/tenderbriefing/tender/actions/runs/31248144341) green |
-| YAW flag | `youth_agent_workspace_v1` — `YOUTH_AGENT_WORKSPACE_*` env **absent** (defaults false / empty; fail-closed) |
+| Image digest | `sha256:b47efce78405107e8f03cc9461ab755f6f7fff9f3f5d767f91eb4185c7b21482` |
+| Deploy workflow | [31639344236](https://github.com/tenderbriefing/tender/actions/runs/31639344236) |
+| Merge | PR [#28](https://github.com/tenderbriefing/tender/pull/28) → tip `7d2ee45` |
+| Pre-deploy CI | [31638540134](https://github.com/tenderbriefing/tender/actions/runs/31638540134) green |
+| Certification | `docs/reports/PAYFAST_CSP_FORM_ACTION_CERTIFICATION.md` |
+| YAW flag | `youth_agent_workspace_v1` — env **absent** (fail-closed) |
 | PI flags | `PROCUREMENT_INTELLIGENCE_ENABLED` / `NEXT_PUBLIC_…` both **false** |
 | Google Auth | `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=false` |
-| PayFast | `PAYFAST_MODE=live`; `PAYFAST_MERCHANT_EMAIL=info@tenderbriefing.co.za` |
-| Shipped | Audit remediation (profile API, legacy quarantine, RFQ truthfulness, tender 404, scrape status, automation abort, CI audit gate, env docs) + apex forwarded-host 308 |
+| PayFast | `PAYFAST_MODE=live`; CSP `form-action` includes `https://payment.payfast.io` |
+| Shipped | Exact-host CSP allow for PayFast redirect hop; regression tests; live payment page verified without charge |
 
 ## Rollback target (enterprise-v1.0.0)
 
@@ -41,4 +43,4 @@
 | Prior deploy | [30653868712](https://github.com/tenderbriefing/tender/actions/runs/30653868712) |
 | PI-only kill | Replace GSM pilot secret with non-matching placeholder + `gcloud run services update --update-secrets=…:latest` (flags stay false) |
 | YAW-only kill | Keep `YOUTH_AGENT_WORKSPACE_ENABLED` unset/false and leave pilot UIDs empty (already production posture) |
-| Immediate prior | `tenderbriefing-00107-n7v` / audit remed without apex host fix / deploy [31247468569](https://github.com/tenderbriefing/tender/actions/runs/31247468569) |
+| Immediate prior | `tenderbriefing-00108-vqr` / audit-remed-bd16ca4 / deploy [31248485891](https://github.com/tenderbriefing/tender/actions/runs/31248485891) |
