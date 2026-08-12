@@ -119,6 +119,8 @@ curl -sS http://localhost:3000/api/integrations/health | jq '.summary,.integrati
 
 **Flow:** SME submits request → `paymentStatus: pending` → redirect to PayFast hosted checkout → webhook or return URL sets `paid` → agents notified.
 
+**CSP:** Hosted checkout POSTs to `www.payfast.co.za` / `sandbox.payfast.co.za`, then PayFast redirects to `payment.payfast.io`. Chrome enforces `form-action` across that redirect chain — `next.config.js` must allow exact `https://payment.payfast.io` or checkout appears to “do nothing” after the continuing-payment toast.
+
 **Full setup:** [PAYFAST_PAYMENTS_SETUP.md](./PAYFAST_PAYMENTS_SETUP.md)
 
 **Methods:** `createCheckout()`, `getCheckout()`, webhook signature verification
