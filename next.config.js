@@ -44,7 +44,9 @@ const securityHeaders = [
 
       "base-uri 'self'",
 
-      "form-action 'self' https://www.payfast.co.za https://sandbox.payfast.co.za",
+      // PayFast: form POST → www/sandbox.payfast.co.za, then 302 → payment.payfast.io.
+      // Chrome enforces form-action across that redirect chain (exact host only).
+      "form-action 'self' https://www.payfast.co.za https://sandbox.payfast.co.za https://payment.payfast.io",
 
       "frame-ancestors 'self'",
 
