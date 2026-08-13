@@ -5,7 +5,6 @@
 import type { WelcomeEmailInput, WelcomeEmailResult, WelcomeEmailRole } from './welcomeEmailTypes'
 
 // Shared CJS transactional email service
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const tx = require('./transactionalEmailService')
 
 export type { WelcomeEmailInput, WelcomeEmailResult, WelcomeEmailRole }

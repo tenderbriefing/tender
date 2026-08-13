@@ -16,7 +16,7 @@ export default function DevEmailsPage({
     notFound()
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  // Shared CJS fixtures (allowJs)
   const { GALLERY } = require('@/lib/emails/fixtures') as {
     GALLERY: Array<{ id: string; label: string }>
   }
