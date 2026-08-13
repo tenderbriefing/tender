@@ -50,7 +50,8 @@ describe('executionBudget', () => {
 describe('automation job registry', () => {
   it('is the validated source of truth for all scheduled jobs', () => {
     const jobs = registry.listJobs()
-    expect(jobs).toHaveLength(14)
+    expect(jobs).toHaveLength(15)
+    expect(jobs.map((job: { name: string }) => job.name)).toContain('report_sla_emails')
     expect(jobs.map((job: { priority: number }) => job.priority)).toEqual(
       [...jobs].map((job: { priority: number }) => job.priority).sort((a, b) => a - b)
     )
