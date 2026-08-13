@@ -136,6 +136,16 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
   if (!request) throw new Error('Attendance request not found')
 
   if (request.paymentStatus === 'paid') {
+    // Idempotent: deliver missing SME confirmation if prior send failed
+    try {
+      const txEmail = require('../transactionalEmailService')
+      await txEmail.sendAttendancePaymentConfirmationSafe(request)
+    } catch (err) {
+      console.error(
+        '[attendancePayment] already-paid confirmation retry failed:',
+        err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+      )
+    }
     return { request, alreadyPaid: true }
   }
 
@@ -182,6 +192,35 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
   } catch (err) {
     console.error(
       '[attendancePayment] founder ops notify failed:',
+      err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+    )
+  }
+
+  // SME payment confirmation email — authoritative ITN/reconcile path only; fail-soft
+  try {
+    const txEmail = require('../transactionalEmailService')
+    const withSla = txEmail.ensureReportSlaFields(updated)
+    if (withSla.reportDueAt && !updated.reportDueAt) {
+      try {
+        const { getStorage } = require('../storageAdapter')
+        await getStorage().saveAttendanceRequest({
+          id: requestId,
+          reportDueAt: withSla.reportDueAt,
+          reportSlaStatus: withSla.reportSlaStatus,
+          reportSlaFallback: withSla.reportSlaFallback,
+          updatedAt: new Date().toISOString(),
+        })
+      } catch (slaErr) {
+        console.error(
+          '[attendancePayment] report SLA stamp failed:',
+          slaErr instanceof Error ? slaErr.message.slice(0, 160) : 'unknown'
+        )
+      }
+    }
+    await txEmail.sendAttendancePaymentConfirmationSafe(updated)
+  } catch (err) {
+    console.error(
+      '[attendancePayment] transactional email failed:',
       err instanceof Error ? err.message.slice(0, 160) : 'unknown'
     )
   }

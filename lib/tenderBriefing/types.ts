@@ -139,6 +139,13 @@ export interface AttendanceRequest {
   notifiedAgents?: string[]
   declines?: Array<{ agentId: string; reason: string; at: string }>
   reportId?: string
+  /** ISO datetime when meeting report is due (SLA). */
+  reportDueAt?: string | null
+  meetingEndedAt?: string | null
+  reportSubmittedAt?: string | null
+  reportDeliveredAt?: string | null
+  reportSlaStatus?: 'pending' | 'submitted' | 'overdue' | 'unknown' | string | null
+  reportSlaFallback?: string | null
 }
 
 export interface BriefingReport {

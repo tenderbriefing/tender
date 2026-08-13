@@ -310,6 +310,93 @@ async function runTenderClosingReminders() {
   return { job: 'tender_closing_reminders', triggered }
 }
 
+async function runReportSlaEmails() {
+  const storage = getStorage()
+  const txEmail = require('./transactionalEmailService')
+  const { getFirestore } = require('../config/firebaseAdmin')
+  const requests = await storage.getAttendanceRequests()
+  const now = new Date()
+  const DUE_SOON_MS = 4 * 60 * 60 * 1000
+  let pending = 0
+  let dueSoon = 0
+  let overdue = 0
+  let smeDelay = 0
+  let adminEsc = 0
+
+  for (const request of requests) {
+    if (!['assigned', 'accepted', 'en_route', 'arrived', 'in_progress'].includes(String(request.status || ''))) {
+      continue
+    }
+    if (request.reportId || request.reportSubmittedAt) continue
+    if (request.paymentStatus && request.paymentStatus !== 'paid' && request.paymentStatus !== 'not_required') {
+      continue
+    }
+
+    const stamped = txEmail.ensureReportSlaFields(request, now)
+    const dueIso = stamped.reportDueAt
+    if (!dueIso) continue
+    const dueAt = new Date(dueIso)
+    if (Number.isNaN(dueAt.getTime())) continue
+
+    // Persist SLA fields when missing
+    if (!request.reportDueAt || request.reportSlaStatus !== stamped.reportSlaStatus) {
+      try {
+        await storage.saveAttendanceRequest({
+          id: request.id,
+          reportDueAt: dueIso,
+          reportSlaStatus: stamped.reportSlaStatus,
+          reportSlaFallback: stamped.reportSlaFallback,
+          updatedAt: now.toISOString(),
+        })
+      } catch {
+        /* non-blocking */
+      }
+    }
+
+    let agent = { id: request.assignedAgentId || request.agentId, email: null, displayName: request.agentName }
+    if (agent.id) {
+      try {
+        const snap = await getFirestore().collection('users').doc(agent.id).get()
+        if (snap.exists) {
+          const p = snap.data() || {}
+          agent = { ...agent, email: p.email || null, displayName: p.displayName || agent.displayName }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    const msToDue = dueAt.getTime() - now.getTime()
+    const briefingAt = parseDate(request.briefingDate)
+    const meetingPassed = briefingAt ? briefingAt.getTime() < now.getTime() : false
+
+    if (msToDue < 0) {
+      const overdueMs = Math.abs(msToDue)
+      const overdueHours = Math.round(overdueMs / (60 * 60 * 1000))
+      const rem = await txEmail.sendAgentReportReminderSafe(stamped, agent, 'overdue')
+      if (rem.sent) overdue += 1
+      const adm = await txEmail.sendAdminReportOverdueSafe(stamped, {
+        overdueLabel: `${overdueHours}h`,
+        agentName: agent.displayName,
+      })
+      if (adm.sent) adminEsc += 1
+      // SME delay notice once when overdue (no fabricated completion date)
+      if (overdueHours >= 1) {
+        const delay = await txEmail.sendReportDelayUpdateSafe(stamped)
+        if (delay.sent) smeDelay += 1
+      }
+    } else if (msToDue <= DUE_SOON_MS && meetingPassed) {
+      const rem = await txEmail.sendAgentReportReminderSafe(stamped, agent, 'due_soon')
+      if (rem.sent) dueSoon += 1
+    } else if (meetingPassed) {
+      const rem = await txEmail.sendAgentReportReminderSafe(stamped, agent, 'pending')
+      if (rem.sent) pending += 1
+    }
+  }
+
+  return { job: 'report_sla_emails', pending, dueSoon, overdue, smeDelay, adminEsc }
+}
+
 async function runBriefingReminders() {
   const storage = getStorage()
   const requests = await storage.getAttendanceRequests()
@@ -536,6 +623,8 @@ async function runSingleJob(job, options = {}) {
       return runTenderClosingReminders()
     case 'briefing_reminders':
       return runBriefingReminders()
+    case 'report_sla_emails':
+      return runReportSlaEmails()
     case 'missed_briefing_detection':
       return runMissedBriefingDetection()
     case 'retry_failed_whatsapp':
@@ -880,6 +969,7 @@ module.exports = {
   runScheduledAutomation,
   runTenderClosingReminders,
   runBriefingReminders,
+  runReportSlaEmails,
   runMissedBriefingDetection,
   retryFailedWhatsApp,
   runSlaEscalations,
