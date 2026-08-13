@@ -252,6 +252,20 @@ async function assignRequestToAgent(requestId, agent, { byAdmin = false } = {}) 
   transitioned.acceptedAt = now
   if (byAdmin) transitioned.assignedByAdmin = true
 
+  // Stamp report SLA fields (briefing scheduled + 24h fallback when meetingEndedAt absent)
+  try {
+    const txEmail = require('./transactionalEmailService')
+    const withSla = txEmail.ensureReportSlaFields(transitioned)
+    transitioned.reportDueAt = withSla.reportDueAt || transitioned.reportDueAt || null
+    transitioned.reportSlaStatus = withSla.reportSlaStatus || transitioned.reportSlaStatus || null
+    transitioned.reportSlaFallback = withSla.reportSlaFallback || null
+  } catch (slaErr) {
+    console.error(
+      '[agentAssignment] report SLA stamp failed:',
+      slaErr instanceof Error ? slaErr.message.slice(0, 160) : 'unknown'
+    )
+  }
+
   await storage.saveAttendanceRequest(transitioned)
   await workflowAutomationService.dispatchWorkflowEvent('request_accepted', {
     ...transitioned,
@@ -263,6 +277,40 @@ async function assignRequestToAgent(requestId, agent, { byAdmin = false } = {}) 
     entityId: transitioned.id,
     agentId: agent.id,
   })
+
+  // Transactional emails: agent assignment + SME allocation confirmation — fail-soft
+  try {
+    const txEmail = require('./transactionalEmailService')
+    const agentPayload = {
+      id: agent.id,
+      uid: agent.id,
+      email: agent.email || null,
+      displayName: agent.displayName || agent.name || '',
+      name: agent.name || agent.displayName || '',
+    }
+    if (!agentPayload.email && agent.id) {
+      try {
+        const { getFirestore } = require('../config/firebaseAdmin')
+        const snap = await getFirestore().collection('users').doc(agent.id).get()
+        if (snap.exists) {
+          const profile = snap.data() || {}
+          if (profile.email) agentPayload.email = profile.email
+          if (!agentPayload.displayName && profile.displayName) {
+            agentPayload.displayName = profile.displayName
+          }
+        }
+      } catch {
+        /* ignore profile lookup */
+      }
+    }
+    await txEmail.sendAgentAssignmentEmailSafe(transitioned, agentPayload)
+    await txEmail.sendAgentAllocatedToSmeEmailSafe(transitioned)
+  } catch (err) {
+    console.error(
+      '[agentAssignment] transactional email failed:',
+      err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+    )
+  }
 
   return transitioned
 }
@@ -348,6 +396,7 @@ async function submitBriefingReport(payload) {
 
   await storage.saveBriefingReport(report)
 
+  let completedRequest = null
   const request = await getRequestById(payload.requestId)
   if (request) {
     if (request.assignedAgentId && request.assignedAgentId !== payload.agentId) {
@@ -357,8 +406,6 @@ async function submitBriefingReport(payload) {
       applyWorkflowTransition,
       assertWorkflowTransition,
     } = require('./domain/lifecycleEnforcement')
-    // Allow completed from assigned/accepted/en_route/arrived/in_progress
-    const from = request.status === 'assigned' ? 'accepted' : request.status
     // Normalize assigned → treat as accepted for completion path used by product today
     const effective = request.status === 'assigned' ? { ...request, status: 'accepted' } : request
     assertWorkflowTransition(effective.status, 'completed', 'youth-agent')
@@ -367,7 +414,10 @@ async function submitBriefingReport(payload) {
       actorId: payload.agentId,
     })
     completed.reportId = report.id
+    completed.reportSubmittedAt = report.createdAt
+    completed.reportSlaStatus = 'submitted'
     await storage.saveAttendanceRequest(completed)
+    completedRequest = completed
     await workflowAutomationService.dispatchWorkflowEvent('report_uploaded', {
       ...completed,
       id: completed.id,
@@ -382,6 +432,22 @@ async function submitBriefingReport(payload) {
     requestId: payload.requestId,
     agentId: payload.agentId,
   })
+
+  // SME report-ready (+ proof when attendance confirmed) — fail-soft
+  if (completedRequest) {
+    try {
+      const txEmail = require('./transactionalEmailService')
+      if (report.attendanceConfirmed === true || report.attendanceProofUrl) {
+        await txEmail.sendAttendanceProofAvailableEmailSafe(completedRequest)
+      }
+      await txEmail.sendBriefingReportReadyEmailSafe(completedRequest, report)
+    } catch (err) {
+      console.error(
+        '[agentAssignment] report transactional email failed:',
+        err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+      )
+    }
+  }
 
   return report
 }

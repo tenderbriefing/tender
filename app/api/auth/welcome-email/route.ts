@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
 
     const result = await sendWelcomeEmailSafe({
       to: email,
+      uid: user.uid,
       displayName: String(data.displayName || user.displayName || ''),
       userType: user.userType,
       companyName: typeof data.companyName === 'string' ? data.companyName : user.companyName,

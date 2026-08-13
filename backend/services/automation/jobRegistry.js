@@ -4,6 +4,7 @@ const JOB_DEFINITIONS = Object.freeze([
   { name: 'tender_closing_reminders', priority: 10, minStartMs: 8_000, retry: 'hourly', sideEffects: true },
   { name: 'briefing_reminders', priority: 20, minStartMs: 8_000, retry: 'hourly', sideEffects: true },
   { name: 'missed_briefing_detection', priority: 30, minStartMs: 10_000, retry: 'hourly', sideEffects: true },
+  { name: 'report_sla_emails', priority: 35, minStartMs: 12_000, retry: 'hourly', sideEffects: true },
   { name: 'retry_failed_whatsapp', priority: 40, minStartMs: 20_000, retry: 'bounded_20', sideEffects: true },
   { name: 'sla_escalations', priority: 50, minStartMs: 12_000, retry: 'hourly', sideEffects: true },
   { name: 'smart_dispatch', priority: 60, minStartMs: 15_000, retry: 'hourly', sideEffects: true },

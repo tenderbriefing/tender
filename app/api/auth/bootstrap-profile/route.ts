@@ -214,6 +214,7 @@ export async function POST(request: NextRequest) {
       try {
         const welcome = await sendWelcomeEmailSafe({
           to: email,
+          uid,
           displayName,
           userType: role,
         })
