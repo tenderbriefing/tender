@@ -24,9 +24,9 @@ export const ADMIN_CONTROL_CENTRE_MODULES: AdminNavGroup[] = [
     label: 'Operate',
     links: [
       {
-        href: '/founder/user-intelligence',
-        label: 'User Intelligence',
-        description: 'Founder cohort and network analytics',
+        href: '/founder',
+        label: 'Founder control centre',
+        description: 'Pulse, intelligence, and interventions',
         accent: true,
         founderOnly: true,
       },
@@ -158,7 +158,7 @@ export const CONTROL_CENTRE_PRIMARY_ACTIONS: PrimaryAction[] = [
 
 /** Header-safe subset — keep authenticated admin nav scannable. */
 export const ADMIN_HEADER_NAV = [
-  { name: 'Control centre', href: '/admin/dashboard' },
+  { name: 'Console', href: '/admin/dashboard' },
   { name: 'Operations', href: '/admin/operations' },
   { name: 'Registrations', href: '/admin/registrations' },
   { name: 'RFQ inbox', href: '/admin/procurement-inbox' },
@@ -166,6 +166,24 @@ export const ADMIN_HEADER_NAV = [
   { name: 'Finance', href: '/admin/finance' },
   { name: 'Integrations', href: '/admin/integrations' },
 ] as const
+
+/** Founder header: home first, then daily ops. Integrations stay in Console modules. */
+export const FOUNDER_HEADER_NAV = [
+  { name: 'Founder', href: '/founder' },
+  { name: 'Console', href: '/admin/dashboard' },
+  { name: 'Operations', href: '/admin/operations' },
+  { name: 'Registrations', href: '/admin/registrations' },
+  { name: 'RFQ inbox', href: '/admin/procurement-inbox' },
+  { name: 'Dispatch', href: '/admin/dispatch' },
+  { name: 'Finance', href: '/admin/finance' },
+] as const
+
+export function getAdminHeaderNav(opts: { showFounder: boolean }): ReadonlyArray<{
+  name: string
+  href: string
+}> {
+  return opts.showFounder ? FOUNDER_HEADER_NAV : ADMIN_HEADER_NAV
+}
 
 export function filterAdminModules(opts: {
   showFounder: boolean

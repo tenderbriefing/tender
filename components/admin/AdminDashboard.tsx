@@ -254,13 +254,13 @@ export default function AdminDashboard() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-800">
-              {showFounderNav ? 'Founder · Control centre' : 'Admin · Control centre'}
+              Admin · Operations
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-brand-900 sm:text-3xl">
               Operations console
             </h1>
             <p className="mt-1 max-w-xl text-sm text-slate-600">
-              Sync health, open work, and primary actions — modules stay one tap away.
+              Sync health, queues, and daily actions. Modules stay one tap away.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -379,8 +379,22 @@ export default function AdminDashboard() {
       {/* 3. Primary actions */}
       <section aria-label="Primary actions">
         <h2 className="sr-only">Primary actions</h2>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {CONTROL_CENTRE_PRIMARY_ACTIONS.map((action) => (
+        <div
+          className={`grid grid-cols-2 gap-2 ${
+            showFounderNav ? 'sm:grid-cols-3 lg:grid-cols-5' : 'sm:grid-cols-4'
+          }`}
+        >
+          {(showFounderNav
+            ? [
+                {
+                  href: '/founder',
+                  label: 'Founder home',
+                  description: 'Pulse and intelligence',
+                },
+                ...CONTROL_CENTRE_PRIMARY_ACTIONS,
+              ]
+            : CONTROL_CENTRE_PRIMARY_ACTIONS
+          ).map((action) => (
             <Link
               key={action.href}
               href={action.href}
@@ -394,21 +408,6 @@ export default function AdminDashboard() {
             </Link>
           ))}
         </div>
-        {showFounderNav && (
-          <div className="mt-2">
-            <Link
-              href="/founder/user-intelligence"
-              onClick={() =>
-                onModuleNav('/founder/user-intelligence', 'User Intelligence')
-              }
-              className="inline-flex min-h-[40px] items-center gap-1.5 text-sm font-semibold text-brand-800 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-800"
-            >
-              User Intelligence
-              <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden />
-            </Link>
-            <span className="ml-2 text-xs text-slate-500">Founder-only cohort analytics</span>
-          </div>
-        )}
       </section>
 
       {/* 4. KPI strip — one metric group */}

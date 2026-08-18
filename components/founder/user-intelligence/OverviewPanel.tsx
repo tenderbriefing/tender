@@ -1,10 +1,6 @@
 'use client'
 
 import {
-  BuildingOffice2Icon,
-  UserGroupIcon,
-} from '@heroicons/react/24/outline'
-import {
   ComparisonBars,
   DonutChart,
   EngagementBadge,
@@ -13,10 +9,16 @@ import {
   engagementSegments,
   formatCount,
 } from './charts'
-import { Panel, StatCard } from './chrome'
+import { Panel } from './chrome'
 import type { OverviewData } from './types'
 
-export function OverviewPanel({ overview, dataNotes }: { overview: OverviewData; dataNotes?: string[] }) {
+export function OverviewPanel({
+  overview,
+  dataNotes,
+}: {
+  overview: OverviewData
+  dataNotes?: string[]
+}) {
   const smeEngagement = engagementSegments(overview.engagementDistribution?.smes)
   const agentEngagement = engagementSegments(overview.engagementDistribution?.agents)
   const roleTotal = (overview.totalSmes || 0) + (overview.totalYouthAgents || 0)
@@ -54,32 +56,52 @@ export function OverviewPanel({ overview, dataNotes }: { overview: OverviewData;
     },
   ]
 
-  return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Total registered" value={overview.totalRegistered} accent="navy" />
-        <StatCard label="SMEs" value={overview.totalSmes} accent="navy" />
-        <StatCard label="Youth Agents" value={overview.totalYouthAgents} accent="gold" />
-        <StatCard
-          label="Inactive / at risk"
-          value={overview.inactiveUsers}
-          hint="Dormant or at-risk across both roles"
-        />
-      </div>
+  const pulse = [
+    { label: 'Total registered', value: overview.totalRegistered },
+    { label: 'SMEs', value: overview.totalSmes },
+    { label: 'Youth Agents', value: overview.totalYouthAgents },
+    {
+      label: 'Inactive / at risk',
+      value: overview.inactiveUsers,
+      warn: true,
+      hint: 'Dormant or at-risk across both roles',
+    },
+  ]
 
-      <div className="grid gap-5 lg:grid-cols-3">
-        <Panel
-          title="Role mix"
-          subtitle="SMEs and Youth Agents stay separate"
-          icon={<BuildingOffice2Icon className="h-5 w-5 text-brand-700" />}
-        >
+  return (
+    <div className="space-y-6">
+      <section aria-label="Key metrics" className="rounded-lg border border-slate-200 bg-white">
+        <dl className="grid grid-cols-2 divide-y divide-slate-100 lg:grid-cols-4 lg:divide-y-0">
+          {pulse.map((kpi) => (
+            <div
+              key={kpi.label}
+              className="px-4 py-4 sm:px-5 lg:border-l lg:border-slate-100 lg:first:border-l-0"
+            >
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                {kpi.label}
+              </dt>
+              <dd
+                className={`mt-1 text-2xl font-semibold tabular-nums tracking-tight ${
+                  kpi.warn && (kpi.value || 0) > 0 ? 'text-amber-800' : 'text-brand-900'
+                }`}
+              >
+                {formatCount(kpi.value)}
+              </dd>
+              {kpi.hint ? <p className="mt-0.5 text-[11px] text-slate-500">{kpi.hint}</p> : null}
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Panel title="Role mix" subtitle="SMEs and Youth Agents stay separate">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-around">
             <DonutChart
               segments={roleSegments}
               centerLabel={formatCount(roleTotal)}
               centerSub="users"
             />
-            <ul className="space-y-2 text-sm">
+            <ul className="w-full space-y-2 text-sm sm:w-auto">
               {roleSegments.map((s) => (
                 <li key={s.key} className="flex items-center gap-2">
                   <span
@@ -96,39 +118,35 @@ export function OverviewPanel({ overview, dataNotes }: { overview: OverviewData;
           </div>
         </Panel>
 
-        <Panel
-          title="SME vs Agent"
-          subtitle="Side-by-side activity snapshot"
-          icon={<UserGroupIcon className="h-5 w-5 text-accent-600" />}
-        >
+        <Panel title="SME vs Agent" subtitle="Side-by-side activity">
           <ComparisonBars items={comparisons} />
         </Panel>
 
-        <Panel title="Onboarding completion" subtitle="Profile completion rates by role">
+        <Panel title="Onboarding" subtitle="Profile completion by role">
           <div className="flex justify-around gap-4 py-2">
             <ProgressRing
               value={overview.registrationCompletionRate?.smes}
-              label="SME onboarding"
+              label="SME"
             />
             <ProgressRing
               value={overview.registrationCompletionRate?.agents}
-              label="Agent onboarding"
+              label="Agent"
             />
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 Avg days · SME
               </p>
-              <p className="mt-1 text-lg font-bold tabular-nums text-brand-900">
+              <p className="mt-1 text-lg font-semibold tabular-nums text-brand-900">
                 {formatCount(overview.averageDaysOnPlatform?.smes)}
               </p>
             </div>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 Avg days · Agent
               </p>
-              <p className="mt-1 text-lg font-bold tabular-nums text-brand-900">
+              <p className="mt-1 text-lg font-semibold tabular-nums text-brand-900">
                 {formatCount(overview.averageDaysOnPlatform?.agents)}
               </p>
             </div>
@@ -136,7 +154,7 @@ export function OverviewPanel({ overview, dataNotes }: { overview: OverviewData;
         </Panel>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="SME engagement" subtitle="Distribution across engagement classes">
           <EngagementDistribution segments={smeEngagement} empty="No SME engagement data yet" />
         </Panel>
@@ -148,19 +166,13 @@ export function OverviewPanel({ overview, dataNotes }: { overview: OverviewData;
         </Panel>
       </div>
 
-      <div className="rounded-xl border border-slate-200/80 bg-white px-5 py-4 text-xs text-slate-500 shadow-sm">
-        <p>
-          {overview.comparisons?.note} Session duration:{' '}
-          {overview.averageSessionDuration ?? 'not yet measurable'}.
-        </p>
-        {Array.isArray(dataNotes) && dataNotes.length > 0 && (
-          <ul className="mt-2 list-disc space-y-1 pl-4">
-            {dataNotes.map((n) => (
-              <li key={n}>{n}</li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <p className="text-xs leading-relaxed text-slate-500">
+        {overview.comparisons?.note} Session duration:{' '}
+        {overview.averageSessionDuration ?? 'not yet measurable'}.
+        {Array.isArray(dataNotes) && dataNotes.length > 0
+          ? ` ${dataNotes.join(' ')}`
+          : null}
+      </p>
     </div>
   )
 }

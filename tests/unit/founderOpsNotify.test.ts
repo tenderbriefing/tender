@@ -76,7 +76,7 @@ describe('founderOpsNotificationService helpers', () => {
     const reg = notifyService.buildRegistrationSummary(sampleProfile())
     expect(reg.idempotencyKey).toBe('sme-register:uid-sme-001')
     expect(reg.adminPath).toBe('/admin/registrations')
-    expect(reg.founderPath).toBe('/founder/user-intelligence')
+    expect(reg.founderPath).toBe('/founder')
     expect(reg.email).toBe('owner@acme.co.za')
     expect(reg.companyName).toBe('Acme Civils')
 

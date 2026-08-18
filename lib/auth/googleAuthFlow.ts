@@ -1,4 +1,4 @@
-import { dashboardPathForRole } from '@/lib/auth/redirects'
+import { dashboardPathForRole, homePathForProfile } from '@/lib/auth/redirects'
 import type { UserProfile } from '@/lib/auth'
 
 export type PlatformRole = 'sme' | 'youth-agent' | 'admin'
@@ -91,7 +91,7 @@ export function resolvePostAuthDestination(profile: UserProfile): {
   }
   return {
     blocked: false,
-    path: dashboardPathForRole(profile.userType),
+    path: homePathForProfile(profile),
     onboardingRequired: false,
   }
 }

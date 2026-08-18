@@ -1,5 +1,10 @@
 import type { UserProfile } from '@/lib/auth'
-import { ADMIN_HEADER_NAV } from '@/lib/admin/controlCentre'
+import { ADMIN_HEADER_NAV, getAdminHeaderNav } from '@/lib/admin/controlCentre'
+import {
+  evaluateFounderAccess,
+  isFounderIntelligenceEnabled,
+  isFounderIntelligenceEnabledClient,
+} from '@/lib/founder/access'
 
 export function dashboardPathForRole(userType?: UserProfile['userType']): string {
   switch (userType) {
@@ -11,6 +16,24 @@ export function dashboardPathForRole(userType?: UserProfile['userType']): string
     default:
       return '/sme/dashboard'
   }
+}
+
+/** Signed-in home: founders land on /founder, everyone else on their role dashboard. */
+export function homePathForProfile(profile?: {
+  userType?: UserProfile['userType'] | string | null
+  email?: string | null
+  founderAccess?: boolean
+} | null): string {
+  const userType = (profile?.userType || undefined) as UserProfile['userType'] | undefined
+  const founderOk = evaluateFounderAccess({
+    enabled: isFounderIntelligenceEnabled() || isFounderIntelligenceEnabledClient(),
+    authenticated: true,
+    userType,
+    email: profile?.email,
+    founderAccess: profile?.founderAccess === true,
+  }).ok
+  if (founderOk) return '/founder'
+  return dashboardPathForRole(userType)
 }
 
 export const SME_NAV = [
@@ -28,8 +51,12 @@ export const AGENT_NAV = [
   { name: 'Profile', href: '/settings' },
 ] as const
 
-/** Lean authenticated header nav — full catalogue lives in control centre Modules. */
+/** Lean authenticated header nav — full catalogue lives in the operations console. */
 export const ADMIN_NAV = ADMIN_HEADER_NAV
+
+export function adminNavForUser(opts: { showFounder: boolean }) {
+  return getAdminHeaderNav(opts)
+}
 
 export const PUBLIC_NAV = [
   { name: 'Home', href: '/' },

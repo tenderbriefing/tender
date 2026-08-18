@@ -4,7 +4,9 @@ import {
   ADMIN_HEADER_NAV,
   CONTROL_CENTRE_PRIMARY_ACTIONS,
   CONTROL_CENTRE_TABS,
+  FOUNDER_HEADER_NAV,
   filterAdminModules,
+  getAdminHeaderNav,
   getClientFeatureFlagSnapshot,
 } from '@/lib/admin/controlCentre'
 
@@ -29,13 +31,11 @@ describe('admin control centre IA', () => {
   it('hides founder-only modules for non-founders', () => {
     const admin = filterAdminModules({ showFounder: false })
     const operate = admin.find((g) => g.id === 'operate')
-    expect(operate?.links.some((l) => l.href === '/founder/user-intelligence')).toBe(false)
+    expect(operate?.links.some((l) => l.href === '/founder')).toBe(false)
 
     const founder = filterAdminModules({ showFounder: true })
     const founderOperate = founder.find((g) => g.id === 'operate')
-    expect(founderOperate?.links.some((l) => l.href === '/founder/user-intelligence')).toBe(
-      true
-    )
+    expect(founderOperate?.links.some((l) => l.href === '/founder')).toBe(true)
   })
 
   it('preserves critical operational destinations in the module catalogue', () => {
@@ -57,12 +57,20 @@ describe('admin control centre IA', () => {
     }
   })
 
-  it('keeps header nav lean and aligned with control centre home', () => {
+  it('keeps header nav lean and aligned with the operations console', () => {
     expect(ADMIN_HEADER_NAV[0]).toEqual({
-      name: 'Control centre',
+      name: 'Console',
       href: '/admin/dashboard',
     })
     expect(ADMIN_HEADER_NAV.length).toBeLessThanOrEqual(8)
+  })
+
+  it('puts Founder first in founder header nav', () => {
+    expect(FOUNDER_HEADER_NAV[0]).toEqual({ name: 'Founder', href: '/founder' })
+    expect(FOUNDER_HEADER_NAV.some((l) => l.href === '/admin/dashboard')).toBe(true)
+    expect(getAdminHeaderNav({ showFounder: true })[0].href).toBe('/founder')
+    expect(getAdminHeaderNav({ showFounder: false })[0].href).toBe('/admin/dashboard')
+    expect(getAdminHeaderNav({ showFounder: true }).length).toBeLessThanOrEqual(8)
   })
 
   it('returns read-only feature flag rows without throwing', () => {

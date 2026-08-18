@@ -2,39 +2,6 @@
 
 import { formatCount } from './charts'
 
-export function StatCard({
-  label,
-  value,
-  hint,
-  accent,
-}: {
-  label: string
-  value: string | number | null | undefined
-  hint?: string
-  accent?: 'navy' | 'gold' | 'muted'
-}) {
-  const border =
-    accent === 'gold'
-      ? 'border-l-accent-500'
-      : accent === 'navy'
-        ? 'border-l-brand-800'
-        : 'border-l-transparent'
-
-  return (
-    <div
-      className={`rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm border-l-[3px] ${border}`}
-    >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-        {label}
-      </p>
-      <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-brand-900">
-        {formatCount(value)}
-      </p>
-      {hint && <p className="mt-1 text-xs leading-snug text-slate-500">{hint}</p>}
-    </div>
-  )
-}
-
 export function Panel({
   title,
   subtitle,
@@ -51,21 +18,41 @@ export function Panel({
   className?: string
 }) {
   return (
-    <section
-      className={`overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm ${className}`}
-    >
-      <div className="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <section className={`overflow-hidden rounded-lg border border-slate-200 bg-white ${className}`}>
+      <div className="flex flex-col gap-2 border-b border-slate-100 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div>
-          <h2 className="flex items-center gap-2 text-base font-bold text-brand-900 sm:text-lg">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-brand-900">
             {icon}
             {title}
           </h2>
-          {subtitle && <p className="mt-0.5 text-sm text-slate-600">{subtitle}</p>}
+          {subtitle ? <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p> : null}
         </div>
         {actions}
       </div>
-      <div className="p-5">{children}</div>
+      <div className="p-4 sm:p-5">{children}</div>
     </section>
+  )
+}
+
+/** @deprecated Prefer metric strips; kept for role/network panels that still use cards */
+export function StatCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string
+  value: string | number | null | undefined
+  hint?: string
+  accent?: 'navy' | 'gold' | 'muted'
+}) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-4 py-3.5">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1.5 text-2xl font-semibold tabular-nums tracking-tight text-brand-900">
+        {formatCount(value)}
+      </p>
+      {hint ? <p className="mt-1 text-xs leading-snug text-slate-500">{hint}</p> : null}
+    </div>
   )
 }
 
@@ -77,9 +64,11 @@ export function EmptyPanel({
   description?: string
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-6 py-12 text-center">
+    <div className="rounded-lg border border-dashed border-slate-200 bg-white px-6 py-12 text-center">
       <p className="text-sm font-semibold text-brand-900">{title}</p>
-      {description && <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">{description}</p>}
+      {description ? (
+        <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">{description}</p>
+      ) : null}
     </div>
   )
 }
@@ -92,10 +81,10 @@ export function ErrorPanel({
   onRetry?: () => void
 }) {
   return (
-    <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-900">
+    <div className="rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-900">
       <p className="font-semibold">Could not load intelligence</p>
       <p className="mt-1">{message}</p>
-      {onRetry && (
+      {onRetry ? (
         <button
           type="button"
           onClick={onRetry}
@@ -103,7 +92,7 @@ export function ErrorPanel({
         >
           Retry
         </button>
-      )}
+      ) : null}
     </div>
   )
 }
@@ -119,7 +108,7 @@ export function Pagination({
 }) {
   if (totalPages <= 1) return null
   return (
-    <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3 text-sm">
+    <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-sm sm:px-5">
       <button
         type="button"
         disabled={page <= 1}

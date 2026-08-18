@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { signIn, getUserProfile } from '@/lib/auth'
 import { getAuthErrorMessage, normalizeAuthEmail } from '@/lib/auth/errors'
-import { dashboardPathForRole } from '@/lib/auth/redirects'
+import { homePathForProfile } from '@/lib/auth/redirects'
 import { resolvePostAuthDestination } from '@/lib/auth/googleAuthFlow'
 import {
   continueWithGoogle,
@@ -104,7 +104,7 @@ function SignInForm() {
         /* non-blocking */
       }
       if (redirectTo) router.push(redirectTo)
-      else router.push(dest.path || dashboardPathForRole(profile.userType))
+      else router.push(dest.path || homePathForProfile(profile))
     } catch (error: unknown) {
       toast.error(getAuthErrorMessage(error, 'Failed to sign in. Please try again.'))
     } finally {

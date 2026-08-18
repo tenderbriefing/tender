@@ -11,15 +11,19 @@ import { toast } from 'react-hot-toast'
 import { Menu, X } from 'lucide-react'
 import NotificationCenter from '@/components/notifications/NotificationCenter'
 import {
-  ADMIN_NAV,
   AGENT_NAV,
   PUBLIC_NAV,
   SME_NAV,
-  dashboardPathForRole,
+  adminNavForUser,
+  homePathForProfile,
 } from '@/lib/auth/redirects'
+import {
+  evaluateFounderAccess,
+  isFounderIntelligenceEnabledClient,
+} from '@/lib/founder/access'
 
 function isActive(pathname: string, href: string) {
-  if (href === '/') return pathname === '/'
+  if (href === '/' || href === '/founder') return pathname === href
   if (href.startsWith('/#')) return pathname === '/'
   return pathname === href || pathname.startsWith(`${href}/`)
 }
@@ -47,7 +51,14 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
     }
   }
 
-  const dashboardHref = dashboardPathForRole(userProfile?.userType)
+  const dashboardHref = homePathForProfile(userProfile)
+  const showFounderNav = evaluateFounderAccess({
+    enabled: isFounderIntelligenceEnabledClient(),
+    authenticated: Boolean(user),
+    userType: userProfile?.userType,
+    email: user?.email || userProfile?.email,
+    founderAccess: userProfile?.founderAccess === true,
+  }).ok
 
   const roleNav =
     userProfile?.userType === 'sme'
@@ -55,11 +66,13 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
       : userProfile?.userType === 'youth-agent'
         ? AGENT_NAV
         : userProfile?.userType === 'admin'
-          ? ADMIN_NAV
+          ? adminNavForUser({ showFounder: showFounderNav })
           : []
 
   // While auth is loading, keep public wayfinding visible — only swap chrome after resolve
   const showAccountChrome = !loading && !!user
+  const showStandaloneDashboard =
+    showAccountChrome && userProfile?.userType !== 'admin'
   const navItems = showAccountChrome ? roleNav : PUBLIC_NAV
   const onHomeOverlay = transparentOnHome && pathname === '/'
   const overDarkHero = onHomeOverlay && !scrolled && !isMenuOpen
@@ -111,7 +124,7 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
                 </Link>
               )
             })}
-            {showAccountChrome && (
+            {showStandaloneDashboard && (
               <Link
                 href={dashboardHref}
                 className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
@@ -233,7 +246,7 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
                   {item.name}
                 </Link>
               ))}
-              {showAccountChrome && (
+              {showStandaloneDashboard && (
                 <Link
                   href={dashboardHref}
                   className="rounded-lg px-3 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50"
