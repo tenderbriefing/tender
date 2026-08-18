@@ -88,16 +88,20 @@ export async function GET(request: NextRequest) {
       isRunning: Boolean(syncStatus.isRunning),
     })
 
-    const { logHotPath } = require('../../../../backend/services/hotPathLog') as {
-      logHotPath: (f: Record<string, unknown>) => void
+    try {
+      const { logHotPath } = require('../../../backend/services/hotPathLog') as {
+        logHotPath: (f: Record<string, unknown>) => void
+      }
+      logHotPath({
+        endpoint: 'tender-briefings',
+        durationMs: Date.now() - started,
+        scanned,
+        resultCount: data.length,
+        cache: 'n/a',
+      })
+    } catch {
+      /* logging must not fail the public catalogue */
     }
-    logHotPath({
-      endpoint: 'tender-briefings',
-      durationMs: Date.now() - started,
-      scanned,
-      resultCount: data.length,
-      cache: 'n/a',
-    })
 
     return NextResponse.json({
       success: true,
