@@ -10,6 +10,9 @@ import {
 } from '@/lib/security/publicTender'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30
+
+const DEFAULT_PAGE = 40
 
 function asViewer(user: Awaited<ReturnType<typeof verifyApiUser>>): PlatformViewer {
   if (!user) return null
@@ -17,6 +20,7 @@ function asViewer(user: Awaited<ReturnType<typeof verifyApiUser>>): PlatformView
 }
 
 export async function GET(request: NextRequest) {
+  const started = Date.now()
   try {
     const storage = backend.getStorage()
     const { searchParams } = new URL(request.url)
@@ -25,22 +29,50 @@ export async function GET(request: NextRequest) {
     const includeOptional =
       viewer?.userType === 'admin' && searchParams.get('includeOptional') === 'true'
 
-    const allTenders: TenderBriefing[] = await storage.getTenderBriefings({
-      province: searchParams.get('province') || undefined,
-      sector: searchParams.get('sector') || undefined,
-      status: searchParams.get('status') || undefined,
-    })
-
-    const visible = filterPlatformVisible(allTenders, viewer, {
-      allowOptionalForAdmin: includeOptional,
-    })
-
-    const offset = Math.max(0, Number(searchParams.get('offset') || 0))
     const limitParam = searchParams.get('limit')
-    const limit = limitParam ? Math.min(Math.max(1, Number(limitParam)), 500) : null
-    const page = limit ? visible.slice(offset, offset + limit) : visible
+    const pageSize = limitParam
+      ? Math.min(Math.max(1, Number(limitParam)), 100)
+      : DEFAULT_PAGE
+    const cursor = searchParams.get('cursor') || undefined
+    const province = searchParams.get('province') || undefined
 
-    const data = user ? page : page.map(toPublicTenderBriefing)
+    let pageItems: TenderBriefing[] = []
+    let nextCursor: string | null = null
+    let scanned = 0
+    let total: number | null = null
+
+    if (typeof storage.listTenderBriefingsPage === 'function' && !includeOptional) {
+      const page = await storage.listTenderBriefingsPage({
+        pageSize,
+        cursor,
+        province,
+        compulsoryOnly: true,
+      })
+      pageItems = filterPlatformVisible(page.items, viewer, {
+        allowOptionalForAdmin: false,
+      })
+      nextCursor = page.nextCursor
+      scanned = page.scanned
+      if (typeof storage.countDocuments === 'function') {
+        total = await storage.countDocuments('tenderBriefings', { briefingCompulsory: true })
+      }
+    } else {
+      const bounded = await storage.getTenderBriefings({
+        province,
+        sector: searchParams.get('sector') || undefined,
+        status: searchParams.get('status') || undefined,
+        limit: 400,
+      })
+      const visible = filterPlatformVisible(bounded, viewer, {
+        allowOptionalForAdmin: includeOptional,
+      })
+      pageItems = visible.slice(0, pageSize)
+      nextCursor = visible.length > pageSize ? visible[pageSize - 1]?.id || null : null
+      total = visible.length
+      scanned = bounded.length
+    }
+
+    const data = user ? pageItems : pageItems.map(toPublicTenderBriefing)
 
     const sync = backend.incrementalSync()
     const syncStatus = await sync.getSyncStatus()
@@ -56,19 +88,33 @@ export async function GET(request: NextRequest) {
       isRunning: Boolean(syncStatus.isRunning),
     })
 
+    const { logHotPath } = require('../../../../backend/services/hotPathLog') as {
+      logHotPath: (f: Record<string, unknown>) => void
+    }
+    logHotPath({
+      endpoint: 'tender-briefings',
+      durationMs: Date.now() - started,
+      scanned,
+      resultCount: data.length,
+      cache: 'n/a',
+    })
+
     return NextResponse.json({
       success: true,
       data,
       count: data.length,
-      total: visible.length,
-      offset,
-      hasMore: limit ? offset + page.length < visible.length : false,
+      total,
+      offset: 0,
+      cursor: cursor || null,
+      nextCursor,
+      hasMore: Boolean(nextCursor),
       lastUpdated: publicSync.lastUpdated,
       syncStatus: publicSync,
       policy: {
         compulsoryBriefingsOnly: !includeOptional,
-        // Non-admins: hide tenders whose briefing datetime has passed (SAST).
         upcomingBriefingsOnly: viewer?.userType !== 'admin',
+        paginated: true,
+        pageSize,
       },
     })
   } catch (error) {

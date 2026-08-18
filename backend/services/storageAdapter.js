@@ -85,11 +85,49 @@ class JsonStorageAdapter {
   }
 
   async getAllTenders(filters = {}) {
-    return applyTenderFilters(readCollection(JSON_FILES.TENDER_BRIEFINGS, []), filters)
+    const items = applyTenderFilters(readCollection(JSON_FILES.TENDER_BRIEFINGS, []), filters)
+    const cap = Number(filters.limit)
+    if (Number.isFinite(cap) && cap > 0) return items.slice(0, cap)
+    return items
   }
 
   async getTenderBriefings(filters = {}) {
     return this.getAllTenders(filters)
+  }
+
+  async countDocuments(collectionName, equality = {}) {
+    const file =
+      collectionName === 'tenderBriefings'
+        ? JSON_FILES.TENDER_BRIEFINGS
+        : collectionName === 'attendanceRequests'
+          ? JSON_FILES.ATTENDANCE_REQUESTS
+          : collectionName === 'briefingReports'
+            ? JSON_FILES.BRIEFING_REPORTS
+            : null
+    if (!file) return 0
+    let items = readCollection(file, [])
+    for (const [field, value] of Object.entries(equality || {})) {
+      items = items.filter((row) => row[field] === value)
+    }
+    return items.length
+  }
+
+  async listTenderBriefingsPage(filters = {}) {
+    const pageSize = Math.min(Math.max(Number(filters.pageSize) || 40, 1), 100)
+    let items = applyTenderFilters(readCollection(JSON_FILES.TENDER_BRIEFINGS, []), {
+      ...filters,
+      compulsoryOnly: true,
+    })
+    const cursor = filters.cursor ? String(filters.cursor) : ''
+    const start = cursor ? items.findIndex((t) => t.id === cursor) + 1 : 0
+    const slice = items.slice(Math.max(0, start), Math.max(0, start) + pageSize)
+    const last = slice[slice.length - 1]
+    return {
+      items: slice,
+      nextCursor: slice.length === pageSize && last ? last.id : null,
+      scanned: slice.length,
+      pageSize,
+    }
   }
 
   async getTenderById(id) {
@@ -179,6 +217,10 @@ class JsonStorageAdapter {
         }
         return false
       })
+    }
+    const cap = Number(filters.limit)
+    if (Number.isFinite(cap) && cap > 0) {
+      items = items.slice(0, Math.min(cap, 2000))
     }
     return items.sort(
       (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
@@ -285,6 +327,14 @@ class FirestoreStorageAdapter {
 
   async getTenderBriefings(filters) {
     return this.getAllTenders(filters)
+  }
+
+  async countDocuments(collectionName, equality) {
+    return this._getService().countDocuments(collectionName, equality)
+  }
+
+  async listTenderBriefingsPage(filters) {
+    return this._getService().listTenderBriefingsPage(filters)
   }
 
   async getTenderById(id) {

@@ -9,11 +9,34 @@ function monthKey(iso) {
   return String(iso).slice(0, 7)
 }
 
-async function generateProcurementInsights() {
+const INSIGHTS_CACHE_TTL_MS = 5 * 60 * 1000
+let insightsCache = null
+let insightsCacheAt = 0
+let insightsInflight = null
+
+async function generateProcurementInsights({ force = false } = {}) {
+  if (!force && insightsCache && Date.now() - insightsCacheAt < INSIGHTS_CACHE_TTL_MS) {
+    return insightsCache
+  }
+  if (!force && insightsInflight) return insightsInflight
+  insightsInflight = buildProcurementInsights()
+    .then((data) => {
+      insightsCache = data
+      insightsCacheAt = Date.now()
+      return data
+    })
+    .finally(() => {
+      insightsInflight = null
+    })
+  return insightsInflight
+}
+
+/** Explicit analysis / cached path. Bounded catalogue window, not a poll-time full scan. */
+async function buildProcurementInsights() {
   const storage = getStorage()
   const [tenders, requests, agentRanks] = await Promise.all([
-    storage.getAllTenders(),
-    storage.getAttendanceRequests(),
+    storage.getAllTenders({ limit: 5000 }),
+    storage.getAttendanceRequests({ limit: 2000 }),
     agentPerformanceService.rankAllAgents(),
   ])
 
@@ -101,6 +124,10 @@ async function generateProcurementInsights() {
     highPerformingAgents: agentRanks.filter((a) => a.tier === 'Platinum' || a.tier === 'Gold').slice(0, 10),
     atRiskAgents: agentRanks.filter((a) => a.tier === 'At Risk').slice(0, 10),
     repeatSmeBehavior: repeatSmes,
+    dataNotes: [
+      'Tender mix is a bounded catalogue window (≤5000), not a silent full-collection total.',
+      'Attendance KPIs use a bounded request cohort (≤2000).',
+    ],
   }
 }
 

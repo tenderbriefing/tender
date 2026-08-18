@@ -142,8 +142,136 @@ async function saveExecutiveMetricsSnapshot() {
   return doc
 }
 
+const LIVE_CACHE_TTL_MS = 60000
+let liveCache = null
+let liveCacheAt = 0
+let liveInflight = null
+
+/**
+ * Interactive GET path — no catalogue scan. Totals come from platformStats/catalogue
+ * and Firestore count(); request KPIs use a bounded cohort (≤2000).
+ * Full computeExecutiveMetrics remains for explicit snapshot/save jobs.
+ */
+async function computeLiveExecutiveMetrics() {
+  const storage = getStorage()
+  const syncService = require('./incrementalSyncService')
+  const catalogueStats = require('./catalogueStatsService')
+  const [summary, requests, reports, syncStatus, waStats, workflowTelemetry, requestTotal] =
+    await Promise.all([
+      catalogueStats.readCatalogueSummary(),
+      storage.getAttendanceRequests({ limit: 2000 }),
+      storage.getBriefingReports({ limit: 2000 }),
+      syncService.getSyncStatus(),
+      whatsappService.getWhatsAppStats(100),
+      workflowAutomationService.getWorkflowTelemetry({ limit: 100 }),
+      typeof storage.countDocuments === 'function'
+        ? storage.countDocuments('attendanceRequests').catch(() => 0)
+        : Promise.resolve(0),
+    ])
+
+  const paid = requests.filter((r) => r.paymentStatus === 'paid')
+  const pendingPaid = requests.filter(
+    (r) => r.status === 'pending' && r.paymentStatus === 'paid'
+  )
+  const completed = requests.filter((r) => r.status === 'completed')
+  const today = new Date().toISOString().slice(0, 10)
+  const revenueTodayCents = paid
+    .filter((r) => r.paidAt && String(r.paidAt).startsWith(today))
+    .reduce((s, r) => s + (r.paymentAmount || 24900), 0)
+  const provinceDemand = {}
+  const departmentDemand = {}
+  const smeCounts = {}
+  for (const r of requests) {
+    const p = r.province || 'Unknown'
+    provinceDemand[p] = (provinceDemand[p] || 0) + 1
+    const d = r.department || 'Unknown'
+    departmentDemand[d] = (departmentDemand[d] || 0) + 1
+    if (r.smeId) smeCounts[r.smeId] = (smeCounts[r.smeId] || 0) + 1
+  }
+  const dispatchTimes = []
+  for (const r of requests) {
+    const dm = minutesBetween(r.paidAt || r.createdAt, r.acceptedAt)
+    if (dm !== null) dispatchTimes.push(dm)
+  }
+  const slaCompliant = requests.filter(
+    (r) =>
+      r.acceptedAt &&
+      minutesBetween(r.paidAt, r.acceptedAt) !== null &&
+      minutesBetween(r.paidAt, r.acceptedAt) <= 60
+  ).length
+  const conversionPct =
+    requests.length > 0 ? Math.round((paid.length / requests.length) * 1000) / 10 : 0
+  const waTotal = (waStats.sent || 0) + (waStats.failed || 0) + (waStats.pending || 0)
+  const whatsappSuccessRate =
+    waTotal > 0 ? Math.round((waStats.sent / waTotal) * 1000) / 10 : null
+  const workflowCompleted = workflowTelemetry.byStatus?.completed || 0
+  const workflowTotal = workflowTelemetry.total || 0
+  const workflowCompletionRate =
+    workflowTotal > 0 ? Math.round((workflowCompleted / workflowTotal) * 1000) / 10 : null
+
+  return {
+    capturedAt: new Date().toISOString(),
+    totalTenders: Number(summary?.tenderCount || 0),
+    activeTenders: Number(summary?.totalBriefings || 0),
+    totalRequests: Number(requestTotal || 0),
+    paidRequests: paid.length,
+    pendingPaidRequests: pendingPaid.length,
+    completedRequests: completed.length,
+    conversionPct,
+    revenueTodayCents,
+    provinceDemand: Object.entries(provinceDemand)
+      .map(([province, count]) => ({ province, count }))
+      .sort((a, b) => b.count - a.count),
+    topDepartments: Object.entries(departmentDemand)
+      .map(([department, count]) => ({ department, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10),
+    topSmes: Object.entries(smeCounts)
+      .map(([smeId, count]) => {
+        const r = requests.find((x) => x.smeId === smeId)
+        return { smeId, count, name: r?.smeCompany || r?.smeName || smeId }
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10),
+    averageDispatchMinutes:
+      dispatchTimes.length > 0
+        ? Math.round(dispatchTimes.reduce((a, b) => a + b, 0) / dispatchTimes.length)
+        : null,
+    averageReportUploadMinutes: null,
+    slaCompliancePct:
+      paid.length > 0 ? Math.round((slaCompliant / paid.length) * 1000) / 10 : null,
+    whatsappSuccessRate,
+    paymentConversionPct: conversionPct,
+    workflowCompletionRate,
+    workflowHealth: workflowTelemetry.byStatus || {},
+    syncHealth: syncStatus.apiHealth || 'unknown',
+    operationalUptime: syncStatus.apiHealth === 'healthy' ? 'up' : 'degraded',
+    dataNotes: [
+      'Catalogue totals from platformStats/catalogue (sync precompute), not a live full scan.',
+      'Paid/pending/dispatch KPIs use a bounded attendance-request cohort (≤2000), not lifetime mix.',
+    ],
+    reportsSampleSize: reports.length,
+  }
+}
+
 async function getLatestExecutiveMetrics() {
-  const computed = await computeExecutiveMetrics()
+  let computed
+  if (liveCache && Date.now() - liveCacheAt < LIVE_CACHE_TTL_MS) {
+    computed = liveCache
+  } else if (liveInflight) {
+    computed = await liveInflight
+  } else {
+    liveInflight = computeLiveExecutiveMetrics()
+      .then((value) => {
+        liveCache = value
+        liveCacheAt = Date.now()
+        return value
+      })
+      .finally(() => {
+        liveInflight = null
+      })
+    computed = await liveInflight
+  }
   try {
     const db = getFirestore()
     const snap = await db.collection(METRICS_COLLECTION).limit(20).get()
@@ -158,6 +286,7 @@ async function getLatestExecutiveMetrics() {
 
 module.exports = {
   computeExecutiveMetrics,
+  computeLiveExecutiveMetrics,
   saveExecutiveMetricsSnapshot,
   getLatestExecutiveMetrics,
   METRICS_COLLECTION,

@@ -244,7 +244,7 @@ async function buildFreshPayload() {
   const db = getFirestore()
 
   const [requests, agents, waStats, workflowTelemetry, telemetry] = await Promise.all([
-    settled(storage.getAttendanceRequests(), []),
+    settled(storage.getAttendanceRequests({ limit: 500 }), []),
     settled(
       db
         .collection('agents')
@@ -285,14 +285,23 @@ async function buildFreshPayload() {
 }
 
 async function getCommandCenterPayload() {
+  const { logHotPath } = require('./hotPathLog')
   if (cacheEntry && Date.now() - cacheAt < CACHE_TTL_MS) {
+    logHotPath({ endpoint: 'command-center', cache: 'hit', role: 'admin' })
     return cacheEntry
   }
   if (inflight) return inflight
+  const started = Date.now()
   inflight = buildFreshPayload()
     .then((payload) => {
       cacheEntry = payload
       cacheAt = Date.now()
+      logHotPath({
+        endpoint: 'command-center',
+        cache: 'miss',
+        durationMs: Date.now() - started,
+        role: 'admin',
+      })
       return payload
     })
     .finally(() => {

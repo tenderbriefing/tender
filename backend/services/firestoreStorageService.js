@@ -70,9 +70,25 @@ const defaultSyncState = () => ({
   scraperHealth: 'unknown',
 })
 
+/**
+ * Catalogue loaders
+ *
+ * Unbounded: omit `limit` (sync / reconciliation / operator jobs only).
+ * Bounded UI: pass `limit` (hard cap 5000). A cap is a guardrail — never present
+ * a bounded list length as an exact platform total; use countDocuments() or
+ * platformStats/catalogue for totals.
+ */
+const TENDER_BOUNDED_HARD_CAP = 5000
+const ATTENDANCE_BOUNDED_HARD_CAP = 2000
+
 async function getAllTenders(filters = {}) {
   const db = getFirestore()
-  const snapshot = await db.collection(COLLECTIONS.TENDER_BRIEFINGS).get()
+  let query = db.collection(COLLECTIONS.TENDER_BRIEFINGS)
+  const cap = Number(filters.limit)
+  if (Number.isFinite(cap) && cap > 0) {
+    query = query.limit(Math.min(cap, TENDER_BOUNDED_HARD_CAP))
+  }
+  const snapshot = await query.get()
   const items = snapshot.docs.map((doc) => docToObject(doc))
   return applyTenderFilters(items, filters)
 }
@@ -141,6 +157,11 @@ async function getAttendanceRequests(filters = {}) {
     query = query.where('status', '==', filters.status)
   }
 
+  const cap = Number(filters.limit)
+  if (Number.isFinite(cap) && cap > 0) {
+    query = query.limit(Math.min(cap, ATTENDANCE_BOUNDED_HARD_CAP))
+  }
+
   const snapshot = await query.get()
   let items = snapshot.docs.map((doc) => docToObject(doc))
 
@@ -185,6 +206,11 @@ async function getBriefingReports(filters = {}) {
 
   if (filters.tenderId) {
     query = query.where('tenderId', '==', filters.tenderId)
+  }
+
+  const cap = Number(filters.limit)
+  if (Number.isFinite(cap) && cap > 0) {
+    query = query.limit(Math.min(cap, ATTENDANCE_BOUNDED_HARD_CAP))
   }
 
   const snapshot = await query.get()
@@ -308,8 +334,81 @@ async function markAllNotificationsRead(userId) {
   if (count > 0) await batch.commit()
 }
 
+async function countDocuments(collectionName, equality = {}) {
+  const db = getFirestore()
+  let query = db.collection(collectionName)
+  for (const [field, value] of Object.entries(equality)) {
+    if (value !== undefined && value !== null && value !== '') {
+      query = query.where(field, '==', value)
+    }
+  }
+  const snap = await query.count().get()
+  return snap.data().count
+}
+
+/**
+ * Cursor page for the public/admin catalogue. Does not load the full collection.
+ * Visibility (upcoming compulsory) is applied in-process over a bounded scan budget.
+ */
+async function listTenderBriefingsPage(filters = {}) {
+  const pageSize = Math.min(Math.max(Number(filters.pageSize) || 40, 1), 100)
+  const scanBudget = Math.min(Math.max(Number(filters.scanBudget) || 160, pageSize), 400)
+  const db = getFirestore()
+  const col = db.collection(COLLECTIONS.TENDER_BRIEFINGS)
+  let lastDoc = null
+  if (filters.cursor) {
+    const cursorSnap = await col.doc(String(filters.cursor)).get()
+    if (cursorSnap.exists) lastDoc = cursorSnap
+  }
+
+  const collected = []
+  let scanned = 0
+  let nextCursor = null
+  let exhausted = false
+
+  while (collected.length < pageSize && scanned < scanBudget) {
+    const batchSize = Math.min(80, scanBudget - scanned)
+    let query = col.where('briefingCompulsory', '==', true).orderBy('lastSyncedAt', 'desc')
+    if (filters.province) {
+      query = col
+        .where('briefingCompulsory', '==', true)
+        .where('province', '==', filters.province)
+        .orderBy('lastSyncedAt', 'desc')
+    }
+    query = query.limit(batchSize)
+    if (lastDoc) query = query.startAfter(lastDoc)
+    const snap = await query.get()
+    if (snap.empty) {
+      exhausted = true
+      break
+    }
+    scanned += snap.docs.length
+    for (const doc of snap.docs) {
+      lastDoc = doc
+      nextCursor = doc.id
+      const item = docToObject(doc)
+      if (item.visibility === 'private' && !filters.includePrivate) continue
+      collected.push(item)
+      if (collected.length >= pageSize) break
+    }
+    if (snap.docs.length < batchSize) {
+      exhausted = true
+      break
+    }
+  }
+
+  return {
+    items: collected.slice(0, pageSize),
+    nextCursor: exhausted && collected.length < pageSize ? null : nextCursor,
+    scanned,
+    pageSize,
+  }
+}
+
 module.exports = {
   COLLECTIONS,
+  TENDER_BOUNDED_HARD_CAP,
+  ATTENDANCE_BOUNDED_HARD_CAP,
   getAllTenders,
   getTenderById,
   upsertTenders,
@@ -325,4 +424,6 @@ module.exports = {
   getNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  countDocuments,
+  listTenderBriefingsPage,
 }

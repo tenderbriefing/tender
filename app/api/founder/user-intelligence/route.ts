@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyFounderUser } from '@/lib/founder/verifyFounder'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,9 +16,17 @@ export async function GET(request: NextRequest) {
     const q = searchParams.get('q') || ''
     const province = searchParams.get('province') || ''
 
+    const started = Date.now()
     const svc = require('../../../../backend/services/founderIntelligenceService.js')
 
     const data = await svc.buildFounderIntelligence({ page, pageSize, role, q, province })
+    const { logHotPath } = require('../../../../backend/services/hotPathLog')
+    logHotPath({
+      endpoint: 'founder_user_intelligence',
+      durationMs: Date.now() - started,
+      resultCount: Array.isArray(data?.rows) ? data.rows.length : undefined,
+      role: 'founder',
+    })
     return NextResponse.json({ success: true, data })
   } catch (error) {
     return NextResponse.json(

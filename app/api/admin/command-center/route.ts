@@ -12,8 +12,16 @@ export async function GET(request: NextRequest) {
   if (!user) return unauthorizedResponse('Admin sign-in required')
 
   try {
+    const started = Date.now()
     const commandCenter = require('../../../../backend/services/commandCenterService')
     const data = await commandCenter.getCommandCenterPayload()
+    const { logHotPath } = require('../../../../backend/services/hotPathLog')
+    logHotPath({
+      endpoint: 'command-center',
+      durationMs: Date.now() - started,
+      resultCount: Array.isArray(data?.pendingQueue) ? data.pendingQueue.length : 0,
+      role: 'admin',
+    })
     return NextResponse.json({ success: true, data })
   } catch (error) {
     return NextResponse.json(

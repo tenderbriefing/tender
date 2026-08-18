@@ -7,6 +7,8 @@ export default defineConfig({
     include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
     exclude: ['tests/firestore/**', 'tests/e2e/**', 'node_modules/**'],
     reporters: ['default'],
+    // JSON adapter tests share backend/data/*.json; parallel files race the same request store.
+    fileParallelism: false,
   },
   resolve: {
     alias: {

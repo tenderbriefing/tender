@@ -10,6 +10,7 @@ export const DEV_ONLY_PAGE_PREFIXES = [
   '/maps-test',
   '/secrets-test',
   '/test',
+  '/dev',
 ] as const
 
 /** API routes allowed without a Bearer token (handlers still sanitize responses). */
