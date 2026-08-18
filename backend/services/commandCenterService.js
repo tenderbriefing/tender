@@ -1,15 +1,26 @@
 /**
- * Operations command center — aggregated live ops payload for admin UI.
+ * Operations command center — live ops payload for admin UI.
+ *
+ * This endpoint is polled from /admin/operations (every ~45s) behind Firebase
+ * Hosting’s 60s Cloud Run rewrite. The previous implementation fan-out to
+ * getAllTenders, rankAllAgents, findBestAgentsForRequest (×8, each re-ranking
+ * and scoring fraud), getAiOpsExtension, and PI dashboard — which OOMs the 1Gi
+ * Cloud Run instance and surfaces as a browser 503 on `command-center`.
+ *
+ * Keep this path bounded: reuse already-fetched requests/agents, never scan
+ * the full tender collection, and cache briefly so stacked polls share work.
  */
 const { getFirestore } = require('../config/firebaseAdmin')
 const { getStorage } = require('./storageAdapter')
-const liveDispatchService = require('./liveDispatchService')
-const executiveAnalyticsService = require('./executiveAnalyticsService')
-const procurementInsightsService = require('./procurementInsightsService')
 const agentPerformanceService = require('./agentPerformanceService')
 const workflowAutomationService = require('./workflowAutomationService')
 const whatsappService = require('./whatsappService')
-const aiOpsExecutive = require('./aiOpsExecutiveService')
+
+const CACHE_TTL_MS = Number(process.env.COMMAND_CENTER_CACHE_TTL_MS || 20000)
+
+let cacheEntry = null
+let cacheAt = 0
+let inflight = null
 
 function parseDate(value) {
   if (!value) return null
@@ -17,56 +28,86 @@ function parseDate(value) {
   return Number.isNaN(d.getTime()) ? null : d
 }
 
-async function getCommandCenterPayload() {
-  const storage = getStorage()
-  const db = getFirestore()
+function settled(promise, fallback) {
+  return Promise.resolve(promise).then(
+    (value) => value,
+    () => fallback
+  )
+}
 
-  const [
-    requests,
-    agents,
-    waStats,
-    workflowTelemetry,
-    executive,
-    insights,
-    agentRanks,
-  ] = await Promise.all([
-    storage.getAttendanceRequests(),
-    db.collection('agents').limit(300).get().then((s) =>
-      s.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-        latitude: d.data().latitude,
-        longitude: d.data().longitude,
-      }))
-    ),
-    whatsappService.getWhatsAppStats(30),
-    workflowAutomationService.getWorkflowTelemetry({ limit: 40 }),
-    executiveAnalyticsService.getLatestExecutiveMetrics(),
-    procurementInsightsService.generateProcurementInsights(),
-    agentPerformanceService.rankAllAgents(),
-  ])
+function rankAgentsLight(agents, requests) {
+  return agents
+    .map((agent) => {
+      const assigned = requests.filter(
+        (r) => r.assignedAgentId === agent.id || r.agentId === agent.id
+      )
+      const completed = assigned.filter((r) => r.status === 'completed')
+      const missed = assigned.filter((r) => r.briefingMissed === true)
+      const score = agentPerformanceService.agentPerformanceScore(agent, {
+        completionRate: assigned.length ? completed.length / assigned.length : 0,
+        missedBriefings: missed.length,
+        smeRating: agent.rating ?? 3,
+        reportingQuality: agent.reliabilityScore ?? 50,
+      })
+      return {
+        agentId: agent.id,
+        displayName: agent.displayName || agent.name || agent.email,
+        province: agent.province,
+        score,
+        tier: agentPerformanceService.tierFromScore(score),
+        lat: agent.latitude,
+        lng: agent.longitude,
+        availability: agent.availability,
+      }
+    })
+    .sort((a, b) => b.score - a.score)
+}
 
-  const pendingQueue = requests
-    .filter((r) => r.status === 'pending' && r.paymentStatus === 'paid')
-    .sort((a, b) => new Date(a.paidAt || a.createdAt) - new Date(b.paidAt || b.createdAt))
-    .slice(0, 25)
+function liveExecutive(requests, waStats) {
+  const today = new Date().toISOString().slice(0, 10)
+  const paid = requests.filter((r) => r.paymentStatus === 'paid')
+  const pendingPaid = requests.filter((r) => r.status === 'pending' && r.paymentStatus === 'paid')
+  const revenueTodayCents = paid
+    .filter((r) => r.paidAt && String(r.paidAt).startsWith(today))
+    .reduce((s, r) => s + (Number(r.paymentAmount || r.quotedFee) || 24900), 0)
+  const conversionPct =
+    requests.length > 0 ? Math.round((paid.length / requests.length) * 1000) / 10 : 0
+  const waSent = waStats.sent || 0
+  const waFailed = waStats.failed || 0
+  const waTotal = waSent + waFailed
+  return {
+    revenueTodayCents,
+    paidRequests: paid.length,
+    conversionPct,
+    whatsappSuccessRate: waTotal > 0 ? Math.round((waSent / waTotal) * 1000) / 10 : null,
+    pendingPaidRequests: pendingPaid.length,
+  }
+}
 
-  const dispatchBoard = []
-  for (const req of pendingQueue.slice(0, 8)) {
-    const matches = await liveDispatchService.findBestAgentsForRequest(req, { limit: 5 })
-    dispatchBoard.push({
+function buildDispatchBoard(pendingQueue, ranked) {
+  return pendingQueue.slice(0, 8).map((req) => {
+    const sameProvince = ranked.filter((a) => a.province && a.province === req.province)
+    const pool = sameProvince.length ? sameProvince : ranked
+    return {
       requestId: req.id,
       tenderNumber: req.tenderNumber,
       province: req.province,
       paidAt: req.paidAt,
       notifiedCount: (req.notifiedAgents || []).length,
-      topAgents: matches,
-    })
-  }
+      topAgents: pool.slice(0, 5).map((a) => ({
+        agentId: a.agentId,
+        displayName: a.displayName,
+        dispatchScore: a.score,
+        tier: a.tier,
+        distanceKm: null,
+      })),
+    }
+  })
+}
 
+function buildSlaHeatmap(requests, now) {
   const slaHeatmap = {}
-  const now = Date.now()
-  for (const r of requests.filter((r) => r.status === 'pending' && r.paymentStatus === 'paid')) {
+  for (const r of requests.filter((row) => row.status === 'pending' && row.paymentStatus === 'paid')) {
     const paidAt = parseDate(r.paidAt)
     if (!paidAt) continue
     const mins = (now - paidAt.getTime()) / 60000
@@ -76,28 +117,24 @@ async function getCommandCenterPayload() {
     if (!slaHeatmap[p]) slaHeatmap[p] = { normal: 0, medium: 0, high: 0, critical: 0 }
     slaHeatmap[p][bucket] += 1
   }
+  return slaHeatmap
+}
 
-  let dispatchSnap = []
-  let slaSnap = []
-  let workflowFailSnap = []
-  try {
-    const [d, s, w] = await Promise.all([
-      db.collection('dispatchEvents').limit(30).get(),
-      db.collection('slaBreaches').limit(30).get(),
-      db.collection('workflowFailures').limit(20).get(),
-    ])
-    dispatchSnap = d.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
-      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-    slaSnap = s.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
-      .sort((a, b) => new Date(b.detectedAt || 0) - new Date(a.detectedAt || 0))
-    workflowFailSnap = w.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
-      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-  } catch {
-    /* collections may be empty */
-  }
+function buildCommandCenterPayload({
+  requests = [],
+  agents = [],
+  waStats = {},
+  workflowTelemetry = {},
+  dispatchSnap = [],
+  slaSnap = [],
+  workflowFailSnap = [],
+  now = Date.now(),
+} = {}) {
+  const ranked = rankAgentsLight(agents, requests)
+  const pendingQueue = requests
+    .filter((r) => r.status === 'pending' && r.paymentStatus === 'paid')
+    .sort((a, b) => new Date(a.paidAt || a.createdAt) - new Date(b.paidAt || b.createdAt))
+    .slice(0, 25)
 
   const paymentPipeline = {
     pending: requests.filter((r) => r.paymentStatus === 'pending').length,
@@ -106,55 +143,22 @@ async function getCommandCenterPayload() {
     cancelled: requests.filter((r) => r.paymentStatus === 'cancelled').length,
   }
 
-  const activeAgentsMap = agents
-    .filter((a) => a.latitude && a.longitude)
-    .map((a) => ({
-      id: a.id,
-      name: a.displayName || a.name,
-      province: a.province,
-      lat: a.latitude,
-      lng: a.longitude,
-      availability: a.availability,
-      tier: agentRanks.find((r) => r.agentId === a.id)?.tier,
-    }))
-
-  const whatsappStream = (waStats.latest || [])
-    .filter((n) => n.channel === 'whatsapp' || n.status)
-    .slice(0, 20)
-    .map((n) => ({
-      id: n.id,
-      status: n.status,
-      type: n.type,
-      createdAt: n.createdAt,
-      recipientRole: n.recipientRole,
-    }))
-
-  let aiOps = null
-  try {
-    aiOps = await aiOpsExecutive.getAiOpsExtension()
-  } catch {
-    aiOps = null
-  }
-
-  let procurementIntelligence = null
-  try {
-    const pi = require('./procurementIntelligenceService')
-    const dash = await pi.getDashboardPayload()
-    procurementIntelligence = {
-      sourcesEnabled: dash.sourceRegistry?.enabled,
-      sourcesTotal: dash.sourceRegistry?.total,
-      tendersBySource: dash.tendersBySource,
-      compulsoryRate: dash.briefingDensity?.compulsoryRate,
-    }
-  } catch {
-    procurementIntelligence = null
-  }
+  const highDemandProvinces = Object.entries(
+    requests.reduce((acc, r) => {
+      const p = r.province || 'Unknown'
+      acc[p] = (acc[p] || 0) + 1
+      return acc
+    }, {})
+  )
+    .map(([province, requestCount]) => ({ province, requestCount }))
+    .sort((a, b) => b.requestCount - a.requestCount)
+    .slice(0, 5)
 
   return {
-    generatedAt: new Date().toISOString(),
-    aiOps,
-    procurementIntelligence,
-    dispatchBoard,
+    generatedAt: new Date(now).toISOString(),
+    aiOps: null,
+    procurementIntelligence: null,
+    dispatchBoard: buildDispatchBoard(pendingQueue, ranked),
     pendingQueue: pendingQueue.map((r) => ({
       id: r.id,
       tenderNumber: r.tenderNumber,
@@ -163,17 +167,36 @@ async function getCommandCenterPayload() {
       paidAt: r.paidAt,
       notifiedAgents: (r.notifiedAgents || []).length,
       minutesWaiting: r.paidAt
-        ? Math.round((now - parseDate(r.paidAt).getTime()) / 60000)
+        ? Math.round((now - (parseDate(r.paidAt)?.getTime() || now)) / 60000)
         : null,
     })),
-    activeAgentsMap,
-    slaHeatmap,
-    whatsappStream,
+    activeAgentsMap: ranked
+      .filter((a) => a.lat && a.lng)
+      .map((a) => ({
+        id: a.agentId,
+        name: a.displayName,
+        province: a.province,
+        lat: a.lat,
+        lng: a.lng,
+        availability: a.availability,
+        tier: a.tier,
+      })),
+    slaHeatmap: buildSlaHeatmap(requests, now),
+    whatsappStream: (waStats.latest || [])
+      .filter((n) => n.channel === 'whatsapp' || n.status)
+      .slice(0, 20)
+      .map((n) => ({
+        id: n.id,
+        status: n.status,
+        type: n.type,
+        createdAt: n.createdAt,
+        recipientRole: n.recipientRole,
+      })),
     whatsappSummary: {
       configured: whatsappService.isConfigured(),
-      sent: waStats.sent,
-      failed: waStats.failed,
-      pending: waStats.pending,
+      sent: waStats.sent || 0,
+      failed: waStats.failed || 0,
+      pending: waStats.pending || 0,
     },
     paymentPipeline,
     workflowTimeline: workflowTelemetry.recent || [],
@@ -181,19 +204,113 @@ async function getCommandCenterPayload() {
     failedAutomationAlerts: workflowFailSnap,
     recentDispatches: dispatchSnap.slice(0, 15),
     slaBreaches: slaSnap.slice(0, 15),
-    executive: executive.live,
+    executive: liveExecutive(requests, waStats),
     insights: {
-      highDemandProvinces: insights.highDemandProvinces?.slice(0, 5),
-      underServicedProvinces: insights.underServicedProvinces?.slice(0, 5),
-      highPerformingAgents: insights.highPerformingAgents?.slice(0, 5),
+      highDemandProvinces,
+      underServicedProvinces: [],
+      highPerformingAgents: ranked
+        .filter((a) => a.tier === 'Platinum' || a.tier === 'Gold')
+        .slice(0, 5),
     },
-    agentTierCounts: agentRanks.reduce((acc, a) => {
+    agentTierCounts: ranked.reduce((acc, a) => {
       acc[a.tier] = (acc[a.tier] || 0) + 1
       return acc
     }, {}),
   }
 }
 
+async function loadTelemetrySnaps(db) {
+  try {
+    const [d, s, w] = await Promise.all([
+      db.collection('dispatchEvents').limit(30).get(),
+      db.collection('slaBreaches').limit(30).get(),
+      db.collection('workflowFailures').limit(20).get(),
+    ])
+    const byCreated = (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+    return {
+      dispatchSnap: d.docs.map((doc) => ({ id: doc.id, ...doc.data() })).sort(byCreated),
+      slaSnap: s.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .sort((a, b) => new Date(b.detectedAt || 0) - new Date(a.detectedAt || 0)),
+      workflowFailSnap: w.docs.map((doc) => ({ id: doc.id, ...doc.data() })).sort(byCreated),
+    }
+  } catch {
+    return { dispatchSnap: [], slaSnap: [], workflowFailSnap: [] }
+  }
+}
+
+async function buildFreshPayload() {
+  const storage = getStorage()
+  const db = getFirestore()
+
+  const [requests, agents, waStats, workflowTelemetry, telemetry] = await Promise.all([
+    settled(storage.getAttendanceRequests(), []),
+    settled(
+      db
+        .collection('agents')
+        .limit(300)
+        .get()
+        .then((snap) =>
+          snap.docs.map((d) => ({
+            id: d.id,
+            ...d.data(),
+            latitude: d.data().latitude,
+            longitude: d.data().longitude,
+          }))
+        ),
+      []
+    ),
+    settled(whatsappService.getWhatsAppStats(30), {
+      sent: 0,
+      failed: 0,
+      pending: 0,
+      latest: [],
+    }),
+    settled(workflowAutomationService.getWorkflowTelemetry({ limit: 40 }), {
+      recent: [],
+      failedQueue: [],
+    }),
+    loadTelemetrySnaps(db),
+  ])
+
+  return buildCommandCenterPayload({
+    requests: Array.isArray(requests) ? requests : [],
+    agents: Array.isArray(agents) ? agents : [],
+    waStats: waStats || {},
+    workflowTelemetry: workflowTelemetry || {},
+    dispatchSnap: telemetry.dispatchSnap,
+    slaSnap: telemetry.slaSnap,
+    workflowFailSnap: telemetry.workflowFailSnap,
+  })
+}
+
+async function getCommandCenterPayload() {
+  if (cacheEntry && Date.now() - cacheAt < CACHE_TTL_MS) {
+    return cacheEntry
+  }
+  if (inflight) return inflight
+  inflight = buildFreshPayload()
+    .then((payload) => {
+      cacheEntry = payload
+      cacheAt = Date.now()
+      return payload
+    })
+    .finally(() => {
+      inflight = null
+    })
+  return inflight
+}
+
+function resetCommandCenterCacheForTests() {
+  cacheEntry = null
+  cacheAt = 0
+  inflight = null
+}
+
 module.exports = {
   getCommandCenterPayload,
+  buildCommandCenterPayload,
+  rankAgentsLight,
+  CACHE_TTL_MS,
+  resetCommandCenterCacheForTests,
 }

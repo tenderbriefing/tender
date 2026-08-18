@@ -5,7 +5,7 @@ import {
 } from '@/lib/auth/verifyApiUser'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 120
+export const maxDuration = 30
 
 export async function GET(request: NextRequest) {
   const user = await verifyApiUser(request.headers.get('authorization'), ['admin'])

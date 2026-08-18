@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { authFetch } from '@/lib/api/authenticatedFetch'
@@ -62,23 +62,34 @@ interface CommandCenterData {
 export default function CommandCenter() {
   const [data, setData] = useState<CommandCenterData | null>(null)
   const [loading, setLoading] = useState(true)
+  const inFlight = useRef(false)
+  const hasData = useRef(false)
 
   const load = useCallback(async () => {
+    if (inFlight.current) return
+    inFlight.current = true
     try {
       const res = await authFetch('/api/admin/command-center')
-      const json = await res.json()
-      if (json.success) setData(json.data)
-      else toast.error(json.error || 'Failed to load command center')
+      const json = await res.json().catch(() => null)
+      if (res.ok && json?.success) {
+        hasData.current = true
+        setData(json.data)
+        return
+      }
+      if (!hasData.current) {
+        toast.error(json?.error || `Command center unavailable (${res.status})`)
+      }
     } catch {
-      toast.error('Command center unavailable')
+      if (!hasData.current) toast.error('Command center unavailable')
     } finally {
+      inFlight.current = false
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
     load()
-    const t = setInterval(load, 30000)
+    const t = setInterval(load, 45000)
     return () => clearInterval(t)
   }, [load])
 
