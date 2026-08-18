@@ -51,6 +51,12 @@ describe('hot-path Firestore safeguards', () => {
     expect(s).toMatch(/youth-agent/)
   })
 
+  it('catalogue API requires hotPathLog from repo root, not a parent directory', () => {
+    const s = src('app/api/tender-briefings/route.ts')
+    expect(s).toMatch(/require\('\.\.\/\.\.\/\.\.\/backend\/services\/hotPathLog'\)/)
+    expect(s).not.toMatch(/require\('\.\.\/\.\.\/\.\.\/\.\.\/backend\/services\/hotPathLog'\)/)
+  })
+
   it('getSyncStatus does not load all tenders', () => {
     const s = src('backend/services/incrementalSyncService.js')
     const start = s.indexOf('async function getSyncStatus')
