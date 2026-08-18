@@ -50,7 +50,7 @@ function StatusDot({ tone }: { tone: 'ok' | 'warn' | 'danger' | 'neutral' }) {
 export default function AdminDashboard() {
   const { user, userProfile } = useAuth()
   const { lastUpdated, syncStatus, refresh } = useTenderBriefingsPolling({
-    pollIntervalMs: 15000,
+    enabled: false,
   })
   const [stats, setStats] = useState<AdminDashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -62,7 +62,7 @@ export default function AdminDashboard() {
     checkedAt: string | null
   } | null>(null)
   const [payfastStatus, setPayfastStatus] = useState<string | null>(null)
-  const { data: intelligence, loading: intelligenceLoading } = useOperationalIntelligence(15000)
+  const { data: intelligence, loading: intelligenceLoading } = useOperationalIntelligence(60000)
   const tabsId = useId()
 
   const showFounderNav = evaluateFounderAccess({
@@ -127,7 +127,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     loadStats()
     loadOpsSignals()
-    const interval = setInterval(loadStats, 15000)
+    const interval = setInterval(loadStats, 30000)
     return () => clearInterval(interval)
   }, [loadStats, loadOpsSignals])
 

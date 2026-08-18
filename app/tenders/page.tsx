@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { usePagedList } from '@/hooks/usePagedList'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
@@ -22,55 +21,74 @@ import {
   sortTenders,
   type TenderSortKey,
 } from '@/lib/procurement/filters'
-import { computeTenderDashboardStats } from '@/lib/procurement/tenderStatus'
 import { ArrowPathIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import { ClipboardList, Filter } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
-const PAGE_SIZE = 12
+const SKELETON_ROWS = 12
 const COMPULSORY_ONLY = false
+
+type CatalogueDashboardStats = {
+  total: number
+  open: number
+  closingSoon: number
+  compulsory: number
+}
 
 export default function TenderOpportunitiesPage() {
   const { user, userProfile } = useAuth()
   const router = useRouter()
-  const { tenders, loading, lastUpdated, syncStatus, refresh } = useTenderBriefingsPolling({
-    compulsoryOnly: COMPULSORY_ONLY,
-  })
   const { filters, setFilters, resetFilters, hydrated: filtersHydrated } =
     useSavedProcurementFilters()
+  const { tenders, loading, loadingMore, error, lastUpdated, syncStatus, refresh, loadMore, hasMore } =
+    useTenderBriefingsPolling({
+      compulsoryOnly: COMPULSORY_ONLY,
+      province: filters.province || undefined,
+      pageSize: 40,
+    })
 
   const [sortKey, setSortKey] = useState<TenderSortKey>('closingDate')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [refreshing, setRefreshing] = useState(false)
+  const [catalogueStats, setCatalogueStats] = useState<CatalogueDashboardStats | null>(null)
 
   const options = useMemo(() => extractFilterOptions(tenders), [tenders])
-  const stats = useMemo(() => computeTenderDashboardStats(tenders), [tenders])
 
   const filtered = useMemo(() => {
     const f = filterTenders(tenders, filters)
     return sortTenders(f, sortKey, sortDir)
   }, [tenders, filters, sortKey, sortDir])
 
-  const {
-    pageItems: pagedTenders,
-    page,
-    totalPages,
-    total,
-    goNext,
-    goPrev,
-    hasNext,
-    hasPrev,
-    reset: resetPage,
-  } = usePagedList(filtered, PAGE_SIZE)
-
   useEffect(() => {
-    resetPage()
-  }, [filters, sortKey, sortDir, resetPage])
+    let cancelled = false
+    fetch('/api/tender-briefings/stats/summary')
+      .then((res) => res.json())
+      .then((json) => {
+        if (cancelled || !json?.success || !json.data) return
+        const d = json.data as {
+          totalBriefings?: number
+          compulsoryBriefings?: number
+          closingWithin7Days?: number
+        }
+        setCatalogueStats({
+          total: Number(d.totalBriefings || 0),
+          open: Number(d.totalBriefings || 0),
+          closingSoon: Number(d.closingWithin7Days || 0),
+          compulsory: Number(d.compulsoryBriefings || 0),
+        })
+      })
+      .catch(() => {
+        if (!cancelled) setCatalogueStats(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [lastUpdated])
 
   const canRunSync = userProfile?.userType === 'admin'
   const ready = filtersHydrated
   const hasData = tenders.length > 0
-  const isEmptyCatalog = !loading && !hasData
+  const isEmptyCatalog = !loading && !hasData && !error
 
   const handleSort = (key: TenderSortKey) => {
     if (sortKey === key) setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
@@ -201,13 +219,13 @@ export default function TenderOpportunitiesPage() {
           </div>
         )}
 
-        {hasData && (
+        {catalogueStats && (
           <div className="mb-6">
             <TenderDashboardStats
-              total={stats.total}
-              open={stats.open}
-              closingSoon={stats.closingSoon}
-              compulsory={stats.compulsory}
+              total={catalogueStats.total}
+              open={catalogueStats.open}
+              closingSoon={catalogueStats.closingSoon}
+              compulsory={catalogueStats.compulsory}
             />
           </div>
         )}
@@ -227,8 +245,14 @@ export default function TenderOpportunitiesPage() {
           </div>
         )}
 
+        {error && !loading && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {error}
+          </div>
+        )}
+
         {!ready || loading ? (
-          <TenderTableSkeleton rows={PAGE_SIZE} />
+          <TenderTableSkeleton rows={SKELETON_ROWS} />
         ) : isEmptyCatalog ? (
           <ProcurementEmptyState
             icon={ClipboardList}
@@ -242,13 +266,27 @@ export default function TenderOpportunitiesPage() {
             <ProcurementEmptyState
               icon={Filter}
               title="No opportunities match your filters"
-              description="Try clearing filters or broadening your province and department selection."
+              description={
+                hasMore
+                  ? 'Filters apply to the opportunities loaded so far. Load more from the catalogue, or clear filters to broaden province and department selection.'
+                  : 'Try clearing filters or broadening your province and department selection.'
+              }
             />
-            <div className="-mt-6 pb-8 text-center">
+            <div className="-mt-6 flex flex-col items-center gap-3 pb-8">
+              {hasMore && (
+                <button
+                  type="button"
+                  onClick={() => loadMore()}
+                  disabled={loadingMore}
+                  className="inline-flex min-h-[44px] items-center rounded-xl bg-brand-800 px-5 py-2.5 text-sm font-semibold text-white shadow-soft hover:bg-brand-700 disabled:opacity-50"
+                >
+                  {loadingMore ? 'Loading…' : 'Load more opportunities'}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={resetFilters}
-                className="inline-flex min-h-[44px] items-center rounded-xl bg-brand-800 px-5 py-2.5 text-sm font-semibold text-white shadow-soft hover:bg-brand-700"
+                className="inline-flex min-h-[44px] items-center rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 Clear all filters
               </button>
@@ -257,53 +295,54 @@ export default function TenderOpportunitiesPage() {
         ) : (
           <>
             <TenderTable
-              tenders={pagedTenders}
+              tenders={filtered}
               sortKey={sortKey}
               sortDir={sortDir}
               onSort={handleSort}
             />
 
             <div className="mt-4 space-y-4 md:hidden">
-              {pagedTenders.map((tender) => (
+              {filtered.map((tender) => (
                 <TenderOpportunityCard key={tender.id} tender={tender} />
               ))}
             </div>
 
-            {totalPages > 1 && (
-              <nav
-                className="mt-8 flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:flex-row"
-                aria-label="Pagination"
-              >
-                <p className="text-sm text-slate-600">
-                  Showing{' '}
-                  <span className="font-semibold text-slate-900">
-                    {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)}
-                  </span>{' '}
-                  of <span className="font-semibold text-slate-900">{total}</span>
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={!hasPrev}
-                    onClick={goPrev}
-                    className="min-h-[44px] rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
-                  >
-                    Previous
-                  </button>
-                  <span className="flex min-h-[44px] items-center px-2 text-sm font-medium text-slate-600">
-                    {page + 1} / {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={!hasNext}
-                    onClick={goNext}
-                    className="min-h-[44px] rounded-xl bg-brand-800 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-40"
-                  >
-                    Next
-                  </button>
-                </div>
-              </nav>
-            )}
+            <nav
+              className="mt-8 flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:flex-row"
+              aria-label="Catalogue pagination"
+            >
+              <p className="text-sm text-slate-600">
+                Showing{' '}
+                <span className="font-semibold text-slate-900">{filtered.length}</span>
+                {tenders.length !== filtered.length ? (
+                  <>
+                    {' '}
+                    matching of{' '}
+                    <span className="font-semibold text-slate-900">{tenders.length}</span> loaded
+                  </>
+                ) : (
+                  <> loaded</>
+                )}
+                {catalogueStats ? (
+                  <>
+                    {' '}
+                    · catalogue totals above are platform aggregates, not this page
+                  </>
+                ) : null}
+              </p>
+              {hasMore ? (
+                <button
+                  type="button"
+                  onClick={() => loadMore()}
+                  disabled={loadingMore}
+                  className="min-h-[44px] rounded-xl bg-brand-800 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-40"
+                >
+                  {loadingMore ? 'Loading…' : 'Load more'}
+                </button>
+              ) : (
+                <span className="text-sm font-medium text-slate-500">End of loaded catalogue</span>
+              )}
+            </nav>
           </>
         )}
 

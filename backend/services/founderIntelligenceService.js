@@ -54,14 +54,25 @@ async function buildFounderIntelligence({ page = 1, pageSize = 25, role = 'all',
   const cappedSize = Math.min(Math.max(Number(pageSize) || 25, 1), 100)
   const pageNum = Math.max(Number(page) || 1, 1)
 
-  const [usersSnap, smesSnap, agentsSnap, requestsSnap, summariesSnap, workspaceSnap] =
+  const countEq = async (col, field, value) => {
+    try {
+      const snap = await db.collection(col).where(field, '==', value).count().get()
+      return snap.data().count
+    } catch {
+      return 0
+    }
+  }
+
+  const [smeTotal, agentTotal, usersSnap, smesSnap, agentsSnap, requestsSnap, summariesSnap, workspaceSnap] =
     await Promise.all([
-      db.collection('users').get(),
-      db.collection('smes').get(),
-      db.collection('agents').get(),
-      db.collection('attendanceRequests').get(),
-      db.collection('userActivitySummaries').get(),
-      db.collection('smeWorkspace').get(),
+      countEq('users', 'userType', 'sme'),
+      countEq('users', 'userType', 'youth-agent'),
+      db.collection('users').limit(800).get(),
+      db.collection('smes').limit(800).get(),
+      db.collection('agents').limit(800).get(),
+      db.collection('attendanceRequests').limit(1500).get(),
+      db.collection('userActivitySummaries').limit(800).get(),
+      db.collection('smeWorkspace').limit(800).get(),
     ])
 
   const smeById = new Map(smesSnap.docs.map((d) => [d.id, d.data()]))
@@ -279,9 +290,9 @@ async function buildFounderIntelligence({ page = 1, pageSize = 25, role = 'all',
 
   return {
     overview: {
-      totalRegistered: smes.length + agents.length,
-      totalSmes: smes.length,
-      totalYouthAgents: agents.length,
+      totalRegistered: smeTotal + agentTotal,
+      totalSmes: smeTotal,
+      totalYouthAgents: agentTotal,
       newSmesToday,
       newYouthAgentsToday: newAgentsToday,
       activeSmesToday,
@@ -333,6 +344,7 @@ async function buildFounderIntelligence({ page = 1, pageSize = 25, role = 'all',
       'Agent–SME links derived from attendanceRequests (not permanent portfolios).',
       'Engagement uses userActivitySummaries + profile timestamps until productEvents mature.',
       'Average session duration unavailable until session telemetry accumulates.',
+      'Lifetime SME/Youth Agent totals use Firestore count aggregations. Engagement mix, geography, and action samples use a bounded recent cohort (≤800 profiles, ≤1500 attendance requests) — not a silent cap presented as a complete mix.',
     ],
   }
 }
@@ -499,8 +511,46 @@ async function getUserDetail(uid) {
   }
 }
 
+const CACHE_TTL_MS = Number(process.env.FOUNDER_INTEL_CACHE_TTL_MS || 20000)
+let cacheEntry = null
+let cacheAt = 0
+let inflight = null
+
+async function getFounderIntelligence(opts = {}) {
+  const key = JSON.stringify({
+    page: Number(opts.page) || 1,
+    pageSize: Number(opts.pageSize) || 25,
+    role: opts.role || 'all',
+    q: opts.q || '',
+    province: opts.province || '',
+  })
+  if (cacheEntry && cacheEntry.key === key && Date.now() - cacheAt < CACHE_TTL_MS) {
+    return cacheEntry.value
+  }
+  if (inflight && inflight.key === key) return inflight.promise
+  const promise = buildFounderIntelligence(opts)
+    .then((value) => {
+      cacheEntry = { key, value }
+      cacheAt = Date.now()
+      return value
+    })
+    .finally(() => {
+      inflight = null
+    })
+  inflight = { key, promise }
+  return promise
+}
+
+function resetFounderIntelligenceCacheForTests() {
+  cacheEntry = null
+  cacheAt = 0
+  inflight = null
+}
+
 module.exports = {
-  buildFounderIntelligence,
+  buildFounderIntelligence: getFounderIntelligence,
   getUserDetail,
   classify,
+  resetFounderIntelligenceCacheForTests,
+  CACHE_TTL_MS,
 }

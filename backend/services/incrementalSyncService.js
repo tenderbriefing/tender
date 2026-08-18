@@ -344,8 +344,22 @@ async function runSync(options = {}) {
     state.lastError = stats.errors[0] || null
     state.apiHealth = 'healthy'
     state.scraperHealth = 'standby'
+    state.tenderCount = existingTenders.length
+    state.compulsoryCount = existingTenders.filter((t) => t.briefingCompulsory).length
 
     await storage.saveSyncState(state)
+
+    try {
+      const catalogueStats = require('./catalogueStatsService')
+      await catalogueStats.writeCatalogueSummary(existingTenders, {
+        tenderCount: existingTenders.length,
+      })
+    } catch (err) {
+      console.warn(
+        '[sync] catalogue summary write skipped:',
+        err instanceof Error ? err.message.slice(0, 120) : 'unknown'
+      )
+    }
 
     await auditLogService.logEvent({
       type: 'api_sync_complete',
@@ -367,7 +381,14 @@ async function runSync(options = {}) {
     syncLog.completedAt = new Date().toISOString()
 
     // Preserve last good dataset — never delete tenders on sync failure
-    const preservedCount = (await storage.getTenderBriefings()).length
+    let preservedCount = Number(state.preservedTenderCount || state.tenderCount || 0)
+    try {
+      if (typeof storage.countDocuments === 'function') {
+        preservedCount = await storage.countDocuments('tenderBriefings')
+      }
+    } catch {
+      /* keep previous */
+    }
 
     state.isRunning = false
     state.lockAcquiredAt = null
@@ -406,14 +427,30 @@ function getLastSuccessfulSyncLog(syncLogs = []) {
 async function getSyncStatus() {
   const storage = getStorage()
   const state = await storage.getSyncState()
-  const tenders = await storage.getTenderBriefings()
   const lastFailed = getLastFailedSyncLog(state.syncLogs)
   const lastSuccess = getLastSuccessfulSyncLog(state.syncLogs)
 
+  let tenderCount = Number(state.tenderCount || state.preservedTenderCount || 0)
+  let compulsoryCount = Number(state.compulsoryCount || 0)
+  try {
+    const catalogueStats = require('./catalogueStatsService')
+    const summary = await catalogueStats.readCatalogueSummary()
+    if (summary?.tenderCount != null) tenderCount = Number(summary.tenderCount)
+    if (summary?.compulsoryBriefings != null) compulsoryCount = Number(summary.compulsoryBriefings)
+  } catch {
+    if (typeof storage.countDocuments === 'function' && !tenderCount) {
+      try {
+        tenderCount = await storage.countDocuments('tenderBriefings')
+      } catch {
+        /* leave 0 */
+      }
+    }
+  }
+
   return {
     ...state,
-    tenderCount: tenders.length,
-    compulsoryCount: tenders.filter((t) => t.briefingCompulsory).length,
+    tenderCount,
+    compulsoryCount,
     lastUpdated: state.lastSuccessfulSync,
     lastFailedSyncAt: state.lastFailedSync || lastFailed?.startedAt || null,
     lastFailedSyncError: lastFailed?.error || state.lastError || null,

@@ -23,11 +23,11 @@ Never commit real secret values. Rotate via Google Secret Manager / hosting env.
 | `PAYFAST_MODE` | `live` / sandbox | prod | No | `live` | Y | Payments | Wrong PayFast host |
 | `PAYFAST_SANDBOX` | Legacy sandbox alias | optional | No | true/false | - | Payments | Prefer `PAYFAST_MODE` |
 | `PAYFAST_MERCHANT_EMAIL` | Merchant profile email (same-account omit guard) | recommended prod | No | email | Y | Payments | Prefills buyer as merchant → PayFast 400 |
-| `RESEND_API_KEY` | Transactional email | prod notify | Yes | string | S | Comms | Emails skipped |
-| `RESEND_FROM_EMAIL` | From address | optional | No | email | - | Comms | Default from used |
-| `TWILIO_ACCOUNT_SID` | WhatsApp outbound | prod notify | Yes | string | S | Comms | WhatsApp send fails |
-| `TWILIO_AUTH_TOKEN` | Twilio auth | prod notify | Yes | string | S | Comms | WhatsApp send fails |
-| `TWILIO_WHATSAPP_FROM` | Twilio WhatsApp from | prod notify | Yes | string | S | Comms | WhatsApp send fails |
+| `RESEND_API_KEY` | Transactional email (prefer sending-only key) | prod notify | Yes | string | S (`TENDERBRIEFING_API:latest` until rotated) | Comms | Emails skipped |
+| `RESEND_FROM_EMAIL` | From address | optional | No | email | Y (`hello@tenderbriefing.co.za`) | Comms | Default from used |
+| `TWILIO_ACCOUNT_SID` | WhatsApp outbound | prod notify | Yes | string | - (not mounted; fail-closed) | Comms | WhatsApp send skipped |
+| `TWILIO_AUTH_TOKEN` | Twilio auth | prod notify | Yes | string | - (not mounted; fail-closed) | Comms | WhatsApp send skipped |
+| `TWILIO_WHATSAPP_FROM` | Twilio WhatsApp from | prod notify | Yes | string | - (not mounted; fail-closed) | Comms | WhatsApp send skipped |
 | `WHATSAPP_WEBHOOK_ENABLED` | Enable Meta WhatsApp webhook | optional | No | true/false | F (off) | Comms | 503 if route hit without config |
 | `WHATSAPP_VERIFY_TOKEN` | Meta verify | if WhatsApp on | Yes | string | F | Comms | Verify fails |
 | `WHATSAPP_APP_SECRET` | HMAC signature | prod WhatsApp | Yes | string | F | Comms | Unsigned rejected |
@@ -65,6 +65,12 @@ PayFast: `docs/runbooks/PAYFAST.md`.
 | Procurement Intelligence | Flags `false`; pilot UIDs in GSM only |
 | Google Auth UI | `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=false` |
 | Meta WhatsApp webhook | Not enabled; Twilio outbound separate |
+
+## Communications secrets (production scale closure)
+
+WhatsApp remains **fail-closed** until an operator creates/mounts GSM secrets and adds them to Cloud Run `--set-secrets`. Expected names: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`. Do not invent credentials.
+
+Resend production currently mounts `RESEND_API_KEY=TENDERBRIEFING_API:latest` (full-access). Create a sending-only API key in the Resend dashboard, store it in GSM, and point `RESEND_API_KEY` at that secret. Keep `RESEND_FROM_EMAIL=hello@tenderbriefing.co.za` and the verified domain.
 
 ## Rotation
 

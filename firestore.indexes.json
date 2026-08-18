@@ -4,8 +4,17 @@
       "collectionGroup": "tenderBriefings",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "briefingCompulsory", "order": "ASCENDING" },
+        { "fieldPath": "lastSyncedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tenderBriefings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "briefingCompulsory", "order": "ASCENDING" },
         { "fieldPath": "province", "order": "ASCENDING" },
-        { "fieldPath": "closingDate", "order": "ASCENDING" }
+        { "fieldPath": "lastSyncedAt", "order": "DESCENDING" }
       ]
     },
     {

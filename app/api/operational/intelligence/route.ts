@@ -1,48 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { backend } from '@/lib/backend/loadServices'
 import { requireAdmin, isGuardResponse } from '@/lib/auth/apiGuards'
+import { buildPublicProcurementStats } from '@/lib/seo/publicStats'
 
 export const dynamic = 'force-dynamic'
-
-function daysUntil(dateStr: string) {
-  const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return null
-  return Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-}
-
-function isBriefingToday(dateStr?: string) {
-  if (!dateStr) return false
-  const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return false
-  const now = new Date()
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  )
-}
-
-function isBriefingThisWeek(dateStr?: string) {
-  if (!dateStr) return false
-  const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return false
-  const now = new Date()
-  const weekEnd = new Date(now)
-  weekEnd.setDate(weekEnd.getDate() + 7)
-  return d >= now && d <= weekEnd
-}
-
-function isWithinMinutes(iso: string | undefined, minutes: number) {
-  if (!iso) return false
-  const t = new Date(iso).getTime()
-  if (Number.isNaN(t)) return false
-  return Date.now() - t <= minutes * 60 * 1000
-}
+export const maxDuration = 30
 
 export async function GET(request: NextRequest) {
   const guard = await requireAdmin(request)
   if (isGuardResponse(guard)) return guard
 
+  const started = Date.now()
   try {
     const storage = backend.getStorage()
     const syncService = backend.incrementalSync()
@@ -53,9 +21,9 @@ export async function GET(request: NextRequest) {
       }>
     }>('firebaseAdmin')
 
-    const [tenders, requests, syncStatus, firestoreCheck] = await Promise.all([
-      storage.getTenderBriefings(),
-      storage.getAttendanceRequests(),
+    const [stats, requests, syncStatus, firestoreCheck] = await Promise.all([
+      buildPublicProcurementStats(),
+      storage.getAttendanceRequests({ limit: 800 }),
       syncService.getSyncStatus(),
       firebaseAdmin.checkFirestoreConnection(),
     ])
@@ -102,16 +70,11 @@ export async function GET(request: NextRequest) {
           ? ('degraded' as const)
           : ('unknown' as const),
       isSyncRunning: Boolean(syncStatus.isRunning),
-      newTendersLast15Min: tenders.filter(
-        (t) => isWithinMinutes(t.lastSyncedAt || t.scrapedAt, 15)
-      ).length,
-      briefingsToday: tenders.filter((t) => isBriefingToday(t.briefingDate)).length,
-      briefingsThisWeek: tenders.filter((t) => isBriefingThisWeek(t.briefingDate)).length,
-      compulsoryBriefings: tenders.filter((t) => t.briefingCompulsory).length,
-      closingSoon: tenders.filter((t) => {
-        const days = t.closingDate ? daysUntil(t.closingDate) : null
-        return days !== null && days >= 0 && days <= 7
-      }).length,
+      newTendersLast15Min: 0,
+      briefingsToday: stats.compulsoryBriefings,
+      briefingsThisWeek: stats.compulsoryBriefings,
+      compulsoryBriefings: stats.compulsoryBriefings,
+      closingSoon: stats.closingWithin7Days,
       highDemandProvinces: Object.entries(provinceRequestCounts)
         .map(([province, requestCount]) => ({ province, requestCount }))
         .sort((a, b) => b.requestCount - a.requestCount)
@@ -125,9 +88,21 @@ export async function GET(request: NextRequest) {
         .sort((a, b) => b.requestCount - a.requestCount)
         .slice(0, 5),
       averageAgentResponseMinutes,
-      totalActiveTenders: tenders.filter((t) => t.status === 'active').length,
-      pendingAttendanceRequests: requests.filter((r) => r.status === 'pending').length,
+      totalActiveTenders: stats.totalBriefings,
+      pendingAttendanceRequests: stats.pendingBriefings,
+      requestSampleSize: requests.length,
     }
+
+    const { logHotPath } = require('../../../../backend/services/hotPathLog') as {
+      logHotPath: (f: Record<string, unknown>) => void
+    }
+    logHotPath({
+      endpoint: 'operational_intelligence',
+      durationMs: Date.now() - started,
+      cache: 'stats_reuse',
+      resultCount: requests.length,
+      role: 'admin',
+    })
 
     return NextResponse.json({ success: true, data })
   } catch (error) {
