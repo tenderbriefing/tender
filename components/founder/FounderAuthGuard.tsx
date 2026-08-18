@@ -31,7 +31,7 @@ export default function FounderAuthGuard({ children }: { children: React.ReactNo
     }
     if (!user) {
       router.replace(
-        `/auth/signin?redirect=${encodeURIComponent(pathname || '/founder/user-intelligence')}`
+        `/auth/signin?redirect=${encodeURIComponent(pathname || '/founder')}`
       )
       return
     }

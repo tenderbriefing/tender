@@ -45,9 +45,9 @@ export function ActionCentrePanel({ actions }: { actions?: ActionItem[] }) {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm">
-          <h3 className="text-sm font-bold text-brand-900">Affected users by priority</h3>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+          <h3 className="text-sm font-semibold text-brand-900">Affected users by priority</h3>
           <p className="mt-0.5 text-xs text-slate-500">Sum of affected counts in each band</p>
           <div className="mt-4">
             <HorizontalBarList
@@ -57,8 +57,8 @@ export function ActionCentrePanel({ actions }: { actions?: ActionItem[] }) {
             />
           </div>
         </div>
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm">
-          <h3 className="text-sm font-bold text-brand-900">Affected users by audience</h3>
+        <div className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+          <h3 className="text-sm font-semibold text-brand-900">Affected users by audience</h3>
           <p className="mt-0.5 text-xs text-slate-500">SME and Youth Agent stay separated</p>
           <div className="mt-4">
             <HorizontalBarList
@@ -70,16 +70,16 @@ export function ActionCentrePanel({ actions }: { actions?: ActionItem[] }) {
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white">
         {items.map((a) => (
           <article
             key={a.id}
-            className={`rounded-2xl border bg-white p-5 shadow-sm ${
+            className={`px-4 py-4 sm:px-5 ${
               a.priority === 'high'
-                ? 'border-amber-200 border-l-[3px] border-l-amber-500'
+                ? 'border-l-[3px] border-l-amber-500'
                 : a.priority === 'medium'
-                  ? 'border-slate-200 border-l-[3px] border-l-brand-700'
-                  : 'border-slate-200'
+                  ? 'border-l-[3px] border-l-brand-800'
+                  : ''
             }`}
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -88,13 +88,13 @@ export function ActionCentrePanel({ actions }: { actions?: ActionItem[] }) {
                   <AudienceBadge audience={a.audience} />
                   <PriorityBadge priority={a.priority} />
                 </div>
-                <h3 className="text-base font-bold text-brand-900">{a.title}</h3>
+                <h3 className="text-sm font-semibold text-brand-900">{a.title}</h3>
               </div>
-              <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-800">
+              <span className="text-xs font-semibold tabular-nums text-slate-600">
                 {a.affectedCount.toLocaleString('en-ZA')} affected
               </span>
             </div>
-            <p className="mt-3 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600">
               <span className="font-semibold text-slate-800">Why:</span> {a.why}
             </p>
             <p className="mt-1 text-sm text-slate-600">

@@ -1,6 +1,5 @@
 'use client'
 
-import { BuildingOffice2Icon, UserGroupIcon } from '@heroicons/react/24/outline'
 import { EngagementBadge } from './charts'
 import { EmptyPanel, Pagination } from './chrome'
 import type { AgentRow, Paginated, SmeRow } from './types'
@@ -17,22 +16,17 @@ export function SmeIntelligencePanel({
   const items = data?.items || []
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">
-      <div className="border-b border-slate-100 px-5 py-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-bold text-brand-900">
-              <BuildingOffice2Icon className="h-5 w-5 text-brand-700" />
-              SME Intelligence
-            </h2>
-            <p className="mt-0.5 text-sm text-slate-600">
-              {(data?.total ?? 0).toLocaleString('en-ZA')} SMEs · separate from Youth Agents
-            </p>
-          </div>
-          <span className="rounded-md bg-brand-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-brand-800 ring-1 ring-inset ring-brand-100">
-            SME only
-          </span>
+    <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="flex items-end justify-between gap-3 border-b border-slate-100 px-4 py-3.5 sm:px-5">
+        <div>
+          <h2 className="text-sm font-semibold text-brand-900">SME directory</h2>
+          <p className="mt-0.5 text-xs text-slate-500">
+            {(data?.total ?? 0).toLocaleString('en-ZA')} SMEs · separate from Youth Agents
+          </p>
         </div>
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          SME only
+        </span>
       </div>
 
       {items.length === 0 ? (
@@ -46,7 +40,7 @@ export function SmeIntelligencePanel({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500">
+              <tr className="border-b border-slate-100 bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
                 <th className="px-5 py-3 font-semibold">Business</th>
                 <th className="px-3 py-3 font-semibold">Location</th>
                 <th className="px-3 py-3 font-semibold">Engagement</th>
@@ -118,22 +112,17 @@ export function AgentIntelligencePanel({
   const items = data?.items || []
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">
-      <div className="border-b border-slate-100 px-5 py-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-bold text-brand-900">
-              <UserGroupIcon className="h-5 w-5 text-accent-600" />
-              Youth Agent Intelligence
-            </h2>
-            <p className="mt-0.5 text-sm text-slate-600">
-              {(data?.total ?? 0).toLocaleString('en-ZA')} agents · service delivery focus
-            </p>
-          </div>
-          <span className="rounded-md bg-accent-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-accent-900 ring-1 ring-inset ring-accent-200">
-            Agent only
-          </span>
+    <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="flex items-end justify-between gap-3 border-b border-slate-100 px-4 py-3.5 sm:px-5">
+        <div>
+          <h2 className="text-sm font-semibold text-brand-900">Youth Agent directory</h2>
+          <p className="mt-0.5 text-xs text-slate-500">
+            {(data?.total ?? 0).toLocaleString('en-ZA')} agents · service delivery focus
+          </p>
         </div>
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          Agent only
+        </span>
       </div>
 
       {items.length === 0 ? (
@@ -147,7 +136,7 @@ export function AgentIntelligencePanel({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500">
+              <tr className="border-b border-slate-100 bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
                 <th className="px-5 py-3 font-semibold">Agent</th>
                 <th className="px-3 py-3 font-semibold">Status</th>
                 <th className="px-3 py-3 font-semibold">Engagement</th>
@@ -160,7 +149,7 @@ export function AgentIntelligencePanel({
               {items.map((a) => (
                 <tr
                   key={a.id}
-                  className="cursor-pointer border-b border-slate-50 transition hover:bg-accent-50/30"
+                  className="cursor-pointer border-b border-slate-50 transition hover:bg-slate-50"
                   onClick={() => onSelect(a.id)}
                 >
                   <td className="px-5 py-3">

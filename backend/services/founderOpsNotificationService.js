@@ -102,7 +102,7 @@ function buildRegistrationSummary(profile = {}) {
   const uid = sliceStr(profile.uid, 128)
   const userType = profile.userType || 'sme'
   const adminPath = '/admin/registrations'
-  const founderPath = '/founder/user-intelligence'
+  const founderPath = '/founder'
   const timestamp = profile.createdAt || profile.updatedAt || new Date().toISOString()
   return {
     kind: 'registration',

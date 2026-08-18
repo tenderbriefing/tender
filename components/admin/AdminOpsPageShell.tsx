@@ -47,7 +47,7 @@ export default function AdminOpsPageShell({
         kicker={kicker}
         title={title}
         description={description}
-        breadcrumb={breadcrumb || { label: 'Control centre', href: '/admin/dashboard' }}
+        breadcrumb={breadcrumb || { label: 'Console', href: '/admin/dashboard' }}
       />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>
       <Footer />
