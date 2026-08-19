@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
+import Link from 'next/link'
 import WorkspaceShell from '@/components/agent/workspace/WorkspaceShell'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { workspaceGet, workspaceMutate } from '@/lib/agent/workspace/clientApi'
@@ -130,6 +131,8 @@ export default function AssignmentDetailPage() {
   const req = detail.request
   const draftStatus = String(detail.fieldReportDraft?.status || 'draft')
   const editable = draftStatus === 'draft' || draftStatus === 'rejected' || !detail.fieldReportDraft
+  const evidenceCtaAllowed =
+    editable && ['arrived', 'in_progress', 'completed'].includes(String(req.status || ''))
 
   return (
     <WorkspaceShell title="Assignment">
@@ -181,6 +184,28 @@ export default function AssignmentDetailPage() {
             )}
           </div>
         </section>
+
+        {evidenceCtaAllowed && (
+          <section className="rounded-2xl border border-brand-200 bg-brand-50/20 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-700">
+                  Submit Evidence
+                </p>
+                <h3 className="mt-1 text-sm font-bold text-slate-900">Use the 4-step wizard</h3>
+                <p className="mt-1 text-xs text-slate-600">
+                  Upload audio + attendance proof and complete structured observations.
+                </p>
+              </div>
+              <Link
+                href={`/agent/workspace/assignments/${requestId}/submit-evidence`}
+                className="min-h-[44px] inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700"
+              >
+                Submit Evidence
+              </Link>
+            </div>
+          </section>
+        )}
 
         <section className="rounded-2xl border border-slate-200 bg-white p-4">
           <div className="flex items-center justify-between">
