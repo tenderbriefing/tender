@@ -215,6 +215,18 @@ service cloud.firestore {
         || (isSme() && resource.data.smeId == request.auth.uid);
     }
 
+    match /briefingIntelligenceReports/{reportId} {
+      allow create: if isYouthAgent()
+        && request.resource.data.agentId == request.auth.uid;
+      allow read: if isAdmin()
+        || (isYouthAgent() && resource.data.agentId == request.auth.uid)
+        || (isSme() && resource.data.smeId == request.auth.uid);
+      allow update: if isAdmin()
+        || (isYouthAgent() && resource.data.agentId == request.auth.uid
+          && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['smeId', 'reportId', 'deliveredAt', 'pdfStorageRef', 'deliveryEmailId']));
+    }
+
     match /auditLogs/{logId} {
       allow read: if isAdmin();
       allow write: if false;
