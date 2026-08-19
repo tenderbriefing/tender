@@ -16,15 +16,11 @@ vi.mock('@/lib/briefing-intelligence/auditService', () => {
   }
 })
 
-vi.mock(
-  '@/lib/services/transactionalEmailService',
-  () => {
-    return {
-      sendViaResend: vi.fn().mockResolvedValue({ sent: false }),
-    }
-  },
-  { virtual: true }
-)
+vi.mock('@/lib/services/transactionalEmailService', () => {
+  return {
+    sendViaResend: vi.fn().mockResolvedValue({ sent: false }),
+  }
+})
 
 type MockUser = { uid: string; userType: 'admin' | 'youth-agent' | 'sme' }
 let mockUser: MockUser | null = null

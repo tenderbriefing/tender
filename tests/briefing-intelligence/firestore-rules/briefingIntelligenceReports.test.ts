@@ -13,7 +13,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { doc, getDoc, setDoc, updateDoc, type Firestore } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
 
 const PROJECT_ID = 'demo-tenderbriefing'
 
@@ -77,7 +77,7 @@ async function seed(collectionName: string, docId: string, data: Record<string, 
   })
 }
 
-function firestoreAs(actorUid: string | null): Firestore {
+function firestoreAs(actorUid: string | null) {
   const ctx = actorUid ? testEnv.authenticatedContext(actorUid) : testEnv.unauthenticatedContext()
   return ctx.firestore()
 }
