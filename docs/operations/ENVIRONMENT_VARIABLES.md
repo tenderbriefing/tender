@@ -42,6 +42,8 @@ Never commit real secret values. Rotate via Google Secret Manager / hosting env.
 | `FOUNDER_USER_INTELLIGENCE_ENABLED` | Founder UI flag | optional | No | true/false | Y (`true`) | Founder | Feature hidden |
 | `NEXT_PUBLIC_FOUNDER_USER_INTELLIGENCE` | Client mirror | optional | No | true/false | Y | Founder | UI hidden |
 | `FOUNDER_EMAIL_ALLOWLIST` | Founder console emails | prod founder | No | email list | Y | Founder | Access denied |
+| `FOUNDER_DASHBOARD_V2` | Founder Dashboard V2 shell | optional | No | true/false | - | Founder | `false` restores legacy Home + User Intelligence chrome |
+| `NEXT_PUBLIC_FOUNDER_DASHBOARD_V2` | Client mirror for V2 shell | optional | No | true/false | - | Founder | Must match server flag for rollback |
 | `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED` | Google Sign-In UI | optional | No | true/false | Y (`false`) | Auth | Google UI hidden |
 | `PROCUREMENT_INTELLIGENCE_ENABLED` | PI Phase 1 global | optional (default false) | No | true/false | Y (`false`) | Product | Without pilot UIDs → 503 |
 | `NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED` | Advisory client mirror | optional (default false) | No | true/false | Y (`false`) | Product | Non-pilots see no panel |

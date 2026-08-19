@@ -20,7 +20,9 @@ export async function verifyFounderUser(
     }
   }
 
-  const user = await verifyApiUser(authorizationHeader, ['admin'])
+  // Do not pass ['admin'] into verifyApiUser — that collapses an authenticated
+  // SME/agent into 401. Authenticated non-founders must be 403.
+  const user = await verifyApiUser(authorizationHeader)
   if (!user) {
     return { error: unauthorizedResponse('Sign in required'), reason: 'unauthorized' }
   }

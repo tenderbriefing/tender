@@ -19,6 +19,7 @@ import {
 } from '@/lib/auth/redirects'
 import {
   evaluateFounderAccess,
+  isFounderDashboardV2EnabledClient,
   isFounderIntelligenceEnabledClient,
 } from '@/lib/founder/access'
 
@@ -66,7 +67,10 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
       : userProfile?.userType === 'youth-agent'
         ? AGENT_NAV
         : userProfile?.userType === 'admin'
-          ? adminNavForUser({ showFounder: showFounderNav })
+          ? adminNavForUser({
+              showFounder: showFounderNav,
+              founderV2: isFounderDashboardV2EnabledClient(),
+            })
           : []
 
   // While auth is loading, keep public wayfinding visible — only swap chrome after resolve

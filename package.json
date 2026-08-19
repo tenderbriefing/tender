@@ -48,6 +48,7 @@
     "qa:firestore-rules": "node scripts/firestore-rules-qa.js",
     "rfq-inbox:qa": "node scripts/rfq-inbox-qa.js",
     "smoke:production:rest": "node scripts/production-smoke-rest.js",
+    "qa:founder-dashboard-v2-smoke": "node scripts/founder-dashboard-v2-smoke.js",
     "test:integrations": "node scripts/test-integrations-health.js",
     "payfast:readiness": "node scripts/payfast-readiness-check.js"
   },

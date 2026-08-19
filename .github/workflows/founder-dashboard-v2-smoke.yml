@@ -1,0 +1,113 @@
+# Founder Dashboard V2 authenticated smoke.
+# Injects secrets.SMOKE_TEST_PASSWORD into the smoke script.
+# Logs HTTP status / latency / KPI numbers only — never credentials or tokens.
+name: Founder Dashboard V2 smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: local (boot PR HEAD against production Firestore) or production
+        required: true
+        default: local
+        type: choice
+        options:
+          - local
+          - production
+  pull_request:
+    branches: [master, main]
+
+concurrency:
+  group: founder-v2-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Founder V2 auth + KPI smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Require smoke password secret
+        env:
+          SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
+        run: |
+          if [ -z "$SMOKE_TEST_PASSWORD" ]; then
+            echo "SMOKE_TEST_PASSWORD secret is missing"
+            exit 1
+          fi
+          echo "SMOKE_TEST_PASSWORD: present"
+
+      - name: Production build (PR HEAD)
+        if: ${{ github.event_name == 'pull_request' || inputs.target == 'local' }}
+        env:
+          NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+          NEXT_PUBLIC_FOUNDER_USER_INTELLIGENCE: 'true'
+          NEXT_PUBLIC_FOUNDER_DASHBOARD_V2: 'true'
+          NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: 'false'
+        run: npm run build
+
+      - name: Start Next against production Firestore
+        if: ${{ github.event_name == 'pull_request' || inputs.target == 'local' }}
+        env:
+          NODE_ENV: production
+          PORT: '3000'
+          HOSTNAME: 127.0.0.1
+          STORAGE_ADAPTER: firestore
+          FIREBASE_PROJECT_ID: tenderbriefing-34679
+          FOUNDER_USER_INTELLIGENCE_ENABLED: 'true'
+          NEXT_PUBLIC_FOUNDER_USER_INTELLIGENCE: 'true'
+          FOUNDER_DASHBOARD_V2: 'true'
+          NEXT_PUBLIC_FOUNDER_DASHBOARD_V2: 'true'
+          FOUNDER_EMAIL_ALLOWLIST: info@tenderbriefing.co.za
+          NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: 'false'
+        run: |
+          nohup npm run start -- --port 3000 --hostname 127.0.0.1 >/tmp/next-start.log 2>&1 &
+          echo "next_pid=$!"
+          for i in $(seq 1 60); do
+            code=$(curl -sS -o /dev/null -w "%{http_code}" "http://127.0.0.1:3000/api/health/firestore" || echo "000")
+            echo "warmup $i health=$code"
+            if [ "$code" = "200" ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Next.js failed to become ready"
+          tail -n 80 /tmp/next-start.log || true
+          exit 1
+
+      - name: Run founder V2 smoke
+        env:
+          SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
+          STORAGE_ADAPTER: firestore
+          FIREBASE_PROJECT_ID: tenderbriefing-34679
+          FOUNDER_USER_INTELLIGENCE_ENABLED: 'true'
+          FOUNDER_EMAIL_ALLOWLIST: info@tenderbriefing.co.za
+          FOUNDER_SMOKE_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.target == 'production' && 'https://www.tenderbriefing.co.za' || 'http://127.0.0.1:3000' }}
+        run: node scripts/founder-dashboard-v2-smoke.js
+
+      - name: Install Playwright Chromium
+        if: ${{ github.event_name == 'pull_request' || inputs.target == 'local' }}
+        run: npx playwright install --with-deps chromium
+
+      - name: Signed-in founder walkthrough (no traces)
+        if: ${{ github.event_name == 'pull_request' || inputs.target == 'local' }}
+        env:
+          CI: 'true'
+          FOUNDER_E2E: '1'
+          E2E_SKIP_WEBSERVER: '1'
+          E2E_BASE_URL: http://127.0.0.1:3000
+          SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
+        run: npx playwright test tests/e2e/founder-dashboard-v2-smoke.spec.ts --trace off --reporter=line

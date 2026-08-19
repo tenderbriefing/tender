@@ -16,5 +16,6 @@ describe('apiRoutePolicy', () => {
   it('keeps PayFast ITN public and blocks retired bookings in production', () => {
     expect(isPublicApiRoute('/api/webhooks/payfast', 'POST')).toBe(true)
     expect(isProductionBlockedApiRoute('/api/bookings')).toBe(true)
+    expect(isPublicApiRoute('/api/founder/dashboard', 'GET')).toBe(false)
   })
 })
