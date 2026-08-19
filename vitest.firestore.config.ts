@@ -4,7 +4,7 @@ import path from 'path'
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['tests/firestore/**/*.test.ts'],
+    include: ['tests/firestore/**/*.test.ts', 'tests/briefing-intelligence/firestore-rules/**/*.test.ts'],
     fileParallelism: false,
     testTimeout: 60_000,
     hookTimeout: 60_000,

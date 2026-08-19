@@ -16,7 +16,7 @@ export default defineConfig({
   webServer: process.env.E2E_SKIP_WEBSERVER
     ? undefined
     : {
-        command: 'npm run start',
+        command: 'node .next/standalone/server.js',
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
