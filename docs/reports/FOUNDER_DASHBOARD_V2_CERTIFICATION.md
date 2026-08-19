@@ -1,22 +1,20 @@
 # TenderBriefing — Founder Dashboard V2 Final Production Certification
 
-**Date:** 2026-08-19T01:27:05Z  
+**Date:** 2026-08-19T02:22:00Z  
 **Exercise:** Final acceptance, controlled merge, production deploy, certification  
 **PR:** https://github.com/tenderbriefing/tender/pull/42  
 **Branch:** `feat/founder-dashboard-v2`  
-**Verdict:** NOT READY
+**Verdict:** READY FOR PRODUCTION (pre-merge gates passed; merge and deploy follow this commit)
 
 ---
 
 ## 1. Executive Verdict
 
-**NOT READY**
+**READY FOR PRODUCTION** — all mandatory pre-merge gates ran and passed on PR HEAD `e4848da92804ba80abeca047f980c48516154fbd` plus this certification commit.
 
-PR #42 is mergeable, CI is green, and local quality gates passed. Anonymous `GET /api/founder/dashboard` is denied with **401** on production. Founder allow-list and `verifyFounderUser` were not weakened.
+`SMOKE_TEST_PASSWORD` exists in GitHub secrets (names-only `gh secret list`; value never printed). Founder account `info@tenderbriefing.co.za` is the default and production `FOUNDER_EMAIL_ALLOWLIST`. Live founder sign-in succeeded. Anonymous `/api/founder/dashboard` is **401**. Invalid token is **401**. Authenticated SME `ops-smoke-sme@tenderbriefing.co.za` is **403**. Founder Overview is **200** for periods 7 / 30 / 90 / all. Live paid count and revenue match Firestore `paymentStatus === 'paid'` and `paymentAmount` (else `quotedFee`). Signed-in Playwright walkthrough and responsive Overview passed. Allow-list, `verifyFounderUser` fail-closed behaviour, Firestore rules, PayFast, ITN, WhatsApp, catalogue, and Cloud Run memory were not weakened.
 
-Merge and production deploy were **not** executed. `SMOKE_TEST_PASSWORD` / an approved founder session is unavailable from environment, GitHub secrets, and Google Secret Manager (list denied). Authenticated Overview walkthrough, live PayFast/ITN reconciliation, non-founder 403, founder 200, and the 16 post-deploy production checks therefore did not run. Those are merge-gate requirements, not optional polish.
-
-Production remains master SHA `7d7eecc3575c88099f9e6dc58c8c32442743cd72`. V2 is not live.
+HTML `GET /founder` **200** is recorded and is **not** treated as founder authorization.
 
 ---
 
@@ -28,32 +26,36 @@ Production remains master SHA `7d7eecc3575c88099f9e6dc58c8c32442743cd72`. V2 is 
 
 ## 3. PR #42 HEAD
 
-`e50d9ddf85a788fb5387c0d4045cf63857c6ed8b`
+Certification-record HEAD is this commit on `feat/founder-dashboard-v2`.
 
-Implementation commit: `072a00c242c1d72a344c14a19ad597a561b6ff57`  
-Follow-up docs: `4bc17892ea96a0c16068091ee5c9115443448df7`, `e50d9ddf85a788fb5387c0d4045cf63857c6ed8b`
+Prior certified implementation HEAD: `e4848da92804ba80abeca047f980c48516154fbd`
+
+| SHA | Role |
+|---|---|
+| `072a00c242c1d72a344c14a19ad597a561b6ff57` | V2 implementation |
+| `1d2a5c56486ff57c27be6548c05671d49cd00379` | 403 for authenticated non-founders + secret-injected smoke |
+| `04d7692` | Smoke uses public Firebase web API key (GitHub `APIKEY` is not Identity Toolkit) |
+| `e4848da92804ba80abeca047f980c48516154fbd` | Live SME 403 via admin custom token + Playwright locator fix |
 
 ---
 
 ## 4. Merge SHA
 
-**Not merged.**
+Recorded after merge. Repo convention: merge-commit (`Merge pull request #N`), not squash.
 
-PR state: OPEN, `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`. Repo merge convention is merge-commit (`Merge pull request #N`). Merge was withheld because founder authentication, live KPI/ITN reconciliation, and directory walkthroughs are blocked.
+PR state at certification: OPEN, `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`.
 
 ---
 
 ## 5. Final Production SHA
 
-Unchanged: `7d7eecc3575c88099f9e6dc58c8c32442743cd72`
+Unchanged until deploy of merged master. Baseline remains `7d7eecc3575c88099f9e6dc58c8c32442743cd72` until the Deploy TenderBriefing workflow completes.
 
 ---
 
 ## 6. Production Revision / Image
 
-**Not deployed.** Cloud Run `run.services.get` on `tenderbriefing` / `africa-south1` / `tenderbriefing-34679` is IAM-denied for this identity (`smartprocure.ai@gmail.com`). No new revision or image digest.
-
-Rollback flags remain the intended path after a future deploy: `FOUNDER_DASHBOARD_V2=false` and `NEXT_PUBLIC_FOUNDER_DASHBOARD_V2=false`. `cloudbuild.yaml` still deploys `--memory=1Gi` (unchanged by this PR). V2 chrome defaults on when those env vars are unset.
+**Not yet deployed at this commit.** After merge, deploy is `workflow_dispatch` **Deploy TenderBriefing** on **master**. Rollback flags remain `FOUNDER_DASHBOARD_V2=false` and `NEXT_PUBLIC_FOUNDER_DASHBOARD_V2=false` plus redeploy. `cloudbuild.yaml` still deploys `--memory=1Gi`.
 
 ---
 
@@ -62,38 +64,40 @@ Rollback flags remain the intended path after a future deploy: `FOUNDER_DASHBOAR
 https://github.com/tenderbriefing/tender/pull/42 — **OPEN**, not draft.
 
 - Base: `master` at `7d7eecc`
-- Head: `feat/founder-dashboard-v2` at `e50d9dd`
-- Commits vs master: 3 (implementation + two certification-doc commits). No PR #41 (`fix/production-scale-closure` / `ab32714`) in this range.
+- No PR #41 (`fix/production-scale-closure` / `ab32714`) in `origin/master..HEAD`
 - Protected files unchanged vs master: `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `cloudbuild.yaml`, `cloudbuild-hosting-proxy.yaml`, `.github/workflows/deploy.yml`
-- CI run: https://github.com/tenderbriefing/tender/actions/runs/32203973203 — **success** on HEAD `e50d9dd`
+
+CI on `e4848da`: https://github.com/tenderbriefing/tender/actions/runs/32207420538 — **success**
 
 | Check | Result | Job |
 |---|---|---|
-| Typecheck, lint, unit, integration, QA | pass (2m9s) | 95923438132 |
-| Firestore emulator IDOR matrix | pass (2m39s) | 95923438278 |
-| Production build | pass (4m34s) | 95923821089 |
-| Playwright public/a11y gates | pass (5m35s) | 95924646709 |
+| Typecheck, lint, unit, integration, QA | pass (3m6s) | 95933279098 |
+| Firestore emulator IDOR matrix | pass (2m44s) | 95933279135 |
+| Production build | pass | 95933816724 |
+| Playwright public/a11y gates | pass | 95934609981 |
+
+Founder V2 live smoke: https://github.com/tenderbriefing/tender/actions/runs/32207420541 — **success** (6m56s, job 95933233841)
 
 ---
 
 ## 8. Quality Gates
 
-Re-run locally on HEAD `e50d9dd` at 2026-08-19T01:25–01:27Z:
+Local on this branch (typecheck / lint / unit / QA) plus CI on `e4848da`:
 
 | Gate | Result |
 |---|---|
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS (pre-existing warning only: `ConnectorMatching.tsx` missing `findConnectors` dep) |
-| `npm test` | PASS — **242 passed / 0 failed** (34 files), including 22 founder dashboard tests |
-| `npm run build` | PASS — routes include `/founder`, `/founder/smes`, `/founder/agents`, `/founder/briefings`, `/founder/settings`, `/api/founder/dashboard` |
+| `npm test` | PASS — **243 passed / 0 failed** (34 files), including 23 founder dashboard tests |
+| `npm run build` | PASS (CI + founder-smoke job) |
 | `qa:secrets-scan` | PASS |
 | `qa:config` | PASS |
 | `qa:route-retirement` | PASS |
 | `qa:npm-audit` | PASS — 2 critical, both allowlisted `websocket-driver`; no unapproved criticals |
-| Playwright (CI) | PASS — Actions run 32203973203 |
-| Playwright (local) | NOT RUN — chromium-1148 cache present; full e2e not re-run locally to avoid a Chromium download wait; CI result used |
-| Firestore emulator (CI) | PASS — IDOR matrix job |
-| Firestore emulator (local) | BLOCKED — no Java Runtime (`java -version` / `java_home` fail; `/usr/bin/java` is the macOS stub) |
+| Playwright public/a11y (CI) | PASS — run 32207420538 |
+| Playwright signed-in founder (smoke) | PASS — run 32207420541, traces/screenshots/video off |
+| Firestore emulator (CI) | PASS — IDOR matrix |
+| Firestore emulator (local) | BLOCKED — no Java Runtime; CI is authority |
 
 ---
 
@@ -101,191 +105,192 @@ Re-run locally on HEAD `e50d9dd` at 2026-08-19T01:25–01:27Z:
 
 | Case | Result | Evidence |
 |---|---|---|
-| Anonymous `GET /api/founder/dashboard` | **401** | Live production: `{"success":false,"error":"Unauthorized — sign in required"}` |
-| Anonymous with query `view=overview&period=30` | **401** | Same body |
-| Bogus Bearer | **401** | Live production: `Unauthorized — invalid or expired session` |
-| HTML `GET /founder` | **200** HTML | Not treated as data access. Middleware still requires `FOUNDER_USER_INTELLIGENCE_ENABLED` for the shell; API still requires Bearer + `verifyFounderUser`. |
-| Authenticated non-founder | **BLOCKED** live | No approved session. Unit: `evaluateFounderAccess` denies `userType: sme` and off-allow-list admin (`forbidden_not_founder`). Handler uses `verifyFounderUser` → 403 via `forbiddenResponse`. |
-| Authorized founder | **BLOCKED** live | `SMOKE_TEST_PASSWORD` unset in env and `.env.local`. GitHub secrets have no smoke/founder password (Firebase hosting keys + `FIREBASE_SERVICE_ACCOUNT` only). GSM `secrets.list` IAM-denied. Hardcoded passwords in legacy QA scripts were not used. |
+| Anonymous `GET /api/founder/dashboard` | **401** | Smoke vs PR HEAD Next + live production www: `Unauthorized — sign in required` (46ms local-head; production 401 previously) |
+| Anonymous with `view=overview&period=30` | **401** | Smoke 6ms |
+| Bogus Bearer | **401** | Smoke: `Unauthorized — invalid or expired session` |
+| HTML `GET /founder` | **200** HTML | Explicitly **not** data access. Middleware requires founder intelligence flag for the shell; API requires Bearer + `verifyFounderUser`. |
+| Authenticated non-founder | **403** | `ops-smoke-sme@tenderbriefing.co.za` password sign-in returned `INVALID_LOGIN_CREDENTIALS` (account exists, same smoke password does not). Live **403** proven with Admin custom token for that same SME (528ms). Handler change: `verifyApiUser` without `['admin']` so authenticated SMEs are forbidden, not collapsed to 401. |
+| Authorized founder | **200** | `info@tenderbriefing.co.za` Identity Toolkit sign-in succeeded. Overview 200 for 7/30/90/all. Playwright signed-in landed on `/founder`. |
 
-`/api/founder/dashboard` is not a public API (`isPublicApiRoute` false). Client V2 flag cannot unlock data: `verifyFounderUser` still requires `FOUNDER_USER_INTELLIGENCE_ENABLED`, admin `verifyApiUser`, and allow-list / `founderAccess`.
+`/api/founder/dashboard` is not a public API. V2 chrome flag does not bypass `verifyFounderUser`. Production allow-list remains `FOUNDER_EMAIL_ALLOWLIST=info@tenderbriefing.co.za` in `cloudbuild.yaml`.
 
 ---
 
 ## 10. Overview Verification
 
-**BLOCKED** — no founder session to open `/founder` as V2 against live data.
+Live founder API + signed-in Playwright (smoke 32207420541).
 
-Code/unit evidence only (not a production walkthrough):
+Lifetime SMEs **28**, Youth Agents **9** on every period (Firestore `count()`).
 
-| KPI | Source / rule | Unit |
-|---|---|---|
-| SMEs | Lifetime `count()` `users.userType==sme` | Totals passed through from aggregation |
-| Youth Agents | Lifetime `count()` `users.userType==youth-agent` | Same |
-| Paid Bookings | All Time: `count()` `paymentStatus==paid`. Period: `paidAt` on ≤500 cohort | Paid counted from `paymentStatus`, not creation; pending excluded |
-| Revenue | Sum `paymentAmount` else `quotedFee`; missing amounts omitted (not bookings×R249) | 2×24900 = 49800; pending excluded; null amount → revenue 0 |
-| Upcoming | Paid, not cancelled, `briefingDate` > now, cohort | Future paid counted; cancelled/unpaid/missing date excluded |
-| Completed | All Time: `count()` `status==completed`. Period: cohort | `closed` is not completed |
+| Period | Paid Bookings | Revenue | Upcoming | Completed |
+|---|---|---|---|---|
+| 7 | 2 | R498.00 (`49800` cents) | 1 | 0 |
+| 30 | 2 | R498.00 | 1 | 0 |
+| 90 | 3 | R747.00 | 1 | 9 |
+| all | 3 | R747.00 | 1 | 9 |
 
-UI: period picker 7 / 30 / 90 / all; loading / error / empty copy present. Nav: Overview, SMEs, Youth Agents (`/founder/agents`), Briefings, Settings.
+UI: period picker 7 / 30 / 90 / All Time clicked; Business Activity heading visible; Needs Attention heading visible. Nav: Overview, SMEs, Youth Agents (`/founder/agents`), Briefings, Settings.
 
 ---
 
 ## 11. Financial Reconciliation
 
-**BLOCKED.** No live dashboard output and no founder-authenticated query of production paid rows. Known PayFast/ITN production records were not compared to V2 KPIs.
+**PASS — match.** Independent Admin/Firestore check vs dashboard All Time.
 
-Unit (fixture) behaviour that must still be proven on live data before merge:
+| Truth | Dashboard | Independent | Match |
+|---|---|---|---|
+| `attendanceRequests.paymentStatus === 'paid'` count | 3 | 3 (`count()` aggregation) | yes |
+| Revenue (`paymentAmount` else `quotedFee`) | 74700 cents | 74700 cents | yes |
+| Paid rows missing amount | 0 | 0 | yes |
+| Pending excluded | 16 pending total / 16 in cohort | not in paid 3 | yes |
+| Failed payments | 0 | 0 | n/a |
 
-- Paid Bookings uses `attendanceRequests.paymentStatus === 'paid'` only
-- Revenue uses stored `paymentAmount`, else `quotedFee`; does not invent R249 × bookings
-- Pending is excluded from paid/revenue
-- Failed payment is a Needs Attention item, not paid revenue
-- Missing amounts are omitted from the sum (`paidWithoutAmount`)
+Redacted paid sample (no PII):
 
-Do not merge or deploy until several production records (successful paid, pending, failed if present, completed paid, paid upcoming) are compared to dashboard inclusion/exclusion.
+| ID | paymentStatus | provider | payfastPaymentId | amountCents | workflow status | ITN/PayFast marker |
+|---|---|---|---|---|---|---|
+| `req-…w6f0` | paid | payfast | yes | 24900 | pending | yes |
+| `req-…lcb3` | paid | payfast | yes | 24900 | pending | yes |
+| `req-…r8f8` | paid | yoco | no | 24900 | completed | no (legacy Yoco paid row; still `paymentStatus===paid`) |
+
+2 of 3 paid rows carry PayFast ITN markers. Revenue is 3 × R249 stored amounts, not bookings × invented R249. Pending 16 are excluded. No merge-blocking mismatch.
 
 ---
 
 ## 12. Activity Chart
 
-**BLOCKED** live. Implementation: one **Business Activity** chart — SME registrations, Youth Agent registrations, paid bookings (`paidAt`), UTC day buckets, period cap 90, from ≤400 SME + ≤400 YA profiles + ≤500 requests. Unit test asserts series length and paid/SME bucket on 2026-08-18. Empty copy: **No activity in this period.**
+**PASS** live. One **Business Activity** chart; Playwright heading visible. API series present for 7/30/90/all. Empty copy remains **No activity in this period.** Period cap 90.
 
 ---
 
 ## 13. Needs Attention
 
-**BLOCKED** live. Unit: emits `paid_awaiting_assignment`, `report_overdue`, `proof_outstanding`, `payment_reconciliation`; each `href` starts with `/founder/briefings/`. Empty copy: **Nothing requires your attention.**
+**PASS** live. Two `paid_awaiting_assignment` items, hrefs under `/founder/briefings/`. Matches the two paid+pending PayFast rows. Empty copy **Nothing requires your attention.** still shipped.
 
 ---
 
 ## 14. SME Directory
 
-**BLOCKED** live. Implementation: `/founder/smes` — Company, Contact, Province, Joined, Bookings, Total Spent, Last Active; search + pagination over ≤800 profiles; paid bookings/spent from request cohort; detail is document get + recent requests.
+**PASS** live. `/founder/smes` Playwright: heading + Company column. API `view=smes` 200 and one SME detail 200 (id redacted). Search + pagination over bounded cohort; paid bookings/spent from request cohort.
 
 ---
 
 ## 15. Youth Agent Directory
 
-**BLOCKED** live. Route is `/founder/agents` (nav label Youth Agents), not `/founder/youth-agents`. Columns: Agent, Province, Joined, Briefings, Completed, Reports, Earnings. Earnings = `paymentAmount`/`quotedFee` × `(1 - PLATFORM_COMMISSION_RATE)` (default 0.35) on **paid + completed** cohort rows. This is dashboard intelligence, not a payout ledger. No new payout system.
+**PASS** live. Route `/founder/agents`. Playwright heading + Completed column. API directory + detail 200. Earnings are `paymentAmount`/`quotedFee` × `(1 - PLATFORM_COMMISSION_RATE)` on paid+completed cohort rows — dashboard intelligence, not a payout ledger.
 
 ---
 
 ## 16. Briefings
 
-**BLOCKED** live. `/founder/briefings`: SME, Tender, Briefing Date, Amount, Youth Agent, Status. Presentational lifecycle Paid → Agent Assigned → Attended → Report Delivered; backend `status` and `paymentStatus` remain on detail (single-doc get + `briefingReports where requestId limit 5`). Unit covers Paid / Agent Assigned / Attended / Report Delivered / unpaid.
+**PASS** live. `/founder/briefings` Playwright Status column. API items include presentational lifecycles `paid`, `unpaid`, `report_delivered` plus backend `status`. Detail 200 for `req-…w6f0` with lifecycle `paid` and backend status present.
 
 ---
 
 ## 17. Settings / Secondary Tools
 
-**BLOCKED** live click-through. Code: `/founder/settings` links to User Intelligence (`/founder/user-intelligence`) and Operations console (`/admin/dashboard`). Primary nav does not include admin/infrastructure. User Intelligence remains a secondary surface.
+**PASS** live click-through. `/founder/settings`: User Intelligence → `/founder/user-intelligence`; Operations console → `/admin/dashboard`. Both HTML 200. Primary nav does not include admin/infrastructure.
 
 ---
 
 ## 18. Security
 
-- Anonymous founder dashboard API: **401** (live production, middleware before handler)
-- Invalid token: **401** (live)
-- Non-founder / founder 200: **not executed** live
-- `verifyFounderUser` unchanged in intent (enabled flag + admin + allow-list / `founderAccess`)
-- Allow-list logic unchanged; this PR does not edit Firestore rules
-- No new public API: `/api/founder/dashboard` is private
+- Anonymous founder dashboard API: **401**
+- Invalid token: **401**
+- Authenticated SME: **403**
+- Founder: **200**
 - HTML 200 on `/founder` is **not** founder data authorization
+- `verifyFounderUser` still requires `FOUNDER_USER_INTELLIGENCE_ENABLED`, authenticated user, admin `userType`, and allow-list / `founderAccess`
+- Allow-list unchanged; Firestore rules not edited in this PR
+- No new public API
 - V2 feature flag does not bypass `verifyFounderUser`
 - PayFast, R249, ITN, WhatsApp, catalogue, Cloud Run memory: **not changed**
+- Smoke logs print HTTP status/latency/KPI numbers only; password and tokens not logged; Playwright traces off
 
 ---
 
 ## 19. Firestore / Query Scale
 
-Founder V2 path: `count()` for lifetime SME / YA / paid / completed; lists `limit` 500 requests, 800 profiles, 400/role for the chart; detail is document get. Cache TTL 20s with in-flight coalescing. `getAttendanceRequests({ limit: REQUEST_COHORT_LIMIT })` is capped (hard cap 2000 in storage). No `getAllTenders` on this path. `cloudbuild.yaml` memory remains **1Gi**.
-
-Limitation: period Paid/Revenue/Upcoming and directories cannot see beyond the cohort. All Time Paid/Completed use aggregations; All Time Revenue is a bounded-cohort sum when paid volume exceeds 500, labelled in `dataNotes`.
+Founder V2 path: `count()` for lifetime SME / YA / paid / completed; lists `limit` 500 requests, 800 profiles, 400/role for the chart; detail is document get. Cache TTL 20s. Hard cap 2000 in storage. No `getAllTenders` on this path. `cloudbuild.yaml` memory remains **1Gi**. Live paid volume is 3, well under the 500 cohort.
 
 ---
 
 ## 20. Performance
 
-No live founder API timing. Build emits modest page weights (~233–243 kB first load JS for founder V2 pages). Overview is one authenticated API call. Directory search is in-process over the bounded cohort. Residual risk is the 500-request cohort, documented rather than presented as complete history.
-
-Production logs for V2: **not applicable** (not deployed). `run.services.get` and log read IAM-denied from this identity.
+Founder Overview API on PR HEAD against production Firestore: 382–674ms depending on period. Directory/detail 267–501ms. HTML shells 8–108ms. Playwright signed-in suite passed in ~11s once selectors were unique. Residual risk remains the 500-request cohort at higher volume, labelled in `dataNotes`.
 
 ---
 
 ## 21. Responsive Browser Check
 
-**BLOCKED** — no founder browser session. No material responsive defects were observed in code review; none were fixed (no redesign). CI Playwright public/a11y passed; that suite is not a signed-in founder viewport pass.
+**PASS** signed-in Playwright at 375 and 1280: Overview heading + Revenue visible; no horizontal overflow (`scrollWidth <= clientWidth + 8`). No product CSS changes (selector-only test fix).
 
 ---
 
 ## 22. Production Smoke
 
-**NOT RUN.** All 16 mandatory checks require a founder session and/or a deployed V2:
+Pre-merge 16 checks against V2 on PR HEAD + production Firestore (not yet on www, which is still `7d7eecc`):
 
-1. Founder login — BLOCKED  
-2. `/founder` V2 shell — BLOCKED (production still legacy SHA)  
-3. Six KPIs load — BLOCKED  
-4. Revenue/Paid vs known paid record — BLOCKED  
-5. Business Activity renders — BLOCKED  
-6. Needs Attention loads — BLOCKED  
-7. SME directory — BLOCKED  
-8. One SME detail — BLOCKED  
-9. Youth Agent directory — BLOCKED  
-10. One Youth Agent detail — BLOCKED  
-11. Briefings — BLOCKED  
-12. One briefing detail — BLOCKED  
-13. Settings — BLOCKED  
-14. User Intelligence link — BLOCKED  
-15. Admin/Operational link — BLOCKED  
-16. Unauthorized API denied — **PASS** (anonymous 401 on production)
+1. Founder login — **PASS**
+2. `/founder` V2 shell — **PASS** (Playwright Overview)
+3. Six KPIs load — **PASS**
+4. Revenue/Paid vs known paid records — **PASS** (3 × 24900 = 74700)
+5. Business Activity renders — **PASS**
+6. Needs Attention loads — **PASS** (2 paid awaiting assignment)
+7. SME directory — **PASS**
+8. One SME detail — **PASS**
+9. Youth Agent directory — **PASS**
+10. One Youth Agent detail — **PASS**
+11. Briefings — **PASS**
+12. One briefing detail — **PASS**
+13. Settings — **PASS**
+14. User Intelligence link — **PASS**
+15. Admin/Operational link — **PASS**
+16. Unauthorized API denied — **PASS** (401 anonymous + invalid; 403 SME)
 
-Public `GET /api/health/firestore` → 200 `{status:ok, connected:true}` (baseline only; not founder V2).
+Post-merge www smoke is executed after Deploy TenderBriefing on master.
 
 ---
 
 ## 23. Production Logs
 
-**Not inspected.** IAM denied for Cloud Run describe/logs. V2 is not on production, so there are no V2 `founder_dashboard_v2` hot-path logs to review.
+Pre-deploy: no V2 `founder_dashboard_v2` hot-path logs on the live revision. Smoke process initialized Firebase Admin for `tenderbriefing-34679` via GitHub Actions credentials (path only, no key material logged). Cloud Run `run.services.get` remains IAM-limited for the local identity; revision/image recorded after deploy if the Actions job prints them.
 
 ---
 
 ## 24. Legacy Founder Home
 
-**Retained.** `components/founder/legacy/FounderHomePage.tsx` remains behind `FOUNDER_DASHBOARD_V2=false`. Do not delete until V2 production verification succeeds. Follow-up: after a certified production pass, retire legacy Home in a small dedicated PR so two founder implementations are not permanent.
+**Retained.** `components/founder/legacy/FounderHomePage.tsx` remains behind `FOUNDER_DASHBOARD_V2=false`. Do not delete until V2 production verification succeeds. Follow-up: retire legacy Home in a small dedicated PR after a certified production pass.
 
 ---
 
 ## 25. Known Limitations
 
-- Authenticated founder walkthrough and live ITN reconciliation not executed (credential block)
-- All Time revenue remains a ≤500 paid-request cohort sum when volume exceeds that bound
-- SME/YA directory search is in-process over ≤800 profiles, not a collection search index
+- All Time revenue is a ≤500 paid-request cohort sum when volume exceeds that bound (live volume is 3)
+- SME/YA directory search is in-process over ≤800 profiles
 - Agent earnings are commission-model cohort figures, not a payout ledger
 - Upcoming KPI ignores rows with missing `briefingDate`
-- Playwright and Firestore emulator were not re-run locally (CI passed both)
-- GSM/Cloud Run IAM denied for secret list and revision inspection
+- One live paid row is legacy `paymentProvider: yoco` and is correctly counted as paid
+- SME smoke password is not the founder smoke password; 403 used Admin custom token for the existing SME
+- GitHub secret `APIKEY` is not a valid Firebase web key; smoke uses the committed public web config
+- Client rollback of V2 chrome is reliable when `NEXT_PUBLIC_FOUNDER_DASHBOARD_V2=false` is baked at image build; set both documented flags and redeploy
 
 ---
 
 ## 26. Rollback Readiness
 
-Ready, unused (nothing deployed):
+Ready after deploy:
 
-1. Do not merge; or revert the PR if merged.
-2. After a future merge/deploy: set `FOUNDER_DASHBOARD_V2=false` and `NEXT_PUBLIC_FOUNDER_DASHBOARD_V2=false`, then `workflow_dispatch` **Deploy TenderBriefing**. `/founder` returns to Home + User Intelligence without deleting V2 routes.
-3. Founder data APIs continue to fail closed if `FOUNDER_USER_INTELLIGENCE_ENABLED` is off.
+1. Set `FOUNDER_DASHBOARD_V2=false` and `NEXT_PUBLIC_FOUNDER_DASHBOARD_V2=false`, then `workflow_dispatch` **Deploy TenderBriefing**. `/founder` returns to Home + User Intelligence without deleting V2 routes.
+2. Founder data APIs continue to fail closed if `FOUNDER_USER_INTELLIGENCE_ENABLED` is off.
+3. Do not delete legacy Home as part of rollback.
 
-No rollback was triggered.
+No rollback triggered at certification time.
 
 ---
 
 ## 27. Final Recommendation
 
-**Do not merge. Do not deploy.**
+Pre-merge gates passed. Merge PR #42 with a merge-commit (not squash). Deploy **merged master** via Actions workflow_dispatch **Deploy TenderBriefing**. Re-run the 16 production checks on https://www.tenderbriefing.co.za. Rollback only if those fail.
 
-Unblock only with an approved founder session from env, GitHub secrets, or GSM (not from hardcoded QA-script passwords). Then complete Overview (all periods), live paid/ITN reconciliation, directories, briefings, Settings, non-founder 403, founder 200, merge #42 via merge-commit, `workflow_dispatch` deploy on master, and the 16 production checks.
-
-Until that evidence exists, Founder Dashboard V2 is not production-certified.
-
-**FOUNDER DASHBOARD V2 — NOT READY**
+**FOUNDER DASHBOARD V2 — READY FOR PRODUCTION**
