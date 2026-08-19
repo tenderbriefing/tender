@@ -404,6 +404,16 @@ describe('founder dashboard API surface', () => {
     expect(route).not.toMatch(/getAllTenders/)
   })
 
+  it('returns 403 for authenticated non-founders rather than collapsing them to 401', () => {
+    const { readFileSync } = require('node:fs')
+    const { join } = require('node:path')
+    const src = readFileSync(join(process.cwd(), 'lib/founder/verifyFounder.ts'), 'utf8')
+    expect(src).toContain("verifyApiUser(authorizationHeader)")
+    expect(src).not.toContain("verifyApiUser(authorizationHeader, ['admin'])")
+    expect(src).toContain("forbiddenResponse('Founder access required')")
+    expect(src).toContain("unauthorizedResponse('Sign in required')")
+  })
+
   it('ships empty, loading, and error copy in the V2 UI', () => {
     const { readFileSync } = require('node:fs')
     const { join } = require('node:path')
