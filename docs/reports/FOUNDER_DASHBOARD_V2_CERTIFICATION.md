@@ -3,6 +3,7 @@
 **Date:** 2026-08-19  
 **Branch:** `feat/founder-dashboard-v2`  
 **Starting SHA:** `7d7eecc3575c88099f9e6dc58c8c32442743cd72` (origin/master / production baseline)  
+**Final SHA:** `072a00c242c1d72a344c14a19ad597a561b6ff57`  
 **Verdict:** PASS WITH CONDITIONS
 
 This is a UI/product redesign of the Founder experience. It is not a backend rewrite, not merged, and not deployed.
@@ -21,7 +22,7 @@ The founder workspace now answers the six business questions on Overview (SMEs, 
 
 ## 3. Final SHA
 
-Recorded at PR open (this report is committed on the branch).
+`072a00c242c1d72a344c14a19ad597a561b6ff57`
 
 ## 4. Branch
 
@@ -29,7 +30,7 @@ Recorded at PR open (this report is committed on the branch).
 
 ## 5. PR
 
-Recorded at PR open.
+Opened from `feat/founder-dashboard-v2` against `master`. URL filled after `gh pr create`.
 
 ## 6. Files changed
 
