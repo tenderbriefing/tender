@@ -18,7 +18,7 @@ Public catalogue pagination, filters, anonymous denial of founder/admin intellig
 
 ## 3. Final SHA
 
-Branch head of `fix/production-scale-closure` (see git / PR). Not merged to production at report time.
+`195592416e938f33674f7eefcb07e5f70760a20c` (`fix/production-scale-closure`). Not merged to production at report time.
 
 ## 4. Branch
 
@@ -26,7 +26,7 @@ Branch head of `fix/production-scale-closure` (see git / PR). Not merged to prod
 
 ## 5. PR
 
-Opened from this branch against `master`. Number recorded in the pull request URL after open.
+[#41](https://github.com/tenderbriefing/tender/pull/41)
 
 ## 6. Merge SHA
 
