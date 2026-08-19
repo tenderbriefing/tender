@@ -30,7 +30,7 @@ The founder workspace now answers the six business questions on Overview (SMEs, 
 
 ## 5. PR
 
-Opened from `feat/founder-dashboard-v2` against `master`. URL filled after `gh pr create`.
+https://github.com/tenderbriefing/tender/pull/42
 
 ## 6. Files changed
 
