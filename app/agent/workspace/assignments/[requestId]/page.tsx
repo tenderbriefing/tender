@@ -190,18 +190,18 @@ export default function AssignmentDetailPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-700">
-                  Submit Evidence
+                  Submit Report
                 </p>
-                <h3 className="mt-1 text-sm font-bold text-slate-900">Use the 4-step wizard</h3>
+                <h3 className="mt-1 text-sm font-bold text-slate-900">Upload audio + attendance proof</h3>
                 <p className="mt-1 text-xs text-slate-600">
-                  Upload audio + attendance proof and complete structured observations.
+                  Only audio recording and attendance proof are required.
                 </p>
               </div>
               <Link
                 href={`/agent/workspace/assignments/${requestId}/submit-evidence`}
                 className="min-h-[44px] inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700"
               >
-                Submit Evidence
+                Submit Report
               </Link>
             </div>
           </section>

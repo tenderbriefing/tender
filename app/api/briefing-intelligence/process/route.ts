@@ -173,6 +173,19 @@ export async function POST(request: NextRequest) {
       },
     }
 
+    // Prevent fabrication: attendance verification can only be marked verified
+    // when the agent provided attendance proof evidence.
+    const hasAttendanceEvidence = Array.isArray(report.attendanceEvidenceRefs) && report.attendanceEvidenceRefs.length > 0
+    if (!hasAttendanceEvidence && reportContent?.attendanceVerification) {
+      reportContent.attendanceVerification = {
+        ...reportContent.attendanceVerification,
+        verified: false,
+        method: 'attendance_proof_missing',
+        notes: null,
+        redactedAttendeeCount: null,
+      }
+    }
+
     // Standard system disclaimer + certification metadata (not derived from transcript).
     reportContent.importantNotice =
       'Standard disclaimer: This is a system-generated intelligence report draft. Always verify facts against the official tender documents.'
@@ -236,6 +249,10 @@ export async function POST(request: NextRequest) {
           updatedAt: now,
           processingAttempts: nextAttempts,
           processingStartedAt: report?.processingStartedAt || now,
+          // Fail-closed: remove any previous AI artifacts so we never "deliver" stale content.
+          reportContent: null,
+          transcription: null,
+          draftReadyAt: null,
         },
         { merge: true }
       )

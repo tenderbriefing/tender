@@ -136,7 +136,6 @@ describe('Briefing Intelligence evidence upload', () => {
 
     const form = new FormData()
     form.set('requestId', requestId)
-    form.set('observations', JSON.stringify({ shortNote: 'hello' }))
     form.set('audio', new File([new Uint8Array([1, 2, 3])], 'voice.mp3', { type: 'audio/mpeg' }))
     form.append('attendanceImages', new File([new Uint8Array([9])], 'img1.jpg', { type: 'image/jpeg' }))
 
@@ -159,6 +158,66 @@ describe('Briefing Intelligence evidence upload', () => {
     expect(logMock).toHaveBeenCalled()
   })
 
+  it('auto-resolves tender from booking (ignores agent tender fields)', async () => {
+    const requestId = 'req-tender-resolve'
+    const agentId = 'agent-a-uid'
+    const smeId = 'sme-a-uid'
+    const tenderIdFromBooking = 'tender-expected'
+
+    fakeStore.attendanceRequests = {
+      [requestId]: {
+        agentId,
+        assignedAgentId: null,
+        notifiedAgents: [],
+        smeId,
+        tenderId: tenderIdFromBooking,
+      },
+    }
+    fakeStore.briefingIntelligenceReports = {}
+
+    const form = new FormData()
+    form.set('requestId', requestId)
+    form.set('audio', new File([new Uint8Array([1, 2, 3])], 'voice.mp3', { type: 'audio/mpeg' }))
+    form.append('attendanceImages', new File([new Uint8Array([9])], 'img1.jpg', { type: 'image/jpeg' }))
+
+    // These should not affect tender resolution.
+    form.set('tenderId', 'tender-from-agent-ui')
+    form.set('tenderContext', JSON.stringify({ tenderId: 'tender-from-agent-ui' }))
+    form.set('tenderDocument', new File([new Uint8Array([7])], 'tender.pdf', { type: 'application/pdf' }))
+
+    const res = await evidencePost(makeFakeRequest({ token: 'ya-a', form }) as any)
+    expect(res.status).toBe(200)
+    const json = await res.json()
+
+    const reportId = json.data.reportId as string
+    const report = (fakeStore.briefingIntelligenceReports as Record<string, BriefingIntelligenceReport>)[
+      reportId
+    ]
+    expect(report.tenderId).toBe(tenderIdFromBooking)
+  })
+
+  it('requires audio file', async () => {
+    const requestId = 'req-audio-missing'
+    fakeStore.attendanceRequests = {
+      [requestId]: {
+        agentId: 'agent-a-uid',
+        assignedAgentId: null,
+        notifiedAgents: [],
+        smeId: 'sme-a-uid',
+        tenderId: 'tender-1',
+      },
+    }
+
+    const form = new FormData()
+    form.set('requestId', requestId)
+    form.append('attendanceImages', new File([new Uint8Array([9])], 'img1.jpg', { type: 'image/jpeg' }))
+
+    const res = await evidencePost(makeFakeRequest({ token: 'ya-a', form }) as any)
+    expect(res.status).toBe(400)
+    const json = await res.json()
+    expect(json.error).toMatch(/audio file is required/i)
+  })
+
   it("YA cannot upload evidence for someone else's assignment", async () => {
     const requestId = 'req-2'
     const agentId = 'agent-a-uid'
@@ -177,7 +236,6 @@ describe('Briefing Intelligence evidence upload', () => {
 
     const form = new FormData()
     form.set('requestId', requestId)
-    form.set('observations', JSON.stringify({ shortNote: 'hello' }))
     form.set('audio', new File([new Uint8Array([1, 2, 3])], 'voice.mp3', { type: 'audio/mpeg' }))
     form.append('attendanceImages', new File([new Uint8Array([9])], 'img1.jpg', { type: 'image/jpeg' }))
 
@@ -202,7 +260,6 @@ describe('Briefing Intelligence evidence upload', () => {
 
     const form = new FormData()
     form.set('requestId', requestId)
-    form.set('observations', JSON.stringify({ shortNote: 'hello' }))
     form.set('audio', new File([new Uint8Array([1])], 'voice.txt', { type: 'audio/unknown' }))
     form.append('attendanceImages', new File([new Uint8Array([9])], 'img1.jpg', { type: 'image/jpeg' }))
 
@@ -226,7 +283,6 @@ describe('Briefing Intelligence evidence upload', () => {
 
     const form = new FormData()
     form.set('requestId', requestId)
-    form.set('observations', JSON.stringify({ shortNote: 'hello' }))
     form.set('audio', new File([new Uint8Array([1, 2, 3])], 'voice.mp3', { type: 'audio/mpeg' }))
 
     const res = await evidencePost(makeFakeRequest({ token: 'ya-a', form }) as any)
@@ -251,7 +307,6 @@ describe('Briefing Intelligence evidence upload', () => {
 
     const form = new FormData()
     form.set('requestId', requestId)
-    form.set('observations', JSON.stringify({ shortNote: 'hello' }))
     form.set('audio', hugeAudio)
     form.append('attendanceImages', new File([new Uint8Array([9])], 'img1.jpg', { type: 'image/jpeg' }))
 

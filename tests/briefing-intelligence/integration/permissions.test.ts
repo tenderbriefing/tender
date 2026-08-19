@@ -40,12 +40,55 @@ vi.mock('@/lib/auth/verifyApiUser', () => {
 })
 
 import { GET as reportGet } from '../../../app/api/briefing-intelligence/[reportId]/route'
+import { GET as reportsListGet } from '../../../app/api/briefing-intelligence/route'
 import { PATCH as reviewPatch } from '../../../app/api/briefing-intelligence/review/route'
 
 function makeFakeFirestore() {
   return {
     collection(name: string) {
       if (!fakeStore[name]) fakeStore[name] = {}
+
+      const makeQuery = (filters: Array<{ field: string; op: string; value: any }>, limitNum: number | null) => {
+        const q = {
+          where(field: string, op: string, value: any) {
+            return makeQuery([...filters, { field, op, value }], limitNum)
+          },
+          orderBy(_field: string, _dir?: 'asc' | 'desc') {
+            return makeQuery(filters, limitNum)
+          },
+          startAfter(_cursorSnap: any) {
+            return makeQuery(filters, limitNum)
+          },
+          limit(n: number) {
+            return makeQuery(filters, n)
+          },
+          async get() {
+            const allEntries = Object.entries(fakeStore[name] || {}).map(([id, data]) => ({ id, data }))
+            const filtered = allEntries.filter(({ data }) => {
+              return filters.every((f) => {
+                if (f.op !== '==') return false
+                return data?.[f.field] === f.value
+              })
+            })
+
+            const sorted = filtered.sort((a, b) => {
+              const ad = new Date(a.data?.createdAt || a.data?.evidenceSubmittedAt || 0).getTime()
+              const bd = new Date(b.data?.createdAt || b.data?.evidenceSubmittedAt || 0).getTime()
+              return bd - ad
+            })
+
+            const sliced = typeof limitNum === 'number' ? sorted.slice(0, limitNum) : sorted
+            return {
+              docs: sliced.map((row) => ({
+                id: row.id,
+                data: () => row.data,
+              })),
+            }
+          },
+        }
+        return q
+      }
+
       return {
         doc(id: string) {
           return {
@@ -58,6 +101,12 @@ function makeFakeFirestore() {
               fakeStore[name][id] = merge ? { ...(fakeStore[name][id] || {}), ...patch } : patch
             },
           }
+        },
+        where(field: string, op: string, value: any) {
+          return makeQuery([{ field, op, value }], null)
+        },
+        orderBy(field: string, dir?: 'asc' | 'desc') {
+          return makeQuery([], null).orderBy(field, dir)
         },
       }
     },
@@ -72,9 +121,9 @@ function makeJsonRequest(token: string, body: any) {
 }
 
 function makeGetRequest(token: string) {
-  return {
+  return new Request('http://localhost/api/briefing-intelligence', {
     headers: new Headers({ authorization: `Bearer ${token}` }),
-  } as any
+  }) as any
 }
 
 describe('Briefing Intelligence permissions (IDOR)', () => {
@@ -104,6 +153,18 @@ describe('Briefing Intelligence permissions (IDOR)', () => {
         status: 'delivered',
         evidenceSubmittedAt: new Date().toISOString(),
         deliveredAt: '2026-08-19T12:00:00.000Z',
+        audioFileRef: `workspace-evidence/${requestId}/${agentId}/briefing-intelligence/${reportId}/audio/audio.mp3`,
+        audioFileName: 'audio.mp3',
+        audioFileSizeMb: 1,
+        attendanceEvidenceRefs: ['workspace-evidence/att/1.png'],
+        transcription: {
+          provider: 'openai-whisper',
+          rawTranscriptRef: `briefing-intelligence/${reportId}/transcripts/raw.json`,
+          transcriptWordCount: 10,
+          language: null,
+          confidence: null,
+          completedAt: new Date().toISOString(),
+        },
         pdfStorageRef: `briefing-intelligence/${reportId}/pdf/${reportId}.pdf`,
         deliveryEmailId: 'email-abc',
         agentReviewNotes: 'final note',
@@ -116,6 +177,9 @@ describe('Briefing Intelligence permissions (IDOR)', () => {
     expect(resOwn.status).toBe(200)
     const jsonOwn = await resOwn.json()
     expect(jsonOwn.success).toBe(true)
+    expect(jsonOwn.data.audioFileRef).toBeNull()
+    expect(jsonOwn.data.attendanceEvidenceRefs).toEqual([])
+    expect(jsonOwn.data.transcription.rawTranscriptRef).toBeNull()
 
     const resOther = await reportGet(makeGetRequest('sme-b') as any, { params: { reportId } })
     expect(resOther.status).toBe(403)
@@ -126,6 +190,9 @@ describe('Briefing Intelligence permissions (IDOR)', () => {
     expect(resOwn.status).toBe(200)
     const jsonOwn = await resOwn.json()
     expect(jsonOwn.success).toBe(true)
+    expect(jsonOwn.data.audioFileRef).toBeNull()
+    expect(jsonOwn.data.attendanceEvidenceRefs).toEqual([])
+    expect(jsonOwn.data.transcription.rawTranscriptRef).toBeNull()
 
     const resOther = await reportGet(makeGetRequest('ya-b') as any, { params: { reportId } })
     expect(resOther.status).toBe(403)
@@ -136,6 +203,33 @@ describe('Briefing Intelligence permissions (IDOR)', () => {
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.success).toBe(true)
+    expect(json.data.audioFileRef).toMatch(/workspace-evidence/)
+    expect(Array.isArray(json.data.attendanceEvidenceRefs)).toBe(true)
+    expect(json.data.transcription.rawTranscriptRef).toMatch(/briefing-intelligence/)
+  })
+
+  it('SME list view redacts raw audio + attendance refs', async () => {
+    const res = await reportsListGet(
+      makeGetRequest('sme-a') as any
+    )
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    expect(json.success).toBe(true)
+    const row = json.data[0]
+    expect(row.audioFileRef).toBeNull()
+    expect(row.attendanceEvidenceRefs).toEqual([])
+    expect(row.transcription.rawTranscriptRef).toBeNull()
+  })
+
+  it('Admin list view retains raw audio + attendance refs', async () => {
+    const res = await reportsListGet(makeGetRequest('admin-a') as any)
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    expect(json.success).toBe(true)
+    const row = json.data[0]
+    expect(row.audioFileRef).toMatch(/workspace-evidence/)
+    expect(row.attendanceEvidenceRefs.length).toBeGreaterThan(0)
+    expect(row.transcription.rawTranscriptRef).toMatch(/briefing-intelligence/)
   })
 
   it('cannot modify delivered reports via youth-agent review', async () => {

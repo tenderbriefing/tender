@@ -92,8 +92,8 @@ export async function POST(request: NextRequest) {
   const form = await request.formData()
 
   const requestId = String(form.get('requestId') || '')
-  const observationsRaw = form.get('observations')
-  const tenderContextRaw = form.get('tenderContext') // optional; not used directly, but tolerated
+  const observationsRaw = form.get('observations') // optional (Youth Agent no longer submits this)
+  const tenderContextRaw = form.get('tenderContext') // optional; tolerated for backwards compatibility
   void tenderContextRaw
 
   const audioEntry = form.get('audio') || form.get('audioFile') || form.get('audio_file')
@@ -141,15 +141,14 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  if (!observationsRaw) {
-    return NextResponse.json({ success: false, error: 'observations JSON is required' }, { status: 400 })
-  }
-  let observationsParsed: unknown
-  try {
-    const rawStr = observationsRaw instanceof File ? '' : String(observationsRaw)
-    observationsParsed = JSON.parse(rawStr)
-  } catch {
-    return NextResponse.json({ success: false, error: 'Invalid observations JSON' }, { status: 400 })
+  let observationsParsed: unknown = {}
+  if (observationsRaw) {
+    try {
+      const rawStr = observationsRaw instanceof File ? '' : String(observationsRaw)
+      observationsParsed = JSON.parse(rawStr)
+    } catch {
+      return NextResponse.json({ success: false, error: 'Invalid observations JSON' }, { status: 400 })
+    }
   }
 
   const admin = getFirebaseAdmin()

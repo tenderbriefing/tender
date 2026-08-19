@@ -105,6 +105,42 @@ Reuses `attendanceLifecycle` / `lifecycleEnforcement` (no duplicate machine). Ag
 
 `POST /api/agent/workspace/evidence` — youth-agent/admin, 10MB, image/pdf/audio, assignment check, signed URL (not public bucket ACL).
 
+## Youth Agent Submission Simplification
+
+### Removed fields from the previous youth wizard
+- Removed ALL youth-agent input fields beyond evidence files.
+- Removed tender document upload.
+- Removed re-entering tender details and briefing date/time/venue/closing/procuring entity fields.
+- Removed structured observations + the review/confirmation step that depended on those fields.
+
+### Final agent-required inputs (exact)
+Required from Youth Agent:
+1. Audio recording.
+2. Attendance proof.
+
+### Automatic tender-data resolution + audio processing path
+- Youth Agent submits evidence to `POST /api/briefing-intelligence/evidence` with **audio + attendance proof only**.
+- Server resolves `tenderId` and links processing to the existing `attendanceRequests` booking (agent-provided tender fields are ignored).
+- Admin processing (`POST /api/briefing-intelligence/process`) fetches trusted tender context from `tenderBriefings`, downloads the stored audio from secure storage, transcribes it, then runs AI extraction against **tender context + transcript**.
+
+### Attendance verification path (fail-closed)
+- If extraction/transcription fails, the report is set to `processing_failed` and previous AI artifacts are cleared (no final/fabricated delivery).
+- `attendanceVerification.verified` is forced to `false` whenever `attendanceEvidenceRefs` is empty (so attendance cannot be marked verified without proof evidence).
+
+### Relevant tests + security results
+- Updated `evidenceUpload.test.ts` to validate audio+attendance-only submission (no required observations JSON).
+- Added `attendanceVerificationRequiresEvidence.test.ts` to confirm:
+  - `verified=false` when attendance evidence is missing.
+  - tender context used by AI matches the tender linked to the booking.
+- Added `extractionFailureBlocksFinal.test.ts` to confirm:
+  - extraction failure sets `processing_failed`
+  - `reportContent` + `transcription` are cleared
+  - delivery is blocked.
+- Updated briefing-intelligence API permission tests so youth agents and SMEs cannot access raw audio refs or attendance evidence refs.
+
+### Known limitations
+- AI extraction currently uses the audio transcript + tender context; attendance proof files are enforced for evidence presence (verification gating) but are not fed into transcript extraction.
+
 ## 13. Messaging
 
 Assignment-scoped `assignmentMessages` via Admin SDK; agent↔SME; push notification best-effort.

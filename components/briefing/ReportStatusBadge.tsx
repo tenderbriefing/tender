@@ -45,13 +45,53 @@ const STYLE_BY_STATUS: Record<
 
 export default function ReportStatusBadge({
   status,
+  mode = 'internal',
 }: {
   status: ReportStatus | string
+  mode?: 'internal' | 'youth-agent'
 }) {
-  const cfg = STYLE_BY_STATUS[String(status)] || {
-    label: String(status),
-    className: 'bg-slate-100 text-slate-700 ring-slate-200',
-  }
+  const youthCfg = {
+    awaiting_evidence: {
+      label: 'Upcoming',
+      className: 'bg-slate-100 text-slate-700 ring-slate-200',
+    },
+    evidence_uploaded: {
+      label: 'Submit Report',
+      className: 'bg-blue-50 text-blue-900 ring-blue-200',
+    },
+    processing: {
+      label: 'Processing',
+      className: 'bg-amber-50 text-amber-900 ring-amber-200',
+    },
+    draft_report: {
+      label: 'Processing',
+      className: 'bg-amber-50 text-amber-900 ring-amber-200',
+    },
+    agent_review: {
+      label: 'Processing',
+      className: 'bg-amber-50 text-amber-900 ring-amber-200',
+    },
+    processing_failed: {
+      label: 'Submit Report',
+      className: 'bg-blue-50 text-blue-900 ring-blue-200',
+    },
+    final: {
+      label: 'Completed',
+      className: 'bg-emerald-50 text-emerald-900 ring-emerald-200',
+    },
+    delivered: {
+      label: 'Completed',
+      className: 'bg-emerald-50 text-emerald-900 ring-emerald-200',
+    },
+  } as const
+
+  const cfg =
+    mode === 'youth-agent'
+      ? (youthCfg as any)[String(status)] || { label: 'Processing', className: 'bg-amber-50 text-amber-900 ring-amber-200' }
+      : STYLE_BY_STATUS[String(status)] || {
+          label: String(status),
+          className: 'bg-slate-100 text-slate-700 ring-slate-200',
+        }
 
   return (
     <span

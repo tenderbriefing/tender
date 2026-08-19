@@ -113,7 +113,7 @@ export default function AgentBriefingReportReviewPage() {
                 {createdAt ? ` · ${new Date(createdAt).toLocaleString('en-ZA')}` : null}
               </p>
             </div>
-            <ReportStatusBadge status={status} />
+              <ReportStatusBadge status={status} mode="youth-agent" />
           </div>
         </section>
 

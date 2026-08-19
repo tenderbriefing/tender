@@ -50,6 +50,17 @@ export async function GET(
         : undefined,
   }
 
+  // Role-based redaction: never expose raw audio refs or attendance evidence refs to youth agents or SMEs.
+  if (user.userType !== 'admin') {
+    view.audioFileRef = null
+    view.audioFileName = null
+    view.audioFileSizeMb = null
+    view.attendanceEvidenceRefs = []
+    if (view.transcription) {
+      view.transcription = { ...view.transcription, rawTranscriptRef: null }
+    }
+  }
+
   return NextResponse.json({ success: true, data: view })
 }
 

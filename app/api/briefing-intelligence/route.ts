@@ -75,6 +75,18 @@ export async function GET(request: NextRequest) {
             }
           : undefined,
     }
+
+    // Role-based redaction: SMEs/youth agents must not see raw audio refs or attendance evidence refs.
+    if (user.userType !== 'admin') {
+      report.audioFileRef = null
+      report.audioFileName = null
+      report.audioFileSizeMb = null
+      report.attendanceEvidenceRefs = []
+      if (report.transcription) {
+        report.transcription = { ...report.transcription, rawTranscriptRef: null }
+      }
+    }
+
     return report
   })
 
