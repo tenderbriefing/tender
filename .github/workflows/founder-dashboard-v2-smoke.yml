@@ -57,13 +57,6 @@ jobs:
           NEXT_PUBLIC_FOUNDER_USER_INTELLIGENCE: 'true'
           NEXT_PUBLIC_FOUNDER_DASHBOARD_V2: 'true'
           NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: 'false'
-          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.APIKEY }}
-          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.AUTHDOMAIN }}
-          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.PROJECTID }}
-          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.STORAGEBUCKET }}
-          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.MESSAGINGSENDERID }}
-          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.APPID }}
-          NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ secrets.MEASUREMENTID }}
         run: npm run build
 
       - name: Start Next against production Firestore
@@ -80,13 +73,6 @@ jobs:
           NEXT_PUBLIC_FOUNDER_DASHBOARD_V2: 'true'
           FOUNDER_EMAIL_ALLOWLIST: info@tenderbriefing.co.za
           NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: 'false'
-          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.APIKEY }}
-          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.AUTHDOMAIN }}
-          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.PROJECTID }}
-          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.STORAGEBUCKET }}
-          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.MESSAGINGSENDERID }}
-          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.APPID }}
-          NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ secrets.MEASUREMENTID }}
         run: |
           nohup npm run start -- --port 3000 --hostname 127.0.0.1 >/tmp/next-start.log 2>&1 &
           echo "next_pid=$!"
@@ -105,7 +91,6 @@ jobs:
       - name: Run founder V2 smoke
         env:
           SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
-          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.APIKEY }}
           STORAGE_ADAPTER: firestore
           FIREBASE_PROJECT_ID: tenderbriefing-34679
           FOUNDER_USER_INTELLIGENCE_ENABLED: 'true'
@@ -125,5 +110,4 @@ jobs:
           E2E_SKIP_WEBSERVER: '1'
           E2E_BASE_URL: http://127.0.0.1:3000
           SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
-          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.APIKEY }}
         run: npx playwright test tests/e2e/founder-dashboard-v2-smoke.spec.ts --trace off --reporter=line

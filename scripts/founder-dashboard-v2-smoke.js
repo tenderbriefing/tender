@@ -16,7 +16,9 @@ const BASE = (process.env.FOUNDER_SMOKE_BASE_URL || 'http://127.0.0.1:3000').rep
 const FOUNDER_EMAIL = 'info@tenderbriefing.co.za'
 const SME_EMAIL = 'ops-smoke-sme@tenderbriefing.co.za'
 const API_KEY =
-  process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_WEB_API_KEY || ''
+  process.env.FIREBASE_WEB_API_KEY ||
+  process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
+  'AIzaSyDk_QBzmOXJfdl4PPqycoKtecGu0ioCRuY'
 const PASSWORD = process.env.SMOKE_TEST_PASSWORD
 const LIFECYCLE = new Set(['paid', 'agent_assigned', 'attended', 'report_delivered', 'unpaid', 'cancelled'])
 
