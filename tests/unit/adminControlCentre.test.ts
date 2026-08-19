@@ -73,6 +73,14 @@ describe('admin control centre IA', () => {
     expect(getAdminHeaderNav({ showFounder: true }).length).toBeLessThanOrEqual(8)
   })
 
+  it('keeps V2 founder header to Founder and Console only', () => {
+    const nav = getAdminHeaderNav({ showFounder: true, founderV2: true })
+    expect(nav).toEqual([
+      { name: 'Founder', href: '/founder' },
+      { name: 'Console', href: '/admin/dashboard' },
+    ])
+  })
+
   it('returns read-only feature flag rows without throwing', () => {
     const flags = getClientFeatureFlagSnapshot()
     expect(flags.length).toBeGreaterThanOrEqual(3)

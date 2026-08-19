@@ -51,6 +51,16 @@ describe('hot-path Firestore safeguards', () => {
     expect(s).toMatch(/youth-agent/)
   })
 
+  it('founder dashboard v2 uses count aggregations and bounded request reads', () => {
+    const s = src('backend/services/founderDashboardService.js')
+    expect(s).toMatch(/\.count\(\)\.get\(\)/)
+    expect(s).toMatch(/getAttendanceRequests\(\{\s*limit:\s*REQUEST_COHORT_LIMIT/)
+    expect(s).toMatch(/paymentStatus === 'paid'/)
+    expect(unboundedGet(s, 'attendanceRequests')).toBe(false)
+    expect(unboundedGet(s, 'users')).toBe(false)
+    expect(s).not.toMatch(/getAllTenders/)
+  })
+
   it('catalogue API requires hotPathLog from repo root, not a parent directory', () => {
     const s = src('app/api/tender-briefings/route.ts')
     expect(s).toMatch(/require\('\.\.\/\.\.\/\.\.\/backend\/services\/hotPathLog'\)/)

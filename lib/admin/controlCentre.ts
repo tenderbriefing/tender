@@ -178,11 +178,21 @@ export const FOUNDER_HEADER_NAV = [
   { name: 'Finance', href: '/admin/finance' },
 ] as const
 
-export function getAdminHeaderNav(opts: { showFounder: boolean }): ReadonlyArray<{
+/** V2 founder chrome: executive dashboard + console. Ops modules stay under /admin. */
+export const FOUNDER_V2_HEADER_NAV = [
+  { name: 'Founder', href: '/founder' },
+  { name: 'Console', href: '/admin/dashboard' },
+] as const
+
+export function getAdminHeaderNav(opts: {
+  showFounder: boolean
+  founderV2?: boolean
+}): ReadonlyArray<{
   name: string
   href: string
 }> {
-  return opts.showFounder ? FOUNDER_HEADER_NAV : ADMIN_HEADER_NAV
+  if (!opts.showFounder) return ADMIN_HEADER_NAV
+  return opts.founderV2 ? FOUNDER_V2_HEADER_NAV : FOUNDER_HEADER_NAV
 }
 
 export function filterAdminModules(opts: {
@@ -227,6 +237,16 @@ export function getClientFeatureFlagSnapshot(): ClientFeatureFlagRow[] {
       label: 'Youth Agent Workspace',
       enabled: truthy(process.env.NEXT_PUBLIC_YOUTH_AGENT_WORKSPACE_ENABLED),
       note: 'Advisory UI only — server flag + pilot UIDs authorize',
+    },
+    {
+      key: 'founder_dashboard_v2',
+      label: 'Founder Dashboard V2',
+      enabled:
+        process.env.NEXT_PUBLIC_FOUNDER_DASHBOARD_V2 == null ||
+        process.env.NEXT_PUBLIC_FOUNDER_DASHBOARD_V2 === ''
+          ? true
+          : truthy(process.env.NEXT_PUBLIC_FOUNDER_DASHBOARD_V2),
+      note: 'Client mirror — set false with FOUNDER_DASHBOARD_V2 to restore legacy founder home',
     },
   ]
 }

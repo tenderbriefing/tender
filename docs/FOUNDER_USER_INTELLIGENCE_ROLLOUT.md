@@ -4,6 +4,9 @@ Feature flag: `founder_user_intelligence`
 Env: `FOUNDER_USER_INTELLIGENCE_ENABLED` + `NEXT_PUBLIC_FOUNDER_USER_INTELLIGENCE`  
 Allowlist: `FOUNDER_EMAIL_ALLOWLIST=info@tenderbriefing.co.za`
 
+Founder Dashboard V2 (this branch): Overview / SMEs / Youth Agents / Briefings / Settings.
+Set `FOUNDER_DASHBOARD_V2=false` and `NEXT_PUBLIC_FOUNDER_DASHBOARD_V2=false` to restore the previous Home + User Intelligence chrome. User Intelligence remains at `/founder/user-intelligence`. Technical ops stay under `/admin`.
+
 ## Suggested sequence
 
 1. Local: enable flags in `.env.local`, run `node scripts/founder-user-intelligence-qa.js`

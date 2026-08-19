@@ -1,16 +1,38 @@
 /** Fail-closed founder access — server and client helpers. */
 
 export const FOUNDER_FEATURE_FLAG = 'founder_user_intelligence'
+export const FOUNDER_DASHBOARD_V2_FLAG = 'founder_dashboard_v2'
+
+function envFlagOn(value?: string | null): boolean {
+  if (!value) return false
+  const s = value.trim().toLowerCase()
+  return s === '1' || s === 'true' || s === 'yes' || s === 'on'
+}
 
 export function isFounderIntelligenceEnabled(): boolean {
-  const v = process.env.FOUNDER_USER_INTELLIGENCE_ENABLED
-  return v === '1' || v === 'true' || v === 'yes'
+  return envFlagOn(process.env.FOUNDER_USER_INTELLIGENCE_ENABLED)
 }
 
 /** Client-visible mirror; still fail-closed unless explicitly enabled. */
 export function isFounderIntelligenceEnabledClient(): boolean {
-  const v = process.env.NEXT_PUBLIC_FOUNDER_USER_INTELLIGENCE
-  return v === '1' || v === 'true' || v === 'yes'
+  return envFlagOn(process.env.NEXT_PUBLIC_FOUNDER_USER_INTELLIGENCE)
+}
+
+/**
+ * Founder Dashboard V2 shell. Defaults on so this branch delivers the executive UI.
+ * Set FOUNDER_DASHBOARD_V2=false (and NEXT_PUBLIC_FOUNDER_DASHBOARD_V2=false) to restore
+ * the previous Home + User Intelligence founder chrome without deleting V2 routes.
+ */
+export function isFounderDashboardV2Enabled(): boolean {
+  const v = process.env.FOUNDER_DASHBOARD_V2
+  if (v == null || v === '') return true
+  return envFlagOn(v)
+}
+
+export function isFounderDashboardV2EnabledClient(): boolean {
+  const v = process.env.NEXT_PUBLIC_FOUNDER_DASHBOARD_V2
+  if (v == null || v === '') return isFounderDashboardV2Enabled()
+  return envFlagOn(v)
 }
 
 export function founderEmailAllowlist(): string[] {

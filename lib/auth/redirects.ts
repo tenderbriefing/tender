@@ -54,7 +54,7 @@ export const AGENT_NAV = [
 /** Lean authenticated header nav — full catalogue lives in the operations console. */
 export const ADMIN_NAV = ADMIN_HEADER_NAV
 
-export function adminNavForUser(opts: { showFounder: boolean }) {
+export function adminNavForUser(opts: { showFounder: boolean; founderV2?: boolean }) {
   return getAdminHeaderNav(opts)
 }
 
