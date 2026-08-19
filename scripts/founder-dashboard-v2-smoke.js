@@ -131,6 +131,28 @@ function kpiShape(overview) {
   }
 }
 
+async function idTokenViaAdminCustomToken(email) {
+  process.env.STORAGE_ADAPTER = process.env.STORAGE_ADAPTER || 'firestore'
+  process.env.FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'tenderbriefing-34679'
+  const { getFirebaseAdmin } = require('../backend/config/firebaseAdmin')
+  const admin = getFirebaseAdmin()
+  const user = await admin.auth().getUserByEmail(email)
+  const customToken = await admin.auth().createCustomToken(user.uid)
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${encodeURIComponent(API_KEY)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: customToken, returnSecureToken: true }),
+    }
+  )
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    return { ok: false, code: data.error?.message || `HTTP_${res.status}` }
+  }
+  return { ok: true, idToken: data.idToken, uid: user.uid }
+}
+
 async function independentPaidCohort() {
   process.env.STORAGE_ADAPTER = process.env.STORAGE_ADAPTER || 'firestore'
   process.env.FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'tenderbriefing-34679'
@@ -245,29 +267,57 @@ async function main() {
   const founderHeaders = { Authorization: `Bearer ${founderAuth.idToken}` }
 
   const smeAuth = await signIn(SME_EMAIL)
-  if (!smeAuth.ok) {
-    report.walkthrough.nonFounder = {
-      email: SME_EMAIL,
-      code: smeAuth.code,
-      proven: false,
-      note: 'SME account missing or password mismatch; 403 not proven live',
-    }
-    const skipCodes = new Set(['EMAIL_NOT_FOUND', 'INVALID_PASSWORD', 'INVALID_LOGIN_CREDENTIALS'])
-    if (skipCodes.has(smeAuth.code)) {
-      push('non_founder_403', true, { skipped: true, code: smeAuth.code })
-    } else {
-      push('non_founder_403', false, { code: smeAuth.code })
+  let smeToken = null
+  let smeSource = 'password'
+  if (smeAuth.ok) {
+    const smeTok = await signInToken(SME_EMAIL)
+    if (smeTok.ok) smeToken = smeTok.idToken
+  } else if (smeAuth.code !== 'EMAIL_NOT_FOUND') {
+    try {
+      const custom = await idTokenViaAdminCustomToken(SME_EMAIL)
+      if (custom.ok) {
+        smeToken = custom.idToken
+        smeSource = 'admin_custom_token'
+      } else {
+        report.walkthrough.nonFounder = {
+          email: SME_EMAIL,
+          code: smeAuth.code,
+          customCode: custom.code,
+          proven: false,
+        }
+      }
+    } catch (err) {
+      report.walkthrough.nonFounder = {
+        email: SME_EMAIL,
+        code: smeAuth.code,
+        adminError: err instanceof Error ? err.message : 'admin_failed',
+        proven: false,
+      }
     }
   } else {
-    const smeTok = await signInToken(SME_EMAIL)
+    report.walkthrough.nonFounder = { email: SME_EMAIL, code: smeAuth.code, proven: false }
+  }
+
+  if (smeToken) {
     const smeDash = await timed(`${BASE}/api/founder/dashboard?view=overview&period=30`, {
-      headers: { Authorization: `Bearer ${smeTok.idToken}` },
+      headers: { Authorization: `Bearer ${smeToken}` },
     })
     push('non_founder_403', smeDash.status === 403, {
       status: smeDash.status,
       latencyMs: smeDash.latencyMs,
+      source: smeSource,
     })
-    report.walkthrough.nonFounder = { email: SME_EMAIL, status: smeDash.status, proven: smeDash.status === 403 }
+    report.walkthrough.nonFounder = {
+      email: SME_EMAIL,
+      status: smeDash.status,
+      proven: smeDash.status === 403,
+      source: smeSource,
+    }
+  } else {
+    push('non_founder_403', false, {
+      skipped: smeAuth.code === 'EMAIL_NOT_FOUND',
+      code: smeAuth.code,
+    })
   }
 
   const periods = ['7', '30', '90', 'all']
