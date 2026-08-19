@@ -149,6 +149,14 @@ async function saveAttendanceRequest(request) {
   return request
 }
 
+/** Direct document lookup. Do not use getAttendanceRequests() to find one id. */
+async function getAttendanceRequestById(id) {
+  if (!id) return null
+  const db = getFirestore()
+  const snap = await db.collection(COLLECTIONS.ATTENDANCE_REQUESTS).doc(String(id)).get()
+  return snap.exists ? docToObject(snap) : null
+}
+
 async function getAttendanceRequests(filters = {}) {
   const db = getFirestore()
   let query = db.collection(COLLECTIONS.ATTENDANCE_REQUESTS)
@@ -413,6 +421,7 @@ module.exports = {
   getTenderById,
   upsertTenders,
   saveAttendanceRequest,
+  getAttendanceRequestById,
   getAttendanceRequests,
   saveBriefingReport,
   getBriefingReports,

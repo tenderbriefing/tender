@@ -70,7 +70,16 @@ PayFast: `docs/runbooks/PAYFAST.md`.
 
 WhatsApp remains **fail-closed** until an operator creates/mounts GSM secrets and adds them to Cloud Run `--set-secrets`. Expected names: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`. Do not invent credentials.
 
-Resend production currently mounts `RESEND_API_KEY=TENDERBRIEFING_API:latest` (full-access). Create a sending-only API key in the Resend dashboard, store it in GSM, and point `RESEND_API_KEY` at that secret. Keep `RESEND_FROM_EMAIL=hello@tenderbriefing.co.za` and the verified domain.
+Resend production currently mounts `RESEND_API_KEY=TENDERBRIEFING_API:latest` (full-access). Least-privilege rotation is **manual owner action** and must not interrupt sending:
+
+1. In Resend: create a **sending-only** API key restricted to the verified `tenderbriefing.co.za` domain.
+2. In Secret Manager: add a new version to the existing production secret (currently `TENDERBRIEFING_API`) **or** create a dedicated sending-only secret and point Cloud Run `RESEND_API_KEY` at it.
+3. Deploy one Cloud Run revision.
+4. Send a controlled transactional email (registration/welcome or booking receipt to the smoke inbox).
+5. Confirm delivery acceptance in Resend logs.
+6. Only then revoke the previous full-access key in Resend.
+
+Do not rotate if the sending-only key cannot be created or GSM cannot be updated. Keep the current mapping until then.
 
 ## Rotation
 
