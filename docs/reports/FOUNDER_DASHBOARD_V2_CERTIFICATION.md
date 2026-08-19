@@ -4,13 +4,15 @@
 **Exercise:** Final acceptance, controlled merge, production deploy, certification  
 **PR:** https://github.com/tenderbriefing/tender/pull/42  
 **Branch:** `feat/founder-dashboard-v2`  
-**Verdict:** READY FOR PRODUCTION (pre-merge gates passed; merge and deploy follow this commit)
+**Verdict:** READY FOR PRODUCTION — MERGED AND DEPLOYED
 
 ---
 
 ## 1. Executive Verdict
 
-**READY FOR PRODUCTION** — all mandatory pre-merge gates ran and passed on PR HEAD `e4848da92804ba80abeca047f980c48516154fbd` plus this certification commit.
+**READY FOR PRODUCTION — MERGED AND DEPLOYED.**
+
+PR #42 merged with merge-commit `ac63fa4c8469808bff274bb304827e63379ce6a3`. Production deploy of **master** succeeded: https://github.com/tenderbriefing/tender/actions/runs/32213598656. Post-deploy founder smoke against `https://www.tenderbriefing.co.za` succeeded: https://github.com/tenderbriefing/tender/actions/runs/32214922556 (base URL confirmed www). Paid count 3 and revenue 74700 cents still match Firestore. No rollback.
 
 `SMOKE_TEST_PASSWORD` exists in GitHub secrets (names-only `gh secret list`; value never printed). Founder account `info@tenderbriefing.co.za` is the default and production `FOUNDER_EMAIL_ALLOWLIST`. Live founder sign-in succeeded. Anonymous `/api/founder/dashboard` is **401**. Invalid token is **401**. Authenticated SME `ops-smoke-sme@tenderbriefing.co.za` is **403**. Founder Overview is **200** for periods 7 / 30 / 90 / all. Live paid count and revenue match Firestore `paymentStatus === 'paid'` and `paymentAmount` (else `quotedFee`). Signed-in Playwright walkthrough and responsive Overview passed. Allow-list, `verifyFounderUser` fail-closed behaviour, Firestore rules, PayFast, ITN, WhatsApp, catalogue, and Cloud Run memory were not weakened.
 
@@ -41,27 +43,29 @@ Prior certified implementation HEAD: `e4848da92804ba80abeca047f980c48516154fbd`
 
 ## 4. Merge SHA
 
-Recorded after merge. Repo convention: merge-commit (`Merge pull request #N`), not squash.
-
-PR state at certification: OPEN, `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`.
+`ac63fa4c8469808bff274bb304827e63379ce6a3` — `Merge pull request #42 from tenderbriefing/feat/founder-dashboard-v2` at 2026-08-19T03:50:36Z. Not squashed.
 
 ---
 
 ## 5. Final Production SHA
 
-Unchanged until deploy of merged master. Baseline remains `7d7eecc3575c88099f9e6dc58c8c32442743cd72` until the Deploy TenderBriefing workflow completes.
+`ac63fa4c8469808bff274bb304827e63379ce6a3` (`origin/master` after PR #42). Deploy workflow `headSha` matched this commit.
 
 ---
 
 ## 6. Production Revision / Image
 
-**Not yet deployed at this commit.** After merge, deploy is `workflow_dispatch` **Deploy TenderBriefing** on **master**. Rollback flags remain `FOUNDER_DASHBOARD_V2=false` and `NEXT_PUBLIC_FOUNDER_DASHBOARD_V2=false` plus redeploy. `cloudbuild.yaml` still deploys `--memory=1Gi`.
+Deploy: https://github.com/tenderbriefing/tender/actions/runs/32213598656 — **success** (Firebase, Cloud Run africa-south1, hosting proxy, domain health).
+
+Cloud Build: `6c65a871-247e-4c84-a627-25997fb0634c` in `africa-south1`, image repo `africa-south1-docker.pkg.dev/tenderbriefing-34679/tenderbriefing/`.
+
+`gcloud run services describe` from this identity (`smartprocure.ai@gmail.com`) is IAM-denied (`run.services.get`). Exact ready revision name / image digest not readable here. Rollback flags remain `FOUNDER_DASHBOARD_V2=false` and `NEXT_PUBLIC_FOUNDER_DASHBOARD_V2=false` plus redeploy. `cloudbuild.yaml` still deploys `--memory=1Gi`.
 
 ---
 
 ## 7. PR Status
 
-https://github.com/tenderbriefing/tender/pull/42 — **OPEN**, not draft.
+https://github.com/tenderbriefing/tender/pull/42 — **MERGED**.
 
 - Base: `master` at `7d7eecc`
 - No PR #41 (`fix/production-scale-closure` / `ab32714`) in `origin/master..HEAD`
@@ -248,13 +252,32 @@ Pre-merge 16 checks against V2 on PR HEAD + production Firestore (not yet on www
 15. Admin/Operational link — **PASS**
 16. Unauthorized API denied — **PASS** (401 anonymous + invalid; 403 SME)
 
-Post-merge www smoke is executed after Deploy TenderBriefing on master.
+Post-merge www smoke (16 checks) against https://www.tenderbriefing.co.za after deploy — run 32214922556 **success**, `FOUNDER_SMOKE_BASE_URL=https://www.tenderbriefing.co.za`:
+
+1. Founder login — **PASS**
+2. `/founder` V2 API/shell — **PASS** (Overview 200; HTML 200 contains Youth Agents nav copy)
+3. Six KPIs load — **PASS** (SMEs 28, Youth Agents 9, same period table as pre-merge)
+4. Revenue/Paid vs known paid records — **PASS** (3 × 24900 = 74700)
+5. Business Activity — **PASS** (API series)
+6. Needs Attention — **PASS** (2 paid awaiting assignment)
+7. SME directory — **PASS**
+8. One SME detail — **PASS**
+9. Youth Agent directory — **PASS**
+10. One Youth Agent detail — **PASS**
+11. Briefings — **PASS**
+12. One briefing detail — **PASS**
+13. Settings — **PASS**
+14. User Intelligence link — **PASS**
+15. Admin/Operational link — **PASS**
+16. Unauthorized API denied — **PASS** (www anonymous 401 + smoke 403 SME)
+
+Public `GET /api/health/firestore` → 200 `{status:ok, connected:true}`. No rollback.
 
 ---
 
 ## 23. Production Logs
 
-Pre-deploy: no V2 `founder_dashboard_v2` hot-path logs on the live revision. Smoke process initialized Firebase Admin for `tenderbriefing-34679` via GitHub Actions credentials (path only, no key material logged). Cloud Run `run.services.get` remains IAM-limited for the local identity; revision/image recorded after deploy if the Actions job prints them.
+Pre-deploy: no V2 logs on the previous revision. Post-deploy Cloud Run describe/logs remain IAM-denied for `smartprocure.ai@gmail.com`. Smoke against www succeeded with founder Overview 200, so V2 is serving. Cloud Build id `6c65a871-247e-4c84-a627-25997fb0634c`.
 
 ---
 
@@ -291,6 +314,6 @@ No rollback triggered at certification time.
 
 ## 27. Final Recommendation
 
-Pre-merge gates passed. Merge PR #42 with a merge-commit (not squash). Deploy **merged master** via Actions workflow_dispatch **Deploy TenderBriefing**. Re-run the 16 production checks on https://www.tenderbriefing.co.za. Rollback only if those fail.
+Pre-merge and post-deploy gates passed. PR #42 merged. Master `ac63fa4` deployed via Deploy TenderBriefing. www founder smoke passed. No rollback.
 
-**FOUNDER DASHBOARD V2 — READY FOR PRODUCTION**
+**FOUNDER DASHBOARD V2 — READY FOR PRODUCTION — MERGED AND DEPLOYED**
