@@ -55,6 +55,25 @@ service firebase.storage {
         && get(/databases/(default)/documents/users/$(request.auth.uid)).data.userType in ['admin', 'youth-agent']
         && exists(/databases/(default)/documents/attendanceRequests/$(requestId));
     }
+
+    // Briefing Intelligence Reports (audio/transcripts/PDF; report-scoped)
+    match /briefing-intelligence/{reportId}/{allPaths=**} {
+      allow read: if request.auth != null
+        && exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && (
+          get(/databases/(default)/documents/users/$(request.auth.uid)).data.userType == 'admin'
+          || (
+            exists(/databases/(default)/documents/briefingIntelligenceReports/$(reportId))
+            && (
+              get(/databases/(default)/documents/briefingIntelligenceReports/$(reportId)).data.agentId == request.auth.uid
+              || get(/databases/(default)/documents/briefingIntelligenceReports/$(reportId)).data.smeId == request.auth.uid
+            )
+          )
+        );
+      allow write: if request.auth != null
+        && exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && get(/databases/(default)/documents/users/$(request.auth.uid)).data.userType in ['admin', 'youth-agent'];
+    }
     
     // Allow public read access to profile pictures and public documents
     match /public/{allPaths=**} {
