@@ -1,8 +1,7 @@
 import type { NextRequest } from 'next/server'
 import {
-  verifyApiUser,
-  unauthorizedResponse,
-  forbiddenResponse,
+  verifyApiUserDetailed,
+  responseFromVerifyFailure,
   type ApiUserType,
   type VerifiedApiUser,
 } from '@/lib/auth/verifyApiUser'
@@ -11,12 +10,12 @@ export async function requireApiUser(
   request: NextRequest | Request,
   allowedTypes?: ApiUserType[]
 ): Promise<VerifiedApiUser | Response> {
-  const user = await verifyApiUser(
+  const result = await verifyApiUserDetailed(
     request.headers.get('authorization'),
     allowedTypes
   )
-  if (!user) return unauthorizedResponse()
-  return user
+  if (!result.ok) return responseFromVerifyFailure(result)
+  return result.user
 }
 
 export async function requireAdmin(request: NextRequest | Request) {
