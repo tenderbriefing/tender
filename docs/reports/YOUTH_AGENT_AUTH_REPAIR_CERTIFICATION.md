@@ -113,9 +113,9 @@ Also confirm Cloud Run has either `YOUTH_AGENT_WORKSPACE_ENABLED=true` or the ag
 | Field | Value |
 |-------|--------|
 | Branch | `fix/youth-agent-authentication` |
-| Starting SHA | `2067c7c` (master tip at branch creation) |
-| Final SHA | _(set after commit)_ |
-| PR | _(set after create)_ |
+| Starting SHA | `2067c7ccc9903647828b5380bd1fb91eb1049009` (master tip at branch creation) |
+| Final SHA | `12d3e9b770cb60ae229c3a0c4d81a888f6f15ea0` |
+| PR | [#45](https://github.com/tenderbriefing/tender/pull/45) |
 | Merge status | Not merged |
 | Production SHA | Unchanged (not deployed) |
 
