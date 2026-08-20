@@ -1,79 +1,35 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { FileSearch } from 'lucide-react'
+import { notFound } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
-import LoadingSpinner from '@/components/ui/LoadingSpinner'
-import EmptyState from '@/components/ui/EmptyState'
+import ClosedTenderBanner from '@/components/procurement/ClosedTenderBanner'
+import RelatedActiveTenders from '@/components/procurement/RelatedActiveTenders'
+import SmeProcurementIntelligencePanel from '@/components/procurement/SmeProcurementIntelligencePanel'
+import TenderActionPanel from '@/components/procurement/TenderActionPanel'
 import TenderHero from '@/components/procurement/TenderHero'
 import TenderIntelligence from '@/components/procurement/TenderIntelligence'
-import TenderActionPanel from '@/components/procurement/TenderActionPanel'
-import SmeProcurementIntelligencePanel from '@/components/procurement/SmeProcurementIntelligencePanel'
-import type { TenderBriefing } from '@/lib/tenderBriefing/types'
+import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
+import {
+  getIndexableTenderById,
+  getPublicTenders,
+} from '@/lib/seo/publicTenders'
+import { tenderHasUsefulHistoricalContent } from '@/lib/seo/tenderSeo'
 
-export default function TenderDetailsPage() {
-  const { id } = useParams<{ id: string }>()
-  const [tender, setTender] = useState<TenderBriefing | null>(null)
-  const [loading, setLoading] = useState(true)
+export default async function TenderDetailsPage({
+  params,
+}: {
+  params: { id: string }
+}) {
+  const tender = await getIndexableTenderById(params.id)
+  if (!tender || !tenderHasUsefulHistoricalContent(tender)) notFound()
 
-  useEffect(() => {
-    if (!id) return
-    let active = true
-    const load = async () => {
-      try {
-        const res = await fetch(`/api/tender-briefings/${id}`)
-        const json = await res.json()
-        if (!active) return
-        if (json.success) setTender(json.data)
-        else setTender(null)
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-    setLoading(true)
-    load()
-    const interval = setInterval(load, 60000)
-    return () => {
-      active = false
-      clearInterval(interval)
-    }
-  }, [id])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/30">
-        <Header />
-        <div className="flex items-center justify-center py-32">
-          <LoadingSpinner size="lg" />
-        </div>
-        <Footer />
-      </div>
-    )
-  }
-
-  if (!tender) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/30">
-        <Header />
-        <main className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-          <EmptyState
-            icon={FileSearch}
-            title="Tender opportunity not found"
-            description="It may have been removed from the official feed or the link may be incorrect. Browse all live opportunities to keep going."
-            action={{ label: 'Back to Tender Opportunities', href: '/tenders' }}
-          />
-        </main>
-        <Footer />
-      </div>
-    )
-  }
+  const isClosed = getTenderDisplayStatus(tender) === 'closed'
+  const activeTenders = isClosed ? await getPublicTenders() : []
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/20 pb-24 lg:pb-12">
       <Header />
+      <ClosedTenderBanner tender={tender} />
       <TenderHero tender={tender} />
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
@@ -81,6 +37,12 @@ export default function TenderDetailsPage() {
           <div className="space-y-8">
             <SmeProcurementIntelligencePanel tenderId={tender.id} />
             <TenderIntelligence tender={tender} />
+            {isClosed ? (
+              <RelatedActiveTenders
+                currentTender={tender}
+                activeTenders={activeTenders}
+              />
+            ) : null}
           </div>
           <TenderActionPanel tender={tender} />
         </div>

@@ -3,9 +3,15 @@ import type { AdminDashboardStats, SyncStatus, TenderBriefing } from '@/lib/tend
 
 /**
  * Platform policy: TenderBriefing only surfaces compulsory briefing opportunities.
- * Public catalogue cut-off is the briefing datetime (Africa/Johannesburg): once it
- * has passed, the tender is hidden from the website / public APIs. Closing-date and
- * OCDS `status` remain separate (display/sync); they are not the public list cut-off.
+ *
+ * Two visibility layers:
+ * - **Catalogue** (`isPlatformVisibleToViewer`): live list/API cut-off at briefing
+ *   datetime (Africa/Johannesburg). Past briefings drop off /tenders and list APIs.
+ * - **Public detail / SEO** (`isPublicDetailVisibleToViewer`): compulsory public
+ *   records remain on `/tenders/[id]` as historical procurement intelligence even
+ *   after the briefing datetime passes. Invalid or private records return 404.
+ *
+ * Closing-date and OCDS `status` remain separate (display/sync).
  * Private RFQs stay visible to their owner and admins regardless of briefing date.
  * Records are filtered at list time (not hard-deleted).
  */
@@ -18,6 +24,7 @@ export function isCompulsoryBriefingTender(tender: TenderBriefing): boolean {
   return tender.briefingCompulsory === true
 }
 
+/** Live catalogue / list API visibility (upcoming briefing only for anonymous viewers). */
 export function isPlatformVisibleToViewer(
   tender: TenderBriefing,
   viewer: PlatformViewer,
@@ -33,12 +40,39 @@ export function isPlatformVisibleToViewer(
   return hasUpcomingBriefing(tender.briefingDate, tender.briefingTime, options.now)
 }
 
+/**
+ * Public tender detail page visibility (SEO indexable historical records).
+ * Anonymous viewers may view compulsory public tenders even after briefing cut-off.
+ */
+export function isPublicDetailVisibleToViewer(
+  tender: TenderBriefing,
+  viewer: PlatformViewer,
+  options: { allowOptionalForAdmin?: boolean } = {}
+): boolean {
+  if (viewer?.userType === 'admin') {
+    return options.allowOptionalForAdmin === true ? true : isCompulsoryBriefingTender(tender)
+  }
+  if (tender.visibility === 'private') {
+    return viewer?.userType === 'sme' && tender.ownerUid === viewer.uid
+  }
+  return isCompulsoryBriefingTender(tender)
+}
+
 export function filterPlatformVisible(
   tenders: TenderBriefing[],
   viewer: PlatformViewer,
   options: { allowOptionalForAdmin?: boolean; now?: Date } = {}
 ): TenderBriefing[] {
   return tenders.filter((t) => isPlatformVisibleToViewer(t, viewer, options))
+}
+
+/** Indexable public tender detail records (active + closed compulsory briefings). */
+export function filterIndexablePublicTenders(
+  tenders: TenderBriefing[],
+  viewer: PlatformViewer = null,
+  options: { allowOptionalForAdmin?: boolean } = {}
+): TenderBriefing[] {
+  return tenders.filter((t) => isPublicDetailVisibleToViewer(t, viewer, options))
 }
 
 /** Fields safe for anonymous visitors (marketing + /tenders). */
