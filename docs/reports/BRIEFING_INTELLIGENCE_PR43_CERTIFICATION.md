@@ -1,4 +1,4 @@
-# TenderBriefing — PR #43 Final Briefing Intelligence Certification
+# TenderBriefing — PR #43 Release Candidate Certification
 
 **Date (UTC):** 2026-08-20  
 **Stop:** No merge, no production deploy, no flag changes.
@@ -9,7 +9,7 @@
 
 **PASS WITH CONDITIONS**
 
-The simplified Youth Agent path (audio + attendance proof → Submit Report) is implemented, server-authorized, and covered by unit, integration, Firestore emulator, and real Playwright UI tests. Conditions: this working tree is not yet pushed to PR #43; Playwright UI uses a client-only auth stub because `E2E_AGENT_TOKEN` is not a GitHub Actions secret; Founder signed-in Playwright was skipped in this shell (`SMOKE_TEST_PASSWORD` not exported locally).
+Release candidate `4a8fbfb` is committed, pushed, and GitHub CI is green. Youth Agent submit-evidence is certified via unit, integration, Firestore emulator, and Playwright browser tests. Conditions: explicit human merge approval required; post-deploy production smoke with a real authenticated Youth Agent required before production sign-off; optional Founder/SME token Playwright cases remain secret-gated (unrelated to PR #43).
 
 ## 2. Branch
 
@@ -21,155 +21,124 @@ The simplified Youth Agent path (audio + attendance proof → Submit Report) is 
 
 ## 4. Starting SHA
 
-`4b068a49451ccc2c71ad276453748fb87116deb6` (origin/feat/briefing-intelligence-report at this session)
+`4b068a49451ccc2c71ad276453748fb87116deb6`
 
-## 5. Final SHA
+## 5. Final committed SHA
 
-Uncommitted certification work on top of `4b068a4`. Push required before CI re-runs on the PR.
+`4a8fbfb122004d52f22d74aa7e298881b6b9d4ca` — `test: certify youth agent briefing submission flow`
 
-## 6. Files changed (this certification pass)
+## 6. Push status
+
+**Pushed** to `origin/feat/briefing-intelligence-report` (`4b068a4..4a8fbfb`).
+
+## 7. GitHub CI URL
+
+[CI run 32338627117](https://github.com/tenderbriefing/tender/actions/runs/32338627117) (head `4a8fbfb`)
+
+Supplementary: [Founder Dashboard V2 smoke 32338627170](https://github.com/tenderbriefing/tender/actions/runs/32338627170) — success on same SHA.
+
+## 8. CI result
+
+**success** — all required CI jobs passed on `4a8fbfb`.
+
+| Job | Result |
+|-----|--------|
+| Typecheck, lint, unit, integration, QA | PASS |
+| Firestore emulator IDOR matrix | PASS |
+| Production build | PASS |
+| Playwright public/a11y gates | PASS |
+
+## 9. PR diff review
+
+Reviewed PR #43 file list and certification commit. No secrets, test credentials, debug statements, generated artefacts, accidental dependency changes, or production auth bypasses. `test-results/` excluded via `.gitignore`. E2E auth stub is test-gated (see §10). Certification commit adds only PR #43 workflow files listed in §6 of prior pass plus `.github/workflows/ci.yml` (E2E build flag) and `.gitignore`.
+
+## 10. E2E authentication stub safety
+
+**Conclusion: fail-closed; not activatable in production.**
+
+`lib/e2e/uiAuthStub.ts` + `AuthProvider` stub path requires **all** of:
+
+1. Build-time `NEXT_PUBLIC_E2E_AUTH_STUB_ALLOWED=1` — set only in the CI Playwright job build step; **never** in production deploy builds.
+2. Runtime localhost host only (`127.0.0.1`, `localhost`, `[::1]`).
+3. `window.__TB_E2E_UI_STUB__` via Playwright `addInitScript` (not query params, localStorage, cookies, or client headers).
+
+Regression: `tests/briefing-intelligence/unit/uiAuthStubSafety.test.ts` (5 tests). Normal Firebase `onAuthStateChanged` path unchanged when stub inactive. Server-side assignment/evidence authorization unchanged.
+
+## 11. Youth Agent browser tests
+
+**PASS** — `tests/e2e/submit-evidence-ui.spec.ts` → **5/5 passed** (local and CI Playwright job).
+
+## 12. Full Playwright result
+
+**21 passed / 5 skipped / 0 failed** (authoritative: CI Playwright job on run 32338627117).
+
+## 13. Explanation of all skipped Playwright tests
+
+All five skips are **unrelated** to Youth Agent authentication, workspace, Briefing Intelligence, evidence submission, assignment authorization, or tender resolution:
+
+| # | Spec | Test | Skip reason |
+|---|------|------|-------------|
+| 1 | `founder-dashboard-v2-smoke.spec.ts` | Overview KPIs, periods, chart, Needs Attention | `FOUNDER_E2E=1` + `SMOKE_TEST_PASSWORD` not set |
+| 2 | `founder-dashboard-v2-smoke.spec.ts` | SME, Youth Agent, Briefings, Settings links | same |
+| 3 | `founder-dashboard-v2-smoke.spec.ts` | responsive Overview at 375 and 1280 | same |
+| 4 | `release-gates.spec.ts` | SME can list attendance requests with token | `E2E_SME_TOKEN` absent |
+| 5 | `release-gates.spec.ts` | SME token cannot call admin scrape status | `E2E_SME_TOKEN` absent |
+
+No PR #43 scenario is skipped.
+
+## 14. Firestore emulator result
+
+**PASS** — CI job: **43 passed** (2 files). Local: same with `openjdk@21` on PATH.
+
+## 15. Unit/integration result
+
+**PASS** — CI `npm test`: **47 files / 285 tests** (includes briefing-intelligence suite + `uiAuthStubSafety`).
+
+## 16. Build result
+
+**PASS** — CI Production build job and CI Playwright E2E build (`NEXT_PUBLIC_E2E_AUTH_STUB_ALLOWED=1`) both succeeded.
+
+## 17. Security/QA gates
+
+**PASS** — CI verify job: `qa:firestore-rules`, `qa:google-auth`, `qa:route-retirement`, `qa:config`, `qa:secrets-scan`, dependency audit gate.
+
+## 18. Known conditions
+
+1. **Do not merge** until explicit human approval (this certification stops before merge).
+2. **Do not deploy** until post-merge release governance.
+3. No live Firebase Youth Agent Playwright session (`E2E_AGENT_TOKEN` not configured in Actions); UI tests use fail-closed client stub + route mocks; server auth unchanged.
+4. Attendance proof gates verification presence; images are not transcribed.
+5. Closing-date extension fixture is mock-provider-only (`BRIEFING_INTELLIGENCE_PROVIDER=mock`).
+
+## 19. Merge recommendation
+
+**Ready for merge review** after explicit approver sign-off. All required CI checks green on `4a8fbfb`. Do **not** auto-merge.
+
+## 20. Production smoke plan
+
+After eventual deployment, verify with a **real authenticated Youth Agent**:
+
+1. Open assigned briefing only (unassigned returns not authorised).
+2. Upload audio recording.
+3. Upload attendance proof.
+4. Click **Submit Report** → processing completes.
+5. Completed intelligence report visible to SME.
+6. Advertised tender comparison correct.
+7. Material amendment (e.g. closing-date extension) surfaced correctly in report content.
+
+---
+
+## Certification commit files
 
 - `app/agent/workspace/assignments/[requestId]/submit-evidence/page.tsx`
-- `components/providers/AuthProvider.tsx` (Playwright `window.__TB_E2E_UI_STUB__` only)
+- `components/providers/AuthProvider.tsx`
 - `lib/e2e/uiAuthStub.ts`
-- `lib/briefing-intelligence/transcriptionService.ts` (mock-provider fixture path)
-- `playwright.config.ts` (local Chrome channel; standalone static copy)
+- `lib/briefing-intelligence/transcriptionService.ts`
+- `playwright.config.ts`
+- `.github/workflows/ci.yml`
+- `.gitignore`
 - `tests/e2e/submit-evidence-ui.spec.ts`
 - `tests/briefing-intelligence/unit/submitEvidencePageRegression.test.ts`
+- `tests/briefing-intelligence/unit/uiAuthStubSafety.test.ts`
 - `tests/briefing-intelligence/integration/closingDateExtensionExtraction.test.ts`
 - `docs/reports/YOUTH_AGENT_WORKSPACE_V1_CERTIFICATION.md`
-
-## 7. Youth Agent submission fields
-
-Audio recording, attendance proof, Submit Report. No tender upload or observations form.
-
-## 8. Browser/UI regression test result
-
-**PASS** — `npx playwright test tests/e2e/submit-evidence-ui.spec.ts` → 5 passed.
-
-Harness: Playwright `addInitScript` + route mocks for workspace probe/assignment GET. Server evidence/authz code paths are **not** weakened. Missing secret: `E2E_AGENT_TOKEN` (not in GH Actions secrets list). Limitation: environment, not a product defect.
-
-## 9. Static regression test result
-
-**PASS** — `tests/briefing-intelligence/unit/submitEvidencePageRegression.test.ts` (source-level guard only; not a browser test).
-
-## 10. Assigned-agent access result
-
-**PASS** — Playwright: assigned stub YA sees Upload Briefing Recording, Upload Attendance Proof, Submit Report.
-
-## 11. Unassigned-agent denial result
-
-**PASS** — Playwright: no submit form for unassigned request (unauthorised / redirect / no Submit Report). Server: `GET /api/agent/workspace/assignments/[requestId]` returns 404 when `getAssignmentDetail` finds no assignee match.
-
-## 12. Missing-audio validation result
-
-**PASS** — Playwright toast `Select audio first`; API `evidenceUpload.test.ts` requires audio.
-
-## 13. Missing-attendance validation result
-
-**PASS** — Playwright toast `Select attendance evidence` after audio selected; API requires ≥1 attendance file.
-
-## 14. Tender-document absence result
-
-**PASS** — Playwright: no tender document/id/number/title fields, no textarea, no observations/amendment/notes wizard.
-
-## 15. Server-side tender resolution result
-
-**PASS** — `evidenceUpload.test.ts` `auto-resolves tender from booking (ignores agent tender fields)`.
-
-## 16. Cross-agent authorization result
-
-**PASS** — `evidenceUpload.test.ts` `"YA cannot upload evidence for someone else's assignment"` (403, not assigned). Frontend `workspaceGet` is not the security boundary.
-
-## 17. Closing-date extraction result
-
-**PASS** — Advertised closing `12 September 2026`; briefing fixture extends to `19 September 2026`; `changesAndAddenda[0]` states the extension.
-
-## 18. No-fabricated-amendments result
-
-**PASS** — Exactly one `changesAndAddenda` item; Q&A separate (`questionsAndAnswers.length === 1`); no BOQ/revised-specification invention. Mock-provider regex is isolated (`BRIEFING_INTELLIGENCE_PROVIDER=mock`); production default remains OpenAI.
-
-## 19. Attendance verification result
-
-**PASS** — `attendanceVerificationRequiresEvidence.test.ts`: `verified=false` without evidence refs.
-
-## 20. Processing failure / fail-closed result
-
-**PASS** — `extractionFailureBlocksFinal.test.ts`: `processing_failed`, `reportContent`/`transcription` cleared, delivery blocked.
-
-## 21. SME API redaction
-
-**PASS** — `permissions.test.ts`: SME GET redacts `audioFileRef`, `attendanceEvidenceRefs`, `transcription.rawTranscriptRef`.
-
-## 22. Youth Agent API redaction
-
-**PASS** — same file: YA GET redacts those fields.
-
-## 23. Admin access retention
-
-**PASS** — admin GET retains storage refs.
-
-## 24. Typecheck
-
-**PASS** — `npm run typecheck`
-
-## 25. Lint
-
-**PASS** — `npm run lint` (pre-existing ConnectorMatching hook warning only)
-
-## 26. Unit/integration tests
-
-**PASS** — `npm test` → 46 files / 280 tests
-
-## 27. Build
-
-**PASS** — `npm run build` (Secret Manager billing warnings during page collect; build completed)
-
-## 28. Secrets scan
-
-**PASS** — `npm run qa:secrets-scan`
-
-## 29. Config QA
-
-**PASS** — `npm run qa:config`
-
-## 30. Route retirement QA
-
-**PASS** — `npm run qa:route-retirement`
-
-## 31. Firestore rules QA
-
-**PASS** — `npm run qa:firestore-rules`
-
-## 32. Google auth QA
-
-**PASS** — `npm run qa:google-auth` (57 checks)
-
-## 33. Firestore emulator
-
-**PASS** — `PATH=/opt/homebrew/opt/openjdk@21/bin:$PATH npm run test:firestore-emulator` → 43 passed. (Earlier “Java missing” was PATH, not absence of JDK.)
-
-## 34. Playwright
-
-**PASS (with skips)** — Canonical: `npm run test:e2e` / `npx playwright test`
-
-| Result | Count |
-|--------|-------|
-| Passed | 21 |
-| Failed | 0 |
-| Skipped | 5 |
-
-Skipped: 3 founder dashboard smoke (`FOUNDER_E2E=1` + `SMOKE_TEST_PASSWORD`); 2 optional SME token API tests (`E2E_SME_TOKEN` absent). Local Chromium zip for Playwright 1148 timed out; tests used installed Google Chrome (`channel: 'chrome'`, CI still uses Playwright Chromium).
-
-## 35. Known limitations
-
-1. Working tree not pushed; CI on PR HEAD `4b068a4` does not yet include this pass.
-2. No live Firebase Youth Agent session in Playwright (`E2E_AGENT_TOKEN` not configured in Actions).
-3. Attendance images gate verification; they are not transcribed.
-4. Mock closing-date extraction is mock-provider-only.
-
-## 36. Recommended release action
-
-Do **not** merge or deploy until these files are committed and pushed, PR CI is green, and a human approves. After that, merge #43 under existing release governance.
-
-Release criterion: a Youth Agent can open only their assigned briefing, upload only recording + attendance proof, click Submit Report, and TenderBriefing generates intelligence against the advertised tender including material amendments — **met in product + tests, pending push/CI**.
