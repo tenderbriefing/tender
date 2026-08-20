@@ -9,6 +9,7 @@ import WorkspaceShell from '@/components/agent/workspace/WorkspaceShell'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { auth } from '@/lib/firebase'
+import { workspaceGet } from '@/lib/agent/workspace/clientApi'
 
 // Youth Agent submission is intentionally minimal:
 // only audio + attendance proof (no tender fields, no observations).
@@ -107,6 +108,8 @@ export default function SubmitEvidenceWizardPage() {
   const [submissionProgress, setSubmissionProgress] = useState(0)
   const [submittedReportId, setSubmittedReportId] = useState<string | null>(null)
   const previewsRef = useRef<string[]>([])
+  const [assignmentLoading, setAssignmentLoading] = useState(true)
+  const [assignmentAllowed, setAssignmentAllowed] = useState(true)
 
   useEffect(() => {
     if (!authLoading) {
@@ -114,6 +117,29 @@ export default function SubmitEvidenceWizardPage() {
       else if (userProfile?.userType !== 'youth-agent') router.push('/dashboard')
     }
   }, [authLoading, user, userProfile, router])
+
+  // Fail closed: only the assigned Youth Agent may open the submit-evidence page.
+  useEffect(() => {
+    if (authLoading) return
+    if (!user || userProfile?.userType !== 'youth-agent') return
+    if (!requestId) {
+      setAssignmentLoading(false)
+      setAssignmentAllowed(false)
+      router.push('/agent/workspace/assignments')
+      return
+    }
+
+    setAssignmentLoading(true)
+    setAssignmentAllowed(true)
+    workspaceGet(`/api/agent/workspace/assignments/${requestId}`)
+      .then(() => setAssignmentLoading(false))
+      .catch((e) => {
+        toast.error(e instanceof Error ? e.message : 'Not authorised')
+        setAssignmentLoading(false)
+        setAssignmentAllowed(false)
+        router.push('/agent/workspace/assignments')
+      })
+  }, [authLoading, user, userProfile, requestId, router])
 
   useEffect(() => {
     return () => {
@@ -237,6 +263,36 @@ export default function SubmitEvidenceWizardPage() {
     )
   }
 
+  if (assignmentLoading) {
+    return (
+      <WorkspaceShell title="Submit Report">
+        <div className="flex justify-center py-16">
+          <LoadingSpinner />
+        </div>
+      </WorkspaceShell>
+    )
+  }
+
+  if (!assignmentAllowed) {
+    return (
+      <WorkspaceShell title="Submit Report">
+        <div className="space-y-4 py-10">
+          <p className="text-center text-sm font-semibold text-slate-700">
+            You are not authorised to submit this briefing report.
+          </p>
+          <div className="flex justify-center">
+            <Link
+              href="/agent/workspace/assignments"
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+            >
+              Back to assignments
+            </Link>
+          </div>
+        </div>
+      </WorkspaceShell>
+    )
+  }
+
   return (
     <WorkspaceShell title="Submit Report">
       <div className="space-y-6">
@@ -258,10 +314,10 @@ export default function SubmitEvidenceWizardPage() {
           className="space-y-5"
         >
           <section className="rounded-2xl border border-slate-200 bg-white p-4">
-            <h3 className="text-sm font-bold text-slate-900">Audio recording</h3>
+          <h3 className="text-sm font-bold text-slate-900">Upload Briefing Recording</h3>
             <p className="mt-1 text-sm text-slate-600">
-              Upload your MP3/M4A/WAV/AAC recording. Maximum size:{' '}
-              <span className="font-semibold">100MB</span>.
+            Upload the complete audio recording of the tender briefing.
+            Maximum size: <span className="font-semibold">100MB</span>.
             </p>
 
             <div className="mt-4">
@@ -316,9 +372,10 @@ export default function SubmitEvidenceWizardPage() {
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-4">
-            <h3 className="text-sm font-bold text-slate-900">Attendance proof</h3>
+          <h3 className="text-sm font-bold text-slate-900">Upload Attendance Proof</h3>
             <p className="mt-1 text-sm text-slate-600">
-              Upload at least <span className="font-semibold">1</span> file: JPEG/PNG/WebP/PDF.
+            Upload a clear photo or document showing that you attended the briefing.
+            At least <span className="font-semibold">1</span> file is required (JPEG/PNG/WebP/PDF).
             </p>
 
             <div className="mt-4">

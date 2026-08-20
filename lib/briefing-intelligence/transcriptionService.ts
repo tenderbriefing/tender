@@ -414,6 +414,25 @@ export class OpenAITranscriptionProvider implements TranscriptionProvider {
 export class MockTranscriptionProvider implements TranscriptionProvider {
   async transcribe(audioUrl: string): Promise<TranscriptionResult> {
     // Clearly marked mock transcript.
+    // For certain test fixtures we embed deterministic statements so extraction
+    // can be asserted without calling external AI providers.
+    const audio = String(audioUrl || '').toLowerCase()
+    if (audio.includes('closingdate-extended-12-19')) {
+      return {
+        provider: 'mock-provider',
+        transcriptText: [
+          'OFFICIAL: The closing date has been extended from 12 September 2026 to 19 September 2026.',
+          'OFFICIAL: Submission requirements remain aligned with the published tender, subject to verifying the formal written addendum.',
+          'BIDDER: Can you confirm the final closing date for submissions?',
+          'OFFICIAL: Yes. Submissions close on 19 September 2026.',
+        ].join('\n'),
+        transcriptWordCount: null,
+        language: null,
+        confidence: null,
+        completedAt: nowIso(),
+      }
+    }
+
     return {
       provider: 'mock-provider',
       transcriptText: `MOCK_TRANSCRIPT: transcription not executed for ${audioUrl}`,
@@ -425,10 +444,44 @@ export class MockTranscriptionProvider implements TranscriptionProvider {
   }
 
   async extractIntelligence(
-    _transcript: string,
+    transcript: string,
     tenderContext: TenderContext
   ): Promise<BriefingReportContent> {
     const processingDate = nowIso()
+
+    // Deterministic, test-only extraction based on fixture transcript markers.
+    // In production, the mock provider should only be used in test/dev environments.
+    const t = String(transcript || '')
+    const closingMatch = t.match(
+      /extended\s+from\s+(\d{1,2}\s+[a-zA-Z]+\s+\d{4})\s+to\s+(\d{1,2}\s+[a-zA-Z]+\s+\d{4})/i
+    )
+
+    const changesAndAddenda: BriefingReportContent['changesAndAddenda'] = []
+    const keyDates: BriefingReportContent['keyDates'] = []
+    const questionsAndAnswers: BriefingReportContent['questionsAndAnswers'] = []
+
+    if (closingMatch) {
+      const original = closingMatch[1]
+      const revised = closingMatch[2]
+
+      changesAndAddenda.push({
+        change: `Closing date extended from ${original} to ${revised}`,
+        impact:
+          'Plan the SME submission against the revised closing date, but confirm any formal written addendum issued by the procuring entity before submission.',
+      })
+
+      keyDates.push({
+        date: revised,
+        description: `Closing date extended to ${revised} (announcement at briefing).`,
+      })
+
+      questionsAndAnswers.push({
+        question: 'Can you confirm the final closing date for submissions?',
+        answer: `Submissions close on ${revised}.`,
+        askedBy: 'Bidder',
+      })
+    }
+
     return {
       coverHeader: {
         reportId: tenderContext.reportId,
@@ -452,10 +505,10 @@ export class MockTranscriptionProvider implements TranscriptionProvider {
       },
       keyRequirements: [],
       clarifications: [],
-      questionsAndAnswers: [],
-      changesAndAddenda: [],
+      questionsAndAnswers,
+      changesAndAddenda,
       complianceRisks: [],
-      keyDates: [],
+      keyDates,
       recommendedActions: [],
       attendanceInfo: {
         estimatedAttendees: null,

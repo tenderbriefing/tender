@@ -129,6 +129,7 @@ Required from Youth Agent:
 
 ### Relevant tests + security results
 - Updated `evidenceUpload.test.ts` to validate audio+attendance-only submission (no required observations JSON).
+  Cross-agent denial: `"YA cannot upload evidence for someone else's assignment"` (403 / not assigned).
 - Added `attendanceVerificationRequiresEvidence.test.ts` to confirm:
   - `verified=false` when attendance evidence is missing.
   - tender context used by AI matches the tender linked to the booking.
@@ -137,6 +138,14 @@ Required from Youth Agent:
   - `reportContent` + `transcription` are cleared
   - delivery is blocked.
 - Updated briefing-intelligence API permission tests so youth agents and SMEs cannot access raw audio refs or attendance evidence refs.
+- **Source-level regression (not a browser test):** `tests/briefing-intelligence/unit/submitEvidencePageRegression.test.ts` guards page source for required labels, fail-closed assignment `workspaceGet`, and missing-file toasts.
+- **Real browser/UI regression:** `tests/e2e/submit-evidence-ui.spec.ts` (Playwright) renders `/agent/workspace/assignments/[requestId]/submit-evidence` and asserts assigned-agent copy, missing-audio/attendance blocking, no tender fields, and unassigned denial.
+- Added `closingDateExtensionExtraction.test.ts` as a realistic fixture to prove closing-date extensions surface in the SME report without inventing additional amendments.
+
+### Playwright + emulator (2026-08-20 local)
+- `npm run test:firestore-emulator`: **43 passed** (Java via Homebrew `openjdk@21` on PATH).
+- `npx playwright test tests/e2e/submit-evidence-ui.spec.ts`: **5 passed**.
+- `npx playwright test` (full suite): **21 passed, 5 skipped, 0 failed**. Skips: Founder Dashboard signed-in smoke (`FOUNDER_E2E`/`SMOKE_TEST_PASSWORD` not in this shell) and optional `E2E_SME_TOKEN` API cases. Canonical command: `npm run test:e2e`.
 
 ### Known limitations
 - AI extraction currently uses the audio transcript + tender context; attendance proof files are enforced for evidence presence (verification gating) but are not fed into transcript extraction.

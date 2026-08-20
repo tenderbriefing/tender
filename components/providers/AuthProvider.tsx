@@ -5,6 +5,7 @@ import { User } from 'firebase/auth'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { UserProfile, getUserProfile } from '@/lib/auth'
+import { readE2eUiAuthStub } from '@/lib/e2e/uiAuthStub'
 
 interface AuthContextType {
   user: User | null
@@ -56,6 +57,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   useEffect(() => {
+    // Playwright-only: build flag + localhost + window.__TB_E2E_UI_STUB__ via addInitScript.
+    // No effect on production users or production deploy builds.
+    const e2eStub = readE2eUiAuthStub()
+    if (e2eStub) {
+      const stubUser = {
+        uid: e2eStub.uid,
+        email: e2eStub.email || 'e2e-agent@tenderbriefing.test',
+        getIdToken: async () => e2eStub.token || 'e2e-stub-token',
+      } as unknown as User
+      try {
+        Object.defineProperty(auth, 'currentUser', {
+          configurable: true,
+          get: () => stubUser,
+        })
+      } catch {
+        /* ignore if auth.currentUser is non-configurable */
+      }
+      setUser(stubUser)
+      setUserProfile({
+        uid: e2eStub.uid,
+        email: e2eStub.email || 'e2e-agent@tenderbriefing.test',
+        userType: 'youth-agent',
+        displayName: 'E2E Youth Agent',
+      } as UserProfile)
+      setLoading(false)
+      return
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
       setUser(nextUser)
 
