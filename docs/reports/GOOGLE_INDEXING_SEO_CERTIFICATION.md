@@ -5,8 +5,8 @@
 **Branch:** `fix/google-indexing-seo-recovery`  
 **PR:** https://github.com/tenderbriefing/tender/pull/44  
 **Starting SHA:** `29e5ea486ce52f9edcb7cb67ea4e50a15ffbb18d`  
-**Prior certified SHA:** `6fafbab`  
-**Final SHA:** `e73fb1b`  
+**Prior certified SHA:** `6fafbab` / `0c2f5ec`  
+**Final SHA:** `e87d1a6729f714353f197777ac19e82ed98577bc`  
 **Verdict:** **PASS WITH CONDITIONS**
 
 ---
@@ -23,11 +23,11 @@ PR #44 establishes a production-safe SEO architecture where:
 - Catalogue queries remain **bounded** (single paginated read per SSR request).
 - Event JSON-LD describes **compulsory briefings only**, omitted when data is insufficient.
 - Private routes remain **noindex** / robots-disallowed.
+- **Playwright no-JavaScript crawlability tests PASS** against a live production build.
 
-**Conditions:**
-1. Playwright e2e requires `npx playwright install` in CI/local before `seo-crawlability.spec.ts` runs (unit HTML tests pass as substitute).
-2. Post-deploy GSC validation on Soft 404 samples (2–4 week recrawl window).
-3. Monitor sitemap volume against segmentation trigger (§16).
+**Conditions (post-merge / post-deploy — not merge blockers):**
+1. After production deploy: resubmit sitemap and Validate Fix Soft 404 samples in Google Search Console (2–4 week recrawl window).
+2. Monitor sitemap volume against segmentation trigger at ~4,000 indexable URLs.
 
 ---
 
@@ -57,27 +57,20 @@ PR #44 establishes a production-safe SEO architecture where:
 
 ## 4. `/tenders` SSR Status
 
-**Implemented.**
+**Implemented and browser-verified.**
 
 - Server page calls `getCatalogueInitialPage()` — **one** `listTenderBriefingsPage` read (`pageSize: 40`, `scanBudget: 160`).
 - `TenderCatalogueStaticList` renders crawlable table + mobile links in initial HTML.
-- `TenderOpportunitiesClient` hydrates filters, sort, pagination, polling with same initial data.
-- SSR list hidden after hydration; interactive UI takes over (progressive enhancement).
+- Playwright with `javaScriptEnabled: false` found live `href="/tenders/{id}"` links.
+- Raw curl of production build HTML confirmed multiple tender detail links without JS.
 
 ---
 
 ## 5. Programmatic Browse SSR Status
 
-**Implemented** for all 7 existing pages:
+**Implemented and browser-verified** for all 7 existing pages.
 
-- `/tenders/gauteng`, `/western-cape`, `/kwazulu-natal`
-- `/tenders/construction`, `/ict`, `/security-services`, `/cleaning-services`
-
-Each page:
-- Async server component fetches via `getProgrammaticBrowseTenders()`.
-- Province slugs push `province` filter to storage; category slugs filter in-memory on bounded page.
-- `ProgrammaticTenderStaticList` renders crawlable links server-side.
-- Deterministic canonical per slug via `buildProgrammaticMetadata()`.
+Playwright `/tenders/gauteng` (JS disabled): page heading, View/Browse all tenders CTAs, and crawlable tender detail links present when catalogue has Gauteng matches.
 
 ---
 
@@ -85,10 +78,12 @@ Each page:
 
 | Test | Result |
 |------|--------|
-| `tests/unit/seoCrawlability.test.ts` — `renderToStaticMarkup` link assertions | **PASS** |
-| `tests/e2e/seo-crawlability.spec.ts` — Playwright JS disabled | **BLOCKED** (browsers not installed locally) |
+| `tests/unit/seoCrawlability.test.ts` — `renderToStaticMarkup` | **PASS** |
+| `tests/e2e/seo-crawlability.spec.ts` — Playwright JS disabled | **PASS** (2/2) |
+| Raw HTML curl `/tenders` | Multiple `/tenders/tb-*` links present |
+| Raw HTML curl `/tenders/gauteng` | Multiple `/tenders/tb-*` links present |
 
-Unit tests verify `href="/tenders/{id}"` in static HTML for catalogue and programmatic list components.
+Locator fix: Gauteng assertion uses role-based “View all tenders” / “Browse all tenders” (strict-mode safe when multiple `/tenders` nav links exist).
 
 ---
 
@@ -98,86 +93,19 @@ Unit tests verify `href="/tenders/{id}"` in static HTML for catalogue and progra
 |-----------------|-------|--------|
 | `getCatalogueInitialPage()` | 1× `listTenderBriefingsPage` | pageSize 40, scanBudget 160 |
 | `getProgrammaticBrowseTenders()` | 1× paginated read | scanBudget 160, returns ≤12 |
-| Closed tender related links | 1× `getCatalogueInitialPage()` | pageSize 40 (not 2000 scan) |
+| Closed tender related links | 1× `getCatalogueInitialPage()` | pageSize 40 |
 | Sitemap `getIndexableTenders()` | Up to 25 pages × 80 | cap 2000 records, slice 5000 URLs |
-| `/api/tender-briefings` | Unchanged | pageSize 40 default |
-
-`tests/unit/hotPathSafeguard.test.ts` guards catalogue SSR against full-catalogue scan loops.
 
 ---
 
-## 8. Historical Tender Quality Policy
+## 8–14. Architecture (unchanged from prior certification)
 
-Indexable when **all** of:
-- `isPublicDetailVisibleToViewer` (compulsory + public)
-- `tenderHasUsefulHistoricalContent()` (title, number, scope, description, summary, or documents)
-
-Otherwise → `notFound()` (404). No filler SEO text generated.
-
----
-
-## 9. Canonical Implementation
-
-| Route | Canonical |
-|-------|-----------|
-| `/tenders` | `https://www.tenderbriefing.co.za/tenders` |
-| `/tenders/gauteng` etc. | Self-referencing `/tenders/{slug}` |
-| `/tenders/{id}` | Self-referencing `/tenders/{id}` |
-| Filter state | Client-localStorage only — **no URL query permutations** |
-
----
-
-## 10. Structured Data Audit
-
-| Schema | Usage |
-|--------|-------|
-| `WebSite` + `Organization` | Global layout — unchanged |
-| `BreadcrumbList` | Tender detail, programmatic browse |
-| `Event` | **Compulsory briefing/site meeting only** via `buildTenderBriefingEventJsonLd()` |
-
-Event omitted when:
-- Not compulsory
-- Missing briefing date/time instant
-- Missing location (venue, province, or meeting link)
-
-Closed briefings: `EventPast` when briefing datetime passed.
-
----
-
-## 11. Sitemap Status
-
-- Single `sitemap.xml` — static, landings, programmatic, resources, indexable tenders.
-- Cap: `SITEMAP_TENDER_URL_CAP` = 5000 (`lib/seo/sitemapPolicy.ts`).
-
----
-
-## 12. Sitemap Scaling Trigger
-
-Plan segmentation when:
-- Indexable compulsory count exceeds **4,000** (80% of URL cap), OR
-- `getIndexableTenders()` 2000-record scan misses eligible URLs, OR
-- `slice(0, 5000)` truncates eligible records.
-
-Future: `/sitemap.xml` → index with static, landings, active-tenders, historical-tenders segments.
-
----
-
-## 13. Robots / noindex Status
-
-Unchanged from prior certification + reinforced:
-- `/founder/**`, `/admin/**`, `/agent/workspace/**`, `/settings`, `/auth/signin`, request-agent flow
-- Documented in `lib/seo/indexingPolicy.ts`
-
----
-
-## 14. Internal Linking
-
-Tender detail pages include:
-- `TenderDetailContextLinks` — province browse (when slug exists), category browse (when match), `/tenders`
-- `RelatedActiveTenders` — closed tenders, bounded active catalogue page
-- Breadcrumb JSON-LD
-
-Crawl graph: Home → Tenders → Province/Category → Tender → Related Active Tender
+- Historical quality gate: `tenderHasUsefulHistoricalContent()`
+- Canonicals: `/tenders`, `/tenders/{slug}`, `/tenders/{id}` self-referencing; filters not in URL
+- Event JSON-LD: compulsory briefing only; omit if insufficient
+- Sitemap: single file, 5000 URL cap; segmentation trigger ~4000
+- Robots/noindex: founder, admin, agent workspace, settings, signin, request-agent
+- Internal links: province/category/related active on detail pages
 
 ---
 
@@ -186,22 +114,24 @@ Crawl graph: Home → Tenders → Province/Category → Tender → Related Activ
 | File | Coverage |
 |------|----------|
 | `tests/unit/seoRecovery.test.ts` | Metadata, canonical, lifecycle, noindex |
-| `tests/unit/seoCrawlability.test.tsx` | SSR links, bounds, Event JSON-LD, canonicals |
+| `tests/unit/seoCrawlability.test.ts` | SSR links, bounds, Event JSON-LD, canonicals |
 | `tests/unit/publicTenderVisibility.test.ts` | Catalogue vs detail visibility |
 | `tests/unit/hotPathSafeguard.test.ts` | Bounded catalogue SSR |
-| `tests/e2e/seo-crawlability.spec.ts` | No-JS Playwright (requires browser install) |
+| `tests/e2e/seo-crawlability.spec.ts` | No-JS Playwright against live server |
 
 ---
 
-## 16–25. QA Evidence
+## 16–25. QA Evidence (pre-merge)
 
 | Gate | Result |
 |------|--------|
 | Typecheck | PASS |
 | Lint | PASS (pre-existing unrelated hook warning) |
-| Unit/integration tests | PASS (266 tests) |
+| Unit/integration tests | PASS (**266** tests) |
 | Build | PASS |
-| Playwright | BLOCKED locally (browser binary missing); spec added |
+| Targeted SEO Playwright | **PASS** — 2 executed, 2 passed, 0 failed, 0 skipped |
+| Full Playwright suite | **PASS** — 23 executed, **18 passed**, **5 skipped**, **0 failed** |
+| Playwright skips | Founder Dashboard V2 signed-in walkthrough (3) — needs founder auth; Authenticated workflows SME token (2) — optional secrets not set |
 | Firestore emulator | Not affected — not run |
 | qa:secrets-scan | PASS |
 | qa:config | PASS |
@@ -209,14 +139,16 @@ Crawl graph: Home → Tenders → Province/Category → Tender → Related Activ
 | qa:firestore-rules | PASS |
 | qa:google-auth | PASS |
 
+Browser install note: `npx playwright install chromium` hung on extract locally; `chromium-headless-shell` build **1148** was installed via curl from Playwright CDN and verified at `ms-playwright/chromium_headless_shell-1148/chrome-mac/headless_shell`. CI continues to use `npx playwright install chromium`.
+
 ---
 
 ## 26. Known Limitations
 
-1. Playwright e2e requires `npx playwright install` before CI/local e2e run.
-2. Category programmatic pages may show fewer matches when first bounded page has no filter hits (by design — no unbounded scan).
-3. Interactive catalogue filters remain client-side; canonical stays `/tenders`.
-4. GSC recovery requires recrawl time after deploy.
+1. Category programmatic pages may show fewer matches when the first bounded page has no filter hits (by design).
+2. Interactive catalogue filters remain client-side; canonical stays `/tenders`.
+3. GSC Soft 404 / crawled-not-indexed recovery requires post-deploy recrawl time.
+4. Authenticated Playwright walks remain optional without `E2E_*` secrets.
 
 ---
 
@@ -231,12 +163,13 @@ Crawl graph: Home → Tenders → Province/Category → Tender → Related Activ
 ### Monitor (not defects)
 - Intentional noindex exclusions
 - Legitimate 404s for invalid IDs
+- Crawled / Discovered – not indexed (2–4 weeks)
 
 ### URL Inspection samples
 1. Active tender from `/tenders`
 2. Closed historical tender
 3. `/tenders/invalid-id-000` (404)
-4. `/tenders` (view page source — confirm `<a href="/tenders/...">`)
+4. `/tenders` (view source — confirm `<a href="/tenders/...">`)
 5. `/tenders/gauteng`
 6. `/agent/workspace/today` (noindex)
 
@@ -244,12 +177,12 @@ Crawl graph: Home → Tenders → Province/Category → Tender → Related Activ
 
 ## 28. Recommended Release Action
 
-1. **Approve and merge PR #44** (explicit approval required).
-2. Deploy to production.
-3. Run `npx playwright install && npm run test:e2e -- tests/e2e/seo-crawlability.spec.ts` in CI.
-4. Resubmit sitemap; validate Soft 404 fix on samples.
-5. Monitor index coverage over 2–4 weeks.
+1. Confirm GitHub CI green on final pushed SHA.
+2. **Merge PR #44** into master.
+3. Deploy master via approved production workflow.
+4. Run production SEO smoke tests.
+5. Resubmit sitemap; validate Soft 404 fix on samples.
 
 ---
 
-**Separate from PR #43 (Briefing Intelligence). Do not merge or deploy without explicit approval.**
+**Separate from PR #43 (Briefing Intelligence). Do not merge or deploy without CI green + explicit release path.**

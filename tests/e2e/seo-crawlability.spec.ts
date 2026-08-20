@@ -31,12 +31,15 @@ test.describe('SEO crawlability without JavaScript', () => {
     await page.goto('/tenders/gauteng', { waitUntil: 'domcontentloaded' })
 
     await expect(page.locator('h2', { hasText: 'Matching opportunities' })).toBeVisible()
-    await expect(page.locator('a[href="/tenders"]')).toBeVisible()
+    await expect(page.getByRole('link', { name: 'View all tenders' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Browse all tenders' })).toBeVisible()
 
     const tenderLinks = page.locator('a[href^="/tenders/"]:not([href="/tenders/gauteng"])')
     const count = await tenderLinks.count()
+    // Empty live catalogue is valid locally; when tenders exist they must be crawlable.
     if (count > 0) {
-      expect(count).toBeGreaterThan(0)
+      const href = await tenderLinks.first().getAttribute('href')
+      expect(href).toMatch(/^\/tenders\/[^/]+$/)
     }
 
     await context.close()
