@@ -76,7 +76,27 @@ export function buildTenderMetadata(tender: TenderBriefing): Metadata {
   })
 }
 
-export function buildTenderEventJsonLd(tender: TenderBriefing) {
+/**
+ * Event JSON-LD for the compulsory tender briefing / site meeting only — not the
+ * procurement opportunity, publication date, or closing date.
+ * Returns null when required briefing fields are insufficient.
+ */
+export function buildTenderBriefingEventJsonLd(tender: TenderBriefing): Record<string, unknown> | null {
+  if (!tender.briefingCompulsory) return null
+  if (!tender.briefingDate?.trim()) return null
+
+  const startDate = toSastIsoString(
+    resolveBriefingDateTime(tender.briefingDate, tender.briefingTime)
+  )
+  if (!startDate) return null
+
+  const hasLocation = Boolean(
+    tender.meetingLink?.trim() ||
+      tender.briefingVenue?.trim() ||
+      tender.province?.trim()
+  )
+  if (!hasLocation) return null
+
   const scope = getOfficialEtendersScope(tender)
   const isClosed = getTenderDisplayStatus(tender) === 'closed'
   const briefingPast = isBriefingPast(tender.briefingDate, tender.briefingTime)
@@ -84,28 +104,29 @@ export function buildTenderEventJsonLd(tender: TenderBriefing) {
   return {
     '@context': 'https://schema.org',
     '@type': 'Event',
-    name: tender.briefingCompulsory
-      ? `Compulsory tender briefing — ${scope || tender.title}`
-      : `Tender briefing — ${scope || tender.title}`,
-    description: scope || tender.description || tender.title,
-    startDate:
-      toSastIsoString(resolveBriefingDateTime(tender.briefingDate, tender.briefingTime)) ??
-      undefined,
-    eventAttendanceMode: tender.meetingLink
+    name: `Compulsory tender briefing — ${scope || tender.title || tender.tenderNumber || 'Site meeting'}`,
+    description:
+      tender.briefingVenue?.trim() ||
+      scope ||
+      tender.description ||
+      'Compulsory tender briefing session',
+    startDate,
+    eventAttendanceMode: tender.meetingLink?.trim()
       ? 'https://schema.org/OnlineEventAttendanceMode'
       : 'https://schema.org/OfflineEventAttendanceMode',
-    eventStatus: isClosed || briefingPast
-      ? 'https://schema.org/EventPast'
-      : 'https://schema.org/EventScheduled',
-    location: tender.meetingLink
+    eventStatus:
+      isClosed || briefingPast
+        ? 'https://schema.org/EventPast'
+        : 'https://schema.org/EventScheduled',
+    location: tender.meetingLink?.trim()
       ? {
           '@type': 'VirtualLocation',
           url: tender.meetingLink,
         }
       : {
           '@type': 'Place',
-          name: tender.briefingVenue || tender.province || 'South Africa',
-          address: tender.briefingVenue || tender.province || 'South Africa',
+          name: tender.briefingVenue?.trim() || tender.province || 'South Africa',
+          address: tender.briefingVenue?.trim() || tender.province || 'South Africa',
         },
     organizer: {
       '@type': 'Organization',
@@ -113,6 +134,11 @@ export function buildTenderEventJsonLd(tender: TenderBriefing) {
     },
     url: absoluteUrl(`/tenders/${tender.id}`),
   }
+}
+
+/** @deprecated Use buildTenderBriefingEventJsonLd — kept for transitional imports. */
+export function buildTenderEventJsonLd(tender: TenderBriefing): Record<string, unknown> | null {
+  return buildTenderBriefingEventJsonLd(tender)
 }
 
 export function buildTenderBreadcrumbJsonLd(tender: TenderBriefing) {

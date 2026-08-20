@@ -6,7 +6,7 @@ import {
   buildTenderMetadata,
   buildTenderPageDescription,
   buildTenderPageTitle,
-  buildTenderEventJsonLd,
+  buildTenderBriefingEventJsonLd,
   tenderHasUsefulHistoricalContent,
 } from '../../lib/seo/tenderSeo'
 import type { TenderBriefing } from '../../lib/tenderBriefing/types'
@@ -84,7 +84,7 @@ describe('SEO metadata — closed tender', () => {
     const description = buildTenderPageDescription(closed)
     expect(description.toLowerCase()).toContain('closed')
     expect(meta.robots).toEqual({ index: true, follow: true })
-    expect(buildTenderEventJsonLd(closed).eventStatus).toBe('https://schema.org/EventPast')
+    expect(buildTenderBriefingEventJsonLd(closed)?.eventStatus).toBe('https://schema.org/EventPast')
   })
 })
 

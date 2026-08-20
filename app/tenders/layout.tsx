@@ -6,6 +6,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     'Browse compulsory government tender briefings across South Africa. Official eTenders data, briefing dates, documents and free SME discovery on TenderBriefing.',
   path: '/tenders',
+  // Catalogue filters are client-local (not URL query params) — canonical stays /tenders.
   keywords: [
     'tender briefing South Africa',
     'compulsory tender briefings',

@@ -5,7 +5,7 @@ import { buildPageMetadata } from '@/lib/seo/metadata'
 import { getIndexableTenderById } from '@/lib/seo/publicTenders'
 import {
   buildTenderBreadcrumbJsonLd,
-  buildTenderEventJsonLd,
+  buildTenderBriefingEventJsonLd,
   buildTenderMetadata,
   tenderHasUsefulHistoricalContent,
 } from '@/lib/seo/tenderSeo'
@@ -37,10 +37,12 @@ export default async function TenderDetailLayout({
   const tender = await getIndexableTenderById(params.id)
   if (!tender || !tenderHasUsefulHistoricalContent(tender)) notFound()
 
+  const briefingEvent = buildTenderBriefingEventJsonLd(tender)
+
   return (
     <>
       <JsonLd data={buildTenderBreadcrumbJsonLd(tender)} />
-      {tender.briefingDate ? <JsonLd data={buildTenderEventJsonLd(tender)} /> : null}
+      {briefingEvent ? <JsonLd data={briefingEvent} /> : null}
       {children}
     </>
   )

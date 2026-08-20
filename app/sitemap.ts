@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next'
 import { SEO_LANDING_PATHS } from '@/lib/seo/landingPages'
 import { PROGRAMMATIC_SLUGS } from '@/lib/seo/programmaticPages'
 import { getIndexableTenders } from '@/lib/seo/publicTenders'
+import { SITEMAP_TENDER_URL_CAP } from '@/lib/seo/sitemapPolicy'
 import { RESOURCE_ARTICLES } from '@/lib/seo/resources'
 import { SITE_URL } from '@/lib/seo/site'
 
@@ -56,7 +57,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let tenderEntries: MetadataRoute.Sitemap = []
   try {
     const tenders = await getIndexableTenders()
-    tenderEntries = tenders.slice(0, 5000).map((tender) => ({
+    tenderEntries = tenders.slice(0, SITEMAP_TENDER_URL_CAP).map((tender) => ({
       url: `${SITE_URL}/tenders/${tender.id}`,
       lastModified: tender.lastSyncedAt ? new Date(tender.lastSyncedAt) : now,
       changeFrequency: 'daily',

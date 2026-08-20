@@ -3,15 +3,16 @@ import { notFound } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import ClosedTenderBanner from '@/components/procurement/ClosedTenderBanner'
+import TenderDetailContextLinks from '@/components/procurement/TenderDetailContextLinks'
 import RelatedActiveTenders from '@/components/procurement/RelatedActiveTenders'
 import SmeProcurementIntelligencePanel from '@/components/procurement/SmeProcurementIntelligencePanel'
 import TenderActionPanel from '@/components/procurement/TenderActionPanel'
 import TenderHero from '@/components/procurement/TenderHero'
 import TenderIntelligence from '@/components/procurement/TenderIntelligence'
 import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
+import { getCatalogueInitialPage } from '@/lib/seo/catalogueServerData'
 import {
   getIndexableTenderById,
-  getPublicTenders,
 } from '@/lib/seo/publicTenders'
 import { tenderHasUsefulHistoricalContent } from '@/lib/seo/tenderSeo'
 
@@ -24,7 +25,7 @@ export default async function TenderDetailsPage({
   if (!tender || !tenderHasUsefulHistoricalContent(tender)) notFound()
 
   const isClosed = getTenderDisplayStatus(tender) === 'closed'
-  const activeTenders = isClosed ? await getPublicTenders() : []
+  const activeTenders = isClosed ? (await getCatalogueInitialPage()).tenders : []
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/20 pb-24 lg:pb-12">
@@ -43,6 +44,7 @@ export default async function TenderDetailsPage({
                 activeTenders={activeTenders}
               />
             ) : null}
+            <TenderDetailContextLinks tender={tender} />
           </div>
           <TenderActionPanel tender={tender} />
         </div>

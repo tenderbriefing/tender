@@ -75,4 +75,11 @@ describe('hot-path Firestore safeguards', () => {
     expect(body).not.toMatch(/getAllTenders\s*\(/)
     expect(body).toMatch(/readCatalogueSummary/)
   })
+
+  it('catalogue SSR uses a single bounded paginated read', () => {
+    const s = src('lib/seo/catalogueServerData.ts')
+    expect(s).toMatch(/listTenderBriefingsPage\(/)
+    expect(s).not.toMatch(/for \(let i = 0; i < 25/)
+    expect(s).toMatch(/CATALOGUE_SCAN_BUDGET/)
+  })
 })

@@ -1,10 +1,12 @@
 # TenderBriefing — Google Indexing & Technical SEO Certification
 
+**Programme:** PR #44 — Google Indexing & Technical SEO Recovery (Final Release Certification)  
 **Date:** 2026-08-20  
 **Branch:** `fix/google-indexing-seo-recovery`  
+**PR:** https://github.com/tenderbriefing/tender/pull/44  
 **Starting SHA:** `29e5ea486ce52f9edcb7cb67ea4e50a15ffbb18d`  
-**Final SHA:** `c5c8755`  
-**PR:** _(set after PR creation)_  
+**Prior certified SHA:** `6fafbab`  
+**Final SHA:** _(set at commit)_  
 **Verdict:** **PASS WITH CONDITIONS**
 
 ---
@@ -13,199 +15,194 @@
 
 **PASS WITH CONDITIONS**
 
-TenderBriefing now separates **live catalogue visibility** from **historical tender detail indexing**. Expired compulsory briefings return HTTP 200 with substantive server-rendered content instead of hard 404s or client-side “not found” shells at HTTP 200. Invalid records return genuine 404. Sitemap, robots, metadata, canonicals, and noindex policies were hardened without changing unrelated business workflows.
+PR #44 establishes a production-safe SEO architecture where:
 
-**Conditions (post-deploy):**
-1. Submit updated sitemap in Google Search Console and validate Soft 404 fix after recrawl (2–4 weeks).
-2. URL Inspection on representative samples listed in §31.
-3. Catalogue and programmatic browse pages remain partially client-rendered — monitor “Crawled – currently not indexed” after this deploy.
+- Invalid tenders return genuine HTTP **404** (no soft-404 shells at HTTP 200).
+- Closed compulsory briefings remain **indexable historical records** at HTTP 200.
+- **`/tenders` and programmatic browse pages** server-render crawlable `<a href="/tenders/{id}">` links in initial HTML.
+- Catalogue queries remain **bounded** (single paginated read per SSR request).
+- Event JSON-LD describes **compulsory briefings only**, omitted when data is insufficient.
+- Private routes remain **noindex** / robots-disallowed.
+
+**Conditions:**
+1. Playwright e2e requires `npx playwright install` in CI/local before `seo-crawlability.spec.ts` runs (unit HTML tests pass as substitute).
+2. Post-deploy GSC validation on Soft 404 samples (2–4 week recrawl window).
+3. Monitor sitemap volume against segmentation trigger (§16).
 
 ---
 
-## 2. Root Cause of Soft 404s (~146)
+## 2. Soft 404 Root Cause
 
-| Cause | Mechanism |
+| Cause | Detail |
+|-------|--------|
+| **Primary** | Expired compulsory briefings returned HTTP **404** while Google retained previously indexed URLs. |
+| **Secondary** | Client-rendered `/tenders/[id]` showed “not found” UI at HTTP **200** on API failure. |
+| **Tertiary** | `/tenders` and programmatic browse pages had **no tender links in initial HTML** (CSR-only after hydration). |
+
+---
+
+## 3. Tender Lifecycle Implementation
+
+| State | HTTP | Index | Catalogue | Detail page |
+|-------|------|-------|-----------|-------------|
+| Active compulsory | 200 | yes | yes | yes |
+| Closed compulsory | 200 | yes | no (live list) | yes (historical) |
+| Invalid / empty | 404 | no | no | no |
+
+- `isPlatformVisibleToViewer` — live catalogue cut-off (briefing datetime).
+- `isPublicDetailVisibleToViewer` — detail + sitemap historical records.
+- `tenderHasUsefulHistoricalContent()` — rejects empty shells (404).
+
+---
+
+## 4. `/tenders` SSR Status
+
+**Implemented.**
+
+- Server page calls `getCatalogueInitialPage()` — **one** `listTenderBriefingsPage` read (`pageSize: 40`, `scanBudget: 160`).
+- `TenderCatalogueStaticList` renders crawlable table + mobile links in initial HTML.
+- `TenderOpportunitiesClient` hydrates filters, sort, pagination, polling with same initial data.
+- SSR list hidden after hydration; interactive UI takes over (progressive enhancement).
+
+---
+
+## 5. Programmatic Browse SSR Status
+
+**Implemented** for all 7 existing pages:
+
+- `/tenders/gauteng`, `/western-cape`, `/kwazulu-natal`
+- `/tenders/construction`, `/ict`, `/security-services`, `/cleaning-services`
+
+Each page:
+- Async server component fetches via `getProgrammaticBrowseTenders()`.
+- Province slugs push `province` filter to storage; category slugs filter in-memory on bounded page.
+- `ProgrammaticTenderStaticList` renders crawlable links server-side.
+- Deterministic canonical per slug via `buildProgrammaticMetadata()`.
+
+---
+
+## 6. No-JavaScript Crawlability Result
+
+| Test | Result |
+|------|--------|
+| `tests/unit/seoCrawlability.test.ts` — `renderToStaticMarkup` link assertions | **PASS** |
+| `tests/e2e/seo-crawlability.spec.ts` — Playwright JS disabled | **BLOCKED** (browsers not installed locally) |
+
+Unit tests verify `href="/tenders/{id}"` in static HTML for catalogue and programmatic list components.
+
+---
+
+## 7. Query Bounds / Performance Safeguards
+
+| Page / function | Reads | Limits |
+|-----------------|-------|--------|
+| `getCatalogueInitialPage()` | 1× `listTenderBriefingsPage` | pageSize 40, scanBudget 160 |
+| `getProgrammaticBrowseTenders()` | 1× paginated read | scanBudget 160, returns ≤12 |
+| Closed tender related links | 1× `getCatalogueInitialPage()` | pageSize 40 (not 2000 scan) |
+| Sitemap `getIndexableTenders()` | Up to 25 pages × 80 | cap 2000 records, slice 5000 URLs |
+| `/api/tender-briefings` | Unchanged | pageSize 40 default |
+
+`tests/unit/hotPathSafeguard.test.ts` guards catalogue SSR against full-catalogue scan loops.
+
+---
+
+## 8. Historical Tender Quality Policy
+
+Indexable when **all** of:
+- `isPublicDetailVisibleToViewer` (compulsory + public)
+- `tenderHasUsefulHistoricalContent()` (title, number, scope, description, summary, or documents)
+
+Otherwise → `notFound()` (404). No filler SEO text generated.
+
+---
+
+## 9. Canonical Implementation
+
+| Route | Canonical |
 |-------|-----------|
-| **Primary** | Expired compulsory briefings were removed from public visibility at briefing cut-off and returned **HTTP 404**, while Google still held previously indexed URLs that had returned **HTTP 200** with thin or “not found” content. |
-| **Secondary** | `/tenders/[id]` was a client component that rendered “Tender opportunity not found” at **HTTP 200** when the API fetch failed or raced the briefing cut-off. |
-| **Tertiary** | Valid tender pages SSR’d only a loading spinner; crawlers saw thin HTML despite rich metadata. |
+| `/tenders` | `https://www.tenderbriefing.co.za/tenders` |
+| `/tenders/gauteng` etc. | Self-referencing `/tenders/{slug}` |
+| `/tenders/{id}` | Self-referencing `/tenders/{id}` |
+| Filter state | Client-localStorage only — **no URL query permutations** |
 
 ---
 
-## 3. Soft 404 Remediation
+## 10. Structured Data Audit
 
-- Introduced `isPublicDetailVisibleToViewer()` — compulsory public records remain on detail pages after briefing cut-off.
-- Converted `/tenders/[id]` to a **server-rendered page** with `notFound()` for invalid records (genuine 404).
-- Removed client-side “not found at 200” code path entirely.
-- `TenderHero` and `TenderIntelligence` render in initial HTML (no `'use client'`).
-- Empty compulsory records without title, number, description, summary, or documents → **404**.
+| Schema | Usage |
+|--------|-------|
+| `WebSite` + `Organization` | Global layout — unchanged |
+| `BreadcrumbList` | Tender detail, programmatic browse |
+| `Event` | **Compulsory briefing/site meeting only** via `buildTenderBriefingEventJsonLd()` |
 
----
+Event omitted when:
+- Not compulsory
+- Missing briefing date/time instant
+- Missing location (venue, province, or meeting link)
 
-## 4. noindex Audit
-
-Documented in `lib/seo/indexingPolicy.ts`. Reinforced with metadata on:
-
-| Route class | Mechanism |
-|-------------|-----------|
-| `/founder/**`, `/admin/**` | Existing `PRIVATE_ROUTE_ROBOTS` + robots disallow |
-| `/agent/workspace/**` | Added `PRIVATE_ROUTE_ROBOTS` |
-| `/agent/dashboard/**` | Existing |
-| `/sme/**` workspace routes | robots disallow expanded |
-| `/auth/signin/**` | New layout + robots disallow |
-| `/settings/**` | New layout + robots disallow |
-| `/tenders/[id]/request-agent` | New layout noindex |
-| Missing tender/resource | `noIndex: true` in metadata |
-| Global 404 | `app/not-found.tsx` with noindex |
-
-**Intentionally indexable:** `/auth/signup`, marketing landings, `/tenders`, programmatic browse pages, historical tender detail pages.
+Closed briefings: `EventPast` when briefing datetime passed.
 
 ---
 
-## 5. Legitimate 404 Analysis (16 reported)
+## 11. Sitemap Status
 
-Correct 404 behaviour preserved for:
-
-- Non-existent tender IDs
-- Non-compulsory tenders (never public catalogue records)
-- Private RFQs (anonymous access)
-- Empty shell records without useful content
-- Dev/test routes (middleware 404 in production)
-
-These should **not** be “fixed” — ensure they stay out of sitemap and internal links.
+- Single `sitemap.xml` — static, landings, programmatic, resources, indexable tenders.
+- Cap: `SITEMAP_TENDER_URL_CAP` = 5000 (`lib/seo/sitemapPolicy.ts`).
 
 ---
 
-## 6. Crawled – Not Indexed (43)
+## 12. Sitemap Scaling Trigger
 
-Likely contributors addressed systemically:
+Plan segmentation when:
+- Indexable compulsory count exceeds **4,000** (80% of URL cap), OR
+- `getIndexableTenders()` 2000-record scan misses eligible URLs, OR
+- `slice(0, 5000)` truncates eligible records.
 
-- Thin CSR-only HTML on tender detail → **fixed** (SSR content)
-- Expired tender 404s → **fixed** (historical 200 pages)
-- Duplicate/thin metadata → **improved** (unique titles with org + tender number)
-
-Remaining contributors (monitor post-deploy):
-
-- CSR catalogue at `/tenders` (links appear after hydration)
-- Programmatic browse pages with zero live matches (valid but thin)
-- Google quality assessment lag on previously soft-404 URLs
+Future: `/sitemap.xml` → index with static, landings, active-tenders, historical-tenders segments.
 
 ---
 
-## 7. Discovered – Not Indexed (32)
+## 13. Robots / noindex Status
 
-Improvements:
-
-- Sitemap now includes **historical + active** indexable compulsory tenders via `getIndexableTenders()`
-- Closed tender pages link to **Related active tenders** and `/tenders`
-- Internal links on detail pages remain in server HTML
-
-Monitor crawl depth on large historical corpus after sitemap resubmit.
+Unchanged from prior certification + reinforced:
+- `/founder/**`, `/admin/**`, `/agent/workspace/**`, `/settings`, `/auth/signin`, request-agent flow
+- Documented in `lib/seo/indexingPolicy.ts`
 
 ---
 
-## 8. Canonical Audit
+## 14. Internal Linking
 
-- Canonical base: `https://www.tenderbriefing.co.za` via `lib/seo/site.ts`
-- Each indexable page sets `alternates.canonical` through `buildPageMetadata({ path })`
-- Tender detail: self-referencing `/tenders/{id}`
-- Apex → www **308** in middleware (existing)
-- Static programmatic slugs (`/tenders/gauteng`) take precedence over dynamic `[id]`
+Tender detail pages include:
+- `TenderDetailContextLinks` — province browse (when slug exists), category browse (when match), `/tenders`
+- `RelatedActiveTenders` — closed tenders, bounded active catalogue page
+- Breadcrumb JSON-LD
 
-No redirect loops introduced.
-
----
-
-## 9. Sitemap Audit
-
-`app/sitemap.ts` includes:
-
-- Homepage, catalogue, marketing pages, SEO landings, programmatic browse, resources
-- Up to 5,000 **indexable** tender URLs (`getIndexableTenders()`)
-
-Excludes:
-
-- Private/auth/dashboard routes
-- `/api/**`
-- Non-compulsory / private / empty records
-- `/tenders/[id]/request-agent`
+Crawl graph: Home → Tenders → Province/Category → Tender → Related Active Tender
 
 ---
 
-## 10. Robots.txt Audit
+## 15. SEO Automated Tests
 
-Expanded disallow list for `/agent/workspace`, `/settings`, `/auth/signin`, SME onboarding/book-agent, `/jobs`.  
-Allows public tender pages, sitemap, and Next.js assets.  
-`Sitemap: https://www.tenderbriefing.co.za/sitemap.xml`
-
----
-
-## 11. Tender Lifecycle Policy
-
-| State | HTTP | Index | Sitemap | Behaviour |
-|-------|------|-------|---------|-----------|
-| **Active** | 200 | yes | yes | Full detail, agent booking available |
-| **Closed / expired briefing** | 200 | yes | yes | “Tender closed” banner, historical content, related active links |
-| **Invalid / never public** | 404 | no | no | `notFound()` — no fake 200 |
-
-Catalogue list APIs and `/tenders` remain **live-only** (upcoming briefings).
+| File | Coverage |
+|------|----------|
+| `tests/unit/seoRecovery.test.ts` | Metadata, canonical, lifecycle, noindex |
+| `tests/unit/seoCrawlability.test.tsx` | SSR links, bounds, Event JSON-LD, canonicals |
+| `tests/unit/publicTenderVisibility.test.ts` | Catalogue vs detail visibility |
+| `tests/unit/hotPathSafeguard.test.ts` | Bounded catalogue SSR |
+| `tests/e2e/seo-crawlability.spec.ts` | No-JS Playwright (requires browser install) |
 
 ---
 
-## 12–18. Tender Behaviours
-
-### Active tender
-- HTTP 200, indexable, self-canonical, Event JSON-LD `EventScheduled`, full metadata
-
-### Closed tender
-- HTTP 200, indexable, closed metadata copy, `EventPast` JSON-LD, closed banner, related active tenders
-
-### Invalid tender
-- HTTP 404 via `notFound()`, noindex metadata if metadata phase runs, excluded from sitemap
-
----
-
-## 19. Metadata Implementation
-
-- Title pattern: `{Scope/Title} | {Organisation}` via `buildTenderPageTitle()`
-- Description pattern: tender number, organisation, province, dates; closed variant for historical records
-- Missing tenders: noindex
-
----
-
-## 20. Structured Data
-
-- Global `Organization` + `WebSite` (existing)
-- Tender detail: `BreadcrumbList` + `Event` (status reflects closed/active)
-- No fabricated Job/Product schema
-
----
-
-## 21. Internal Linking
-
-- Closed tender pages: `RelatedActiveTenders` + footer link to `/tenders`
-- `TenderHero` back link, province/category preserved in content
-- Catalogue CSR limitation noted as known follow-up
-
----
-
-## 22. SEO Automated Tests
-
-`tests/unit/seoRecovery.test.ts` — metadata, canonical, closed tender, noindex policy, invalid record detection  
-`tests/unit/publicTenderVisibility.test.ts` — catalogue vs detail visibility split
-
----
-
-## 23–29. QA Evidence
+## 16–25. QA Evidence
 
 | Gate | Result |
 |------|--------|
 | Typecheck | PASS |
-| Lint | PASS (pre-existing hook warning in unrelated file) |
-| Unit/integration tests | PASS (253 tests) |
+| Lint | PASS (pre-existing unrelated hook warning) |
+| Unit/integration tests | PASS (266 tests) |
 | Build | PASS |
-| Playwright | Not run (no SEO e2e spec on master baseline) |
-| Firestore emulator | Not run (no SEO-specific emulator tests) |
+| Playwright | BLOCKED locally (browser binary missing); spec added |
+| Firestore emulator | Not affected — not run |
 | qa:secrets-scan | PASS |
 | qa:config | PASS |
 | qa:route-retirement | PASS |
@@ -214,47 +211,45 @@ Catalogue list APIs and `/tenders` remain **live-only** (upcoming briefings).
 
 ---
 
-## 30. Known Limitations
+## 26. Known Limitations
 
-1. `/tenders` catalogue remains client-rendered — tender links not in initial HTML.
-2. Programmatic browse pages (`/tenders/gauteng`, etc.) CSR tender lists.
-3. Sitemap capped at 5,000 tender URLs — segmented sitemaps not yet required.
-4. GSC recovery requires recrawl time; historical 404 URLs may persist in reports temporarily.
+1. Playwright e2e requires `npx playwright install` before CI/local e2e run.
+2. Category programmatic pages may show fewer matches when first bounded page has no filter hits (by design — no unbounded scan).
+3. Interactive catalogue filters remain client-side; canonical stays `/tenders`.
+4. GSC recovery requires recrawl time after deploy.
 
 ---
 
-## 31. Search Console Actions After Deployment
+## 27. Search Console Post-Deployment Procedure
 
 ### Validate Fix
-- **Soft 404** — after deploy + 48h, validate fix on sample expired tender URLs that previously 404’d
-
-### Monitor (do not validate as defects)
-- **Excluded by noindex** — `/admin`, `/founder`, `/agent/workspace`, `/auth/signin`, etc.
-- **Not found (404)** — invalid tender IDs, non-compulsory records
-- **Crawled / Discovered – not indexed** — recheck in 2–4 weeks
+- **Soft 404** — sample previously expired tender URLs after 48h
 
 ### Resubmit
-- Sitemap: `https://www.tenderbriefing.co.za/sitemap.xml`
+- `https://www.tenderbriefing.co.za/sitemap.xml`
+
+### Monitor (not defects)
+- Intentional noindex exclusions
+- Legitimate 404s for invalid IDs
 
 ### URL Inspection samples
-1. Active tender — any live compulsory briefing from `/tenders`
-2. Closed tender — previously soft-404 expired briefing URL
-3. Invalid tender — `/tenders/invalid-id-000`
-4. Catalogue — `https://www.tenderbriefing.co.za/tenders`
-5. Province page — `https://www.tenderbriefing.co.za/tenders/gauteng`
-6. Private route — `https://www.tenderbriefing.co.za/agent/workspace/today` (expect noindex)
+1. Active tender from `/tenders`
+2. Closed historical tender
+3. `/tenders/invalid-id-000` (404)
+4. `/tenders` (view page source — confirm `<a href="/tenders/...">`)
+5. `/tenders/gauteng`
+6. `/agent/workspace/today` (noindex)
 
 ---
 
-## 32. Recommended Next Action
+## 28. Recommended Release Action
 
-1. Merge PR after approval.
+1. **Approve and merge PR #44** (explicit approval required).
 2. Deploy to production.
-3. Resubmit sitemap in GSC.
-4. Validate Soft 404 fix with 5–10 sample URLs.
-5. Follow-up PR (optional): SSR tender links on `/tenders` catalogue for crawl discovery.
+3. Run `npx playwright install && npm run test:e2e -- tests/e2e/seo-crawlability.spec.ts` in CI.
+4. Resubmit sitemap; validate Soft 404 fix on samples.
+5. Monitor index coverage over 2–4 weeks.
 
 ---
 
-**Certification author:** Cursor Agent (SEO recovery sprint)  
-**Separate from:** PR #43 Briefing Intelligence — this branch created from `origin/master`.
+**Separate from PR #43 (Briefing Intelligence). Do not merge or deploy without explicit approval.**
