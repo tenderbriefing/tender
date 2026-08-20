@@ -3,6 +3,7 @@ import { backend } from '@/lib/backend/loadServices'
 import { verifyApiUser } from '@/lib/auth/verifyApiUser'
 import {
   isPlatformVisibleToViewer,
+  isPublicDetailVisibleToViewer,
   toPublicTenderBriefing,
   type PlatformViewer,
 } from '@/lib/security/publicTender'
@@ -34,6 +35,13 @@ export async function GET(
     let visible = isPlatformVisibleToViewer(tender, viewer, {
       allowOptionalForAdmin: true,
     })
+
+    // Public detail pages include historical compulsory briefings after briefing cut-off.
+    if (!visible && !user) {
+      visible = isPublicDetailVisibleToViewer(tender, viewer, {
+        allowOptionalForAdmin: true,
+      })
+    }
 
     // Signed WhatsApp invite: authenticated SMEs may load a private RFQ for booking
     // without it appearing on public /tenders or /sme/book-agent lists.

@@ -1,29 +1,24 @@
-'use client'
-
 import Link from 'next/link'
-import { useMemo } from 'react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import JsonLd from '@/components/seo/JsonLd'
+import ProgrammaticTenderStaticList from '@/components/seo/ProgrammaticTenderStaticList'
 import PageHero from '@/components/ui/PageHero'
-import LoadingSpinner from '@/components/ui/LoadingSpinner'
-import { useTenderBriefingsPolling } from '@/hooks/useTenderBriefingsPolling'
-import { formatProcurementDateTime } from '@/lib/procurement/dates'
-import { getOfficialEtendersScope } from '@/lib/procurement/tenderDescription'
+import type { CataloguePageResult } from '@/lib/seo/catalogueServerData'
 import { PROGRAMMATIC_TENDER_PAGES } from '@/lib/seo/programmaticPages'
 import { breadcrumbJsonLd } from '@/lib/seo/structuredData'
 import { ArrowRight } from 'lucide-react'
 
-export default function ProgrammaticTendersPage({ slug }: { slug: string }) {
-  const config = PROGRAMMATIC_TENDER_PAGES[slug]
-  const { tenders, loading } = useTenderBriefingsPolling({ compulsoryOnly: true })
-  const filtered = useMemo(
-    () => (config ? tenders.filter(config.filter).slice(0, 12) : []),
-    [tenders, config]
-  )
+interface ProgrammaticTendersPageProps {
+  slug: string
+  initial: CataloguePageResult
+}
 
+export default function ProgrammaticTendersPage({ slug, initial }: ProgrammaticTendersPageProps) {
+  const config = PROGRAMMATIC_TENDER_PAGES[slug]
   if (!config) return null
 
+  const tenders = initial.tenders
   const breadcrumbs = breadcrumbJsonLd([
     { name: 'Home', path: '/' },
     { name: 'Tenders', path: '/tenders' },
@@ -79,11 +74,7 @@ export default function ProgrammaticTendersPage({ slug }: { slug: string }) {
                 Live compulsory briefing opportunities synced from official eTenders data.
               </p>
 
-              {loading ? (
-                <div className="flex justify-center py-16">
-                  <LoadingSpinner size="lg" />
-                </div>
-              ) : filtered.length === 0 ? (
+              {tenders.length === 0 ? (
                 <p className="mt-8 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-slate-600">
                   No matching compulsory briefings are live right now.{' '}
                   <Link href="/tenders" className="font-semibold text-brand-800 hover:underline">
@@ -92,37 +83,7 @@ export default function ProgrammaticTendersPage({ slug }: { slug: string }) {
                   or check back after the next sync.
                 </p>
               ) : (
-                <ul className="mt-8 grid gap-4 md:grid-cols-2">
-                  {filtered.map((tender) => (
-                    <li
-                      key={tender.id}
-                      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                    >
-                      <p className="font-mono text-xs font-bold text-brand-800">
-                        {tender.tenderNumber}
-                      </p>
-                      <Link
-                        href={`/tenders/${tender.id}`}
-                        className="mt-2 block text-base font-semibold text-brand-900 hover:text-accent-700"
-                      >
-                        {getOfficialEtendersScope(tender) || tender.title}
-                      </Link>
-                      <p className="mt-2 text-sm text-slate-600">{tender.department}</p>
-                      {tender.briefingDate && (
-                        <p className="mt-3 text-sm font-medium text-accent-700">
-                          Briefing:{' '}
-                          {formatProcurementDateTime(tender.briefingDate, tender.briefingTime)}
-                        </p>
-                      )}
-                      <Link
-                        href={`/tenders/${tender.id}`}
-                        className="mt-4 inline-flex text-sm font-semibold text-brand-800 hover:underline"
-                      >
-                        View tender details →
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                <ProgrammaticTenderStaticList tenders={tenders} />
               )}
 
               <div className="mt-10 flex flex-wrap gap-3">

@@ -2,11 +2,12 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import JsonLd from '@/components/seo/JsonLd'
 import { buildPageMetadata } from '@/lib/seo/metadata'
-import { getPublicTenderById } from '@/lib/seo/publicTenders'
+import { getIndexableTenderById } from '@/lib/seo/publicTenders'
 import {
   buildTenderBreadcrumbJsonLd,
-  buildTenderEventJsonLd,
+  buildTenderBriefingEventJsonLd,
   buildTenderMetadata,
+  tenderHasUsefulHistoricalContent,
 } from '@/lib/seo/tenderSeo'
 
 export async function generateMetadata({
@@ -14,8 +15,8 @@ export async function generateMetadata({
 }: {
   params: { id: string }
 }): Promise<Metadata> {
-  const tender = await getPublicTenderById(params.id)
-  if (!tender) {
+  const tender = await getIndexableTenderById(params.id)
+  if (!tender || !tenderHasUsefulHistoricalContent(tender)) {
     return buildPageMetadata({
       title: 'Tender opportunity not found',
       description: 'This tender briefing may have been removed from the official eTenders feed.',
@@ -33,13 +34,15 @@ export default async function TenderDetailLayout({
   children: React.ReactNode
   params: { id: string }
 }) {
-  const tender = await getPublicTenderById(params.id)
-  if (!tender) notFound()
+  const tender = await getIndexableTenderById(params.id)
+  if (!tender || !tenderHasUsefulHistoricalContent(tender)) notFound()
+
+  const briefingEvent = buildTenderBriefingEventJsonLd(tender)
 
   return (
     <>
       <JsonLd data={buildTenderBreadcrumbJsonLd(tender)} />
-      {tender.briefingDate ? <JsonLd data={buildTenderEventJsonLd(tender)} /> : null}
+      {briefingEvent ? <JsonLd data={briefingEvent} /> : null}
       {children}
     </>
   )

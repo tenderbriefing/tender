@@ -1,10 +1,18 @@
+import { notFound } from 'next/navigation'
 import ProgrammaticTendersPage from '@/components/seo/ProgrammaticTendersPage'
-import { PROGRAMMATIC_TENDER_PAGES, buildProgrammaticMetadata } from '@/lib/seo/programmaticPages'
+import {
+  getProgrammaticBrowseProps,
+  programmaticBrowseMetadata,
+} from '@/lib/seo/programmaticBrowseServer'
 
-const config = PROGRAMMATIC_TENDER_PAGES['western-cape']
+const SLUG = 'western-cape'
 
-export const metadata = buildProgrammaticMetadata(config)
+export async function generateMetadata() {
+  return programmaticBrowseMetadata(SLUG)!
+}
 
-export default function Page() {
-  return <ProgrammaticTendersPage slug="western-cape" />
+export default async function Page() {
+  const props = await getProgrammaticBrowseProps(SLUG)
+  if (!props) notFound()
+  return <ProgrammaticTendersPage slug={props.slug} initial={props.initial} />
 }

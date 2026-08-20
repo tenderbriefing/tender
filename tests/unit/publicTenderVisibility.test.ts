@@ -5,8 +5,10 @@ import {
   resolveBriefingDateTime,
 } from '../../lib/procurement/dates'
 import {
+  filterIndexablePublicTenders,
   filterPlatformVisible,
   isPlatformVisibleToViewer,
+  isPublicDetailVisibleToViewer,
 } from '../../lib/security/publicTender'
 import type { TenderBriefing } from '../../lib/tenderBriefing/types'
 
@@ -102,6 +104,14 @@ describe('filterPlatformVisible — briefing-date cut-off', () => {
     expect(isPlatformVisibleToViewer(optionalUpcoming, null, { now: NOW })).toBe(false)
   })
 
+  it('keeps past briefing visible on public detail pages for anonymous viewers', () => {
+    const expired = baseTender({
+      briefingDate: '2026-07-01T10:00:00+02:00',
+    })
+    expect(isPublicDetailVisibleToViewer(expired, null)).toBe(true)
+    expect(isPlatformVisibleToViewer(expired, null, { now: NOW })).toBe(false)
+  })
+
   it('keeps past briefing visible to admins (ops) but not to SMEs on public catalogue', () => {
     const expired = baseTender({
       briefingDate: '2026-07-01T10:00:00+02:00',
@@ -136,5 +146,26 @@ describe('filterPlatformVisible — briefing-date cut-off', () => {
       status: 'active',
     })
     expect(isPlatformVisibleToViewer(stillBriefing, null, { now: NOW })).toBe(true)
+  })
+})
+
+describe('filterIndexablePublicTenders — SEO historical records', () => {
+  it('includes expired compulsory briefings for sitemap/detail indexing', () => {
+    const upcoming = baseTender({
+      id: 'up',
+      briefingDate: '2026-08-10T10:00:00+02:00',
+    })
+    const expired = baseTender({
+      id: 'ex',
+      briefingDate: '2026-08-01T09:00:00+02:00',
+      briefingTime: '09:00',
+    })
+    const optional = baseTender({
+      id: 'opt',
+      briefingCompulsory: false,
+      briefingDate: '2026-08-10T10:00:00+02:00',
+    })
+    const indexable = filterIndexablePublicTenders([upcoming, expired, optional], null)
+    expect(indexable.map((t) => t.id).sort()).toEqual(['ex', 'up'])
   })
 })

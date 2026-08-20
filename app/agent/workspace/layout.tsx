@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import WorkspaceGate from '@/components/agent/workspace/WorkspaceGate'
+import { PRIVATE_ROUTE_ROBOTS } from '@/lib/seo/metadata'
 
 export const metadata: Metadata = {
+  ...PRIVATE_ROUTE_ROBOTS,
   title: 'Agent Workspace',
   description: 'TenderBriefing Youth Agent field operations workspace',
   appleWebApp: {

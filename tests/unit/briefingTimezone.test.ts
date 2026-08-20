@@ -7,7 +7,7 @@ import {
   toSastIsoString,
 } from '../../lib/procurement/dates'
 import { buildGoogleCalendarUrl, buildIcsContent } from '../../lib/procurement/calendarLinks'
-import { buildTenderEventJsonLd } from '../../lib/seo/tenderSeo'
+import { buildTenderBriefingEventJsonLd } from '../../lib/seo/tenderSeo'
 import { filterPlatformVisible } from '../../lib/security/publicTender'
 import type { TenderBriefing } from '../../lib/tenderBriefing/types'
 
@@ -223,14 +223,14 @@ describe('calendar export is anchored in SAST', () => {
 })
 
 describe('Event JSON-LD', () => {
-  it('publishes startDate with an explicit SAST offset', () => {
-    const jsonLd = buildTenderEventJsonLd(baseTender())
-    expect(jsonLd.startDate).toBe('2026-08-12T11:00:00+02:00')
+  it('publishes startDate with an explicit SAST offset for the compulsory briefing', () => {
+    const jsonLd = buildTenderBriefingEventJsonLd(baseTender())
+    expect(jsonLd?.startDate).toBe('2026-08-12T11:00:00+02:00')
   })
 
-  it('omits startDate rather than guessing when the date is unusable', () => {
-    const jsonLd = buildTenderEventJsonLd(baseTender({ briefingDate: 'not-a-date' }))
-    expect(jsonLd.startDate).toBeUndefined()
+  it('omits Event JSON-LD when the briefing date is unusable', () => {
+    const jsonLd = buildTenderBriefingEventJsonLd(baseTender({ briefingDate: 'not-a-date' }))
+    expect(jsonLd).toBeNull()
   })
 })
 

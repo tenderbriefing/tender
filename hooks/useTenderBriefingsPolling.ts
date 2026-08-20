@@ -9,6 +9,11 @@ interface UseTenderBriefingsOptions {
   enabled?: boolean
   pageSize?: number
   province?: string
+  initialTenders?: TenderBriefing[]
+  initialNextCursor?: string | null
+  initialLastUpdated?: string | null
+  initialSyncStatus?: Partial<SyncStatus>
+  initialTotal?: number | null
 }
 
 export function useTenderBriefings(options: UseTenderBriefingsOptions = {}) {
@@ -18,16 +23,22 @@ export function useTenderBriefings(options: UseTenderBriefingsOptions = {}) {
     enabled = true,
     pageSize = 40,
     province = '',
+    initialTenders,
+    initialNextCursor = null,
+    initialLastUpdated = null,
+    initialSyncStatus = {},
+    initialTotal = null,
   } = options
 
-  const [tenders, setTenders] = useState<TenderBriefing[]>([])
-  const [loading, setLoading] = useState(true)
+  const hasInitial = Array.isArray(initialTenders)
+  const [tenders, setTenders] = useState<TenderBriefing[]>(initialTenders ?? [])
+  const [loading, setLoading] = useState(!hasInitial)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null)
-  const [syncStatus, setSyncStatus] = useState<Partial<SyncStatus>>({})
+  const [lastUpdated, setLastUpdated] = useState<string | null>(initialLastUpdated)
+  const [syncStatus, setSyncStatus] = useState<Partial<SyncStatus>>(initialSyncStatus)
   const [error, setError] = useState<string | null>(null)
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  const [total, setTotal] = useState<number | null>(null)
+  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor)
+  const [total, setTotal] = useState<number | null>(initialTotal)
 
   const fetchPage = useCallback(
     async (cursor?: string | null, replace = false) => {
