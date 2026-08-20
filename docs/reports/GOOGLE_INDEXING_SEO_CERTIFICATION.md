@@ -6,7 +6,8 @@
 **PR:** https://github.com/tenderbriefing/tender/pull/44  
 **Starting SHA:** `29e5ea486ce52f9edcb7cb67ea4e50a15ffbb18d`  
 **Prior certified SHA:** `6fafbab` / `0c2f5ec`  
-**Final SHA:** `d56d19b0e0dccf6807cddb6cc3c019b9852889b2` (tip at certification; subsequent docs-only SHA may differ)  
+**Final SHA:** `dfdfae6cc7804d33af6a5242f75fb067f169f380` (PR tip before merge)  
+**Merge SHA:** `3f18f98a0710aa95968979e0361b0891c46a2b00`  
 **Verdict:** **PASS WITH CONDITIONS** (pre-merge). **Production release:** see `docs/reports/GOOGLE_SEO_RECOVERY_PRODUCTION_CERTIFICATION.md` — **PASS WITH CONDITIONS** after merge `3f18f98` + deploy run `32345637700` + www smoke + Playwright re-verify (2/2 SEO, 18/23 full with 5 intentional skips).
 
 ---
