@@ -7,7 +7,7 @@
 **Starting SHA:** `29e5ea486ce52f9edcb7cb67ea4e50a15ffbb18d`  
 **Prior certified SHA:** `6fafbab` / `0c2f5ec`  
 **Final SHA:** `d56d19b0e0dccf6807cddb6cc3c019b9852889b2` (tip at certification; subsequent docs-only SHA may differ)  
-**Verdict:** **PASS WITH CONDITIONS**
+**Verdict:** **PASS WITH CONDITIONS** (pre-merge). **Production release:** see `docs/reports/GOOGLE_SEO_RECOVERY_PRODUCTION_CERTIFICATION.md` — **PASS WITH CONDITIONS** after merge `3f18f98` + deploy run `32345637700` + www smoke + Playwright re-verify (2/2 SEO, 18/23 full with 5 intentional skips).
 
 ---
 
@@ -175,14 +175,15 @@ Browser install note: `npx playwright install chromium` hung on extract locally;
 
 ---
 
-## 28. Recommended Release Action
+## 28. Release status (completed)
 
-1. Confirm GitHub CI green on final pushed SHA.
-2. **Merge PR #44** into master.
-3. Deploy master via approved production workflow.
-4. Run production SEO smoke tests.
-5. Resubmit sitemap; validate Soft 404 fix on samples.
+1. GitHub CI green on final PR tip `dfdfae6` — **done**.
+2. **Merged PR #44** → master `3f18f98` at 2026-08-20T07:47:02Z — **done**.
+3. Deployed via [Deploy TenderBriefing #32345637700](https://github.com/tenderbriefing/tender/actions/runs/32345637700) — **success**.
+4. Production SEO smoke + Playwright re-verify — **done** (see production certification).
+5. Remaining operator step: Search Console sitemap resubmit + Soft 404 Validate Fix.
 
 ---
 
-**Separate from PR #43 (Briefing Intelligence). Do not merge or deploy without CI green + explicit release path.**
+**Separate from PR #43 (Briefing Intelligence).**  
+**Production certification:** `docs/reports/GOOGLE_SEO_RECOVERY_PRODUCTION_CERTIFICATION.md`
