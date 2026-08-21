@@ -1,5 +1,11 @@
 'use client'
 
+/**
+ * @deprecated Legacy structured notes form. UI entry points redirect to
+ * `/agent/workspace/assignments/[requestId]/submit-evidence`.
+ * Kept only so old imports do not break; do not wire new navigation here.
+ */
+
 import { FormEvent, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'

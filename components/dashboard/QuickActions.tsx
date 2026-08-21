@@ -59,14 +59,14 @@ const QuickActions = ({ userType }: QuickActionsProps) => {
       icon: MagnifyingGlassIcon,
       title: 'Briefing Assignments',
       description: 'Available and assigned briefing sessions',
-      href: '/jobs',
+      href: '/agent/workspace/assignments',
       tone: 'gold',
     },
     {
       icon: DocumentTextIcon,
-      title: 'Submit Briefing Report',
-      description: 'Upload attendance notes and proof',
-      href: '/briefing-reports/upload',
+      title: 'Submit Report',
+      description: 'Upload briefing audio and attendance proof',
+      href: '/agent/workspace/assignments',
       tone: 'navy',
     },
     {

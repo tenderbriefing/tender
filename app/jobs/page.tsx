@@ -192,10 +192,10 @@ export default function AgentJobsPage() {
                       request={req}
                       actions={
                         <Link
-                          href={`/briefing-reports/upload?requestId=${req.id}&tenderId=${req.tenderId}`}
+                          href={`/agent/workspace/assignments/${req.id}/submit-evidence`}
                           className={`${primaryBtn} bg-brand-600 text-white hover:bg-brand-700`}
                         >
-                          Submit briefing report
+                          Submit Report
                         </Link>
                       }
                     />

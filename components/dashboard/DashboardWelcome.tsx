@@ -62,11 +62,11 @@ export default function DashboardWelcome({ userProfile, email }: DashboardWelcom
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/briefing-reports/upload"
+              href="/agent/workspace/assignments"
               className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
             >
               <FileText className="h-4 w-4" />
-              Upload a report
+              Submit Report
             </Link>
           </div>
         </div>
