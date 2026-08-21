@@ -1,29 +1,27 @@
 # Briefing AI Meeting Minutes — Final Certification
 
-**Branch:** `feat/briefing-audio-transcription-pipeline`  
-**PR:** https://github.com/tenderbriefing/tender/pull/47  
-**Final SHA:** `e2349e2f545fb716e4022f989aa59c76dd78adfa`  
-**CI:** All required checks green (typecheck/lint/unit, Firestore IDOR, Playwright, production build, Founder V2 smoke)  
+**Branch:** `feat/briefing-audio-transcription-pipeline` (merged)  
+**PR:** https://github.com/tenderbriefing/tender/pull/47 (**MERGED**)  
+**Certified source SHA:** `1643434b76e5700af04963c1dc18fde1aea25f3a`  
+**Merge SHA:** `0d71d9b09e1012c2af9bc4147c1acaa59ff8c004`  
+**CI:** All required checks green at merge  
 **Date:** 2026-08-21  
 **Scope:** Transcription + AI meeting minutes + tender comparison + branded PDF + founder approval  
-**Merge/deploy:** **NOT performed** — awaiting founder approval
+**Production certification:** see [`BRIEFING_AI_MEETING_MINUTES_PRODUCTION_CERTIFICATION.md`](./BRIEFING_AI_MEETING_MINUTES_PRODUCTION_CERTIFICATION.md)
 
 ---
 
 ## Executive Verdict
 
-**PASS WITH CONDITIONS**
+**PASS WITH CONDITIONS** (post-merge)
 
-**Merge recommendation:** **READY FOR FOUNDER APPROVAL TO MERGE**
+Founder approval granted; PR #47 merged and deployed. Feature flags enabled via ops PRs #48–#50. **Not** `PRODUCTION CERTIFIED`: OpenAI GSM mount failed on first flag deploy, and genuine YA Whisper → report → Founder approve smoke was not completed in the release session.
 
-Local gates are green (typecheck, lint, BI tests 61/61). Controlled mock smoke produced a branded PDF with structured amendments, no speaker labels, official tender metadata preserved, and irrelevant chatter excluded. Security remediations for founder-gated finalisation, draft PDF access, attendance verification honesty, and tighter Firestore YA write rules are included.
+**Remaining before PRODUCTION CERTIFIED:**
 
-**Conditions before calling production-ready:**
-
-1. Deploy Firestore rules + indexes with the merge.  
-2. Enable flags in a controlled environment and run live Whisper smoke with non-sensitive audio + real attendance image.  
-3. Founder reviews 1–2 real drafts before turning on client delivery automation.  
-4. Full `next build` SSG timeouts on `/tenders/*` remain a pre-existing local/CI environmental risk — treat Cloud Build as authoritative for app image compile.
+1. Grant Cloud Run SA `secretAccessor` on GSM `openai-api-key`, remount `OPENAI_API_KEY`, redeploy.  
+2. Authorised Youth Agent live smoke: real audio + attendance → Whisper → AI draft → Founder Approve.  
+3. Founder reviews 1–2 real drafts before client delivery automation.
 
 ---
 
