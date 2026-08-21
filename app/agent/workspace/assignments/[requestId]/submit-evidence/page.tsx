@@ -234,7 +234,8 @@ export default function SubmitEvidenceWizardPage() {
               <div>
                 <h2 className="text-lg font-bold text-slate-900">Submission complete</h2>
                 <p className="mt-1 text-sm text-slate-700">
-                  Upload complete. We are preparing your report — you can leave this page.
+                  Upload complete. Transcription and report preparation continue in the background — you can
+                  leave this page. A Founder will review the draft before it is final.
                 </p>
               </div>
             </div>
@@ -303,7 +304,8 @@ export default function SubmitEvidenceWizardPage() {
           <h2 className="mt-1 text-lg font-bold text-slate-900">Submit Report</h2>
           <p className="mt-1 text-sm text-slate-600">
             Upload your audio recording and attendance proof. The system will resolve the correct tender
-            automatically.
+            automatically. Processing (transcription and report) continues in the background after submit —
+            you do not wait on this page.
           </p>
         </section>
 
@@ -316,8 +318,9 @@ export default function SubmitEvidenceWizardPage() {
           <section className="rounded-2xl border border-slate-200 bg-white p-4">
           <h3 className="text-sm font-bold text-slate-900">Upload Briefing Recording</h3>
             <p className="mt-1 text-sm text-slate-600">
-            Upload the complete audio recording of the tender briefing.
-            Maximum size: <span className="font-semibold">100MB</span>.
+              Upload the complete audio recording of the tender briefing.
+              Accepted formats: <span className="font-semibold">MP3, M4A, WAV, AAC</span>.
+              Maximum size: <span className="font-semibold">100MB</span>.
             </p>
 
             <div className="mt-4">
@@ -374,8 +377,9 @@ export default function SubmitEvidenceWizardPage() {
           <section className="rounded-2xl border border-slate-200 bg-white p-4">
           <h3 className="text-sm font-bold text-slate-900">Upload Attendance Proof</h3>
             <p className="mt-1 text-sm text-slate-600">
-            Upload a clear photo or document showing that you attended the briefing.
-            At least <span className="font-semibold">1</span> file is required (JPEG/PNG/WebP/PDF).
+              Upload a clear photo or PDF of the attendance register / proof.
+              Accepted: <span className="font-semibold">JPEG, PNG, WebP, PDF</span> (max 10MB each, up to 10
+              files). At least <span className="font-semibold">1</span> file is required.
             </p>
 
             <div className="mt-4">
