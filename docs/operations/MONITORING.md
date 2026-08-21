@@ -16,12 +16,28 @@ Emitted via `lib/observability/logger.ts` / `observabilityBridge.js`:
 
 ## Recommended Cloud Monitoring alerts
 
-1. Cloud Run 5xx rate > 2% for 5m → on-call
-2. Log match `itn_rejected` count > 10/15m → payments owner
-3. Log match `paymentStatus":"pending"` aged requests (custom metric) > threshold → dispatch
-4. Auth 401 spike on `/api/attendance-requests` → security
-5. `rate_limit_exceeded` surge → abuse review
-6. WhatsApp `whatsapp_disabled` unexpected if feature expected on
+Create these against project `tenderbriefing-34679`, Cloud Run service `tenderbriefing` (`africa-south1`). Do not alert on 401/403.
+
+| Alert | Filter / metric | Window | Threshold |
+|-------|-----------------|--------|-----------|
+| HTTP 5xx | `run.googleapis.com/request_count` response_code_class=5xx | 5m | > 2% of requests **or** > 5 absolute if traffic is low |
+| 503/504 | log `httpRequest.status=503 OR 504` resource.type=cloud_run_revision | 5m | >= 3 |
+| Container restart / OOM | log `textPayload:"Memory limit"` OR `severity>=ERROR` with `The request was aborted` | 10m | >= 1 |
+| Catalogue latency | log `jsonPayload.event="hot_path"` AND `jsonPayload.endpoint="tender-briefings"` AND `jsonPayload.durationMs>8000` | 10m | >= 5 |
+| PayFast ITN reject | log `jsonPayload.event="itn_rejected"` | 15m | > 10 |
+| Automation failure | log `jsonPayload.event="automation_run_completed"` AND `jsonPayload.errorCount>0` | 30m | >= 2 consecutive |
+| Sync failure | log `jsonPayload.event="catalogue_summary_write_failed"` OR sync `lastError` | 60m | >= 1 after a scheduled run |
+| Transactional email skip | log `[transactionalEmail]` / `RESEND_API_KEY missing` unexpected in production | 30m | >= 3 |
+| Authz on intelligence | log path `/api/admin/command-center` OR `/api/founder/user-intelligence` status=5xx | 5m | >= 1 |
+
+Notification channel must be created once in Cloud Console (email to `info@tenderbriefing.co.za` or ops pager). This identity cannot create policies without `monitoring.alertPolicies.create`.
+
+Apply helper (fails closed without IAM):
+
+```bash
+# Does not print secrets. Requires monitoring.alertPolicies.create.
+bash scripts/apply-production-alerts.sh
+```
 
 ## Operator checks
 

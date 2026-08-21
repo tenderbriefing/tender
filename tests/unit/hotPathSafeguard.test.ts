@@ -65,6 +65,29 @@ describe('hot-path Firestore safeguards', () => {
     const s = src('app/api/tender-briefings/route.ts')
     expect(s).toMatch(/require\('\.\.\/\.\.\/\.\.\/backend\/services\/hotPathLog'\)/)
     expect(s).not.toMatch(/require\('\.\.\/\.\.\/\.\.\/\.\.\/backend\/services\/hotPathLog'\)/)
+    expect(s).toMatch(/Promise\.all/)
+    expect(s).toMatch(/listTenderBriefingsPage/)
+    expect(s).toMatch(/loadCatalogueMeta/)
+  })
+
+  it('attendance request by id is a document get, not a collection scan', () => {
+    const firestore = src('backend/services/firestoreStorageService.js')
+    const assignment = src('backend/services/agentAssignmentService.js')
+    const payment = src('backend/services/payments/attendancePaymentService.js')
+    expect(firestore).toMatch(/async function getAttendanceRequestById/)
+    expect(firestore).toMatch(/\.collection\(COLLECTIONS\.ATTENDANCE_REQUESTS\)\.doc\(String\(id\)\)\.get\(\)/)
+    const assignmentLookup = assignment.slice(
+      assignment.indexOf('async function getRequestById'),
+      assignment.indexOf('async function createRequest')
+    )
+    expect(assignmentLookup).toMatch(/getAttendanceRequestById/)
+    expect(assignmentLookup).not.toMatch(/getAttendanceRequests\(/)
+    const paymentLookup = payment.slice(
+      payment.indexOf('async function getRequestById'),
+      payment.indexOf('async function saveRequest')
+    )
+    expect(paymentLookup).toMatch(/getAttendanceRequestById/)
+    expect(paymentLookup).not.toMatch(/getAttendanceRequests\(/)
   })
 
   it('getSyncStatus does not load all tenders', () => {
