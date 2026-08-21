@@ -1,6 +1,8 @@
 # Briefing AI Meeting Minutes — Final Certification
 
 **Branch:** `feat/briefing-audio-transcription-pipeline`  
+**PR:** https://github.com/tenderbriefing/tender/pull/47  
+**Final SHA:** `853d9573ca19b8a3a0bfbb3cd011c23181b75faa`  
 **Date:** 2026-08-21  
 **Scope:** Transcription + AI meeting minutes + tender comparison + branded PDF + founder approval  
 **Merge/deploy:** **NOT performed** — awaiting founder approval
