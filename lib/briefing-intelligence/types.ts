@@ -65,6 +65,10 @@ export interface BriefingIntelligenceReport {
         language: string | null
         confidence: number | null
         completedAt: string | null
+        /** Firestore briefingTranscripts doc id when async pipeline stored segments. */
+        transcriptId?: string | null
+        segmentCount?: number | null
+        durationSeconds?: number | null
       }
     | null
 
@@ -83,6 +87,18 @@ export interface BriefingIntelligenceReport {
   updatedAt: string
   processingAttempts: number
   lastError: string | null
+
+  /** Meeting-minutes AI report generation status (independent of transcription). */
+  reportGenerationStatus?:
+    | 'waiting_for_transcript'
+    | 'generating'
+    | 'draft_ready'
+    | 'approved'
+    | 'delivered'
+    | 'failed'
+    | null
+  meetingMinutesVersionId?: string | null
+  meetingMinutesPromptVersion?: string | null
 }
 
 // Compatibility exports for existing UI routes/components.

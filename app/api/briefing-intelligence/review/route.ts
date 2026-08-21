@@ -84,6 +84,23 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: true, data: { reportId, status: 'agent_review' } })
     }
 
+    const { isBriefingAiReportGenerationEnabled } = await import(
+      '@/lib/briefing-intelligence/featureFlag'
+    )
+    if (isBriefingAiReportGenerationEnabled()) {
+      const genStatus = String((report as any).reportGenerationStatus || '')
+      if (genStatus !== 'approved') {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              'This AI briefing report requires founder approval before it can be finalised.',
+          },
+          { status: 409 }
+        )
+      }
+    }
+
     await ref.set(
       {
         agentReviewNotes: notes !== null ? String(notes).slice(0, 8000) : report.agentReviewNotes,

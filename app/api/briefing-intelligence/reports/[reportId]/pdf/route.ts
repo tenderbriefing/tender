@@ -28,6 +28,21 @@ export async function GET(
     (user.userType === 'sme' && report.smeId === user.uid)
   if (!canView) return forbiddenResponse('Not allowed to download this PDF')
 
+  // Non-admins may only download after founder approval / final delivery states.
+  if (user.userType !== 'admin') {
+    const genStatus = String((report as any).reportGenerationStatus || '')
+    const allowed =
+      report.status === 'final' ||
+      report.status === 'delivered' ||
+      genStatus === 'approved'
+    if (!allowed) {
+      return NextResponse.json(
+        { success: false, error: 'PDF available after report approval' },
+        { status: 403 }
+      )
+    }
+  }
+
   const pdfPath = report.pdfStorageRef || `briefing-intelligence/${reportId}/pdf/${reportId}.pdf`
 
   try {

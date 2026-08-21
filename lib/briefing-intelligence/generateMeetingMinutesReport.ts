@@ -1,0 +1,335 @@
+import { getFirebaseAdmin } from '@/lib/backend/firebaseAdmin'
+import type { BriefingIntelligenceReport } from '@/lib/briefing-intelligence/types'
+import { getBriefingTranscript } from '@/lib/briefing-intelligence/transcriptStore'
+import { loadTenderDocumentText } from '@/lib/briefing-intelligence/tenderDocumentText'
+import { getBriefingSummaryService } from '@/lib/briefing-intelligence/briefingSummaryService'
+import {
+  claimReportJob,
+  completeReportJob,
+  failReportJob,
+  getReportJob,
+} from '@/lib/briefing-intelligence/reportJobs'
+import {
+  nextReportVersionNumber,
+  saveReportVersion,
+} from '@/lib/briefing-intelligence/reportVersions'
+import {
+  loadDefaultLogoBytes,
+  renderMeetingMinutesPdf,
+  sanitizeReportFileName,
+} from '@/lib/briefing-intelligence/meetingMinutesPdf'
+import { meetingMinutesToBriefingReportContent } from '@/lib/briefing-intelligence/mapMeetingMinutesToReportContent'
+import { logBriefingIntelligenceAuditEvent } from '@/lib/briefing-intelligence/auditService'
+import { syncSlaForReport } from '@/lib/briefing-intelligence/slaService'
+import { isBriefingAiReportGenerationEnabled } from '@/lib/briefing-intelligence/featureFlag'
+import { fetchAttendanceAndTenderContext } from '@/lib/briefing-intelligence/tenderContext'
+
+function nowIso() {
+  return new Date().toISOString()
+}
+
+export type GenerateMeetingMinutesResult =
+  | { ok: true; reportId: string; versionId: string; pdfStoragePath: string | null; skipped?: boolean }
+  | { ok: false; reportId: string; error: string; retryable: boolean }
+
+/**
+ * Generate meeting-minutes draft + PDF from durable transcript.
+ * Does not delete transcript or evidence on failure.
+ */
+export async function generateMeetingMinutesReport(params: {
+  reportId: string
+  jobId: string
+  actorUid: string
+  actorRole: 'admin' | 'system'
+  force?: boolean
+}): Promise<GenerateMeetingMinutesResult> {
+  const { reportId, jobId, actorUid, actorRole } = params
+
+  if (!isBriefingAiReportGenerationEnabled() && !params.force) {
+    return { ok: false, reportId, error: 'AI report generation disabled', retryable: false }
+  }
+
+  const admin = getFirebaseAdmin()
+  const db = admin.firestore()
+  const docRef = db.collection('briefingIntelligenceReports').doc(reportId)
+  const snap = await docRef.get()
+  if (!snap.exists) {
+    return { ok: false, reportId, error: 'Report not found', retryable: false }
+  }
+  const report = snap.data() as BriefingIntelligenceReport
+
+  const existingJob = await getReportJob(db, jobId)
+  if (existingJob?.status === 'completed' && !params.force) {
+    return {
+      ok: true,
+      reportId,
+      versionId: existingJob.reportVersionId || '',
+      pdfStoragePath: existingJob.pdfStoragePath,
+      skipped: true,
+    }
+  }
+
+  const claimed = await claimReportJob(db, jobId)
+  if (!claimed && !params.force) {
+    return { ok: true, reportId, versionId: '', pdfStoragePath: null, skipped: true }
+  }
+
+  const now = nowIso()
+  await docRef.set(
+    {
+      reportGenerationStatus: 'generating',
+      updatedAt: now,
+      lastError: null,
+    },
+    { merge: true }
+  )
+
+  try {
+    const transcriptId =
+      claimed?.transcriptId ||
+      existingJob?.transcriptId ||
+      report.transcription?.transcriptId ||
+      ''
+    if (!transcriptId) {
+      throw Object.assign(new Error('Missing transcriptId for report generation'), {
+        code: 'missing_transcript',
+      })
+    }
+
+    const transcript = await getBriefingTranscript(db, transcriptId)
+    if (!transcript?.fullText) {
+      throw Object.assign(new Error('Transcript not found or empty'), {
+        code: 'missing_transcript',
+      })
+    }
+
+    const tenderCtx = await fetchAttendanceAndTenderContext({
+      db,
+      requestId: report.requestId,
+      tenderId: report.tenderId,
+      reportId,
+    })
+    const tenderDoc = await loadTenderDocumentText({ db, tenderId: report.tenderId })
+    const documentComparisonStatus: 'full' | 'metadata_only' | 'unavailable' =
+      tenderDoc.sourceUrls.length > 0
+        ? 'full'
+        : tenderDoc.text.trim().length > 40
+          ? 'metadata_only'
+          : 'unavailable'
+
+    const tenderSnap = await db.collection('tenderBriefings').doc(report.tenderId).get()
+    const tender = tenderSnap.data() as any
+    const requiresCert = Boolean(
+      tender?.briefingCertificateRequired ||
+        /certificate|information session/i.test(String(tenderDoc.text || ''))
+    )
+
+    console.info('[briefing-report] summary started', {
+      requestId: report.requestId,
+      reportId,
+      tenderId: report.tenderId,
+      transcriptId,
+      documentComparisonStatus,
+    })
+
+    const summaryService = getBriefingSummaryService()
+    const result = await summaryService.summarize({
+      reportId,
+      transcriptText: transcript.fullText,
+      transcriptSegments: (transcript.segments || []).map((s) => ({
+        id: s.id,
+        startSeconds: s.startSeconds,
+        endSeconds: s.endSeconds,
+        text: s.text,
+      })),
+      tenderDocumentText: tenderDoc.text,
+      documentComparisonStatus,
+      officialMetadata: {
+        tenderTitle: tenderCtx.tenderTitle,
+        tenderNumber: tenderCtx.tenderReference,
+        department: tenderCtx.issuingEntity,
+        briefingDate: tenderCtx.briefingDate,
+        briefingVenue: tenderCtx.briefingVenue,
+        closingDate: tenderCtx.closingDate,
+        closingTime: tender?.closingTime ? String(tender.closingTime) : null,
+        requiresBriefingCertificate: requiresCert,
+      },
+    })
+
+    // Load attendance image (first image-like proof)
+    let attendanceBytes: Uint8Array | null = null
+    let attendanceMime: string | null = null
+    const bucket = admin.storage().bucket()
+    const attendanceRef = (report.attendanceEvidenceRefs || [])[0]
+    if (attendanceRef) {
+      try {
+        const [buf] = await bucket.file(attendanceRef).download()
+        attendanceBytes = buf
+        const lower = attendanceRef.toLowerCase()
+        attendanceMime = lower.endsWith('.png')
+          ? 'image/png'
+          : lower.endsWith('.jpg') || lower.endsWith('.jpeg')
+            ? 'image/jpeg'
+            : lower.endsWith('.webp')
+              ? 'image/webp'
+              : 'image/jpeg'
+      } catch {
+        attendanceBytes = null
+      }
+    }
+
+    const logoBytes = await loadDefaultLogoBytes()
+    const pdfBuffer = await renderMeetingMinutesPdf({
+      report: result.structuredReport,
+      logoBytes,
+      attendanceImageBytes: attendanceBytes,
+      attendanceMime,
+      reportId,
+    })
+
+    const fileName = sanitizeReportFileName({
+      tenderNumber: result.structuredReport.cover.tenderNumber,
+      reportId,
+    })
+    const pdfPath = `briefing-intelligence/${reportId}/pdf/${fileName}`
+    await bucket.file(pdfPath).save(pdfBuffer, {
+      contentType: 'application/pdf',
+      metadata: {
+        uploadedBy: 'system',
+        reportId,
+        requestId: report.requestId,
+        promptVersion: result.promptVersion,
+      },
+      resumable: false,
+    })
+
+    const version = await nextReportVersionNumber(db, reportId)
+    const versionRecord = await saveReportVersion({
+      db,
+      reportId,
+      requestId: report.requestId,
+      tenderId: report.tenderId,
+      version,
+      structuredContent: result.structuredReport,
+      summary: result.summary,
+      pdfStoragePath: pdfPath,
+      promptVersion: result.promptVersion,
+      model: result.model,
+      transcriptId,
+    })
+
+    const hasAttendanceEvidence =
+      Array.isArray(report.attendanceEvidenceRefs) && report.attendanceEvidenceRefs.length > 0
+    const reportContent = meetingMinutesToBriefingReportContent(
+      result.structuredReport,
+      reportId,
+      { hasAttendanceEvidence }
+    )
+    reportContent.sourceAndVerification = {
+      ...reportContent.sourceAndVerification,
+      transcriptionProvider: report.transcription?.provider || null,
+      aiModel: result.model,
+      processingDate: nowIso(),
+    }
+
+    const readyAt = nowIso()
+    await docRef.set(
+      {
+        status: 'draft_report',
+        draftReadyAt: readyAt,
+        updatedAt: readyAt,
+        reportContent,
+        meetingMinutes: result.structuredReport,
+        meetingMinutesSummary: result.summary,
+        meetingMinutesVersionId: versionRecord.id,
+        meetingMinutesPromptVersion: result.promptVersion,
+        pdfStorageRef: pdfPath,
+        reportGenerationStatus: 'draft_ready',
+        lastError: null,
+      },
+      { merge: true }
+    )
+
+    await completeReportJob({
+      db,
+      jobId,
+      reportVersionId: versionRecord.id,
+      pdfStoragePath: pdfPath,
+      aiModel: result.model,
+    })
+
+    await syncSlaForReport({ db, reportId, now: new Date(readyAt) })
+    await logBriefingIntelligenceAuditEvent({
+      db,
+      eventType: 'draft_ready',
+      reportId,
+      requestId: report.requestId,
+      agentId: report.agentId,
+      smeId: report.smeId,
+      actorUid,
+      actorRole,
+      nextStatus: 'draft_report',
+      meta: {
+        reportVersionId: versionRecord.id,
+        promptVersion: result.promptVersion,
+        model: result.model,
+        pdfStoragePath: pdfPath,
+      },
+    })
+
+    console.info('[briefing-report] draft stored', {
+      requestId: report.requestId,
+      reportId,
+      tenderId: report.tenderId,
+      versionId: versionRecord.id,
+    })
+
+    return {
+      ok: true,
+      reportId,
+      versionId: versionRecord.id,
+      pdfStoragePath: pdfPath,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    const code =
+      error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: string }).code || 'report_generation_failed')
+        : 'report_generation_failed'
+    const retryable = !['missing_transcript'].includes(code)
+
+    await failReportJob({
+      db,
+      jobId,
+      errorCode: code,
+      errorMessage: message,
+      retry: retryable,
+    })
+
+    const failNow = nowIso()
+    await docRef.set(
+      {
+        reportGenerationStatus: 'failed',
+        lastError: message.slice(0, 2000),
+        updatedAt: failNow,
+        // Keep transcript + evidence; do not wipe transcription fields.
+      },
+      { merge: true }
+    )
+
+    await logBriefingIntelligenceAuditEvent({
+      db,
+      eventType: 'failed',
+      reportId,
+      requestId: report.requestId,
+      agentId: report.agentId,
+      smeId: report.smeId,
+      actorUid,
+      actorRole,
+      error: message,
+      meta: { phase: 'report_generation', jobId },
+    })
+
+    return { ok: false, reportId, error: message, retryable }
+  }
+}

@@ -224,7 +224,46 @@ service cloud.firestore {
       allow update: if isAdmin()
         || (isYouthAgent() && resource.data.agentId == request.auth.uid
           && !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['smeId', 'reportId', 'deliveredAt', 'pdfStorageRef', 'deliveryEmailId']));
+            .hasAny([
+              'smeId',
+              'reportId',
+              'deliveredAt',
+              'pdfStorageRef',
+              'deliveryEmailId',
+              'status',
+              'reportContent',
+              'transcription',
+              'meetingMinutes',
+              'meetingMinutesSummary',
+              'meetingMinutesVersionId',
+              'meetingMinutesPromptVersion',
+              'reportGenerationStatus',
+              'finalizedAt',
+              'draftReadyAt',
+              'processingStartedAt',
+              'processingAttempts',
+              'lastError',
+            ]));
+    }
+
+    // Async transcription jobs — Admin SDK only (no client access).
+    match /briefingTranscriptionJobs/{jobId} {
+      allow read, write: if false;
+    }
+
+    // Durable briefing transcripts — Admin SDK only (served via authenticated admin APIs).
+    match /briefingTranscripts/{transcriptId} {
+      allow read, write: if false;
+    }
+
+    // Meeting-minutes report jobs — Admin SDK only.
+    match /briefingReportJobs/{jobId} {
+      allow read, write: if false;
+    }
+
+    // Versioned meeting-minutes reports — Admin SDK only.
+    match /briefingReportVersions/{versionId} {
+      allow read, write: if false;
     }
 
     match /auditLogs/{logId} {

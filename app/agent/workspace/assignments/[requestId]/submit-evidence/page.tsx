@@ -234,7 +234,7 @@ export default function SubmitEvidenceWizardPage() {
               <div>
                 <h2 className="text-lg font-bold text-slate-900">Submission complete</h2>
                 <p className="mt-1 text-sm text-slate-700">
-                  Your Intelligence Report has been created successfully.
+                  Upload complete. We are preparing your report — you can leave this page.
                 </p>
               </div>
             </div>

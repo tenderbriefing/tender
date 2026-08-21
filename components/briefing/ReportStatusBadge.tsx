@@ -56,31 +56,31 @@ export default function ReportStatusBadge({
       className: 'bg-slate-100 text-slate-700 ring-slate-200',
     },
     evidence_uploaded: {
-      label: 'Submit Report',
+      label: 'Upload complete',
       className: 'bg-blue-50 text-blue-900 ring-blue-200',
     },
     processing: {
-      label: 'Processing',
+      label: 'Transcribing briefing',
       className: 'bg-amber-50 text-amber-900 ring-amber-200',
     },
     draft_report: {
-      label: 'Processing',
+      label: 'Preparing report',
       className: 'bg-amber-50 text-amber-900 ring-amber-200',
     },
     agent_review: {
-      label: 'Processing',
+      label: 'Preparing report',
       className: 'bg-amber-50 text-amber-900 ring-amber-200',
     },
     processing_failed: {
-      label: 'Submit Report',
-      className: 'bg-blue-50 text-blue-900 ring-blue-200',
+      label: 'Recording received. Our team is reviewing the transcription.',
+      className: 'bg-slate-100 text-slate-800 ring-slate-200',
     },
     final: {
-      label: 'Completed',
+      label: 'Report ready',
       className: 'bg-emerald-50 text-emerald-900 ring-emerald-200',
     },
     delivered: {
-      label: 'Completed',
+      label: 'Report ready',
       className: 'bg-emerald-50 text-emerald-900 ring-emerald-200',
     },
   } as const

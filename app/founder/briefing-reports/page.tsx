@@ -208,14 +208,28 @@ export default function FounderBriefingReportsPage() {
                           </div>
                         </td>
                         <td className="border-t border-slate-200 px-4 py-3 align-top">
-                          <Link
-                            href={`/dashboard/briefing-reports/${id}`}
-                            className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold ${
-                              needsAttention ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-brand-600 text-white hover:bg-brand-700'
-                            }`}
-                          >
-                            View detail
-                          </Link>
+                          <div className="flex flex-col gap-2">
+                            <Link
+                              href={`/dashboard/briefing-reports/${id}`}
+                              className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold ${
+                                needsAttention ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-brand-600 text-white hover:bg-brand-700'
+                              }`}
+                            >
+                              View detail
+                            </Link>
+                            <Link
+                              href={`/founder/briefing-reports/${id}/transcript`}
+                              className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                            >
+                              Transcript
+                            </Link>
+                            <Link
+                              href={`/founder/briefing-reports/${id}/minutes`}
+                              className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                            >
+                              Minutes
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     )

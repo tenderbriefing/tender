@@ -119,6 +119,58 @@ describe('Briefing Intelligence transcriptionService', () => {
     expect(res.language).toBeNull()
     expect(res.confidence).toBeNull()
     expect(res.completedAt).toBeTruthy()
+    expect(res.segments.length).toBeGreaterThanOrEqual(1)
+    expect(res.segments[0].speaker).toBe('Speaker 1')
+    expect(res.segments[0].text).toBe('hello world')
+  })
+
+  it('preserves timestamped segments from verbose_json without inventing speaker names', async () => {
+    const provider = new OpenAITranscriptionProvider({ apiKey: 'sk-test' })
+
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === 'https://signed.example/audio.mp3') {
+        return {
+          ok: true,
+          headers: new Headers({ 'content-type': 'audio/mpeg' }),
+          arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+        }
+      }
+      if (url.includes('/audio/transcriptions')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            text: 'Hello there. More words.',
+            language: 'en',
+            duration: 10.5,
+            segments: [
+              { start: 0, end: 4.2, text: ' Hello there.' },
+              { start: 4.2, end: 10.5, text: ' More words.' },
+            ],
+          }),
+        }
+      }
+      throw new Error(`Unexpected fetch url: ${url}`)
+    })
+
+    ;(globalThis as any).fetch = fetchMock
+
+    const res = await provider.transcribe('https://signed.example/audio.mp3')
+    expect(res.segments).toHaveLength(2)
+    expect(res.segments[0].startSeconds).toBe(0)
+    expect(res.segments[0].endSeconds).toBe(4.2)
+    expect(res.segments[0].speaker).toBe('Speaker 1')
+    expect(res.segments[1].speaker).toBe('Speaker 1')
+    expect(res.durationSeconds).toBe(10.5)
+    expect(res.language).toBe('en')
+  })
+
+  it('mock closing-date fixture includes speaker-separated timestamps', async () => {
+    const provider = new MockTranscriptionProvider()
+    const res = await provider.transcribe('https://example/closingdate-extended-12-19.mp3')
+    expect(res.segments.length).toBeGreaterThanOrEqual(2)
+    expect(res.segments.some((s) => s.speaker === 'Speaker 2')).toBe(true)
+    expect(res.transcriptText).toMatch(/19 September 2026/)
   })
 
   it('never generates extraction when transcription returns empty text', async () => {
