@@ -2,7 +2,8 @@
 
 **Branch:** `feat/briefing-audio-transcription-pipeline`  
 **PR:** https://github.com/tenderbriefing/tender/pull/47  
-**Final SHA:** `853d9573ca19b8a3a0bfbb3cd011c23181b75faa`  
+**Final SHA:** `e2349e2f545fb716e4022f989aa59c76dd78adfa`  
+**CI:** All required checks green (typecheck/lint/unit, Firestore IDOR, Playwright, production build, Founder V2 smoke)  
 **Date:** 2026-08-21  
 **Scope:** Transcription + AI meeting minutes + tender comparison + branded PDF + founder approval  
 **Merge/deploy:** **NOT performed** — awaiting founder approval
