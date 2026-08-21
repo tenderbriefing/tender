@@ -26,6 +26,18 @@ export interface TranscriptionResult {
   language: string | null
   confidence: number | null
   completedAt: string
+  /** Timestamped segments; speaker labels are neutral (Speaker N) — never fabricated names. */
+  segments: Array<{
+    id: string
+    speaker: string
+    startSeconds: number
+    endSeconds: number | null
+    text: string
+  }>
+  durationSeconds: number | null
+  model: string | null
+  /** Sanitised provider payload for GCS (no secrets). */
+  rawProviderPayload?: unknown
 }
 
 export interface TranscriptionProvider {
@@ -296,7 +308,8 @@ export class OpenAITranscriptionProvider implements TranscriptionProvider {
     fd.append('model', this.modelTranscribe)
     // OpenAI expects `file` to be a form file. undici Blob works in Node fetch.
     fd.append('file', blob, 'audio')
-    fd.append('response_format', 'json')
+    // verbose_json returns timestamped segments (no diarisation on whisper-1).
+    fd.append('response_format', 'verbose_json')
 
     const res = await fetch(`${this.baseUrl}/audio/transcriptions`, {
       method: 'POST',
@@ -318,6 +331,34 @@ export class OpenAITranscriptionProvider implements TranscriptionProvider {
       throw new Error('Transcription returned empty text')
     }
 
+    const segments: TranscriptionResult['segments'] = []
+    const rawSegments = Array.isArray(data?.segments) ? data.segments : []
+    for (let i = 0; i < rawSegments.length; i++) {
+      const seg = rawSegments[i]
+      const text = String(seg?.text || '').trim()
+      if (!text) continue
+      const start = typeof seg?.start === 'number' ? seg.start : 0
+      const end = typeof seg?.end === 'number' ? seg.end : null
+      // whisper-1 does not diarise; do not invent speaker identities.
+      segments.push({
+        id: `seg-${i + 1}`,
+        speaker: 'Speaker 1',
+        startSeconds: start,
+        endSeconds: end,
+        text,
+      })
+    }
+
+    if (segments.length === 0) {
+      segments.push({
+        id: 'seg-1',
+        speaker: 'Speaker 1',
+        startSeconds: 0,
+        endSeconds: typeof data?.duration === 'number' ? data.duration : null,
+        text: transcriptText,
+      })
+    }
+
     return {
       provider: 'openai-whisper',
       transcriptText,
@@ -325,6 +366,22 @@ export class OpenAITranscriptionProvider implements TranscriptionProvider {
       language: typeof data?.language === 'string' ? data.language : null,
       confidence: null, // Whisper does not reliably provide confidence.
       completedAt: nowIso(),
+      segments,
+      durationSeconds: typeof data?.duration === 'number' ? data.duration : null,
+      model: this.modelTranscribe,
+      rawProviderPayload: {
+        language: data?.language ?? null,
+        duration: data?.duration ?? null,
+        segmentCount: segments.length,
+        // Omit full token arrays to reduce storage; keep segment text/times.
+        segments: segments.map((s) => ({
+          id: s.id,
+          speaker: s.speaker,
+          start: s.startSeconds,
+          end: s.endSeconds,
+          text: s.text,
+        })),
+      },
     }
   }
 
@@ -418,18 +475,45 @@ export class MockTranscriptionProvider implements TranscriptionProvider {
     // can be asserted without calling external AI providers.
     const audio = String(audioUrl || '').toLowerCase()
     if (audio.includes('closingdate-extended-12-19')) {
+      const transcriptText = [
+        'OFFICIAL: The closing date has been extended from 12 September 2026 to 19 September 2026.',
+        'OFFICIAL: Submission requirements remain aligned with the published tender, subject to verifying the formal written addendum.',
+        'BIDDER: Can you confirm the final closing date for submissions?',
+        'OFFICIAL: Yes. Submissions close on 19 September 2026.',
+      ].join('\n')
       return {
         provider: 'mock-provider',
-        transcriptText: [
-          'OFFICIAL: The closing date has been extended from 12 September 2026 to 19 September 2026.',
-          'OFFICIAL: Submission requirements remain aligned with the published tender, subject to verifying the formal written addendum.',
-          'BIDDER: Can you confirm the final closing date for submissions?',
-          'OFFICIAL: Yes. Submissions close on 19 September 2026.',
-        ].join('\n'),
-        transcriptWordCount: null,
-        language: null,
+        transcriptText,
+        transcriptWordCount: countWords(transcriptText),
+        language: 'en',
         confidence: null,
         completedAt: nowIso(),
+        segments: [
+          {
+            id: 'seg-1',
+            speaker: 'Speaker 1',
+            startSeconds: 0,
+            endSeconds: 12,
+            text: 'The closing date has been extended from 12 September 2026 to 19 September 2026.',
+          },
+          {
+            id: 'seg-2',
+            speaker: 'Speaker 2',
+            startSeconds: 12,
+            endSeconds: 20,
+            text: 'Can you confirm the final closing date for submissions?',
+          },
+          {
+            id: 'seg-3',
+            speaker: 'Speaker 1',
+            startSeconds: 20,
+            endSeconds: 28,
+            text: 'Yes. Submissions close on 19 September 2026.',
+          },
+        ],
+        durationSeconds: 28,
+        model: 'mock',
+        rawProviderPayload: { fixture: 'closingdate-extended-12-19' },
       }
     }
 
@@ -437,9 +521,21 @@ export class MockTranscriptionProvider implements TranscriptionProvider {
       provider: 'mock-provider',
       transcriptText: `MOCK_TRANSCRIPT: transcription not executed for ${audioUrl}`,
       transcriptWordCount: null,
-      language: null,
+      language: 'en',
       confidence: null,
       completedAt: nowIso(),
+      segments: [
+        {
+          id: 'seg-1',
+          speaker: 'Speaker 1',
+          startSeconds: 0,
+          endSeconds: 5,
+          text: `MOCK_TRANSCRIPT: transcription not executed for ${audioUrl}`,
+        },
+      ],
+      durationSeconds: 5,
+      model: 'mock',
+      rawProviderPayload: { fixture: 'default' },
     }
   }
 

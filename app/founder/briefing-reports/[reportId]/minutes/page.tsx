@@ -1,0 +1,244 @@
+'use client'
+
+import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
+import { toast } from 'react-hot-toast'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { authFetch } from '@/lib/api/authenticatedFetch'
+
+type MinutesPayload = {
+  reportId: string
+  requestId: string
+  tenderId: string
+  agentId: string
+  reportStatus: string
+  reportGenerationStatus: string | null
+  transcriptionJob: { id: string; status: string; completedAt: string | null } | null
+  reportJob: {
+    id: string
+    status: string
+    attempts: number
+    maxAttempts: number
+    errorMessage: string | null
+    promptVersion: string
+    completedAt: string | null
+  } | null
+  version: {
+    id: string
+    version: number
+    status: string
+    promptVersion: string
+    model: string | null
+    createdAt: string
+    approvedAt: string | null
+    structuredContent: any
+    pdfStoragePath: string | null
+  } | null
+  meetingMinutes: any
+  pdfSignedUrl: string | null
+  attendanceSignedUrls: string[]
+  transcriptId: string | null
+}
+
+export default function FounderBriefingMinutesPage() {
+  const params = useParams()
+  const reportId = String(params?.reportId || '')
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [data, setData] = useState<MinutesPayload | null>(null)
+
+  const load = useCallback(async () => {
+    if (!reportId) return
+    setLoading(true)
+    try {
+      const res = await authFetch(`/api/briefing-intelligence/reports/${reportId}/minutes`)
+      const json = await res.json()
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed to load')
+      setData(json.data as MinutesPayload)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to load')
+      setData(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [reportId])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  async function postAction(action: 'approve' | 'regenerate') {
+    setBusy(true)
+    try {
+      const res = await authFetch(`/api/briefing-intelligence/reports/${reportId}/minutes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) throw new Error(json.error || 'Action failed')
+      toast.success(action === 'approve' ? 'Report approved' : 'Regeneration queued')
+      await load()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Action failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-10">
+        <p className="text-slate-600">Report not available.</p>
+        <Link href="/founder/briefing-reports" className="mt-4 inline-block text-sm underline">
+          Back
+        </Link>
+      </div>
+    )
+  }
+
+  const m = data.meetingMinutes || data.version?.structuredContent
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <Link href="/founder/briefing-reports" className="text-sm text-slate-500 hover:text-slate-800">
+            ← Briefing reports
+          </Link>
+          <h1 className="mt-2 text-2xl font-semibold text-slate-900">Briefing Report · {data.reportId}</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            {data.requestId} · {data.tenderId}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/founder/briefing-reports/${data.reportId}/transcript`}
+            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800"
+          >
+            Transcript
+          </Link>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void postAction('regenerate')}
+            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 disabled:opacity-60"
+          >
+            Regenerate
+          </button>
+          <button
+            type="button"
+            disabled={busy || !m}
+            onClick={() => void postAction('approve')}
+            className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+          >
+            Approve
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 space-y-1">
+        <div>Report status: <strong>{data.reportStatus}</strong></div>
+        <div>Audio / transcription: <strong>{data.transcriptionJob?.status || '—'}</strong></div>
+        <div>Report generation: <strong>{data.reportGenerationStatus || data.reportJob?.status || '—'}</strong></div>
+        {data.version ? (
+          <div>
+            Version {data.version.version} · prompt {data.version.promptVersion} · {data.version.status}
+          </div>
+        ) : null}
+        {data.reportJob?.errorMessage ? (
+          <div className="mt-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-900">
+            {data.reportJob.errorMessage}
+          </div>
+        ) : null}
+        {data.pdfSignedUrl ? (
+          <a
+            href={data.pdfSignedUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-block mt-2 font-medium text-slate-900 underline"
+          >
+            Download PDF
+          </a>
+        ) : null}
+      </div>
+
+      {data.attendanceSignedUrls.length > 0 ? (
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">Attendance evidence</h2>
+          <div className="mt-2 flex flex-wrap gap-3">
+            {data.attendanceSignedUrls.map((url) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={url} src={url} alt="Attendance proof" className="max-h-48 rounded border border-slate-200" />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {m ? (
+        <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-800">
+          <h2 className="text-lg font-semibold text-slate-900">Generated minutes</h2>
+          <section>
+            <h3 className="font-semibold text-slate-900">Purpose</h3>
+            <p className="mt-1">{m.purposeOfBriefing}</p>
+          </section>
+          {(m.whatDepartmentExplained || []).length > 0 ? (
+            <section>
+              <h3 className="font-semibold text-slate-900">What the Department Explained</h3>
+              <ul className="mt-1 list-disc pl-5 space-y-1">
+                {m.whatDepartmentExplained.map((x: string, i: number) => (
+                  <li key={i}>{x}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          {(m.questionsAndClarifications || []).length > 0 ? (
+            <section>
+              <h3 className="font-semibold text-slate-900">Questions and Clarifications</h3>
+              <div className="mt-2 space-y-3">
+                {m.questionsAndClarifications.map((q: any, i: number) => (
+                  <div key={i}>
+                    <div className="font-medium">{q.heading}</div>
+                    <p className="mt-0.5">{q.summary}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+          {(m.mainPoints || []).length > 0 ? (
+            <section>
+              <h3 className="font-semibold text-slate-900">Main Points</h3>
+              <table className="mt-2 w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="py-1 pr-3 font-medium">Matter</th>
+                    <th className="py-1 font-medium">What Was Said</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {m.mainPoints.map((row: any, i: number) => (
+                    <tr key={i} className="border-b border-slate-100 align-top">
+                      <td className="py-2 pr-3">{row.matter}</td>
+                      <td className="py-2">{row.detail}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          ) : null}
+        </div>
+      ) : (
+        <p className="text-sm text-slate-600">No meeting minutes draft yet.</p>
+      )}
+    </div>
+  )
+}

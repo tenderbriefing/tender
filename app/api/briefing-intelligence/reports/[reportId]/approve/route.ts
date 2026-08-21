@@ -44,6 +44,24 @@ export async function POST(
     )
   }
 
+  // When AI meeting-minutes generation is enabled, founder/admin must approve first.
+  const { isBriefingAiReportGenerationEnabled } = await import(
+    '@/lib/briefing-intelligence/featureFlag'
+  )
+  if (isBriefingAiReportGenerationEnabled()) {
+    const genStatus = String((report as any).reportGenerationStatus || '')
+    if (genStatus !== 'approved') {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'This AI briefing report requires founder approval before it can be finalised.',
+        },
+        { status: 409 }
+      )
+    }
+  }
+
   const now = nowIso()
 
   // One-click approve & finalize for existing UI routes:

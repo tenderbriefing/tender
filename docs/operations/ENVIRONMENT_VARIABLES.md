@@ -51,6 +51,14 @@ Never commit real secret values. Rotate via Google Secret Manager / hosting env.
 | `YOUTH_AGENT_WORKSPACE_ENABLED` | YAW global | optional (default false) | No | true/false | F (absent) | Product | Workspace APIs 403 |
 | `NEXT_PUBLIC_YOUTH_AGENT_WORKSPACE_ENABLED` | Advisory client mirror | optional (default false) | No | true/false | F | Product | Gate denial UI |
 | `YOUTH_AGENT_WORKSPACE_PILOT_UIDS` | YAW pilot UIDs | optional | Yes (prefer GSM) | uid,uid | F | Product/Ops | Deny-all when empty + flag false |
+| `BRIEFING_AUDIO_TRANSCRIPTION_ENABLED` | Async briefing audio transcription after evidence | optional (default false) | No | true/false | F | Product | Evidence still accepted; no Whisper jobs |
+| `BRIEFING_AI_REPORT_GENERATION_ENABLED` | Meeting-minutes AI report after transcript | optional (default false) | No | true/false | F | Product | Transcript kept; no report jobs |
+| `BRIEFING_REPORT_PROMPT_VERSION` | Prompt version stamp on generated reports | optional | No | v1 | - | Product | Defaults to v1 |
+| `BRIEFING_INTELLIGENCE_PROVIDER` | `openai` or `mock` | optional | No | openai | - | Product | Mock for tests only |
+| `BRIEFING_INTELLIGENCE_TRANSCRIBE_MODEL` | Whisper model | optional | No | whisper-1 | - | Product | Default whisper-1 |
+| `BRIEFING_INTELLIGENCE_EXTRACT_MODEL` | Extraction model | optional | No | gpt-4o | - | Product | Default gpt-4o |
+| `OPENAI_API_KEY` | OpenAI API (Whisper + extract) | if provider openai | Yes | sk-… | S | AI | Transcription/extract fails |
+| `APP_URL` / `NEXT_PUBLIC_APP_URL` | Base URL for worker self-enqueue | prod if transcription on | No | https://… | Y | Platform | Jobs stay queued |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Admin SDK | prod | Yes | JSON | S | Platform | Server auth/Firestore broken |
 | `FIREBASE_PROJECT_ID` | Admin project | prod | No | project id | Y | Platform | Admin SDK broken |
 | `STORAGE_ADAPTER` | `firestore` / `json` | prod | No | `firestore` | Y | Platform | Wrong storage |
@@ -65,6 +73,8 @@ PayFast: `docs/runbooks/PAYFAST.md`.
 |------------|-----------|
 | Youth Agent Workspace | Env absent → fail-closed |
 | Procurement Intelligence | Flags `false`; pilot UIDs in GSM only |
+| Briefing audio transcription | `BRIEFING_AUDIO_TRANSCRIPTION_ENABLED` absent/`false` → evidence upload only |
+| Briefing AI report generation | `BRIEFING_AI_REPORT_GENERATION_ENABLED` absent/`false` → transcript only, no minutes PDF |
 | Google Auth UI | `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=false` |
 | Meta WhatsApp webhook | Not enabled; Twilio outbound separate |
 

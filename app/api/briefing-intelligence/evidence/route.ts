@@ -17,7 +17,9 @@ const AUDIO_MIME = new Set([
   'audio/mp4', // m4a/aac
   'audio/x-m4a',
   'audio/wav',
+  'audio/x-wav',
   'audio/aac',
+  'audio/ogg',
   'audio/webm',
 ])
 
@@ -293,6 +295,52 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  return NextResponse.json({ success: true, data: { reportId } })
+  // Async transcription: create job + enqueue worker (never blocks on Whisper).
+  let transcriptionJobId: string | null = null
+  try {
+    const { isBriefingAudioTranscriptionEnabled } = await import(
+      '@/lib/briefing-intelligence/featureFlag'
+    )
+    if (isBriefingAudioTranscriptionEnabled()) {
+      const { createOrResetTranscriptionJob } = await import(
+        '@/lib/briefing-intelligence/transcriptionJobs'
+      )
+      const { enqueueTranscriptionWorker } = await import(
+        '@/lib/briefing-intelligence/enqueueTranscription'
+      )
+      const job = await createOrResetTranscriptionJob({
+        db,
+        reportId,
+        requestId,
+        tenderId,
+        agentId,
+        smeId,
+        audioStoragePath: audioPath,
+        audioMimeType: audioFile.type || null,
+        audioSizeBytes: audioFile.size || null,
+        provider: process.env.BRIEFING_INTELLIGENCE_PROVIDER || 'openai',
+      })
+      transcriptionJobId = job.id
+      await enqueueTranscriptionWorker({
+        jobId: job.id,
+        reportId,
+        requestId,
+        tenderId,
+      })
+    }
+  } catch (enqueueErr) {
+    // Evidence remains valid even if job enqueue fails.
+    console.error('[transcription] job create/enqueue failed after evidence', {
+      requestId,
+      reportId,
+      tenderId,
+      error: enqueueErr instanceof Error ? enqueueErr.message : String(enqueueErr),
+    })
+  }
+
+  return NextResponse.json({
+    success: true,
+    data: { reportId, transcriptionJobId },
+  })
 }
 
