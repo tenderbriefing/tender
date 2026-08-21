@@ -23,6 +23,16 @@ import { logBriefingIntelligenceAuditEvent } from '@/lib/briefing-intelligence/a
 import { syncSlaForReport } from '@/lib/briefing-intelligence/slaService'
 import { isBriefingAiReportGenerationEnabled } from '@/lib/briefing-intelligence/featureFlag'
 import { fetchAttendanceAndTenderContext } from '@/lib/briefing-intelligence/tenderContext'
+import {
+  applyAuthoritativeTenderFields,
+  runMeetingMinutesQualityGate,
+} from '@/lib/briefing-intelligence/reportQualityGate'
+import { assessTranscriptQuality } from '@/lib/briefing-intelligence/transcriptQuality'
+import {
+  briefingRunIdFromReportId,
+  classifyErrorMessage,
+  logBriefingPipeline,
+} from '@/lib/briefing-intelligence/pipelineTrace'
 
 function nowIso() {
   return new Date().toISOString()
@@ -57,9 +67,21 @@ export async function generateMeetingMinutesReport(params: {
     return { ok: false, reportId, error: 'Report not found', retryable: false }
   }
   const report = snap.data() as BriefingIntelligenceReport
+  const briefingRunId = briefingRunIdFromReportId(reportId)
+  const startedAt = Date.now()
 
   const existingJob = await getReportJob(db, jobId)
   if (existingJob?.status === 'completed' && !params.force) {
+    logBriefingPipeline({
+      briefingRunId,
+      reportId,
+      requestId: report.requestId,
+      tenderId: report.tenderId,
+      jobId,
+      stage: 'draft_ready',
+      status: 'skipped',
+      detail: 'report_job_already_completed',
+    })
     return {
       ok: true,
       reportId,
@@ -77,9 +99,26 @@ export async function generateMeetingMinutesReport(params: {
   const now = nowIso()
   await docRef.set(
     {
+      briefingRunId,
       reportGenerationStatus: 'generating',
       updatedAt: now,
       lastError: null,
+      pipelineDiagnostics: {
+        briefingRunId,
+        currentStage: 'report_generating',
+        lastSuccessfulStage: 'transcription_complete',
+        failureStage: null,
+        retryEligible: true,
+        lastErrorCategory: null,
+        attemptCount: claimed?.attempts || existingJob?.attempts || 1,
+        evidenceIntact: Boolean(report.audioFileRef),
+        transcriptIntact: Boolean(report.transcription?.transcriptId),
+        draftAvailable: false,
+        currentVersion: null,
+        approvedVersion: null,
+        qualityWarnings: [],
+        updatedAt: now,
+      },
     },
     { merge: true }
   )
@@ -100,6 +139,19 @@ export async function generateMeetingMinutesReport(params: {
     if (!transcript?.fullText) {
       throw Object.assign(new Error('Transcript not found or empty'), {
         code: 'missing_transcript',
+      })
+    }
+
+    const tq = assessTranscriptQuality({
+      fullText: transcript.fullText,
+      durationSeconds: transcript.durationSeconds ?? report.transcription?.durationSeconds ?? null,
+      audioFileSizeMb: report.audioFileSizeMb,
+      segmentCount: transcript.segments?.length ?? null,
+    })
+    if (!tq.ok) {
+      throw Object.assign(new Error(tq.founderMessage), {
+        code: tq.category,
+        qualityGate: true,
       })
     }
 
@@ -124,7 +176,32 @@ export async function generateMeetingMinutesReport(params: {
         /certificate|information session/i.test(String(tenderDoc.text || ''))
     )
 
+    const officialMetadata = {
+      tenderTitle: tenderCtx.tenderTitle,
+      tenderNumber: tenderCtx.tenderReference,
+      department: tenderCtx.issuingEntity,
+      briefingDate: tenderCtx.briefingDate,
+      briefingVenue: tenderCtx.briefingVenue,
+      closingDate: tenderCtx.closingDate,
+      closingTime: tender?.closingTime ? String(tender.closingTime) : null,
+      requiresBriefingCertificate: requiresCert,
+    }
+
+    logBriefingPipeline({
+      briefingRunId,
+      reportId,
+      requestId: report.requestId,
+      tenderId: report.tenderId,
+      jobId,
+      stage: 'report_generating',
+      status: 'ok',
+      provider: 'openai',
+      attempt: claimed?.attempts || existingJob?.attempts || 1,
+      detail: `documentComparisonStatus=${documentComparisonStatus}`,
+    })
+
     console.info('[briefing-report] summary started', {
+      briefingRunId,
       requestId: report.requestId,
       reportId,
       tenderId: report.tenderId,
@@ -144,17 +221,47 @@ export async function generateMeetingMinutesReport(params: {
       })),
       tenderDocumentText: tenderDoc.text,
       documentComparisonStatus,
-      officialMetadata: {
-        tenderTitle: tenderCtx.tenderTitle,
-        tenderNumber: tenderCtx.tenderReference,
-        department: tenderCtx.issuingEntity,
-        briefingDate: tenderCtx.briefingDate,
-        briefingVenue: tenderCtx.briefingVenue,
-        closingDate: tenderCtx.closingDate,
-        closingTime: tender?.closingTime ? String(tender.closingTime) : null,
-        requiresBriefingCertificate: requiresCert,
-      },
+      officialMetadata,
     })
+
+    let structured = applyAuthoritativeTenderFields(result.structuredReport, {
+      tenderTitle: officialMetadata.tenderTitle,
+      tenderNumber: officialMetadata.tenderNumber,
+      department: officialMetadata.department,
+      briefingDate: officialMetadata.briefingDate,
+      briefingVenue: officialMetadata.briefingVenue,
+      closingDate: officialMetadata.closingDate,
+    })
+    result.structuredReport = structured
+
+    const gate = runMeetingMinutesQualityGate({
+      report: structured,
+      official: {
+        tenderTitle: officialMetadata.tenderTitle,
+        tenderNumber: officialMetadata.tenderNumber,
+        department: officialMetadata.department,
+        briefingDate: officialMetadata.briefingDate,
+        briefingVenue: officialMetadata.briefingVenue,
+        closingDate: officialMetadata.closingDate,
+      },
+      transcriptText: transcript.fullText,
+    })
+    if (!gate.ok) {
+      throw Object.assign(new Error(gate.founderMessage), {
+        code: gate.category,
+        qualityGate: true,
+        qualityWarnings: gate.warnings,
+      })
+    }
+    structured = applyAuthoritativeTenderFields(structured, {
+      tenderTitle: officialMetadata.tenderTitle,
+      tenderNumber: officialMetadata.tenderNumber,
+      department: officialMetadata.department,
+      briefingDate: officialMetadata.briefingDate,
+      briefingVenue: officialMetadata.briefingVenue,
+      closingDate: officialMetadata.closingDate,
+    })
+    result.structuredReport = structured
 
     // Load attendance image (first image-like proof)
     let attendanceBytes: Uint8Array | null = null
@@ -199,6 +306,7 @@ export async function generateMeetingMinutesReport(params: {
         reportId,
         requestId: report.requestId,
         promptVersion: result.promptVersion,
+        briefingRunId,
       },
       resumable: false,
     })
@@ -233,8 +341,10 @@ export async function generateMeetingMinutesReport(params: {
     }
 
     const readyAt = nowIso()
+    const qualityWarnings = [...(tq.warnings || []), ...(gate.warnings || [])]
     await docRef.set(
       {
+        briefingRunId,
         status: 'draft_report',
         draftReadyAt: readyAt,
         updatedAt: readyAt,
@@ -246,6 +356,22 @@ export async function generateMeetingMinutesReport(params: {
         pdfStorageRef: pdfPath,
         reportGenerationStatus: 'draft_ready',
         lastError: null,
+        pipelineDiagnostics: {
+          briefingRunId,
+          currentStage: 'draft_ready',
+          lastSuccessfulStage: 'draft_ready',
+          failureStage: null,
+          retryEligible: true,
+          lastErrorCategory: null,
+          attemptCount: claimed?.attempts || existingJob?.attempts || 1,
+          evidenceIntact: Boolean(report.audioFileRef),
+          transcriptIntact: true,
+          draftAvailable: true,
+          currentVersion: versionRecord.version,
+          approvedVersion: null,
+          qualityWarnings,
+          updatedAt: readyAt,
+        },
       },
       { merge: true }
     )
@@ -274,10 +400,25 @@ export async function generateMeetingMinutesReport(params: {
         promptVersion: result.promptVersion,
         model: result.model,
         pdfStoragePath: pdfPath,
+        briefingRunId,
       },
     })
 
+    logBriefingPipeline({
+      briefingRunId,
+      reportId,
+      requestId: report.requestId,
+      tenderId: report.tenderId,
+      jobId,
+      stage: 'draft_ready',
+      status: 'ok',
+      provider: result.provider,
+      durationMs: Date.now() - startedAt,
+      detail: `version=${versionRecord.version}`,
+    })
+
     console.info('[briefing-report] draft stored', {
+      briefingRunId,
       requestId: report.requestId,
       reportId,
       tenderId: report.tenderId,
@@ -296,7 +437,17 @@ export async function generateMeetingMinutesReport(params: {
       error && typeof error === 'object' && 'code' in error
         ? String((error as { code?: string }).code || 'report_generation_failed')
         : 'report_generation_failed'
-    const retryable = !['missing_transcript'].includes(code)
+    const qualityGate =
+      error && typeof error === 'object' && 'qualityGate' in error
+        ? Boolean((error as { qualityGate?: boolean }).qualityGate)
+        : code.includes('quality') ||
+          code === 'empty_transcript' ||
+          code === 'low_quality_transcript' ||
+          code === 'hallucination_guard'
+    const category = classifyErrorMessage(message)
+    const retryable = !['missing_transcript', 'empty_transcript', 'low_quality_transcript', 'hallucination_guard', 'quality_gate', 'ai_schema'].includes(
+      code
+    ) && !qualityGate
 
     await failReportJob({
       db,
@@ -309,10 +460,26 @@ export async function generateMeetingMinutesReport(params: {
     const failNow = nowIso()
     await docRef.set(
       {
-        reportGenerationStatus: 'failed',
+        briefingRunId,
+        reportGenerationStatus: qualityGate ? 'failed_quality_gate' : 'failed',
         lastError: message.slice(0, 2000),
         updatedAt: failNow,
-        // Keep transcript + evidence; do not wipe transcription fields.
+        pipelineDiagnostics: {
+          briefingRunId,
+          currentStage: qualityGate ? 'failed_quality_gate' : 'failed',
+          lastSuccessfulStage: 'transcription_complete',
+          failureStage: qualityGate ? 'failed_quality_gate' : 'failed',
+          retryEligible: retryable,
+          lastErrorCategory: category,
+          attemptCount: claimed?.attempts || existingJob?.attempts || 1,
+          evidenceIntact: Boolean(report.audioFileRef),
+          transcriptIntact: Boolean(report.transcription?.transcriptId),
+          draftAvailable: false,
+          currentVersion: null,
+          approvedVersion: null,
+          qualityWarnings: [message.slice(0, 500)],
+          updatedAt: failNow,
+        },
       },
       { merge: true }
     )
@@ -327,7 +494,20 @@ export async function generateMeetingMinutesReport(params: {
       actorUid,
       actorRole,
       error: message,
-      meta: { phase: 'report_generation', jobId },
+      meta: { phase: 'report_generation', jobId, briefingRunId, errorCategory: category },
+    })
+
+    logBriefingPipeline({
+      briefingRunId,
+      reportId,
+      requestId: report.requestId,
+      tenderId: report.tenderId,
+      jobId,
+      stage: qualityGate ? 'failed_quality_gate' : 'failed',
+      status: 'error',
+      errorCategory: category,
+      durationMs: Date.now() - startedAt,
+      detail: code,
     })
 
     return { ok: false, reportId, error: message, retryable }

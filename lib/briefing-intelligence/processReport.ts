@@ -210,6 +210,66 @@ export async function processBriefingIntelligenceReport(params: {
 
     // Prefer async meeting-minutes report generation when flagged (separate from Whisper).
     if (isBriefingAiReportGenerationEnabled()) {
+      const { assessTranscriptQuality } = await import('@/lib/briefing-intelligence/transcriptQuality')
+      const {
+        briefingRunIdFromReportId,
+        logBriefingPipeline,
+      } = await import('@/lib/briefing-intelligence/pipelineTrace')
+      const briefingRunId = briefingRunIdFromReportId(reportId)
+
+      const quality = assessTranscriptQuality({
+        fullText: transcription.transcriptText,
+        durationSeconds: transcription.durationSeconds ?? null,
+        audioFileSizeMb: report.audioFileSizeMb,
+        segmentCount: segments.length,
+      })
+
+      logBriefingPipeline({
+        briefingRunId,
+        reportId,
+        requestId: report.requestId,
+        tenderId: report.tenderId,
+        jobId,
+        stage: 'transcription_complete',
+        status: quality.ok ? 'ok' : 'error',
+        provider: transcription.provider,
+        errorCategory: quality.ok ? null : quality.category,
+        detail: quality.ok ? null : quality.reason,
+      })
+
+      if (!quality.ok) {
+        const nowFail = nowIso()
+        await docRef.set(
+          {
+            briefingRunId,
+            transcription: transcriptionMeta,
+            status: 'processing',
+            updatedAt: nowFail,
+            reportGenerationStatus: 'failed_quality_gate',
+            lastError: quality.founderMessage.slice(0, 2000),
+            pipelineDiagnostics: {
+              briefingRunId,
+              currentStage: 'failed_quality_gate',
+              lastSuccessfulStage: 'transcription_complete',
+              failureStage: 'failed_quality_gate',
+              retryEligible: true,
+              lastErrorCategory: quality.category,
+              attemptCount: nextAttempts,
+              evidenceIntact: Boolean(report.audioFileRef),
+              transcriptIntact: true,
+              draftAvailable: false,
+              currentVersion: null,
+              approvedVersion: null,
+              qualityWarnings: [quality.founderMessage],
+              updatedAt: nowFail,
+            },
+          },
+          { merge: true }
+        )
+        // Transcript + evidence retained; do not auto-generate a polished draft.
+        return { ok: true, reportId, transcriptId: transcriptRecord.id }
+      }
+
       const { createOrResetReportJob } = await import('@/lib/briefing-intelligence/reportJobs')
       const { enqueueReportGenerationWorker } = await import(
         '@/lib/briefing-intelligence/enqueueReportGeneration'
@@ -227,11 +287,28 @@ export async function processBriefingIntelligenceReport(params: {
       const now2 = nowIso()
       await docRef.set(
         {
+          briefingRunId,
           transcription: transcriptionMeta,
           status: 'processing',
           updatedAt: now2,
           lastError: null,
           reportGenerationStatus: 'waiting_for_transcript',
+          pipelineDiagnostics: {
+            briefingRunId,
+            currentStage: 'report_generating',
+            lastSuccessfulStage: 'transcription_complete',
+            failureStage: null,
+            retryEligible: true,
+            lastErrorCategory: null,
+            attemptCount: nextAttempts,
+            evidenceIntact: Boolean(report.audioFileRef),
+            transcriptIntact: true,
+            draftAvailable: false,
+            currentVersion: null,
+            approvedVersion: null,
+            qualityWarnings: quality.warnings,
+            updatedAt: now2,
+          },
         },
         { merge: true }
       )
@@ -257,6 +334,7 @@ export async function processBriefingIntelligenceReport(params: {
           phase: 'report_generation_enqueued',
           transcriptId: transcriptRecord.id,
           reportJobId: reportJob.id,
+          briefingRunId,
         },
       })
 
