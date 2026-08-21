@@ -9,12 +9,39 @@ import { authFetch } from '@/lib/api/authenticatedFetch'
 
 type MinutesPayload = {
   reportId: string
+  briefingRunId?: string
   requestId: string
   tenderId: string
   agentId: string
+  smeId?: string
+  evidenceSubmittedAt?: string | null
   reportStatus: string
   reportGenerationStatus: string | null
-  transcriptionJob: { id: string; status: string; completedAt: string | null } | null
+  lastError?: string | null
+  pipelineDiagnostics?: {
+    briefingRunId: string
+    currentStage: string
+    lastSuccessfulStage: string | null
+    failureStage: string | null
+    retryEligible: boolean
+    lastErrorCategory: string | null
+    attemptCount: number
+    evidenceIntact: boolean
+    transcriptIntact: boolean
+    draftAvailable: boolean
+    currentVersion: number | null
+    approvedVersion: number | null
+    qualityWarnings: string[]
+    updatedAt: string
+  } | null
+  transcriptionJob: {
+    id: string
+    status: string
+    attempts?: number
+    maxAttempts?: number
+    completedAt: string | null
+    errorCode?: string | null
+  } | null
   reportJob: {
     id: string
     status: string
@@ -32,13 +59,16 @@ type MinutesPayload = {
     model: string | null
     createdAt: string
     approvedAt: string | null
+    approvedBy?: string | null
     structuredContent: any
     pdfStoragePath: string | null
   } | null
   meetingMinutes: any
   pdfSignedUrl: string | null
   attendanceSignedUrls: string[]
+  attendanceEvidenceCount?: number
   transcriptId: string | null
+  audioPresent?: boolean
 }
 
 export default function FounderBriefingMinutesPage() {
@@ -78,7 +108,11 @@ export default function FounderBriefingMinutesPage() {
       })
       const json = await res.json()
       if (!res.ok || !json.success) throw new Error(json.error || 'Action failed')
-      toast.success(action === 'approve' ? 'Report approved' : 'Regeneration queued')
+      if (action === 'approve' && json.data?.alreadyApproved) {
+        toast.success('Already approved (idempotent)')
+      } else {
+        toast.success(action === 'approve' ? 'Report approved' : 'Regeneration queued')
+      }
       await load()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Action failed')
@@ -117,8 +151,11 @@ export default function FounderBriefingMinutesPage() {
           </Link>
           <h1 className="mt-2 text-2xl font-semibold text-slate-900">Briefing Report · {data.reportId}</h1>
           <p className="mt-1 text-sm text-slate-600">
-            {data.requestId} · {data.tenderId}
+            {data.requestId} · {data.tenderId} · YA {data.agentId}
           </p>
+          {data.briefingRunId ? (
+            <p className="mt-1 font-mono text-xs text-slate-500">briefingRunId: {data.briefingRunId}</p>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
@@ -148,11 +185,54 @@ export default function FounderBriefingMinutesPage() {
 
       <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 space-y-1">
         <div>Report status: <strong>{data.reportStatus}</strong></div>
-        <div>Audio / transcription: <strong>{data.transcriptionJob?.status || '—'}</strong></div>
-        <div>Report generation: <strong>{data.reportGenerationStatus || data.reportJob?.status || '—'}</strong></div>
+        <div>Submitted: <strong>{data.evidenceSubmittedAt || '—'}</strong></div>
+        <div>
+          Evidence: audio <strong>{data.audioPresent ? 'yes' : 'no'}</strong> · attendance files{' '}
+          <strong>{data.attendanceEvidenceCount ?? data.attendanceSignedUrls.length}</strong>
+        </div>
+        <div>
+          Transcription: <strong>{data.transcriptionJob?.status || '—'}</strong>
+          {data.transcriptionJob?.attempts != null
+            ? ` · attempt ${data.transcriptionJob.attempts}/${data.transcriptionJob.maxAttempts ?? '—'}`
+            : ''}
+        </div>
+        <div>
+          Report generation: <strong>{data.reportGenerationStatus || data.reportJob?.status || '—'}</strong>
+          {data.reportJob
+            ? ` · attempt ${data.reportJob.attempts}/${data.reportJob.maxAttempts}`
+            : ''}
+        </div>
         {data.version ? (
           <div>
             Version {data.version.version} · prompt {data.version.promptVersion} · {data.version.status}
+            {data.version.approvedAt ? ` · approved ${data.version.approvedAt}` : ''}
+          </div>
+        ) : null}
+        {data.pipelineDiagnostics ? (
+          <div className="mt-3 space-y-1 rounded border border-slate-200 bg-white p-3 text-xs text-slate-700">
+            <div className="font-semibold text-slate-900">Pipeline diagnostics</div>
+            <div>Stage: {data.pipelineDiagnostics.currentStage}</div>
+            <div>Last success: {data.pipelineDiagnostics.lastSuccessfulStage || '—'}</div>
+            <div>Failure stage: {data.pipelineDiagnostics.failureStage || '—'}</div>
+            <div>Error category: {data.pipelineDiagnostics.lastErrorCategory || '—'}</div>
+            <div>Retry eligible: {data.pipelineDiagnostics.retryEligible ? 'yes' : 'no'}</div>
+            <div>
+              Intact — evidence: {data.pipelineDiagnostics.evidenceIntact ? 'yes' : 'no'} · transcript:{' '}
+              {data.pipelineDiagnostics.transcriptIntact ? 'yes' : 'no'} · draft:{' '}
+              {data.pipelineDiagnostics.draftAvailable ? 'yes' : 'no'}
+            </div>
+            {(data.pipelineDiagnostics.qualityWarnings || []).length > 0 ? (
+              <ul className="mt-1 list-disc pl-4 text-amber-900">
+                {data.pipelineDiagnostics.qualityWarnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+        {data.lastError ? (
+          <div className="mt-2 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-950">
+            {data.lastError}
           </div>
         ) : null}
         {data.reportJob?.errorMessage ? (

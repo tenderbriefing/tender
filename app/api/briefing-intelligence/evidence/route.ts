@@ -252,6 +252,7 @@ export async function POST(request: NextRequest) {
     agentId,
     smeId,
     status: 'evidence_uploaded',
+    briefingRunId: reportId,
     evidenceSubmittedAt,
     processingStartedAt: null,
     draftReadyAt: null,
@@ -275,6 +276,23 @@ export async function POST(request: NextRequest) {
     updatedAt: evidenceSubmittedAt,
     processingAttempts,
     lastError: null,
+    reportGenerationStatus: null,
+    pipelineDiagnostics: {
+      briefingRunId: reportId,
+      currentStage: 'evidence_uploaded',
+      lastSuccessfulStage: 'evidence_uploaded',
+      failureStage: null,
+      retryEligible: true,
+      lastErrorCategory: null,
+      attemptCount: 0,
+      evidenceIntact: true,
+      transcriptIntact: false,
+      draftAvailable: false,
+      currentVersion: null,
+      approvedVersion: null,
+      qualityWarnings: [],
+      updatedAt: evidenceSubmittedAt,
+    },
   }
 
   await docRef.set(patch, { merge: true })

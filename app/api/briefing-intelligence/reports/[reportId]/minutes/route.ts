@@ -64,13 +64,25 @@ export async function GET(request: NextRequest, context: RouteContext) {
     success: true,
     data: {
       reportId,
+      briefingRunId: (report as any).briefingRunId || reportId,
       requestId: report.requestId,
       tenderId: report.tenderId,
       agentId: report.agentId,
+      smeId: report.smeId,
+      evidenceSubmittedAt: report.evidenceSubmittedAt,
       reportStatus: report.status,
       reportGenerationStatus: (report as any).reportGenerationStatus || null,
+      lastError: report.lastError ? String(report.lastError).slice(0, 500) : null,
+      pipelineDiagnostics: (report as any).pipelineDiagnostics || null,
       transcriptionJob: transcriptionJob
-        ? { id: transcriptionJob.id, status: transcriptionJob.status, completedAt: transcriptionJob.completedAt }
+        ? {
+            id: transcriptionJob.id,
+            status: transcriptionJob.status,
+            attempts: transcriptionJob.attempts,
+            maxAttempts: transcriptionJob.maxAttempts,
+            completedAt: transcriptionJob.completedAt,
+            errorCode: transcriptionJob.errorCode || null,
+          }
         : null,
       reportJob: reportJob
         ? {
@@ -78,7 +90,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
             status: reportJob.status,
             attempts: reportJob.attempts,
             maxAttempts: reportJob.maxAttempts,
-            errorMessage: reportJob.errorMessage,
+            errorMessage: reportJob.errorMessage
+              ? String(reportJob.errorMessage).slice(0, 400)
+              : null,
             promptVersion: reportJob.promptVersion,
             completedAt: reportJob.completedAt,
           }
@@ -92,6 +106,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
             model: version.model,
             createdAt: version.createdAt,
             approvedAt: version.approvedAt,
+            approvedBy: version.approvedBy,
             structuredContent: version.structuredContent,
             pdfStoragePath: version.pdfStoragePath,
           }
@@ -99,7 +114,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       meetingMinutes: (report as any).meetingMinutes || version?.structuredContent || null,
       pdfSignedUrl,
       attendanceSignedUrls,
+      attendanceEvidenceCount: (report.attendanceEvidenceRefs || []).length,
       transcriptId: report.transcription?.transcriptId || null,
+      audioPresent: Boolean(report.audioFileRef),
     },
   })
 }
@@ -161,34 +178,77 @@ export async function POST(request: NextRequest, context: RouteContext) {
   if (!version) {
     return NextResponse.json({ success: false, error: 'No report version to approve' }, { status: 404 })
   }
-  const approved = await approveReportVersion({
-    db,
-    versionId: version.id,
-    approvedBy: user.uid,
-  })
-  const now = new Date().toISOString()
-  await db.collection('briefingIntelligenceReports').doc(reportId).set(
-    {
-      status: 'final',
-      finalizedAt: now,
-      updatedAt: now,
-      reportGenerationStatus: 'approved',
-      agentReviewedAt: now,
-    },
-    { merge: true }
-  )
-  await logBriefingIntelligenceAuditEvent({
-    db,
-    eventType: 'reviewed',
-    reportId,
-    requestId: report.requestId,
-    agentId: report.agentId,
-    smeId: report.smeId,
-    actorUid: user.uid,
-    actorRole: 'admin',
-    nextStatus: 'final',
-    meta: { versionId: version.id },
-  })
+  if (version.status === 'superseded') {
+    return NextResponse.json(
+      { success: false, error: 'Latest version is superseded; regenerate or select a draft version' },
+      { status: 409 }
+    )
+  }
 
-  return NextResponse.json({ success: true, data: { reportId, version: approved } })
+  let approveResult: Awaited<ReturnType<typeof approveReportVersion>>
+  try {
+    approveResult = await approveReportVersion({
+      db,
+      versionId: version.id,
+      approvedBy: user.uid,
+    })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Approve failed'
+    return NextResponse.json({ success: false, error: msg }, { status: 409 })
+  }
+  if (!approveResult) {
+    return NextResponse.json({ success: false, error: 'Version not found' }, { status: 404 })
+  }
+
+  const now = new Date().toISOString()
+  if (!approveResult.alreadyApproved) {
+    await db.collection('briefingIntelligenceReports').doc(reportId).set(
+      {
+        briefingRunId: reportId,
+        status: 'final',
+        finalizedAt: now,
+        updatedAt: now,
+        reportGenerationStatus: 'approved',
+        agentReviewedAt: now,
+        pipelineDiagnostics: {
+          briefingRunId: reportId,
+          currentStage: 'approved',
+          lastSuccessfulStage: 'approved',
+          failureStage: null,
+          retryEligible: false,
+          lastErrorCategory: null,
+          attemptCount: (report as any).pipelineDiagnostics?.attemptCount || 1,
+          evidenceIntact: Boolean(report.audioFileRef),
+          transcriptIntact: Boolean(report.transcription?.transcriptId),
+          draftAvailable: true,
+          currentVersion: version.version,
+          approvedVersion: version.version,
+          qualityWarnings: (report as any).pipelineDiagnostics?.qualityWarnings || [],
+          updatedAt: now,
+        },
+      },
+      { merge: true }
+    )
+    await logBriefingIntelligenceAuditEvent({
+      db,
+      eventType: 'reviewed',
+      reportId,
+      requestId: report.requestId,
+      agentId: report.agentId,
+      smeId: report.smeId,
+      actorUid: user.uid,
+      actorRole: 'admin',
+      nextStatus: 'final',
+      meta: { versionId: version.id, briefingRunId: reportId },
+    })
+  }
+
+  return NextResponse.json({
+    success: true,
+    data: {
+      reportId,
+      version: approveResult.version,
+      alreadyApproved: approveResult.alreadyApproved,
+    },
+  })
 }

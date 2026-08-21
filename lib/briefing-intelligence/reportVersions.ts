@@ -73,24 +73,38 @@ export async function saveReportVersion(params: {
   return record
 }
 
+/**
+ * Atomic approve. Idempotent when the same version is already approved.
+ * Does not mutate superseded / already-approved historical drafts beyond this doc.
+ */
 export async function approveReportVersion(params: {
   db: Firestore
   versionId: string
   approvedBy: string
-}): Promise<BriefingReportVersion | null> {
+}): Promise<{ version: BriefingReportVersion; alreadyApproved: boolean } | null> {
   const ref = params.db.collection(COLLECTION).doc(params.versionId)
-  const snap = await ref.get()
-  if (!snap.exists) return null
-  const now = nowIso()
-  await ref.set(
-    {
+  return params.db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists) return null
+    const current = snap.data() as BriefingReportVersion
+    if (current.status === 'approved' && current.approvedAt) {
+      return { version: current, alreadyApproved: true }
+    }
+    if (current.status === 'superseded') {
+      throw Object.assign(new Error('Cannot approve a superseded report version'), {
+        code: 'superseded_version',
+      })
+    }
+    const now = nowIso()
+    const next: BriefingReportVersion = {
+      ...current,
       status: 'approved',
       approvedAt: now,
       approvedBy: params.approvedBy,
-    },
-    { merge: true }
-  )
-  return { ...(snap.data() as BriefingReportVersion), status: 'approved', approvedAt: now, approvedBy: params.approvedBy }
+    }
+    tx.set(ref, { status: 'approved', approvedAt: now, approvedBy: params.approvedBy }, { merge: true })
+    return { version: next, alreadyApproved: false }
+  })
 }
 
 export async function getLatestReportVersion(

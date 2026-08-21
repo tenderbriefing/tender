@@ -96,9 +96,35 @@ export interface BriefingIntelligenceReport {
     | 'approved'
     | 'delivered'
     | 'failed'
+    | 'failed_quality_gate'
+    | 'requires_review'
     | null
   meetingMinutesVersionId?: string | null
   meetingMinutesPromptVersion?: string | null
+
+  /**
+   * Correlation id for the full BI run. Equals reportId (TB-BR-…).
+   * Present for ops tracing; safe to log.
+   */
+  briefingRunId?: string | null
+
+  /** Founder-safe pipeline diagnostics (no secrets / no raw transcript). */
+  pipelineDiagnostics?: {
+    briefingRunId: string
+    currentStage: string
+    lastSuccessfulStage: string | null
+    failureStage: string | null
+    retryEligible: boolean
+    lastErrorCategory: string | null
+    attemptCount: number
+    evidenceIntact: boolean
+    transcriptIntact: boolean
+    draftAvailable: boolean
+    currentVersion: number | null
+    approvedVersion: number | null
+    qualityWarnings: string[]
+    updatedAt: string
+  } | null
 }
 
 // Compatibility exports for existing UI routes/components.
