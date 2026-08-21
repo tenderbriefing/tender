@@ -129,7 +129,7 @@ quandl-api-key
 ### 9. **AI & Machine Learning**
 ```bash
 # OpenAI
-openai-api-key
+Open_ai_Secret_Key
 openai-organization-id
 
 # Google AI
@@ -300,7 +300,7 @@ deepl-api-key
   - new-relic-license-key
 
 /ai-ml/
-  - openai-api-key
+  - Open_ai_Secret_Key
   - google-ai-api-key
   - azure-form-recognizer-key
 ```

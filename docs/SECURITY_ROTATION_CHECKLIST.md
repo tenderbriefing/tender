@@ -11,7 +11,7 @@ Do **not** paste real secrets into tickets, chat, or git. Use Secret Manager, `.
 | Item | Detail |
 |------|--------|
 | **Where to rotate** | [OpenAI API keys](https://platform.openai.com/api-keys) — revoke old key, create new |
-| **Update after rotation** | Google Secret Manager secret `openai-api-key`; local `.env.local` `OPENAI_API_KEY` |
+| **Update after rotation** | Google Secret Manager secret `Open_ai_Secret_Key`; local `.env.local` `OPENAI_API_KEY` |
 | **Redeploy** | Cloud Run if the service reads the key from env at build/runtime; run `node scripts/save-openai-key.js` with `OPENAI_API_KEY` set (script reads from env only) |
 | **Verify** | `POST /api/ai/chat` or AI test page; check Cloud Run logs for auth errors |
 
@@ -66,7 +66,7 @@ Do **not** paste real secrets into tickets, chat, or git. Use Secret Manager, `.
 | Item | Detail |
 |------|--------|
 | **Where to rotate** | [Secret Manager](https://console.cloud.google.com/security/secret-manager?project=tenderbriefing-34679) — add **new version** for each exposed secret |
-| **Secrets to review** | `firebase-api-key`, `gmail-client-id`, `gmail-client-secret`, `google-maps-api-key`, `openai-api-key`, `Resend_API`, any custom secrets |
+| **Secrets to review** | `firebase-api-key`, `gmail-client-id`, `gmail-client-secret`, `google-maps-api-key`, `Open_ai_Secret_Key`, `Resend_API`, any custom secrets |
 | **Update after rotation** | Cloud Run env or app code that loads secrets at runtime; run `node scripts/setup-secret-manager.js` with env vars set (no hardcoded values) |
 | **Verify** | `/secrets-test` (dev only), maps/Gmail features in staging |
 
