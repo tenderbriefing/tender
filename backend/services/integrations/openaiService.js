@@ -34,7 +34,7 @@ function getStatus() {
     requiredEnv: [...REQUIRED_ENV, 'OPENAI_MODEL'],
     missing: config.missing,
     setupNotes:
-      'Optional in production — rule-based summaries used when key is missing. Store key in Secret Manager as openai-api-key.',
+      'Optional in production — rule-based summaries used when key is missing. Store key in Secret Manager as Open_ai_Secret_Key (env OPENAI_API_KEY).',
   })
 }
 

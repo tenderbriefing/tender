@@ -12,7 +12,7 @@ const projectId = process.env.GCP_PROJECT_ID || 'tenderbriefing-34679';
 const client = new SecretManagerServiceClient();
 
 const secretEnvKeys = {
-  'openai-api-key': 'OPENAI_API_KEY',
+  'Open_ai_Secret_Key': 'OPENAI_API_KEY',
   'gmail-client-id': 'GMAIL_CLIENT_ID',
   'gmail-client-secret': 'GMAIL_CLIENT_SECRET',
   'firebase-api-key': 'NEXT_PUBLIC_FIREBASE_API_KEY',

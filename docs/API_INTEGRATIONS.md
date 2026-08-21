@@ -196,7 +196,7 @@ If `RESEND_API_KEY` is missing, welcome send is skipped with a warning — regis
 | Item | Value |
 |------|--------|
 | **Env** | `OPENAI_API_KEY`, `OPENAI_MODEL` (default `gpt-4o-mini`) |
-| **Secret Manager** | `openai-api-key` |
+| **Secret Manager** | `Open_ai_Secret_Key` (mounted as env `OPENAI_API_KEY`) |
 | **Service** | `backend/services/integrations/openaiService.js` |
 | **Existing** | `backend/services/aiSummaryService.js` (pipeline) |
 
@@ -232,7 +232,7 @@ Tender briefing dates are already exposed in-app via `backend/services/calendarS
 
 | Secret name | Env variable |
 |-------------|----------------|
-| `openai-api-key` | `OPENAI_API_KEY` |
+| `Open_ai_Secret_Key` | `OPENAI_API_KEY` |
 | `google-maps-api-key` | `GOOGLE_MAPS_API_KEY` |
 | `gmail-client-secret` | (existing Gmail integration) |
 | `payfast-merchant-id` | `PAYFAST_MERCHANT_ID` |

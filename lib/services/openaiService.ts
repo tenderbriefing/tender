@@ -32,7 +32,7 @@ class OpenAIService {
   async initialize(): Promise<void> {
     if (!this.apiKey) {
       try {
-        this.apiKey = await secretManager.getSecret('openai-api-key')
+        this.apiKey = await secretManager.getSecret('Open_ai_Secret_Key')
       } catch (error) {
         // Fallback to environment variable if Secret Manager fails
         this.apiKey = process.env.OPENAI_API_KEY || null

@@ -3,7 +3,7 @@ const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 async function saveOpenAIKey() {
   const client = new SecretManagerServiceClient();
   const projectId = process.env.GCP_PROJECT_ID || 'tenderbriefing-34679';
-  const secretId = 'openai-api-key';
+  const secretId = 'Open_ai_Secret_Key';
   const secretValue = process.env.OPENAI_API_KEY;
 
   if (!secretValue) {
