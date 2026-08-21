@@ -29,7 +29,7 @@ Code/deployment-ready technical hardening is complete on branch `hardening/brief
 
 ## 4. Final SHA
 
-`a5b20d67260a37970a244bb0a71bbb379e4a3b12`
+`65ae23c7618f183dd4196499c898a9a0f9a1322c`
 
 ---
 
