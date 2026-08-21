@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-21  
 **Product URL:** https://www.tenderbriefing.co.za  
-**Updated:** OpenAI GSM binding fix in progress / see Release table
+**Last updated:** 2026-08-21 (OpenAI GSM binding deployed)
 
 ---
 
@@ -12,12 +12,12 @@
 
 | Layer | Status |
 |-------|--------|
-| CODE VERIFIED | **PASS** (PR #47 CI green; BI suite 61/61) |
-| DEPLOYMENT VERIFIED | **PASS** for app + flags; OpenAI secret remount pending merge of binding fix |
-| OPENAI SECRET BINDING | **FIXED IN CONFIG** (`OPENAI_API_KEY` ← `Open_ai_Secret_Key:latest`); IAM confirmed; awaiting deploy verification |
-| REAL PRODUCTION WORKFLOW VERIFIED | **NOT COMPLETE** — awaiting authorised live Youth Agent Whisper+report smoke |
+| CODE VERIFIED | **PASS** |
+| DEPLOYMENT VERIFIED | **PASS** (incl. OpenAI secret mount) |
+| OPENAI SECRET BINDING | **PASS** (`OPENAI_API_KEY` ← `Open_ai_Secret_Key:latest` on revision `tenderbriefing-00125-sfx`) |
+| REAL PRODUCTION WORKFLOW VERIFIED | **NOT COMPLETE** — **AWAITING AUTHORISED REAL YOUTH AGENT SMOKE** |
 
-**Not** declared `PRODUCTION CERTIFIED` until genuine audio → Whisper → AI report → Founder approve succeeds in production.
+**Not** `PRODUCTION CERTIFIED` until genuine audio → Whisper → AI report → Founder approve succeeds with authorised production credentials.
 
 ---
 
@@ -26,27 +26,27 @@
 | Item | Value |
 |------|-------|
 | Feature PR | [#47](https://github.com/tenderbriefing/tender/pull/47) |
-| Certified source SHA (feature) | `1643434b76e5700af04963c1dc18fde1aea25f3a` |
-| Merge SHA (PR #47) | `0d71d9b09e1012c2af9bc4147c1acaa59ff8c004` |
-| First production deploy (PR #47) | [32472467320](https://github.com/tenderbriefing/tender/actions/runs/32472467320) |
-| Ops flags (without OpenAI) | PR #49 / #50 → tip `5c6ea95…` deploy [32478037350](https://github.com/tenderbriefing/tender/actions/runs/32478037350) |
-| OpenAI binding fix | Branch `fix/openai-production-secret-binding` — mounts `OPENAI_API_KEY=Open_ai_Secret_Key:latest` |
-| Prior failed mount | PR #48 attempted wrong name `openai-api-key:latest` |
-| Production URL | https://www.tenderbriefing.co.za |
+| Certified feature source SHA | `1643434b76e5700af04963c1dc18fde1aea25f3a` |
+| Feature merge SHA | `0d71d9b09e1012c2af9bc4147c1acaa59ff8c004` |
+| OpenAI binding PR | [#52](https://github.com/tenderbriefing/tender/pull/52) |
+| Binding certified SHA | `acf5a39714fe3933f2a74caae22dab5226200244` |
+| Binding merge SHA / production SHA | `1214dd802d140eb4a3dfcf2cc2e3b59ef95be267` |
+| Deploy run | [32482761775](https://github.com/tenderbriefing/tender/actions/runs/32482761775) **success** (~2026-08-21T12:52:17Z) |
+| Cloud Run service | `tenderbriefing` / `africa-south1` / `tenderbriefing-34679` |
+| Cloud Run revision | `tenderbriefing-00125-sfx` |
+| Runtime SA | `9058655644-compute@developer.gserviceaccount.com` |
 
 ---
 
-## Secret Manager (no secret values)
+## Secret Manager (values never recorded)
 
 | Item | Status |
 |------|--------|
-| Secret id | `Open_ai_Secret_Key` |
-| Version | `1` **enabled** (`latest` resolves) |
-| Wrong name | `openai-api-key` does **not** apply to production |
-| Runtime env | `OPENAI_API_KEY` |
-| Cloud Run SA | `9058655644-compute@developer.gserviceaccount.com` |
-| IAM | `roles/secretmanager.secretAccessor` on secret (compute + Cloud Build SA) |
-| Mount | `OPENAI_API_KEY=Open_ai_Secret_Key:latest` via `cloudbuild.yaml` `--set-secrets` |
+| Secret | `Open_ai_Secret_Key` |
+| Version | `1` enabled (`latest`) |
+| IAM | `roles/secretmanager.secretAccessor` for compute + Cloud Build SAs (secret-level) |
+| Runtime binding | `OPENAI_API_KEY` ← Secret Manager `Open_ai_Secret_Key` / `latest` |
+| Incorrect prior name | `openai-api-key` (deploy failed; corrected in PR #52) |
 
 ---
 
@@ -60,23 +60,22 @@
 
 ---
 
-## Production Health (baseline)
+## Production Health (post-binding deploy)
 
 | Check | Result |
 |-------|--------|
-| Homepage / tenders / auth | PASS |
-| `/api/health/firestore` | PASS |
-| YA / Founder routes load | PASS |
+| `/`, `/tenders`, auth | PASS (200) |
+| Firestore health | PASS |
+| YA / Founder routes | PASS (200) |
 | Anonymous BI APIs | PASS (401) |
 
 ---
 
-## Real Whisper / Attendance / AI Report / Founder
+## Real Whisper / Attendance / AI / Founder
 
 | Check | Result |
 |-------|--------|
-| Authorised YA live smoke | **NOT RUN** — AWAITING AUTHORISED REAL YOUTH AGENT SMOKE |
-| Whisper / attendance / AI / Founder approve | **NOT RUN** |
+| YA submission / Whisper / AI draft / Founder approve | **NOT RUN** — awaiting authorised production Youth Agent session and real briefing evidence |
 
 ---
 
@@ -84,9 +83,22 @@
 
 | Check | Result |
 |-------|--------|
-| CI Firestore IDOR | PASS |
-| Anonymous APIs | 401 |
-| Founder-gated approve / draft PDF (code) | PASS |
+| CI Firestore IDOR (PR #52) | PASS |
+| Anonymous BI APIs | 401 |
+| Code founder-gated approve / draft PDF | PASS (unchanged) |
+
+---
+
+## Tests (binding fix)
+
+| Gate | Result |
+|------|--------|
+| typecheck | PASS |
+| lint | PASS (pre-existing unrelated ConnectorMatching warning) |
+| BI suite | 61/61 PASS |
+| secrets-scan | PASS |
+| config / firestore-rules QA | PASS |
+| PR #52 CI (incl. production build, Playwright, Founder V2, IDOR) | PASS |
 
 ---
 
@@ -97,18 +109,18 @@ BRIEFING_AI_REPORT_GENERATION_ENABLED=false
 BRIEFING_AUDIO_TRANSCRIPTION_ENABLED=false
 ```
 
-Does not delete evidence, transcripts, jobs, or report versions. Or remove `OPENAI_API_KEY` secret mount and redeploy.
+Or remove `OPENAI_API_KEY=Open_ai_Secret_Key:latest` from `cloudbuild.yaml` `--set-secrets` and redeploy. Does not delete evidence, transcripts, jobs, or report versions.
 
 ---
 
 ## Remaining Conditions
 
-1. Merge + deploy OpenAI binding fix; verify Cloud Run revision mounts `Open_ai_Secret_Key`.  
-2. Authorised Youth Agent production E2E: audio + attendance → Whisper → AI draft → Founder Approve.  
-3. Promote to **PRODUCTION CERTIFIED** only after step 2 passes.
+1. Authorised Youth Agent production E2E: real audio + attendance → Whisper → AI draft → Founder Approve.  
+2. Report quality acceptance against that real briefing evidence.  
+3. Then promote verdict to **PRODUCTION CERTIFIED**.
 
 ---
 
 ## Exact Next Action
 
-Deploy OpenAI binding fix, verify revision secret mount, then run authorised YA production smoke.
+Run the authorised real Youth Agent production smoke on https://www.tenderbriefing.co.za (OpenAI binding is live).
