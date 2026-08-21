@@ -1,9 +1,12 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 
 function resolveFirebaseProjectId(): string {
+  // Align with Admin SDK: prefer server FIREBASE_PROJECT_ID, then public project id.
   const id =
-    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
     process.env.FIREBASE_PROJECT_ID ||
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+    process.env.GOOGLE_CLOUD_PROJECT ||
+    process.env.GCLOUD_PROJECT ||
     (process.env.NODE_ENV === 'production' ? '' : 'tenderbriefing-34679')
   if (!id) {
     throw new Error('FIREBASE_PROJECT_ID / NEXT_PUBLIC_FIREBASE_PROJECT_ID required')

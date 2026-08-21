@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyApiUser, unauthorizedResponse } from '@/lib/auth/verifyApiUser'
+import {
+  verifyApiUserDetailed,
+  responseFromVerifyFailure,
+} from '@/lib/auth/verifyApiUser'
 import { assertYouthAgentWorkspaceAccess } from '@/lib/agent/workspace/apiGuard'
 
 export const dynamic = 'force-dynamic'
@@ -7,11 +10,12 @@ export const dynamic = 'force-dynamic'
 type Ctx = { params: { requestId: string } }
 
 export async function GET(request: NextRequest, { params }: Ctx) {
-  const user = await verifyApiUser(request.headers.get('authorization'), [
+  const result = await verifyApiUserDetailed(request.headers.get('authorization'), [
     'youth-agent',
     'admin',
   ])
-  if (!user) return unauthorizedResponse()
+  if (!result.ok) return responseFromVerifyFailure(result)
+  const user = result.user
   const denied = assertYouthAgentWorkspaceAccess(user)
   if (denied) return denied
 
@@ -37,11 +41,12 @@ export async function GET(request: NextRequest, { params }: Ctx) {
 }
 
 export async function PATCH(request: NextRequest, { params }: Ctx) {
-  const user = await verifyApiUser(request.headers.get('authorization'), [
+  const result = await verifyApiUserDetailed(request.headers.get('authorization'), [
     'youth-agent',
     'admin',
   ])
-  if (!user) return unauthorizedResponse()
+  if (!result.ok) return responseFromVerifyFailure(result)
+  const user = result.user
   const denied = assertYouthAgentWorkspaceAccess(user)
   if (denied) return denied
 

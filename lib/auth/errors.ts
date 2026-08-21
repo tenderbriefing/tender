@@ -2,16 +2,16 @@ import { FirebaseError } from 'firebase/app'
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'auth/email-already-in-use':
-    'This email is already registered. Sign in instead or use a different email.',
+    'This email is already registered. Please sign in.',
   'auth/invalid-email': 'Please enter a valid email address.',
   'auth/weak-password': 'Password must be at least 6 characters.',
   'auth/network-request-failed':
     'Network error. Check your connection and try again.',
   'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
-  'auth/user-not-found': 'No account found with this email. Check the address or register.',
-  'auth/wrong-password': 'Incorrect password. Try again or reset your password.',
-  'auth/invalid-credential': 'Invalid email or password. Please try again.',
-  'auth/invalid-login-credentials': 'Invalid email or password. Please try again.',
+  'auth/user-not-found': 'Incorrect email address or password.',
+  'auth/wrong-password': 'Incorrect email address or password.',
+  'auth/invalid-credential': 'Incorrect email address or password.',
+  'auth/invalid-login-credentials': 'Incorrect email address or password.',
   'auth/user-disabled': 'This account has been disabled. Contact support.',
   'auth/popup-blocked':
     'Your browser blocked the Google sign-in popup. Allow popups or try again — we will redirect instead.',

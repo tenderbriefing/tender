@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyApiUser, unauthorizedResponse } from '@/lib/auth/verifyApiUser'
+import {
+  verifyApiUserDetailed,
+  responseFromVerifyFailure,
+} from '@/lib/auth/verifyApiUser'
 import { assertYouthAgentWorkspaceAccess } from '@/lib/agent/workspace/apiGuard'
 import {
   canAccessYouthAgentWorkspace,
@@ -12,11 +15,12 @@ export const dynamic = 'force-dynamic'
 
 /** Probe workspace access (fail-closed). Used by UI bootstrap. */
 export async function GET(request: NextRequest) {
-  const user = await verifyApiUser(request.headers.get('authorization'), [
+  const result = await verifyApiUserDetailed(request.headers.get('authorization'), [
     'youth-agent',
     'admin',
   ])
-  if (!user) return unauthorizedResponse('Sign-in required')
+  if (!result.ok) return responseFromVerifyFailure(result)
+  const user = result.user
 
   const allowed = canAccessYouthAgentWorkspace({ uid: user.uid, userType: user.userType })
   return NextResponse.json({
@@ -33,11 +37,12 @@ export async function GET(request: NextRequest) {
 
 /** Today board */
 export async function POST(request: NextRequest) {
-  const user = await verifyApiUser(request.headers.get('authorization'), [
+  const result = await verifyApiUserDetailed(request.headers.get('authorization'), [
     'youth-agent',
     'admin',
   ])
-  if (!user) return unauthorizedResponse()
+  if (!result.ok) return responseFromVerifyFailure(result)
+  const user = result.user
   const denied = assertYouthAgentWorkspaceAccess(user)
   if (denied) return denied
 

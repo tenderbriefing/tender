@@ -36,7 +36,7 @@ const securityHeaders = [
 
       "font-src 'self' https://fonts.gstatic.com data:",
 
-      "connect-src 'self' https://*.googleapis.com https://*.google.com https://*.firebaseio.com https://*.cloudfunctions.net wss://*.firebaseio.com https://www.google-analytics.com https://www.payfast.co.za https://sandbox.payfast.co.za https://*.etenders.gov.za https://ocds-api.etenders.gov.za",
+      "connect-src 'self' https://*.googleapis.com https://*.google.com https://*.firebaseio.com https://*.cloudfunctions.net wss://*.firebaseio.com https://www.google-analytics.com https://stats.g.doubleclick.net https://www.payfast.co.za https://sandbox.payfast.co.za https://*.etenders.gov.za https://ocds-api.etenders.gov.za",
 
       "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://www.payfast.co.za https://sandbox.payfast.co.za",
 

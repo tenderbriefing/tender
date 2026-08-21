@@ -1,12 +1,10 @@
 'use client'
 
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { signUp } from '@/lib/auth'
 import { getAuthErrorMessage, normalizeAuthEmail } from '@/lib/auth/errors'
-import { dashboardPathForRole } from '@/lib/auth/redirects'
-import { resolvePostAuthDestination } from '@/lib/auth/googleAuthFlow'
 import { continueWithGoogle, finishGoogleRedirect } from '@/lib/auth/continueWithGoogle'
 import { isGoogleAuthEnabled } from '@/lib/auth/googleAuthEnabled'
 import { requestWelcomeEmail } from '@/lib/auth/requestWelcomeEmail'
@@ -36,6 +34,7 @@ function SignUpForm() {
 
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const submitLock = useRef(false)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -113,8 +112,10 @@ function SignUpForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (submitLock.current || loading || googleLoading) return
     if (!validateForm()) return
 
+    submitLock.current = true
     setLoading(true)
     try {
       const isSme = formData.userType === 'sme'
@@ -152,7 +153,7 @@ function SignUpForm() {
             onboardingCompleted: true,
           }
 
-      const { user, userProfile, created } = await signUp(
+      const { user, created } = await signUp(
         normalizeAuthEmail(formData.email),
         formData.password,
         formData.displayName.trim(),
@@ -163,25 +164,17 @@ function SignUpForm() {
       // Non-blocking — registration succeeds even if mail fails / Resend is unset.
       if (created) void requestWelcomeEmail()
 
-      if (created) {
-        markPostRegistrationWelcomePending(user.uid)
-        router.replace(POST_REGISTRATION_WELCOME_PATH)
-        return
-      }
-
-      // Existing account recovery (orphaned Auth with profile) — treat as sign-in, not welcome.
-      const dest = userProfile
-        ? resolvePostAuthDestination(userProfile)
-        : { path: dashboardPathForRole(formData.userType), blocked: false as const }
-      if (dest.blocked) {
-        toast.error('Access denied.')
-        return
-      }
-      toast.success('Signed in successfully')
-      router.replace(dest.path || dashboardPathForRole(userProfile?.userType || formData.userType))
+      markPostRegistrationWelcomePending(user.uid)
+      router.replace(POST_REGISTRATION_WELCOME_PATH)
     } catch (error: unknown) {
-      toast.error(getAuthErrorMessage(error, 'Registration failed. Please try again.'))
+      toast.error(
+        getAuthErrorMessage(
+          error,
+          'Unable to create your account right now. Please try again.'
+        )
+      )
     } finally {
+      submitLock.current = false
       setLoading(false)
     }
   }
@@ -414,7 +407,7 @@ function SignUpForm() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || googleLoading}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-800 py-3.5 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-700 disabled:opacity-50"
         >
           {loading ? <LoadingSpinner size="sm" /> : `Create ${isSme ? 'SME' : 'agent'} account`}

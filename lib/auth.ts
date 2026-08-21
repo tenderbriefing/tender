@@ -243,23 +243,23 @@ export const signUp = async (
   let user: User
   let createdAuthUser = false
 
+  // Registration: exactly one createUserWithEmailAndPassword attempt.
+  // If the email already exists, surface a clear message — do not silently sign in
+  // or retry signup (that produced Identity Toolkit 400 signup/signin loops).
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
     user = userCredential.user
     createdAuthUser = true
   } catch (error: unknown) {
-    // Recover orphaned Auth accounts from a previous failed profile write.
     const code =
       error && typeof error === 'object' && 'code' in error
         ? String((error as { code?: string }).code || '')
         : ''
-    if (code !== 'auth/email-already-in-use') throw error
-    const existing = await signInWithEmailAndPassword(auth, normalizedEmail, password)
-    user = existing.user
-    const existingProfile = await getUserProfile(user.uid)
-    if (existingProfile?.userType) {
-      return { user, userProfile: existingProfile, created: false }
+    if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+      // Sanitised: code only — never password/token.
+      console.warn('[auth/signUp] Firebase error code:', code || 'unknown')
     }
+    throw error
   }
 
   try {
@@ -287,7 +287,20 @@ export const signUp = async (
 
 export const signIn = async (email: string, password: string) => {
   const normalizedEmail = normalizeAuthEmail(email)
-  const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password)
+  // Login: exactly one signInWithEmailAndPassword attempt — no signup fallback.
+  let userCredential
+  try {
+    userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password)
+  } catch (error: unknown) {
+    const code =
+      error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: string }).code || '')
+        : ''
+    if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+      console.warn('[auth/signIn] Firebase error code:', code || 'unknown')
+    }
+    throw error
+  }
   const user = userCredential.user
 
   let userProfile: UserProfile | null = null

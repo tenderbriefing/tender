@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { signIn, getUserProfile } from '@/lib/auth'
@@ -31,6 +31,7 @@ function SignInForm() {
 
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const submitLock = useRef(false)
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -73,8 +74,10 @@ function SignInForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (submitLock.current || loading || googleLoading) return
     if (!validateForm()) return
 
+    submitLock.current = true
     setLoading(true)
     try {
       const { user, userProfile } = await signIn(
@@ -106,8 +109,9 @@ function SignInForm() {
       if (redirectTo) router.push(redirectTo)
       else router.push(dest.path || homePathForProfile(profile))
     } catch (error: unknown) {
-      toast.error(getAuthErrorMessage(error, 'Failed to sign in. Please try again.'))
+      toast.error(getAuthErrorMessage(error, 'Unable to sign in right now. Please try again.'))
     } finally {
+      submitLock.current = false
       setLoading(false)
     }
   }

@@ -28,7 +28,11 @@ export default function WorkspaceGate({ children }: { children: React.ReactNode 
     }
     try {
       const res = await authFetch('/api/agent/workspace')
-      const json = await res.json()
+      const json = await res.json().catch(() => ({}))
+      if (res.status === 401) {
+        setAccess('signed-out')
+        return
+      }
       if (json?.data?.enabled) setAccess('allowed')
       else setAccess('denied')
     } catch {
@@ -39,14 +43,29 @@ export default function WorkspaceGate({ children }: { children: React.ReactNode 
   useEffect(() => {
     if (loading) return
     if (!user) {
-      router.push('/auth/signin?next=/agent/workspace/today')
+      // Sign-in page reads `redirect`, not `next`.
+      router.push('/auth/signin?redirect=/agent/workspace/today')
       setAccess('signed-out')
       return
     }
+    // Wait for profile when possible so we do not probe APIs as the wrong role.
+    if (user && !userProfile) {
+      // Profile still loading / missing — probe once; server is authoritative.
+      void probe()
+      return
+    }
     void probe()
-  }, [loading, user, probe, router])
+  }, [loading, user, userProfile, probe, router])
 
   if (loading || access === 'loading') {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-slate-50">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
+  }
+
+  if (access === 'signed-out') {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-slate-50">
         <LoadingSpinner size="lg" />
