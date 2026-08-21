@@ -125,11 +125,11 @@ export default function AgentMobileBriefingPage() {
           <VoiceNoteRecorder requestId={requestId} />
 
           <Link
-            href={`/briefing-reports/upload?requestId=${requestId}`}
+            href={`/agent/workspace/assignments/${requestId}/submit-evidence`}
             className="flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-brand-300 bg-white font-bold text-brand-700"
           >
             <FileText className="h-5 w-5" />
-            Upload briefing report
+            Submit Report (audio + attendance)
           </Link>
         </div>
       )}

@@ -8,11 +8,11 @@ import { useNotificationsInbox } from '@/hooks/useNotificationsInbox'
 
 function notificationHref(n: { eventType?: string; data?: Record<string, unknown> }) {
   const data = n.data || {}
+  if (n.eventType === 'briefing_report_submitted' && data.requestId) {
+    return `/agent/workspace/assignments/${String(data.requestId)}/submit-evidence`
+  }
   if (data.requestId) return `/sme/requests/${data.requestId}`
   if (data.tenderId) return `/tenders/${data.tenderId}`
-  if (n.eventType === 'briefing_report_submitted' && data.requestId) {
-    return `/briefing-reports/upload?requestId=${data.requestId}`
-  }
   if (n.eventType?.includes('sync') && n.eventType?.includes('fail')) return '/admin/integrations'
   return '/notifications'
 }
