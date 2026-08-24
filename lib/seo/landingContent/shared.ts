@@ -1,3 +1,4 @@
+import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 import type { SeoFaqItem } from '@/components/seo/SeoFaqSection'
 
 export const SME_FREE_FAQ: SeoFaqItem = {
@@ -6,11 +7,15 @@ export const SME_FREE_FAQ: SeoFaqItem = {
     'Yes. Discovering compulsory tender briefings, tracking opportunities, viewing official tender details and downloading documents is completely free for registered SMEs on TenderBriefing. You only pay when you choose optional Youth Agent attendance support.',
 }
 
-export const R249_FAQ: SeoFaqItem = {
-  question: 'When do I pay the R249 fee?',
-  answer:
-    'The fixed R249 fee applies only when you request a verified Youth Agent to attend a compulsory tender briefing on your behalf. There is no monthly subscription, no paywall on tender discovery and no charge for browsing live opportunities synced from official eTenders data.',
+export const BRIEFING_PRICE_FAQ: SeoFaqItem = {
+  question: `When do I pay the ${BRIEFING_PRICE_LABEL} fee?`,
+  answer: `The fixed ${BRIEFING_PRICE_LABEL} fee applies only when you request a verified Youth Agent to attend a compulsory tender briefing on your behalf. There is no monthly subscription, no paywall on tender discovery and no charge for browsing live opportunities synced from official eTenders data.`,
 }
+
+/** @deprecated Use BRIEFING_PRICE_FAQ */
+export const R249_FAQ = BRIEFING_PRICE_FAQ
+
+export { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 
 export const ETENDERS_FAQ: SeoFaqItem = {
   question: 'Does TenderBriefing replace the National Treasury eTenders portal?',
@@ -27,5 +32,5 @@ export const COMPULSORY_DISQUALIFICATION_FAQ: SeoFaqItem = {
 export const AGENT_DELEGATION_FAQ: SeoFaqItem = {
   question: 'Can someone attend a compulsory briefing on behalf of my company?',
   answer:
-    'In many cases, yes — provided the tender allows representation and you follow any registration or proof-of-attendance requirements. Through TenderBriefing you can request a verified Youth Agent to attend on your behalf for a fixed R249 fee, subject to availability and the specific tender rules.',
+    `In many cases, yes — provided the tender allows representation and you follow any registration or proof-of-attendance requirements. Through TenderBriefing you can request a verified Youth Agent to attend on your behalf for a fixed ${BRIEFING_PRICE_LABEL} fee, subject to availability and the specific tender rules.`,
 }

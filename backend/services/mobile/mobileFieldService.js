@@ -2,6 +2,8 @@
  * Agent field app — sessions, sync queue, telemetry, location pings, earnings.
  */
 const { getFirestore } = require('../../config/firebaseAdmin')
+const { resolveYouthAgentPayoutCents } = require('../../constants/briefingPricing')
+const YA_PAYOUT_CENTS = resolveYouthAgentPayoutCents()
 const { sanitizeFirestoreData } = require('../../utils/sanitizeFirestoreData')
 const { nowIso } = require('../ai/_shared')
 const mobileOps = require('./mobileOpsService')
@@ -147,8 +149,8 @@ async function getMobileDispatchBoard(agentId) {
       briefingVenue: r.briefingVenue,
       status: r.status,
       paymentStatus: r.paymentStatus,
-      payoutCents: r.paymentAmount || 24900,
-      payoutZar: `R${((r.paymentAmount || 24900) / 100).toFixed(2)}`,
+      payoutCents: YA_PAYOUT_CENTS,
+      payoutZar: `R${(YA_PAYOUT_CENTS / 100).toFixed(2)}`,
       assignedToMe: r.agentId === agentId || r.assignedAgentId === agentId,
       canAccept: r.status === 'pending' && (r.paymentStatus === 'paid' || r.paymentStatus === 'not_required'),
       etaMinutes: top?.etaMinutes ?? null,
@@ -207,33 +209,18 @@ async function getBriefingDetail(requestId, agentId) {
 }
 
 async function getAgentEarnings(agentId) {
-  const db = getFirestore()
-  const storage = getStorage()
-  const [payoutSnap, requests] = await Promise.all([
-    db.collection('financePayouts').where('agentId', '==', agentId).limit(50).get().catch(() => ({ docs: [] })),
-    storage.getAttendanceRequests(),
-  ])
-
-  const completed = requests.filter(
-    (r) => (r.agentId === agentId || r.assignedAgentId === agentId) && r.status === 'completed'
-  )
-  const payouts = payoutSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
-  const pending = payouts.filter((p) => p.status === 'pending' || p.status === 'processing')
-  const paid = payouts.filter((p) => p.status === 'paid')
-  const pendingCents = pending.reduce((s, p) => s + (p.amountCents || 0), 0)
-  const paidCents = paid.reduce((s, p) => s + (p.amountCents || 0), 0)
-
-  const month = new Date().toISOString().slice(0, 7)
-  const monthPaid = paid
-    .filter((p) => String(p.createdAt || '').startsWith(month))
-    .reduce((s, p) => s + (p.amountCents || 0), 0)
-
-  return {
-    completedBriefings: completed.length,
-    pendingPayoutCents: pendingCents,
-    paidEarningsCents: paidCents,
-    monthEarningsCents: monthPaid,
-    payouts: payouts.slice(0, 20),
+  const youthAgentPayouts = require('../finance/youthAgentPayoutService')
+  try {
+    return await youthAgentPayouts.getAgentEarningsSummary(agentId)
+  } catch {
+    // Fallback for environments without payout collection yet
+    return {
+      completedBriefings: 0,
+      pendingPayoutCents: 0,
+      paidEarningsCents: 0,
+      monthEarningsCents: 0,
+      payouts: [],
+    }
   }
 }
 

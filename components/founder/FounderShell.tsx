@@ -35,6 +35,11 @@ const V2_NAV = [
     label: 'Briefings',
     match: (p: string) => p.startsWith('/founder/briefings'),
   },
+  {
+    href: '/founder/finance',
+    label: 'Finance',
+    match: (p: string) => p.startsWith('/founder/finance'),
+  },
 ] as const
 
 function navActive(pathname: string, href: string, exact = false) {

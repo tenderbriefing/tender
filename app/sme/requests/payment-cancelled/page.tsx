@@ -13,6 +13,7 @@ import {
   isPayFastSameAccountError,
   PAYFAST_SAME_ACCOUNT_HINT,
 } from '@/lib/payments/payfastUserErrors'
+import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 
 function PaymentCancelledContent() {
   const searchParams = useSearchParams()
@@ -33,7 +34,7 @@ function PaymentCancelledContent() {
           <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-amber-600" />
           <h1 className="mt-4 text-2xl font-bold text-slate-900">Payment not completed</h1>
           <p className="mt-2 text-slate-600">
-            Your attendance request was saved, but the R249.00 support fee was not paid. Youth
+            Your attendance request was saved, but the ${BRIEFING_PRICE_LABEL}.00 support fee was not paid. Youth
             Agents will only see your request after payment is complete.
           </p>
           <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-950">

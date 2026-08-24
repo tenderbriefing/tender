@@ -1,17 +1,11 @@
 import type { SeoLandingConfig } from '@/lib/seo/landingTypes'
-import {
-  AGENT_DELEGATION_FAQ,
-  COMPULSORY_DISQUALIFICATION_FAQ,
-  ETENDERS_FAQ,
-  R249_FAQ,
-  SME_FREE_FAQ,
-} from './shared'
+import { AGENT_DELEGATION_FAQ, COMPULSORY_DISQUALIFICATION_FAQ, ETENDERS_FAQ, R249_FAQ, SME_FREE_FAQ, BRIEFING_PRICE_LABEL } from './shared'
 
 export const southAfricaConfig: SeoLandingConfig = {
   slug: 'tender-briefings-south-africa',
   path: '/tender-briefings-south-africa',
   metaDescription:
-    'Nationwide tender briefing discovery for South African SMEs. Track compulsory government briefings in all nine provinces, sync official eTenders data and request Youth Agent attendance for R249 on TenderBriefing.',
+    `Nationwide tender briefing discovery for South African SMEs. Track compulsory government briefings in all nine provinces, sync official eTenders data and request Youth Agent attendance for ${BRIEFING_PRICE_LABEL} on TenderBriefing.`,
   eyebrow: 'South Africa · All provinces',
   title: 'Tender Briefings Across South Africa',
   heroDescription:
@@ -34,7 +28,7 @@ export const southAfricaConfig: SeoLandingConfig = {
       paragraphs: [
         'Regardless of province, compulsory briefings serve the same policy purpose: equal information to all bidders. Entities use them for complex scopes — hospital upgrades, school security upgrades, network rollouts, demolition work — where assumptions create unequal bids or safety incidents.',
         'SMEs operating in multiple provinces must track briefing calendars that do not align with closing dates. A briefing in Bloemfontein on Wednesday and a closing in Johannesburg on Friday is workable; missing the Wednesday session is not.',
-        'TenderBriefing highlights compulsory sessions early and supports calendar exports so regional teams coordinate without WhatsApp chains and screenshot PDFs. When leadership cannot travel, Youth Agents provide per-briefing attendance at R249 — cheaper than multi-province disqualification.',
+        `TenderBriefing highlights compulsory sessions early and supports calendar exports so regional teams coordinate without WhatsApp chains and screenshot PDFs. When leadership cannot travel, Youth Agents provide per-briefing attendance at ${BRIEFING_PRICE_LABEL} — cheaper than multi-province disqualification.`,
       ],
     },
     {
@@ -48,7 +42,7 @@ export const southAfricaConfig: SeoLandingConfig = {
     {
       heading: 'Benefits of TenderBriefing for South African SMEs',
       paragraphs: [
-        'Free discovery lowers the barrier for emerging contractors, suppliers and professional firms entering government markets. You register once, browse live opportunities and only pay R249 when requesting optional Youth Agent attendance.',
+        `Free discovery lowers the barrier for emerging contractors, suppliers and professional firms entering government markets. You register once, browse live opportunities and only pay ${BRIEFING_PRICE_LABEL} when requesting optional Youth Agent attendance.`,
         'Structured tender detail pages reduce misinterpretation — official scope text is shown verbatim, briefing times include hours where published, and documents are collected in one place.',
         'Internal linking across provinces and sectors helps you explore adjacent opportunities: Gauteng construction today, Western Cape cleaning tomorrow — without losing compliance context.',
         'Resources and guides on TenderBriefing explain PFMA, MFMA and briefing etiquette in plain language so owner-managed businesses compete with larger incumbents on information parity.',
@@ -85,7 +79,7 @@ export const southAfricaConfig: SeoLandingConfig = {
       },
       {
         title: 'Agents for distance',
-        text: 'Use R249 agent attendance when briefing travel exceeds sensible bid spend — especially for exploratory opportunities.',
+        text: `Use ${BRIEFING_PRICE_LABEL} agent attendance when briefing travel exceeds sensible bid spend — especially for exploratory opportunities.`,
       },
       {
         title: 'Share detail links',
@@ -112,7 +106,7 @@ export const southAfricaConfig: SeoLandingConfig = {
     {
       step: '4',
       title: 'Attend or delegate',
-      text: 'Travel to the briefing, join virtually if offered, or request a Youth Agent for fixed R249 support.',
+      text: `Travel to the briefing, join virtually if offered, or request a Youth Agent for fixed ${BRIEFING_PRICE_LABEL} support.`,
     },
     {
       step: '5',
@@ -148,7 +142,7 @@ export const southAfricaConfig: SeoLandingConfig = {
     'All nine provinces represented in live eTenders sync',
     'National, provincial and municipal opportunities in one view',
     'Compulsory briefing dates, times and venues highlighted',
-    'Free SME discovery with optional R249 agent attendance',
+    `Free SME discovery with optional ${BRIEFING_PRICE_LABEL} agent attendance`,
     'Links to regional tender pages and procurement resources',
   ],
   features: [
@@ -198,7 +192,7 @@ export const southAfricaConfig: SeoLandingConfig = {
   ],
   ctaTitle: 'Discover tender briefings in every province',
   ctaDescription:
-    'Join South African SMEs using TenderBriefing for free compulsory briefing discovery — pay R249 only when you need Youth Agent attendance.',
+    `Join South African SMEs using TenderBriefing for free compulsory briefing discovery — pay ${BRIEFING_PRICE_LABEL} only when you need Youth Agent attendance.`,
   ctaPrimaryLabel: 'Register free today',
   ctaSecondaryLabel: 'Browse national tenders',
   relatedLinks: [

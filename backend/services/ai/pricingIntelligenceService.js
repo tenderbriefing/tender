@@ -1,7 +1,8 @@
 /**
  * Pricing intelligence — briefing fees, travel, urgency premium.
  */
-const ATTENDANCE_FEE_CENTS = Number(process.env.NEXT_PUBLIC_ATTENDANCE_FEE_CENTS || 24900)
+const { resolveBriefingPriceCents } = require('../../constants/briefingPricing')
+const ATTENDANCE_FEE_CENTS = resolveBriefingPriceCents()
 const { clamp, haversineKm, daysUntil } = require('./_shared')
 
 function estimateBriefingPricing(context = {}) {

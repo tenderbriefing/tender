@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 import Link from 'next/link'
 import { ShieldCheck, Sparkles, Users } from 'lucide-react'
 import WhatsAppIconLink from '@/components/ui/WhatsAppIconLink'
@@ -28,7 +29,7 @@ export default function AuthShell({
     {
       icon: Sparkles,
       title: 'Free for SMEs',
-      text: 'Pay R249 only when you request agent attendance.',
+      text: `Pay ${BRIEFING_PRICE_LABEL} only when you request agent attendance.`,
     },
   ]
 

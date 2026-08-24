@@ -297,6 +297,31 @@ export async function POST(request: NextRequest) {
 
   await docRef.set(patch, { merge: true })
 
+  // Youth Agent payout liability — independent of Whisper/AI/Founder approval.
+  let payoutResult: { ok?: boolean; created?: boolean; payout?: unknown } | null = null
+  try {
+    const payoutSvc = require('../../../../../backend/services/finance/youthAgentPayoutService')
+    const briefingRevenueCents = payoutSvc.briefingRevenueFromRequest(req)
+    payoutResult = await payoutSvc.ensurePayoutOnEvidenceSubmitted({
+      requestId,
+      assignmentId: requestId,
+      tenderId,
+      youthAgentUid: agentId,
+      reportId,
+      attendanceVerified: attendanceEvidenceRefs.length >= 1,
+      evidenceSubmitted: Boolean(audioPath),
+      briefingRevenueCents,
+      completedAt: evidenceSubmittedAt,
+      actorUid: user.uid,
+    })
+  } catch (payoutErr) {
+    console.error('[payout] ensure on evidence failed', {
+      requestId,
+      reportId,
+      error: payoutErr instanceof Error ? payoutErr.message : String(payoutErr),
+    })
+  }
+
   await logBriefingIntelligenceAuditEvent({
     db,
     eventType: 'evidence_submitted',
@@ -358,7 +383,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    data: { reportId, transcriptionJobId },
+    data: { reportId, transcriptionJobId, payout: payoutResult?.payout ?? null },
   })
 }
 

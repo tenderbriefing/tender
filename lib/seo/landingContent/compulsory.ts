@@ -1,17 +1,11 @@
 import type { SeoLandingConfig } from '@/lib/seo/landingTypes'
-import {
-  AGENT_DELEGATION_FAQ,
-  COMPULSORY_DISQUALIFICATION_FAQ,
-  ETENDERS_FAQ,
-  R249_FAQ,
-  SME_FREE_FAQ,
-} from './shared'
+import { AGENT_DELEGATION_FAQ, COMPULSORY_DISQUALIFICATION_FAQ, ETENDERS_FAQ, R249_FAQ, SME_FREE_FAQ, BRIEFING_PRICE_LABEL } from './shared'
 
 export const compulsoryBriefingsConfig: SeoLandingConfig = {
   slug: 'compulsory-tender-briefings',
   path: '/compulsory-tender-briefings',
   metaDescription:
-    'Complete guide to compulsory tender briefings in South Africa. Track mandatory briefing dates, avoid disqualification, browse live eTenders opportunities and request Youth Agent attendance for R249 on TenderBriefing.',
+    `Complete guide to compulsory tender briefings in South Africa. Track mandatory briefing dates, avoid disqualification, browse live eTenders opportunities and request Youth Agent attendance for ${BRIEFING_PRICE_LABEL} on TenderBriefing.`,
   eyebrow: 'Compliance · Mandatory attendance',
   title: 'Compulsory Tender Briefings in South Africa',
   heroDescription:
@@ -45,7 +39,7 @@ export const compulsoryBriefingsConfig: SeoLandingConfig = {
         'Typical flow begins when a department, municipality or SOE publishes a tender on eTenders with a briefing date before the closing date. The entity uses the session to clarify scope, demonstrate site conditions, explain health and safety rules and answer bidder questions on record.',
         'Attendees usually sign a register. That register may be cross-checked against bidders at submission opening. For construction and demolition tenders, site meetings are especially strict because access, induction and PPE requirements affect both safety and pricing accuracy.',
         'After the briefing, clarifications may be issued as addenda on eTenders. TenderBriefing keeps the original documents and key dates visible so you can compare what was said in the session with what was formally published.',
-        'If you cannot attend, check whether the tender allows a authorised representative. Where it does, TenderBriefing Youth Agents can attend for a fixed R249, capture structured notes and help your team stay eligible to submit.',
+        `If you cannot attend, check whether the tender allows a authorised representative. Where it does, TenderBriefing Youth Agents can attend for a fixed ${BRIEFING_PRICE_LABEL}, capture structured notes and help your team stay eligible to submit.`,
       ],
     },
     {
@@ -53,7 +47,7 @@ export const compulsoryBriefingsConfig: SeoLandingConfig = {
       paragraphs: [
         'TenderBriefing is a South African procurement support platform built around compulsory briefings — not generic tender scraping. We prioritise the dates and compliance signals SMEs need before committing bid resources.',
         'Registered SMEs browse live opportunities free. Each listing links to a detail page with official scope text, department, province, briefing and closing dates, downloadable documents and contact details when published on eTenders.',
-        'When attendance is mandatory and your team is unavailable, request a verified Youth Agent through the platform. You pay R249 only for that attendance request — not for discovery, not for registration, not for viewing documents.',
+        `When attendance is mandatory and your team is unavailable, request a verified Youth Agent through the platform. You pay ${BRIEFING_PRICE_LABEL} only for that attendance request — not for discovery, not for registration, not for viewing documents.`,
         'Briefing reports returned by agents capture instructions, risks, access constraints and submission reminders discussed in the session — giving remote owners and bid administrators the operational context they would have gained in person.',
       ],
     },
@@ -88,7 +82,7 @@ export const compulsoryBriefingsConfig: SeoLandingConfig = {
       },
       {
         title: 'Use agents strategically',
-        text: 'When a high-value tender clashes with operations, a Youth Agent at R249 is often cheaper than disqualification or a rushed overnight trip for a director.',
+        text: `When a high-value tender clashes with operations, a Youth Agent at ${BRIEFING_PRICE_LABEL} is often cheaper than disqualification or a rushed overnight trip for a director.`,
       },
       {
         title: 'Document everything',
@@ -110,7 +104,7 @@ export const compulsoryBriefingsConfig: SeoLandingConfig = {
     {
       step: '3',
       title: 'Plan attendance',
-      text: 'Attend in person, join virtually if offered, or request a verified Youth Agent for R249 when you cannot be there.',
+      text: `Attend in person, join virtually if offered, or request a verified Youth Agent for ${BRIEFING_PRICE_LABEL} when you cannot be there.`,
     },
     {
       step: '4',
@@ -129,7 +123,7 @@ export const compulsoryBriefingsConfig: SeoLandingConfig = {
       scenario:
         'A building contractor spots a school renovation tender in Pretoria with a compulsory site meeting on short notice while the owner is on another project.',
       outcome:
-        'They request a Youth Agent via TenderBriefing for R249, receive a site report with access and safety notes, and submit without disqualification.',
+        `They request a Youth Agent via TenderBriefing for ${BRIEFING_PRICE_LABEL}, receive a site report with access and safety notes, and submit without disqualification.`,
     },
     {
       title: 'Security services provider',
@@ -151,7 +145,7 @@ export const compulsoryBriefingsConfig: SeoLandingConfig = {
     'Live compulsory briefing opportunities from official eTenders sync',
     'Briefing date, time, venue and virtual links on every detail page',
     'Official scope text and downloadable tender documents',
-    'Youth Agent attendance for R249 when you cannot be there in person',
+    `Youth Agent attendance for ${BRIEFING_PRICE_LABEL} when you cannot be there in person`,
     'Free SME registration — pay only for optional agent support',
   ],
   features: [
@@ -201,7 +195,7 @@ export const compulsoryBriefingsConfig: SeoLandingConfig = {
   ],
   ctaTitle: 'Stop losing bids to missed compulsory briefings',
   ctaDescription:
-    'Register free, browse live mandatory briefing opportunities across South Africa, and request a Youth Agent for R249 only when you need attendance support.',
+    `Register free, browse live mandatory briefing opportunities across South Africa, and request a Youth Agent for ${BRIEFING_PRICE_LABEL} only when you need attendance support.`,
   ctaPrimaryLabel: 'Create free SME account',
   ctaSecondaryLabel: 'Explore all tenders',
   relatedLinks: [

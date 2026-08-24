@@ -549,4 +549,66 @@ describe('Youth Agent Workspace collections — IDOR matrix', () => {
     await assertSucceeds(getDoc(doc(firestoreAs(SME_A), 'assignmentMessages', id)))
     await assertFails(getDoc(doc(firestoreAs(AGENT_B), 'assignmentMessages', id)))
   })
+
+  it('youth agent payout records deny client writes and IDOR reads', async () => {
+    const id = uid('payout')
+    await seed('youthAgentPayouts', id, {
+      payoutId: id,
+      youthAgentUid: AGENT_A,
+      requestId: 'req-1',
+      payoutAmountCents: 20000,
+      status: 'eligible',
+      paymentReference: null,
+    })
+
+    // Anonymous cannot read
+    await assertFails(getDoc(doc(firestoreAs(null), 'youthAgentPayouts', id)))
+
+    // Owner YA can read own payout
+    await assertSucceeds(getDoc(doc(firestoreAs(AGENT_A), 'youthAgentPayouts', id)))
+
+    // Admin can read
+    await assertSucceeds(getDoc(doc(firestoreAs(ADMIN), 'youthAgentPayouts', id)))
+
+    // Other YA cannot read
+    await assertFails(getDoc(doc(firestoreAs(AGENT_B), 'youthAgentPayouts', id)))
+
+    // SME cannot read YA payouts
+    await assertFails(getDoc(doc(firestoreAs(SME_A), 'youthAgentPayouts', id)))
+
+    // YA cannot create payout records
+    await assertFails(
+      setDoc(doc(firestoreAs(AGENT_A), 'youthAgentPayouts', uid('evil')), {
+        youthAgentUid: AGENT_A,
+        payoutAmountCents: 999999,
+        status: 'paid',
+      })
+    )
+
+    // YA cannot modify amount, status, or payment reference on own payout
+    await assertFails(
+      updateDoc(doc(firestoreAs(AGENT_A), 'youthAgentPayouts', id), {
+        payoutAmountCents: 999999,
+      })
+    )
+    await assertFails(
+      updateDoc(doc(firestoreAs(AGENT_A), 'youthAgentPayouts', id), { status: 'paid' })
+    )
+    await assertFails(
+      updateDoc(doc(firestoreAs(AGENT_A), 'youthAgentPayouts', id), {
+        paymentReference: 'fake-ref',
+        paidAt: new Date().toISOString(),
+      })
+    )
+
+    // SME cannot write payouts
+    await assertFails(
+      updateDoc(doc(firestoreAs(SME_A), 'youthAgentPayouts', id), { status: 'paid' })
+    )
+
+    // Even admin cannot client-write (Founder uses Admin SDK server path)
+    await assertFails(
+      updateDoc(doc(firestoreAs(ADMIN), 'youthAgentPayouts', id), { status: 'paid' })
+    )
+  })
 })

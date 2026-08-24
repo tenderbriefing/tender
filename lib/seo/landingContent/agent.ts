@@ -1,24 +1,19 @@
 import type { SeoLandingConfig } from '@/lib/seo/landingTypes'
-import {
-  AGENT_DELEGATION_FAQ,
-  ETENDERS_FAQ,
-  R249_FAQ,
-  SME_FREE_FAQ,
-} from './shared'
+import { AGENT_DELEGATION_FAQ, ETENDERS_FAQ, R249_FAQ, SME_FREE_FAQ, BRIEFING_PRICE_LABEL } from './shared'
 
 export const briefingAgentConfig: SeoLandingConfig = {
   slug: 'tender-briefing-agent',
   path: '/tender-briefing-agent',
   metaDescription:
-    'Hire a verified Youth Agent to attend compulsory tender briefings for R249. Free tender discovery for SMEs — fixed fee per briefing, structured reports and official eTenders data on TenderBriefing.',
-  eyebrow: 'Youth Agents · Fixed R249',
+    `Hire a verified Youth Agent to attend compulsory tender briefings for ${BRIEFING_PRICE_LABEL}. Free tender discovery for SMEs — fixed fee per briefing, structured reports and official eTenders data on TenderBriefing.`,
+  eyebrow: `Youth Agents · Fixed ${BRIEFING_PRICE_LABEL}`,
   title: 'Tender Briefing Agent Service for SMEs',
   heroDescription:
-    'When you cannot attend a compulsory briefing in person, TenderBriefing dispatches verified Youth Agents to represent your business at the official session — one transparent R249 fee per request, with structured notes returned afterward.',
+    `When you cannot attend a compulsory briefing in person, TenderBriefing dispatches verified Youth Agents to represent your business at the official session — one transparent ${BRIEFING_PRICE_LABEL} fee per request, with structured notes returned afterward.`,
   heroPrimaryCta: 'Request a briefing agent',
   heroSecondaryCta: 'Find compulsory briefings',
   intro:
-    'Compulsory tender briefings create a scheduling conflict for almost every growing SME: the session is mid-week, out of town, or overlaps with client delivery — but missing it disqualifies the bid. Hiring a full-time tender administrator is expensive; skipping the briefing is worse. TenderBriefing’s briefing agent service bridges that gap with verified Youth Agents who attend official government sessions on your behalf for a fixed R249 per compulsory briefing, while tender discovery on the platform remains completely free.',
+    `Compulsory tender briefings create a scheduling conflict for almost every growing SME: the session is mid-week, out of town, or overlaps with client delivery — but missing it disqualifies the bid. Hiring a full-time tender administrator is expensive; skipping the briefing is worse. TenderBriefing’s briefing agent service bridges that gap with verified Youth Agents who attend official government sessions on your behalf for a fixed ${BRIEFING_PRICE_LABEL} per compulsory briefing, while tender discovery on the platform remains completely free.`,
   sections: [
     {
       heading: 'What a TenderBriefing agent does at the session',
@@ -33,14 +28,14 @@ export const briefingAgentConfig: SeoLandingConfig = {
       paragraphs: [
         'Attend personally when relationship building, complex technical Q&A or high-value strategic bids justify director time on site. Use an agent when travel cost exceeds sensible bid spend, when you are testing a new province, or when two compulsory briefings clash on the same morning.',
         'Agents are especially valuable for site briefings at hospitals, schools, depots and industrial plants where seeing conditions matters but flying a senior estimator from another city does not.',
-        'The R249 fee is per briefing request — not a subscription — so you deploy agents selectively on opportunities that pass your initial compliance and capacity review.',
+        `The ${BRIEFING_PRICE_LABEL} fee is per briefing request — not a subscription — so you deploy agents selectively on opportunities that pass your initial compliance and capacity review.`,
       ],
     },
     {
       heading: 'How the agent request flow works',
       paragraphs: [
         'Register free as an SME, locate a compulsory briefing on TenderBriefing and open the tender detail page. Review official documents, briefing date, time and venue or virtual link.',
-        'When you confirm you need attendance support, submit an agent request through the platform. Payment of R249 applies to that confirmed request — not to browsing or document download.',
+        `When you confirm you need attendance support, submit an agent request through the platform. Payment of ${BRIEFING_PRICE_LABEL} applies to that confirmed request — not to browsing or document download.`,
         'TenderBriefing matches available verified Youth Agents in the region, coordinates attendance and delivers status updates. After the session you receive briefing intelligence to feed your bid team.',
       ],
     },
@@ -55,8 +50,8 @@ export const briefingAgentConfig: SeoLandingConfig = {
     {
       heading: 'Pricing transparency: free discovery, paid attendance',
       paragraphs: [
-        'TenderBriefing never charges SMEs to search tenders, view compulsory flags or read official scope text. The R249 fee is explicitly tied to optional agent attendance — a model designed for owner-managed businesses watching cash flow.',
-        'Compare R249 against fuel, accommodation, lost billable hours and disqualification risk. For many provincial briefings, agent attendance is the rational compliance choice.',
+        `TenderBriefing never charges SMEs to search tenders, view compulsory flags or read official scope text. The ${BRIEFING_PRICE_LABEL} fee is explicitly tied to optional agent attendance — a model designed for owner-managed businesses watching cash flow.`,
+        `Compare ${BRIEFING_PRICE_LABEL} against fuel, accommodation, lost billable hours and disqualification risk. For many provincial briefings, agent attendance is the rational compliance choice.`,
         'See full pricing context on /pricing and process details on /how-it-works.',
       ],
     },
@@ -103,7 +98,7 @@ export const briefingAgentConfig: SeoLandingConfig = {
     {
       step: '3',
       title: 'Submit agent request',
-      text: 'Confirm R249 attendance support through the platform.',
+      text: `Confirm ${BRIEFING_PRICE_LABEL} attendance support through the platform.`,
     },
     {
       step: '4',
@@ -122,7 +117,7 @@ export const briefingAgentConfig: SeoLandingConfig = {
       scenario:
         'A director faces compulsory briefings in Johannesburg and Rustenburg on the same morning.',
       outcome:
-        'They attend one personally and dispatch an agent to the other for R249 — both bids stay eligible.',
+        `They attend one personally and dispatch an agent to the other for ${BRIEFING_PRICE_LABEL} — both bids stay eligible.`,
     },
     {
       title: 'Out-of-province exploratory bid',
@@ -142,7 +137,7 @@ export const briefingAgentConfig: SeoLandingConfig = {
   provinceFocus: [],
   highlights: [
     'Verified Youth Agents for official session attendance',
-    'Fixed R249 per briefing request — no subscription',
+    `Fixed ${BRIEFING_PRICE_LABEL} per briefing request — no subscription`,
     'Free tender discovery and document access for SMEs',
     'Structured briefing reports after each session',
     'WhatsApp and in-app status updates during dispatch',
@@ -154,7 +149,7 @@ export const briefingAgentConfig: SeoLandingConfig = {
     },
     {
       title: 'Fixed pricing',
-      text: 'R249 per attendance — predictable compliance cost for cash-conscious SMEs.',
+      text: `${BRIEFING_PRICE_LABEL} per attendance — predictable compliance cost for cash-conscious SMEs.`,
     },
     {
       title: 'Session documentation',
@@ -174,7 +169,7 @@ export const briefingAgentConfig: SeoLandingConfig = {
         'Verified representatives who attend compulsory briefings on behalf of SMEs and return structured session notes. They complete platform onboarding before receiving assignments.',
     },
     {
-      question: 'Is the R249 fee per tender or per month?',
+      question: `Is the ${BRIEFING_PRICE_LABEL} fee per tender or per month?`,
       answer: 'Per briefing attendance request — not a monthly subscription.',
     },
     AGENT_DELEGATION_FAQ,
@@ -197,7 +192,7 @@ export const briefingAgentConfig: SeoLandingConfig = {
   ],
   ctaTitle: 'Book a tender briefing agent when travel blocks you',
   ctaDescription:
-    'Browse compulsory briefings free. Pay R249 only when you confirm Youth Agent attendance at an official session.',
+    `Browse compulsory briefings free. Pay ${BRIEFING_PRICE_LABEL} only when you confirm Youth Agent attendance at an official session.`,
   ctaPrimaryLabel: 'Sign up and request agent',
   ctaSecondaryLabel: 'View compulsory tenders',
   relatedLinks: [

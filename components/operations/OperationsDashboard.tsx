@@ -102,12 +102,13 @@ export default function OperationsDashboard() {
         r.paymentStatus === 'cancelled'
     )
     const paid = requests.filter((r) => r.paymentStatus === 'paid')
-    const fee = (r: EnrichedAttendanceRequest) => r.paymentAmount ?? 24900
-    const revenueCents = paid.reduce((sum, r) => sum + fee(r), 0)
+    const fee = (r: EnrichedAttendanceRequest) =>
+      r.paymentAmount ?? r.quotedFee ?? r.briefingPriceCents ?? null
+    const revenueCents = paid.reduce((sum, r) => sum + (fee(r) ?? 0), 0)
     const today = new Date().toISOString().slice(0, 10)
     const dailyRevenueCents = paid
       .filter((r) => r.paidAt && String(r.paidAt).startsWith(today))
-      .reduce((sum, r) => sum + fee(r), 0)
+      .reduce((sum, r) => sum + (fee(r) ?? 0), 0)
     return {
       unpaidCount: unpaid.length,
       paidCount: paid.length,

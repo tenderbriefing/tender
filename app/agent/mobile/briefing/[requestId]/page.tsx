@@ -11,6 +11,7 @@ import VoiceNoteRecorder from '@/components/agent/mobile/VoiceNoteRecorder'
 import WhatsAppActions from '@/components/agent/mobile/WhatsAppActions'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { mobileGet } from '@/lib/mobile/mobileApi'
+import { YOUTH_AGENT_PAYOUT_CENTS, formatYouthAgentPayoutZar } from '@/lib/domain/briefingPricing'
 import { Navigation, FileText } from 'lucide-react'
 
 type BriefingPayload = {
@@ -89,7 +90,7 @@ export default function AgentMobileBriefingPage() {
               {String(req.briefingDate || tender.briefingDate)} {String(req.briefingTime || '')}
             </p>
             <p className="mt-2 text-xl font-bold text-brand-700">
-              R{((Number(req.paymentAmount) || 24900) / 100).toFixed(2)}
+              {formatYouthAgentPayoutZar(YOUTH_AGENT_PAYOUT_CENTS)} payout
             </p>
             <a
               href={navUrl}

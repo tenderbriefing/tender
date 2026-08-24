@@ -8,17 +8,16 @@ const {
   applyPaymentTransition,
 } = require('../domain/lifecycleEnforcement')
 
-/** Server-authoritative fee — R249. Prefer ATTENDANCE_FEE_CENTS; never trust client body amounts. */
-const ATTENDANCE_FEE_CENTS = Number(
-  process.env.ATTENDANCE_FEE_CENTS ||
-    process.env.NEXT_PUBLIC_ATTENDANCE_FEE_CENTS ||
-    24900
-)
-const ATTENDANCE_FEE_CURRENCY = 'ZAR'
-const CANONICAL_FEE_CENTS = 24900
-const EFFECTIVE_FEE_CENTS = Number.isFinite(ATTENDANCE_FEE_CENTS) && ATTENDANCE_FEE_CENTS > 0
-  ? Math.round(ATTENDANCE_FEE_CENTS)
-  : CANONICAL_FEE_CENTS
+const {
+  resolveBriefingPriceCents,
+  briefingPriceSnapshotFields,
+  resolveRequestChargeCents,
+  BRIEFING_PRICE_CURRENCY,
+} = require('../../constants/briefingPricing')
+
+/** Server-authoritative fee — R349. Prefer ATTENDANCE_FEE_CENTS; never trust client body amounts. */
+const EFFECTIVE_FEE_CENTS = resolveBriefingPriceCents()
+const ATTENDANCE_FEE_CURRENCY = BRIEFING_PRICE_CURRENCY
 
 function paymentReferenceForRequest(requestId) {
   return `TB-REQ-${requestId}`
@@ -40,9 +39,6 @@ function defaultPaymentFields(requestId) {
   return {
     paymentStatus: 'pending',
     paymentProvider: 'payfast',
-    paymentAmount: EFFECTIVE_FEE_CENTS,
-    quotedFee: EFFECTIVE_FEE_CENTS,
-    currency: ATTENDANCE_FEE_CURRENCY,
     paymentReference: paymentReferenceForRequest(requestId),
     payfastPaymentId: null,
     payfastRedirectUrl: null,
@@ -51,6 +47,7 @@ function defaultPaymentFields(requestId) {
     yocoRedirectUrl: null,
     paidAt: null,
     paymentFailureReason: null,
+    ...briefingPriceSnapshotFields(),
   }
 }
 
@@ -82,13 +79,14 @@ async function createPayfastCheckoutForRequest(request, baseUrl) {
   const successUrl = `${origin}/sme/requests/payment-success?requestId=${encodeURIComponent(request.id)}`
   const cancelUrl = `${origin}/sme/requests/payment-cancelled?requestId=${encodeURIComponent(request.id)}`
   const notifyUrl = `${origin}/api/webhooks/payfast`
+  const chargeCents = resolveRequestChargeCents(request)
 
   const nameParts = String(request.smeName || '').trim().split(/\s+/)
   const nameFirst = nameParts[0] || 'SME'
   const nameLast = nameParts.slice(1).join(' ') || 'Owner'
 
   const result = payfastService.createCheckoutPayload({
-    amountCents: EFFECTIVE_FEE_CENTS,
+    amountCents: chargeCents,
     mPaymentId: paymentReferenceForRequest(request.id),
     itemName: 'Compulsory briefing attendance support',
     itemDescription: `Youth Agent attendance for tender ${request.tenderNumber || request.tenderId || request.id}`,
@@ -152,14 +150,17 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
   assertPaymentTransition(request.paymentStatus, 'paid')
 
   const now = new Date().toISOString()
+  const chargeCents = resolveRequestChargeCents(request)
   const patched = applyPaymentTransition(request, 'paid', {
     actorId: source,
     now,
     extra: {
       paymentProvider: 'payfast',
-      paymentAmount: EFFECTIVE_FEE_CENTS,
-      quotedFee: EFFECTIVE_FEE_CENTS,
+      paymentAmount: chargeCents,
+      quotedFee: chargeCents,
+      briefingPriceCents: chargeCents,
       currency: ATTENDANCE_FEE_CURRENCY,
+      pricingVersion: request.pricingVersion || null,
       paymentReference: paymentReferenceForRequest(requestId),
       payfastPaymentId: pfPaymentId || request.payfastPaymentId || null,
       paidAt: now,
@@ -347,7 +348,7 @@ async function findRequestByCheckoutId(checkoutId) {
  */
 /**
  * Authoritative reconciliation when PayFast confirms COMPLETE but ITN failed locally.
- * Requires matching request, m_payment_id, R249 amount, COMPLETE status, no prior paid entitlement.
+ * Requires matching request, m_payment_id, authoritative amount, COMPLETE status, no prior paid entitlement.
  */
 async function reconcileAuthoritativePayfastPayment({
   requestId,
@@ -407,7 +408,7 @@ async function reconcileAuthoritativePayfastPayment({
     }
   }
 
-  const expectedCents = request.quotedFee || request.paymentAmount || EFFECTIVE_FEE_CENTS
+  const expectedCents = resolveRequestChargeCents(request)
   if (!Number.isFinite(query.amountCents) || Math.abs(query.amountCents - expectedCents) > 1) {
     return {
       ok: false,
@@ -506,7 +507,7 @@ async function processPayfastItn(posted) {
       }
     }
 
-    const expectedCents = request.quotedFee || request.paymentAmount || EFFECTIVE_FEE_CENTS
+    const expectedCents = resolveRequestChargeCents(request)
     const paidZar = Number(posted.amount_gross || posted.amount || 0)
     const paidCents = Math.round(paidZar * 100)
     if (paidCents > 0 && Math.abs(paidCents - expectedCents) > 1) {

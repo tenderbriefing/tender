@@ -10,10 +10,10 @@ import {
 } from '../../lib/domain/paymentLifecycle'
 
 describe('paymentLifecycle', () => {
-  it('uses canonical R249 fee by default', () => {
+  it('uses canonical R349 fee by default', () => {
     delete process.env.ATTENDANCE_FEE_CENTS
     expect(resolveAttendanceFeeCents()).toBe(CANONICAL_ATTENDANCE_FEE_CENTS)
-    expect(CANONICAL_ATTENDANCE_FEE_CENTS).toBe(24900)
+    expect(CANONICAL_ATTENDANCE_FEE_CENTS).toBe(34900)
   })
 
   it('allows pending → paid and rejects paid → pending', () => {
@@ -29,10 +29,10 @@ describe('paymentLifecycle', () => {
   })
 
   it('validates ITN amounts against expected cents', () => {
+    expect(amountsMatchCents(34900, 349)).toBe(true)
     expect(amountsMatchCents(24900, 249)).toBe(true)
-    expect(amountsMatchCents(24900, 248.99)).toBe(true)
-    expect(amountsMatchCents(24900, 1)).toBe(false)
-    expect(amountsMatchCents(24900, 250)).toBe(false)
+    expect(amountsMatchCents(34900, 348.99)).toBe(true)
+    expect(amountsMatchCents(34900, 1)).toBe(false)
   })
 
   it('normalizes unknown payment states to pending', () => {

@@ -117,6 +117,9 @@ export interface AttendanceRequest {
     | 'not_required'
   paymentAmount?: number | null
   quotedFee?: number | null
+  /** Financial snapshot at booking time — authoritative for PayFast charge. */
+  briefingPriceCents?: number | null
+  pricingVersion?: string | null
   currency?: string
   paymentProvider?: 'payfast' | 'yoco' | 'manual' | 'none'
   paymentReference?: string | null

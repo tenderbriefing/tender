@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
+import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 import {
   AlertTriangle,
   Building2,
@@ -436,7 +437,7 @@ export default function TenderIntelligence({ tender }: TenderIntelligenceProps) 
           {[
             'Confirm the briefing and closing dates above, then add the briefing to your calendar.',
             tender.briefingCompulsory
-              ? 'If you cannot attend the compulsory briefing in person, request a verified Youth Agent for R249.'
+              ? `If you cannot attend the compulsory briefing in person, request a verified Youth Agent for ${BRIEFING_PRICE_LABEL}.`
               : 'Confirm whether attendance at the briefing is required for your bid.',
             'Download the tender documents and prepare compliance packs (CSD, tax clearance, BBBEE).',
             'Submit your response through the official government procurement portal — not through TenderBriefing.',

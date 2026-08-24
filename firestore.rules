@@ -395,6 +395,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /youthAgentPayouts/{payoutId} {
+      allow read: if isAdmin()
+        || (isYouthAgent() && resource.data.youthAgentUid == request.auth.uid);
+      allow write: if false;
+    }
+
     match /financeInvoices/{invoiceId} {
       allow read: if isAdmin();
       allow write: if false;

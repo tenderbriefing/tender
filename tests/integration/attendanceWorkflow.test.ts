@@ -65,7 +65,8 @@ describe('SME → Pay → Agent → Complete workflow', () => {
     })
 
     expect(request.paymentStatus).toBe('pending')
-    expect(request.paymentAmount).toBe(24900)
+    expect(request.paymentAmount).toBe(34900)
+    expect(request.briefingPriceCents).toBe(34900)
 
     await expect(
       agentService.acceptRequest(request.id, { id: 'agent-a', displayName: 'A' })
@@ -105,6 +106,28 @@ describe('SME → Pay → Agent → Complete workflow', () => {
     const all = await storage.getAttendanceRequests()
     const row = all.find((r: any) => r.id === request.id)
     expect(row.status).toBe('completed')
+  })
+
+  it('preserves historical R249 snapshot on mark paid', async () => {
+    const storage = require('../../backend/services/storageAdapter').getStorage()
+    const legacyId = `legacy-${Date.now()}`
+    await storage.saveAttendanceRequest({
+      id: legacyId,
+      tenderId: 't-legacy',
+      smeId: 'sme-a',
+      status: 'pending',
+      paymentStatus: 'pending',
+      paymentAmount: 24900,
+      quotedFee: 24900,
+      briefingPriceCents: 24900,
+      pricingVersion: '2024-v249',
+      currency: 'ZAR',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+    const paid = await paymentService.markRequestPaid(legacyId, { pfPaymentId: 'PF-legacy' })
+    expect(paid.request.paymentAmount).toBe(24900)
+    expect(paid.request.briefingPriceCents).toBe(24900)
   })
 
   it('rejects payment downgrade after paid', async () => {

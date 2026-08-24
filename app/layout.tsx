@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 import { Inter, Space_Grotesk } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/providers/AuthProvider'
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
     template: '%s | TenderBriefing',
   },
   description:
-    'TenderBriefing helps South African SMEs discover compulsory tender briefings, track official eTenders opportunities and request Youth Agents for R249 when attendance is required.',
+    'TenderBriefing helps South African SMEs discover compulsory tender briefings, track official eTenders opportunities and request Youth Agents for ${BRIEFING_PRICE_LABEL} when attendance is required.',
   keywords: [
     'tender briefing',
     'tender briefing South Africa',
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
     siteName: 'TenderBriefing',
     title: 'Tender Briefing South Africa | Compulsory Government Tender Briefings',
     description:
-      'Discover compulsory government tender briefings across South Africa. Free for SMEs — R249 only when requesting a Youth Agent.',
+      'Discover compulsory government tender briefings across South Africa. Free for SMEs — ${BRIEFING_PRICE_LABEL} only when requesting a Youth Agent.',
     images: ['/brand/og-logo.png'],
   },
   twitter: {

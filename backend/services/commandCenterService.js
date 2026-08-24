@@ -63,13 +63,23 @@ function rankAgentsLight(agents, requests) {
     .sort((a, b) => b.score - a.score)
 }
 
+function paidAmountCents(record) {
+  const amount = Number(record.paymentAmount)
+  if (Number.isFinite(amount) && amount > 0) return Math.round(amount)
+  const snap = Number(record.briefingPriceCents)
+  if (Number.isFinite(snap) && snap > 0) return Math.round(snap)
+  const quoted = Number(record.quotedFee)
+  if (Number.isFinite(quoted) && quoted > 0) return Math.round(quoted)
+  return 0
+}
+
 function liveExecutive(requests, waStats) {
   const today = new Date().toISOString().slice(0, 10)
   const paid = requests.filter((r) => r.paymentStatus === 'paid')
   const pendingPaid = requests.filter((r) => r.status === 'pending' && r.paymentStatus === 'paid')
   const revenueTodayCents = paid
     .filter((r) => r.paidAt && String(r.paidAt).startsWith(today))
-    .reduce((s, r) => s + (Number(r.paymentAmount || r.quotedFee) || 24900), 0)
+    .reduce((s, r) => s + paidAmountCents(r), 0)
   const conversionPct =
     requests.length > 0 ? Math.round((paid.length / requests.length) * 1000) / 10 : 0
   const waSent = waStats.sent || 0

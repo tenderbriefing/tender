@@ -4,6 +4,7 @@ import JsonLd from '@/components/seo/JsonLd'
 import SeoFaqSection, { SeoCtaBand } from '@/components/seo/SeoFaqSection'
 import type { ResourceArticle } from '@/lib/seo/resources'
 import { breadcrumbJsonLd, faqPageJsonLd } from '@/lib/seo/structuredData'
+import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 
 export default function ResourceArticlePage({ article }: { article: ResourceArticle }) {
   const breadcrumbs = breadcrumbJsonLd([
@@ -55,7 +56,7 @@ export default function ResourceArticlePage({ article }: { article: ResourceArti
 
           <SeoCtaBand
             title="Put this knowledge into action"
-            description="Register free, track compulsory briefings and request a Youth Agent for R249 only when you need attendance support."
+            description={`Register free, track compulsory briefings and request a Youth Agent for ${BRIEFING_PRICE_LABEL} only when you need attendance support.`}
             primaryHref="/auth/role-selection"
             primaryLabel="Create free SME account"
             secondaryHref="/tenders"

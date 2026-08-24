@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 import {
   CSD_PROCUREMENT_CATEGORIES,
   getCategoryByName,
@@ -85,7 +86,7 @@ export default function SmeCategoryCommoditySelector({
             TenderBriefing is free for SMEs
           </p>
           <p className="mt-1 text-sm text-brand-800">
-            You only pay R249 when you request a verified Youth Agent to attend a compulsory
+            You only pay ${BRIEFING_PRICE_LABEL} when you request a verified Youth Agent to attend a compulsory
             briefing on your behalf.
           </p>
         </div>

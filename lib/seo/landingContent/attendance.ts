@@ -1,17 +1,11 @@
 import type { SeoLandingConfig } from '@/lib/seo/landingTypes'
-import {
-  AGENT_DELEGATION_FAQ,
-  COMPULSORY_DISQUALIFICATION_FAQ,
-  ETENDERS_FAQ,
-  R249_FAQ,
-  SME_FREE_FAQ,
-} from './shared'
+import { AGENT_DELEGATION_FAQ, COMPULSORY_DISQUALIFICATION_FAQ, ETENDERS_FAQ, R249_FAQ, SME_FREE_FAQ, BRIEFING_PRICE_LABEL } from './shared'
 
 export const attendanceConfig: SeoLandingConfig = {
   slug: 'tender-briefing-attendance',
   path: '/tender-briefing-attendance',
   metaDescription:
-    'Plan compulsory tender briefing attendance with dates, venues, virtual links and calendar exports. TenderBriefing helps South African SMEs comply — free discovery, R249 Youth Agent backup when you cannot attend.',
+    `Plan compulsory tender briefing attendance with dates, venues, virtual links and calendar exports. TenderBriefing helps South African SMEs comply — free discovery, ${BRIEFING_PRICE_LABEL} Youth Agent backup when you cannot attend.`,
   eyebrow: 'Attendance · Calendar planning',
   title: 'Tender Briefing Attendance Planning',
   heroDescription:
@@ -48,7 +42,7 @@ export const attendanceConfig: SeoLandingConfig = {
     {
       heading: 'When to escalate to Youth Agent attendance',
       paragraphs: [
-        'Escalate when travel exceeds sensible bid budget, when leadership is unavailable, or when two compulsory sessions collide. R249 agent attendance is designed for these operational realities — not as replacement for every briefing.',
+        `Escalate when travel exceeds sensible bid budget, when leadership is unavailable, or when two compulsory sessions collide. ${BRIEFING_PRICE_LABEL} agent attendance is designed for these operational realities — not as replacement for every briefing.`,
         'Agents are particularly useful for first-time site visits in unfamiliar provinces where missing subtle access rules would underprice logistics.',
         'Discovery remains free; you only pay when confirming agent support for a specific compulsory session.',
       ],
@@ -137,7 +131,7 @@ export const attendanceConfig: SeoLandingConfig = {
       scenario:
         'Two compulsory sessions same day in different metros.',
       outcome:
-        'Director attends priority bid; Youth Agent covers second for R249.',
+        `Director attends priority bid; Youth Agent covers second for ${BRIEFING_PRICE_LABEL}.`,
     },
   ],
   provinceFocus: [],
@@ -145,7 +139,7 @@ export const attendanceConfig: SeoLandingConfig = {
     'Briefing date and time on every tender detail page',
     'Venue addresses and virtual meeting links when published',
     'Calendar export for briefing and closing events',
-    'Youth Agent attendance backup for R249 per session',
+    `Youth Agent attendance backup for ${BRIEFING_PRICE_LABEL} per session`,
     'Official documents synced from eTenders',
   ],
   features: [
@@ -195,7 +189,7 @@ export const attendanceConfig: SeoLandingConfig = {
   ],
   ctaTitle: 'Never miss a compulsory briefing date again',
   ctaDescription:
-    'Register free, export briefing calendars from live tenders, and book Youth Agent attendance for R249 when your team cannot be there.',
+    `Register free, export briefing calendars from live tenders, and book Youth Agent attendance for ${BRIEFING_PRICE_LABEL} when your team cannot be there.`,
   ctaPrimaryLabel: 'Create free account',
   ctaSecondaryLabel: 'Browse briefing dates',
   relatedLinks: [

@@ -38,7 +38,7 @@ function JobCard({
         {item.tenderTitle}
       </Text>
       <Text style={{ marginTop: 8, fontWeight: '700', color: colors.brand, fontSize: 18 }}>
-        {item.payoutZar || 'R249.00'}
+        {item.payoutZar || 'R200.00'}
       </Text>
       <Text style={{ fontSize: 12, color: colors.slate600 }}>
         {item.province}

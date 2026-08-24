@@ -1,3 +1,4 @@
+import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 export interface ResourceArticle {
   slug: string
   title: string
@@ -36,7 +37,7 @@ export const RESOURCE_ARTICLES: ResourceArticle[] = [
         heading: 'How TenderBriefing helps SMEs',
         paragraphs: [
           'TenderBriefing syncs official eTenders data and highlights opportunities with compulsory briefing requirements. Each listing shows the official tender description, briefing date and time, venue or meeting link, documents and closing date.',
-          'Discovery is free for SMEs. If you cannot attend in person, you can request a verified Youth Agent for a fixed R249 fee to attend on your behalf and return structured briefing notes.',
+          `Discovery is free for SMEs. If you cannot attend in person, you can request a verified Youth Agent for a fixed ${BRIEFING_PRICE_LABEL} fee to attend on your behalf and return structured briefing notes.`,
         ],
       },
     ],
@@ -77,7 +78,7 @@ export const RESOURCE_ARTICLES: ResourceArticle[] = [
       {
         heading: 'Capacity constraints',
         paragraphs: [
-          'Owners and bid teams cannot be in two places at once. When a briefing clashes with operations, SMEs need a trusted representative. Youth Agents on TenderBriefing attend for a fixed R249 per session — still far cheaper than a lost contract.',
+          `Owners and bid teams cannot be in two places at once. When a briefing clashes with operations, SMEs need a trusted representative. Youth Agents on TenderBriefing attend for a fixed ${BRIEFING_PRICE_LABEL} per session — still far cheaper than a lost contract.`,
         ],
       },
     ],
@@ -93,7 +94,7 @@ export const RESOURCE_ARTICLES: ResourceArticle[] = [
     slug: 'how-tenderbriefing-saves-time-on-site-briefings',
     title: 'How TenderBriefing Helps SMEs Save Time on Site Briefings',
     metaDescription:
-      'TenderBriefing saves SMEs time by tracking compulsory briefings, centralising official eTenders data and offering Youth Agent attendance support for R249.',
+      `TenderBriefing saves SMEs time by tracking compulsory briefings, centralising official eTenders data and offering Youth Agent attendance support for ${BRIEFING_PRICE_LABEL}.`,
     excerpt:
       'How to spend less time searching eTenders and more time preparing winning bids.',
     publishedAt: '2026-05-27',
@@ -113,13 +114,13 @@ export const RESOURCE_ARTICLES: ResourceArticle[] = [
       {
         heading: 'Agent attendance when you need it',
         paragraphs: [
-          'When travel cost or scheduling makes attendance difficult, request a Youth Agent for R249. You receive briefing notes that help your team prepare a compliant submission without being physically present.',
+          `When travel cost or scheduling makes attendance difficult, request a Youth Agent for ${BRIEFING_PRICE_LABEL}. You receive briefing notes that help your team prepare a compliant submission without being physically present.`,
         ],
       },
     ],
     faqs: [
       {
-        question: 'What does the R249 fee cover?',
+        question: `What does the ${BRIEFING_PRICE_LABEL} fee cover?`,
         answer:
           'A verified Youth Agent attending the compulsory briefing on your behalf and providing structured session notes through the platform.',
       },
