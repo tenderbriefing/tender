@@ -611,4 +611,32 @@ describe('Youth Agent Workspace collections — IDOR matrix', () => {
       updateDoc(doc(firestoreAs(ADMIN), 'youthAgentPayouts', id), { status: 'paid' })
     )
   })
+
+  it('youth agent payout batch records deny client writes and IDOR reads', async () => {
+    const batchId = uid('batch')
+    await seed('youthAgentPayoutBatches', batchId, {
+      batchId,
+      youthAgentUid: AGENT_A,
+      periodKey: '2026-08',
+      grossEarningsCents: 100000,
+      status: 'ready',
+    })
+
+    await assertFails(getDoc(doc(firestoreAs(null), 'youthAgentPayoutBatches', batchId)))
+    await assertSucceeds(getDoc(doc(firestoreAs(AGENT_A), 'youthAgentPayoutBatches', batchId)))
+    await assertSucceeds(getDoc(doc(firestoreAs(ADMIN), 'youthAgentPayoutBatches', batchId)))
+    await assertFails(getDoc(doc(firestoreAs(AGENT_B), 'youthAgentPayoutBatches', batchId)))
+    await assertFails(getDoc(doc(firestoreAs(SME_A), 'youthAgentPayoutBatches', batchId)))
+
+    await assertFails(
+      setDoc(doc(firestoreAs(AGENT_A), 'youthAgentPayoutBatches', uid('evil')), {
+        youthAgentUid: AGENT_A,
+        grossEarningsCents: 999999,
+        status: 'paid',
+      })
+    )
+    await assertFails(
+      updateDoc(doc(firestoreAs(ADMIN), 'youthAgentPayoutBatches', batchId), { status: 'paid' })
+    )
+  })
 })

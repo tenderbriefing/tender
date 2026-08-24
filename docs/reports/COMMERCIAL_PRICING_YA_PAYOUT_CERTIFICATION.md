@@ -12,7 +12,7 @@ The production payment path, price snapshots, PayFast charge authority, Youth Ag
 
 1. Deploy Firestore rules + composite indexes for `youthAgentPayouts`.
 2. Run `npm run test:firestore-rules-emulator` in CI/staging (not executed in this certification run).
-3. Complete production smoke: new booking → PayFast R349 ITN → evidence submit → eligible R200 payout → Founder mark paid.
+3. Complete production smoke: new booking → PayFast R349 ITN → evidence submit → eligible R200 payout (accrued, **not** individually marked paid). Monthly EFT settlement is certified separately — see `MONTHLY_YA_EFT_PAYOUT_CERTIFICATION.md`.
 4. Bulk-update remaining SEO/marketing copy still referencing R249 (see audit §6).
 5. Optional: migrate Founder **Agents** directory earnings from legacy 35% commission display to payout-ledger truth.
 

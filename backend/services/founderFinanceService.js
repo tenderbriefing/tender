@@ -4,6 +4,7 @@
  */
 const { getStorage } = require('./storageAdapter')
 const youthAgentPayouts = require('./finance/youthAgentPayoutService')
+const youthAgentPayoutBatches = require('./finance/youthAgentPayoutBatchService')
 
 const PERIOD_DAYS = { '7': 7, '30': 30, '90': 90, all: null }
 
@@ -40,7 +41,14 @@ function isPaidBooking(request) {
   return request && request.paymentStatus === 'paid'
 }
 
-async function getFounderFinanceDashboard({ period = '30', status = 'all', page = 1, pageSize = 25 } = {}) {
+async function getFounderFinanceDashboard({
+  period = '30',
+  status = 'all',
+  page = 1,
+  pageSize = 25,
+  batchPeriodKey = null,
+  batchStatus = 'all',
+} = {}) {
   const startMs = periodStartMs(period)
   const storage = getStorage()
   const requests = await storage.getAttendanceRequests()
@@ -64,34 +72,58 @@ async function getFounderFinanceDashboard({ period = '30', status = 'all', page 
 
   const payoutSummary = await youthAgentPayouts.getFinanceSummary({ periodStartMs: startMs })
   const payoutList = await youthAgentPayouts.listPayouts({ status, page, pageSize })
+  const batchList = await youthAgentPayoutBatches.listBatches({
+    periodKey: batchPeriodKey || null,
+    status: batchStatus === 'all' ? null : batchStatus,
+    pageSize: 100,
+  })
 
-  const totalPayoutLiabilityCents =
-    payoutSummary.payoutsDueCents +
-    payoutSummary.payoutsHeldCents +
-    payoutSummary.payoutsPaidCents
-
-  const grossContributionCents = bookingRevenueCents - totalPayoutLiabilityCents
+  const outstandingYaLiabilityCents = payoutSummary.outstandingYaLiabilityCents
+  const totalYaShareCents =
+    payoutSummary.accruedUnsettledCents +
+    payoutSummary.batchedAwaitingEftCents +
+    payoutSummary.settledCents +
+    payoutSummary.payoutsHeldCents
+  const grossContributionCents = bookingRevenueCents - totalYaShareCents
 
   return {
     period,
+    batchPeriodKey,
     kpis: {
       bookingRevenueCents,
       paidBookings,
-      agentPayoutsDueCents: payoutSummary.payoutsDueCents,
+      yaEarningsAccruedCents: payoutSummary.accruedUnsettledCents,
+      yaBatchedAwaitingEftCents: payoutSummary.batchedAwaitingEftCents,
+      yaPayoutsSettledCents: payoutSummary.settledCents,
+      outstandingYaLiabilityCents,
       agentPayoutsHeldCents: payoutSummary.payoutsHeldCents,
-      agentPayoutsPaidCents: payoutSummary.payoutsPaidCents,
+      /** @deprecated */
+      agentPayoutsDueCents: payoutSummary.accruedUnsettledCents,
+      /** @deprecated */
+      agentPayoutsPaidCents: payoutSummary.settledCents,
       grossContributionCents,
       grossContributionAccruedCents: payoutSummary.grossContributionAccruedCents,
+      batchesReadyCents: payoutSummary.batchSummary?.batchesReadyCents || 0,
+      batchesPaidCents: payoutSummary.batchSummary?.batchesPaidCents || 0,
       missingPaymentAmountCount: missingAmountCount,
     },
     payouts: payoutList,
+    monthlyBatches: batchList,
     notes: {
       bookingRevenue:
         'Sum of paymentAmount (else briefingPriceCents, else quotedFee) on paid attendance requests in period.',
-      agentPayoutsDue: 'Eligible Youth Agent payouts not yet settled (cash outstanding).',
-      agentPayoutsPaid: 'Payouts marked paid by Founder with audit trail.',
+      yaEarningsAccrued:
+        'Eligible R200 job liabilities not yet included in a monthly batch (unsettled accrual).',
+      yaBatchedAwaitingEft:
+        'Jobs included in a generated monthly batch awaiting external EFT settlement.',
+      yaPayoutsSettled:
+        'Job liabilities settled via monthly EFT batch (or legacy per-job paid records).',
+      outstandingYaLiability:
+        'Accrued + batched earnings not yet settled — cash still owed to Youth Agents.',
       grossContribution:
-        'Paid briefing revenue minus total payout liabilities (due + held + paid). Not profit — excludes operating costs.',
+        'Paid briefing revenue minus settled YA payouts and outstanding YA liability. Not profit — excludes operating costs.',
+      monthlyInclusion:
+        'Jobs belong to the calendar month containing eligibleAt (UTC). See lib/finance/youthAgentPayoutBatchTypes.ts.',
     },
   }
 }
