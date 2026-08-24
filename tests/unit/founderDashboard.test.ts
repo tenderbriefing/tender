@@ -335,12 +335,13 @@ describe('directories and lifecycle', () => {
         }),
       ],
       reports: [{ id: 'rep-1', agentId: 'ya-1', requestId: 'r1' }],
+      payoutsByAgent: new Map([['ya-1', 20000]]),
     })
     expect(rows[0].agent).toBe('Sipho')
     expect(rows[0].briefings).toBe(2)
     expect(rows[0].completed).toBe(2)
     expect(rows[0].reports).toBe(1)
-    expect(rows[0].earningsCents).toBe(Math.round(24900 * (1 - 0.35)))
+    expect(rows[0].earningsCents).toBe(20000)
   })
 
   it('presents lifecycle Paid → Agent Assigned → Attended → Report Delivered without replacing backend status', () => {
