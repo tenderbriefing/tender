@@ -55,18 +55,11 @@ export function isAgentDispatchablePayment(status?: string | null): boolean {
   return s === 'paid' || s === 'not_required'
 }
 
-/** Canonical attendance fee in cents — R249.00. Not client-overridable for server charges. */
-export const CANONICAL_ATTENDANCE_FEE_CENTS = 24900
-
-export function resolveAttendanceFeeCents(): number {
-  const server = process.env.ATTENDANCE_FEE_CENTS
-  if (server != null && server !== '') {
-    const n = Number(server)
-    if (Number.isFinite(n) && n > 0) return Math.round(n)
-  }
-  // Display env may exist; server charge still defaults to canonical R249 unless ATTENDANCE_FEE_CENTS set.
-  return CANONICAL_ATTENDANCE_FEE_CENTS
-}
+export {
+  BRIEFING_PRICE_CENTS as CANONICAL_ATTENDANCE_FEE_CENTS,
+  LEGACY_BRIEFING_PRICE_CENTS,
+  resolveBriefingPriceCents as resolveAttendanceFeeCents,
+} from '@/lib/domain/briefingPricing'
 
 export function amountsMatchCents(expectedCents: number, paidZar: number, toleranceCents = 1): boolean {
   const paidCents = Math.round(Number(paidZar) * 100)

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 import Link from 'next/link'
 import MarketingPageLayout from '@/components/marketing/MarketingPageLayout'
 import AnimateIn from '@/components/ui/AnimateIn'
@@ -21,7 +22,7 @@ const benefits = [
 
 const steps = [
   'Browse compulsory briefing tenders',
-  'Request attendance support (R249 standard fee)',
+  `Request attendance support (${BRIEFING_PRICE_LABEL} standard fee)`,
   'Agent attends and uploads report',
   'You submit your tender through official channels',
 ]

@@ -1,7 +1,8 @@
 /**
  * Platform commission and agent earnings.
  */
-const ATTENDANCE_FEE_CENTS = Number(process.env.NEXT_PUBLIC_ATTENDANCE_FEE_CENTS || 24900)
+const { resolveBriefingPriceCents } = require('../../constants/briefingPricing')
+const ATTENDANCE_FEE_CENTS = resolveBriefingPriceCents()
 const PLATFORM_RATE = Number(process.env.PLATFORM_COMMISSION_RATE || 0.35)
 
 async function calculateAgentEarnings(agentId, requestIds = []) {

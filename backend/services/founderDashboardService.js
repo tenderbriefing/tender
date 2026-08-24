@@ -16,7 +16,8 @@ const REPORT_COHORT_LIMIT = 500
 const PAGE_SIZE_MAX = 50
 const ATTENTION_CAP = 25
 const CACHE_TTL_MS = Number(process.env.FOUNDER_DASHBOARD_CACHE_TTL_MS || 20000)
-const PLATFORM_RATE = Number(process.env.PLATFORM_COMMISSION_RATE || 0.35)
+const { resolveYouthAgentPayoutCents } = require('../constants/briefingPricing')
+const YA_PAYOUT_CENTS = resolveYouthAgentPayoutCents()
 const NEEDS_ATTENTION_EMPTY = 'Nothing requires your attention.'
 
 const PERIOD_DAYS = { '7': 7, '30': 30, '90': 90, all: null }
@@ -361,10 +362,9 @@ function buildSmeRows({ users, roleDocs, requests, summaries }) {
   })
 }
 
-function buildAgentRows({ users, roleDocs, requests, reports }) {
+function buildAgentRows({ users, roleDocs, requests, reports, payoutsByAgent = new Map() }) {
   const briefingsByAgent = new Map()
   const completedByAgent = new Map()
-  const earningsByAgent = new Map()
   const reportsByAgent = new Map()
 
   for (const r of requests) {
@@ -373,13 +373,6 @@ function buildAgentRows({ users, roleDocs, requests, reports }) {
     briefingsByAgent.set(aid, (briefingsByAgent.get(aid) || 0) + 1)
     if (isCompletedWorkflow(r)) {
       completedByAgent.set(aid, (completedByAgent.get(aid) || 0) + 1)
-    }
-    if (isPaidBooking(r) && isCompletedWorkflow(r)) {
-      const cents = paidAmountCents(r)
-      if (cents != null) {
-        const agentShare = Math.round(cents * (1 - PLATFORM_RATE))
-        earningsByAgent.set(aid, (earningsByAgent.get(aid) || 0) + agentShare)
-      }
     }
   }
   for (const rep of reports) {
@@ -394,7 +387,8 @@ function buildAgentRows({ users, roleDocs, requests, reports }) {
     ).trim()
     const joined = toIso(u.createdAt) || toIso(role.createdAt) || toIso(u.onboardingCompletedAt)
     const completed = completedByAgent.get(u.id) || 0
-    const hasEarnings = earningsByAgent.has(u.id)
+    const payoutEarnings = payoutsByAgent.get(u.id)
+    const hasPayoutEarnings = payoutEarnings != null && payoutEarnings > 0
     return {
       id: u.id,
       agent: name || u.id,
@@ -403,9 +397,28 @@ function buildAgentRows({ users, roleDocs, requests, reports }) {
       briefings: briefingsByAgent.get(u.id) || 0,
       completed,
       reports: reportsByAgent.get(u.id) || 0,
-      earningsCents: hasEarnings ? earningsByAgent.get(u.id) : completed === 0 ? 0 : null,
+      earningsCents: hasPayoutEarnings ? payoutEarnings : completed === 0 ? 0 : null,
     }
   })
+}
+
+async function loadPayoutEarningsByAgent(limit = 500) {
+  const db = getFirestore()
+  const snap = await db
+    .collection('youthAgentPayouts')
+    .limit(limit)
+    .get()
+    .catch(() => ({ docs: [] }))
+  const map = new Map()
+  for (const doc of snap.docs) {
+    const p = doc.data()
+    if (!p || !['eligible', 'held', 'paid'].includes(p.status)) continue
+    const uid = String(p.youthAgentUid || '')
+    if (!uid) continue
+    const amount = Math.round(Number(p.payoutAmountCents) || YA_PAYOUT_CENTS)
+    map.set(uid, (map.get(uid) || 0) + amount)
+  }
+  return map
 }
 
 function buildBriefingRows(requests) {
@@ -539,13 +552,14 @@ async function loadSmes({ page, pageSize, q, province }) {
 
 async function loadAgents({ page, pageSize, q, province }) {
   const storage = getStorage()
-  const [users, roleDocs, requests, reports] = await Promise.all([
+  const [users, roleDocs, requests, reports, payoutsByAgent] = await Promise.all([
     loadUsersByType('youth-agent', PROFILE_COHORT_LIMIT),
     loadCollectionMap('agents', PROFILE_COHORT_LIMIT),
     storage.getAttendanceRequests({ limit: REQUEST_COHORT_LIMIT }),
     storage.getBriefingReports({ limit: REPORT_COHORT_LIMIT }),
+    loadPayoutEarningsByAgent(),
   ])
-  let rows = buildAgentRows({ users, roleDocs, requests, reports })
+  let rows = buildAgentRows({ users, roleDocs, requests, reports, payoutsByAgent })
   if (province) rows = rows.filter((r) => r.province === province)
   rows = rows.filter((r) => matchesQuery(r, q))
   rows.sort((a, b) => new Date(b.joined || 0) - new Date(a.joined || 0))

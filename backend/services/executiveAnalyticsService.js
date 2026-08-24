@@ -9,6 +9,16 @@ const workflowAutomationService = require('./workflowAutomationService')
 
 const METRICS_COLLECTION = 'executiveMetrics'
 
+function paidAmountCents(record) {
+  const amount = Number(record.paymentAmount)
+  if (Number.isFinite(amount) && amount > 0) return Math.round(amount)
+  const snap = Number(record.briefingPriceCents)
+  if (Number.isFinite(snap) && snap > 0) return Math.round(snap)
+  const quoted = Number(record.quotedFee)
+  if (Number.isFinite(quoted) && quoted > 0) return Math.round(quoted)
+  return 0
+}
+
 function parseDate(value) {
   if (!value) return null
   const d = new Date(value)
@@ -44,7 +54,7 @@ async function computeExecutiveMetrics() {
 
   const revenueTodayCents = paid
     .filter((r) => r.paidAt && String(r.paidAt).startsWith(today))
-    .reduce((s, r) => s + (r.paymentAmount || 24900), 0)
+    .reduce((s, r) => s + paidAmountCents(r), 0)
 
   const provinceDemand = {}
   const departmentDemand = {}
@@ -177,7 +187,7 @@ async function computeLiveExecutiveMetrics() {
   const today = new Date().toISOString().slice(0, 10)
   const revenueTodayCents = paid
     .filter((r) => r.paidAt && String(r.paidAt).startsWith(today))
-    .reduce((s, r) => s + (r.paymentAmount || 24900), 0)
+    .reduce((s, r) => s + paidAmountCents(r), 0)
   const provinceDemand = {}
   const departmentDemand = {}
   const smeCounts = {}

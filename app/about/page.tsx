@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 import Link from 'next/link'
 import MarketingPageLayout from '@/components/marketing/MarketingPageLayout'
 import AnimateIn from '@/components/ui/AnimateIn'
@@ -18,7 +19,7 @@ import {
 export const metadata: Metadata = buildPageMetadata({
   title: 'About TenderBriefing | South Africa Tender Briefing Platform',
   description:
-    'TenderBriefing connects South African SMEs with compulsory tender briefing intelligence and verified Youth Agents. Free discovery — R249 only when requesting briefing attendance.',
+    `TenderBriefing connects South African SMEs with compulsory tender briefing intelligence and verified Youth Agents. Free discovery — ${BRIEFING_PRICE_LABEL} only when requesting briefing attendance.`,
   path: '/about',
   keywords: ['about TenderBriefing', 'tender briefing South Africa', 'SME procurement platform'],
 })
@@ -52,7 +53,7 @@ const pillars = [
 
 const stats = [
   { value: '9', label: 'Provinces covered' },
-  { value: 'R249', label: 'Per briefing fee' },
+  { value: `${BRIEFING_PRICE_LABEL}`, label: 'Per briefing fee' },
   { value: '24h', label: 'Report SLA' },
   { value: 'R0', label: 'SME platform cost' },
 ]

@@ -1,6 +1,8 @@
 /**
  * Pilot outreach message templates (from docs/LAUNCH_MESSAGES.md).
  */
+const { formatBriefingPriceZar } = require('../constants/briefingPricing')
+const BRIEFING_FEE_LABEL = formatBriefingPriceZar()
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ||
   process.env.NEXT_PUBLIC_APP_URL ||
@@ -23,7 +25,7 @@ TenderBriefing helps South African SMEs never miss a *compulsory tender briefing
 ✅ Request a verified Youth Agent to attend on your behalf
 ✅ Receive a structured briefing report for your bid team
 
-Standard attendance support: R249 per briefing (pilot pricing).
+Standard attendance support: ${BRIEFING_FEE_LABEL} per briefing (pilot pricing).
 
 Start here: {{link}}/pilot/sme
 

@@ -45,7 +45,7 @@ export default function BriefingDetailScreen() {
             {String(req.briefingDate || '')} {String(req.briefingTime || '')}
           </Text>
           <Text style={{ marginTop: 12, fontSize: 20, fontWeight: '800', color: colors.brand }}>
-            R{((Number(req.paymentAmount) || 24900) / 100).toFixed(2)}
+            R{(20000 / 100).toFixed(2)} payout
           </Text>
         </Card>
         {data?.aiSummary?.summary && (

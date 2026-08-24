@@ -79,7 +79,7 @@ function DispatchCard({
           </span>
         )}
       </div>
-      <p className="mt-2 text-lg font-bold text-brand-700">{item.payoutZar || 'R249.00'}</p>
+      <p className="mt-2 text-lg font-bold text-brand-700">{item.payoutZar || 'R200.00'}</p>
       <p className="text-xs text-slate-500">
         {item.briefingDate} {item.briefingTime ? `· ${item.briefingTime}` : ''}
       </p>

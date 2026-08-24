@@ -19,9 +19,8 @@ import {
 } from 'lucide-react'
 
 export const metadata: Metadata = buildPageMetadata({
-  title: 'Pricing | Free Tender Discovery & R249 Briefing Agent Fee',
-  description:
-    'TenderBriefing is free for SMEs to discover compulsory tender briefings. Pay R249 only when you request a verified Youth Agent to attend a compulsory briefing on your behalf.',
+  title: `Pricing | Free Tender Discovery & ${ATTENDANCE_FEE_LABEL} Briefing Agent Fee`,
+  description: `TenderBriefing is free for SMEs to discover compulsory tender briefings. Pay ${ATTENDANCE_FEE_LABEL} only when you request a verified Youth Agent to attend a compulsory briefing on your behalf.`,
   path: '/pricing',
   keywords: [
     'tender briefing pricing',
@@ -82,7 +81,7 @@ export default function PricingPage() {
     <MarketingPageLayout
       eyebrow="Pricing"
       title="Pay only when you need a Youth Agent"
-      description="Browse tenders free. Verified Youth Agents are ready across every municipality to represent your SME at compulsory briefings — you pay R249 only when one attends on your behalf."
+      description={`Browse tenders free. Verified Youth Agents are ready across every municipality to represent your SME at compulsory briefings — you pay ${ATTENDANCE_FEE_LABEL} only when one attends on your behalf.`}
       heroExtra={
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link

@@ -11,6 +11,15 @@ type EarningsData = {
     pendingPayoutCents: number
     paidEarningsCents: number
     monthEarningsCents: number
+    payouts?: Array<{
+      payoutId: string
+      requestId: string
+      tenderId?: string
+      payoutAmountCents: number
+      status: string
+      completedAt?: string | null
+      paidAt?: string | null
+    }>
   }
   ledger: {
     balanceCents: number
@@ -59,14 +68,42 @@ export default function WorkspaceEarningsPage() {
             </p>
             <p className="mt-1 text-3xl font-bold text-slate-900">{data.ledger.balanceZar}</p>
             <p className="mt-2 text-sm text-slate-600">
-              Paid {zar(data.earnings.paidEarningsCents)} · Pending{' '}
-              {zar(data.earnings.pendingPayoutCents)} · This month{' '}
+              Approved {zar(data.earnings.pendingPayoutCents)} · Paid{' '}
+              {zar(data.earnings.paidEarningsCents)} · This month{' '}
               {zar(data.earnings.monthEarningsCents)}
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              {data.earnings.completedBriefings} completed briefings · append-only ledger
+              {data.earnings.completedBriefings} completed briefings · R200 per eligible briefing
             </p>
           </section>
+
+          {data.earnings.payouts && data.earnings.payouts.length > 0 && (
+            <section>
+              <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">
+                Your payouts
+              </h2>
+              <ul className="space-y-2">
+                {data.earnings.payouts.map((p) => (
+                  <li
+                    key={p.payoutId}
+                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-900">
+                        Briefing {String(p.requestId).slice(0, 8)}…
+                      </p>
+                      <p className="text-xs text-slate-500 capitalize">
+                        {p.status} · {String(p.completedAt || '').slice(0, 10)}
+                      </p>
+                    </div>
+                    <p className="font-semibold text-emerald-700">
+                      {zar(p.payoutAmountCents)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section>
             <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">

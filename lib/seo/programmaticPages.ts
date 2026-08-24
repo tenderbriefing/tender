@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import { buildPageMetadata } from './metadata'
 
@@ -19,7 +20,7 @@ export const PROGRAMMATIC_TENDER_PAGES: Record<string, ProgrammaticTenderPageCon
     slug: 'gauteng',
     title: 'Gauteng Tender Briefings',
     metaDescription:
-      'Browse compulsory tender briefings in Gauteng. Free SME discovery on TenderBriefing with official eTenders data, briefing dates and Youth Agent support for R249.',
+      `Browse compulsory tender briefings in Gauteng. Free SME discovery on TenderBriefing with official eTenders data, briefing dates and Youth Agent support for ${BRIEFING_PRICE_LABEL}.`,
     eyebrow: 'Gauteng · Provincial tenders',
     heroTitle: 'Gauteng tender briefings & compulsory site meetings',
     heroDescription:
@@ -27,7 +28,7 @@ export const PROGRAMMATIC_TENDER_PAGES: Record<string, ProgrammaticTenderPageCon
     seoCopy: [
       'Gauteng is South Africa’s economic hub with high tender activity across national departments, metros and SOEs.',
       'TenderBriefing surfaces compulsory briefing opportunities in Gauteng with official dates, times, documents and scope of work from eTenders.',
-      'Registration is free for SMEs. Request a Youth Agent for R249 only when you need someone to attend a compulsory briefing on your behalf.',
+      `Registration is free for SMEs. Request a Youth Agent for ${BRIEFING_PRICE_LABEL} only when you need someone to attend a compulsory briefing on your behalf.`,
     ],
     filter: (t) => t.province === 'Gauteng',
   },
@@ -50,7 +51,7 @@ export const PROGRAMMATIC_TENDER_PAGES: Record<string, ProgrammaticTenderPageCon
     slug: 'kwazulu-natal',
     title: 'KwaZulu-Natal Tender Briefings',
     metaDescription:
-      'Browse compulsory tender briefings in KwaZulu-Natal. Official eTenders data on TenderBriefing — free discovery, R249 agent fee when needed.',
+      `Browse compulsory tender briefings in KwaZulu-Natal. Official eTenders data on TenderBriefing — free discovery, ${BRIEFING_PRICE_LABEL} agent fee when needed.`,
     eyebrow: 'KwaZulu-Natal · Provincial tenders',
     heroTitle: 'KwaZulu-Natal tender briefings',
     heroDescription:

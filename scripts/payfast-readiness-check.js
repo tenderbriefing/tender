@@ -6,6 +6,9 @@
 const path = require('path')
 process.chdir(path.join(__dirname, '..'))
 require('./load-env-local').loadEnvLocal()
+const { resolveBriefingPriceCents, BRIEFING_PRICE_CURRENCY } = require('../backend/constants/briefingPricing')
+
+const CANONICAL_BRIEFING_PRICE_CENTS = resolveBriefingPriceCents()
 
 const PROD_BASE =
   process.env.PAYFAST_READINESS_BASE_URL ||
@@ -151,8 +154,12 @@ async function main() {
   if (req) {
     check('paymentStatus is pending', req.paymentStatus === 'pending', req.paymentStatus)
     check('paymentProvider is payfast', req.paymentProvider === 'payfast', req.paymentProvider)
-    check('paymentAmount is 24900', req.paymentAmount === 24900, String(req.paymentAmount))
-    check('currency is ZAR', req.currency === 'ZAR', req.currency)
+    check(
+      `paymentAmount is ${CANONICAL_BRIEFING_PRICE_CENTS}`,
+      req.paymentAmount === CANONICAL_BRIEFING_PRICE_CENTS,
+      String(req.paymentAmount)
+    )
+    check('currency is ZAR', req.currency === BRIEFING_PRICE_CURRENCY, req.currency)
     check(
       'paymentReference format TB-REQ-*',
       /^TB-REQ-/.test(req.paymentReference || ''),

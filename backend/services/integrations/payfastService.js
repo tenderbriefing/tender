@@ -254,7 +254,7 @@ async function queryTransactionByPfPaymentId(pfPaymentId) {
 }
 
 /**
- * Build signed PayFast checkout fields for R249 attendance fee.
+ * Build signed PayFast checkout fields for briefing attendance fee.
  */
 function createCheckoutPayload({
   amountCents,

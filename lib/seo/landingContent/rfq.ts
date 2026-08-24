@@ -1,16 +1,11 @@
 import type { SeoLandingConfig } from '@/lib/seo/landingTypes'
-import {
-  AGENT_DELEGATION_FAQ,
-  ETENDERS_FAQ,
-  R249_FAQ,
-  SME_FREE_FAQ,
-} from './shared'
+import { AGENT_DELEGATION_FAQ, ETENDERS_FAQ, R249_FAQ, SME_FREE_FAQ, BRIEFING_PRICE_LABEL } from './shared'
 
 export const rfqConfig: SeoLandingConfig = {
   slug: 'rfq-briefing-support',
   path: '/rfq-briefing-support',
   metaDescription:
-    'RFQ briefing support for South African SMEs. Track Request for Quotation opportunities with compulsory sessions, manage private RFQs and request Youth Agent attendance for R249 on TenderBriefing.',
+    `RFQ briefing support for South African SMEs. Track Request for Quotation opportunities with compulsory sessions, manage private RFQs and request Youth Agent attendance for ${BRIEFING_PRICE_LABEL} on TenderBriefing.`,
   eyebrow: 'RFQ · Quotations',
   title: 'RFQ Briefing Support for South African SMEs',
   heroDescription:
@@ -18,7 +13,7 @@ export const rfqConfig: SeoLandingConfig = {
   heroPrimaryCta: 'Track RFQ briefings free',
   heroSecondaryCta: 'Browse RFQ opportunities',
   intro:
-    'Not every government opportunity is a multi-stage open tender. Request for Quotation (RFQ) and selective quotation processes appear daily on eTenders — especially for goods, maintenance, professional services and emergency purchases — and many still require briefing attendance or clarification sessions that carry the same disqualification risk as formal tenders. TenderBriefing supports RFQ briefing compliance for SMEs: public RFQs synced from official feeds, private RFQ inbox for direct opportunities, verbatim scope text, and Youth Agent attendance when you cannot join the session in person — all with free discovery and R249 only when you confirm agent support.',
+    `Not every government opportunity is a multi-stage open tender. Request for Quotation (RFQ) and selective quotation processes appear daily on eTenders — especially for goods, maintenance, professional services and emergency purchases — and many still require briefing attendance or clarification sessions that carry the same disqualification risk as formal tenders. TenderBriefing supports RFQ briefing compliance for SMEs: public RFQs synced from official feeds, private RFQ inbox for direct opportunities, verbatim scope text, and Youth Agent attendance when you cannot join the session in person — all with free discovery and ${BRIEFING_PRICE_LABEL} only when you confirm agent support.`,
   sections: [
     {
       heading: 'How RFQs differ from formal tenders — and where briefings still matter',
@@ -41,7 +36,7 @@ export const rfqConfig: SeoLandingConfig = {
       paragraphs: [
         'Shortlist RFQs with realistic delivery capacity and margin. Open official documents immediately — RFQ scopes are tighter but errors are costlier because timelines are shorter.',
         'If briefing is compulsory, calendar it before pricing. For virtual RFQ clarifications, test meeting links early; departments often start precisely on time with limited replay.',
-        'When attendance conflicts with operations, request a Youth Agent for R249 and feed agent notes directly into your quotation template.',
+        `When attendance conflicts with operations, request a Youth Agent for ${BRIEFING_PRICE_LABEL} and feed agent notes directly into your quotation template.`,
       ],
     },
     {
@@ -82,7 +77,7 @@ export const rfqConfig: SeoLandingConfig = {
       },
       {
         title: 'Agents for volume',
-        text: 'High RFQ volume businesses use R249 agents to cover simultaneous compulsory clarifications.',
+        text: `High RFQ volume businesses use ${BRIEFING_PRICE_LABEL} agents to cover simultaneous compulsory clarifications.`,
       },
       {
         title: 'Match official specs',
@@ -104,7 +99,7 @@ export const rfqConfig: SeoLandingConfig = {
     {
       step: '3',
       title: 'Attend or delegate',
-      text: 'Join briefing, or request Youth Agent attendance for R249.',
+      text: `Join briefing, or request Youth Agent attendance for ${BRIEFING_PRICE_LABEL}.`,
     },
     {
       step: '4',
@@ -137,7 +132,7 @@ export const rfqConfig: SeoLandingConfig = {
       scenario:
         'Reseller tracks multiple RFQs with overlapping briefing times.',
       outcome:
-        'Agents cover two sessions at R249 each; director attends highest-value third.',
+        `Agents cover two sessions at ${BRIEFING_PRICE_LABEL} each; director attends highest-value third.`,
     },
   ],
   provinceFocus: [],
@@ -146,7 +141,7 @@ export const rfqConfig: SeoLandingConfig = {
     'Private RFQ inbox for registered SMEs',
     'Official scope and documents from eTenders',
     'Compulsory briefing flags and calendar dates',
-    'Youth Agent support for R249 per session',
+    `Youth Agent support for ${BRIEFING_PRICE_LABEL} per session`,
   ],
   features: [
     {
@@ -194,12 +189,12 @@ export const rfqConfig: SeoLandingConfig = {
     {
       question: 'What is the cost for RFQ briefing agent attendance?',
       answer:
-        'Same fixed R249 per confirmed Youth Agent attendance request — discovery remains free.',
+        `Same fixed ${BRIEFING_PRICE_LABEL} per confirmed Youth Agent attendance request — discovery remains free.`,
     },
   ],
   ctaTitle: 'Stay compliant on RFQ briefings without slowing quotes',
   ctaDescription:
-    'Free RFQ and tender discovery for SMEs — R249 Youth Agent attendance only when a compulsory RFQ briefing requires it.',
+    `Free RFQ and tender discovery for SMEs — ${BRIEFING_PRICE_LABEL} Youth Agent attendance only when a compulsory RFQ briefing requires it.`,
   ctaPrimaryLabel: 'Register for RFQ support',
   ctaSecondaryLabel: 'View RFQ briefings live',
   relatedLinks: [

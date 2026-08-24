@@ -1,15 +1,11 @@
 import type { SeoLandingConfig } from '@/lib/seo/landingTypes'
-import {
-  ETENDERS_FAQ,
-  R249_FAQ,
-  SME_FREE_FAQ,
-} from './shared'
+import { ETENDERS_FAQ, R249_FAQ, SME_FREE_FAQ, BRIEFING_PRICE_LABEL } from './shared'
 
 export const youthAgentConfig: SeoLandingConfig = {
   slug: 'youth-agent-tender-support',
   path: '/youth-agent-tender-support',
   metaDescription:
-    'Youth Agent tender support programme in South Africa. Verified agents attend compulsory briefings for SMEs; suppliers browse free and pay R249 only when requesting attendance on TenderBriefing.',
+    `Youth Agent tender support programme in South Africa. Verified agents attend compulsory briefings for SMEs; suppliers browse free and pay ${BRIEFING_PRICE_LABEL} only when requesting attendance on TenderBriefing.`,
   eyebrow: 'Youth Agents · Earn & learn',
   title: 'Youth Agent Tender Support Programme',
   heroDescription:
@@ -17,13 +13,13 @@ export const youthAgentConfig: SeoLandingConfig = {
   heroPrimaryCta: 'Join as Youth Agent',
   heroSecondaryCta: 'I am an SME — browse free',
   intro:
-    'South Africa’s unemployment challenge and SME procurement compliance gap share a practical bridge: Youth Agents on TenderBriefing. SMEs browsing government opportunities often cannot attend every compulsory briefing — travel, client work and multi-province bids get in the way. Verified youth representatives attend official sessions on their behalf for a fixed R249 fee per request, returning structured notes that keep bids eligible. SMEs pay nothing to discover tenders; agents build work experience in the real procurement economy. This page explains both sides of the Youth Agent tender support model and how it fits into official eTenders processes.',
+    `South Africa’s unemployment challenge and SME procurement compliance gap share a practical bridge: Youth Agents on TenderBriefing. SMEs browsing government opportunities often cannot attend every compulsory briefing — travel, client work and multi-province bids get in the way. Verified youth representatives attend official sessions on their behalf for a fixed ${BRIEFING_PRICE_LABEL} fee per request, returning structured notes that keep bids eligible. SMEs pay nothing to discover tenders; agents build work experience in the real procurement economy. This page explains both sides of the Youth Agent tender support model and how it fits into official eTenders processes.`,
   sections: [
     {
       heading: 'The dual mission: SME compliance and youth opportunity',
       paragraphs: [
         'Government wants capable SMEs in supply chains. SMEs want fair access without disqualification on attendance technicalities. Young job seekers want credible work experience beyond generic internships.',
-        'Youth Agent tender support aligns those interests: when an SME confirms R249 attendance support, a verified agent travels to or joins the compulsory briefing, registers correctly and documents session intelligence.',
+        `Youth Agent tender support aligns those interests: when an SME confirms ${BRIEFING_PRICE_LABEL} attendance support, a verified agent travels to or joins the compulsory briefing, registers correctly and documents session intelligence.`,
         'The model is transparent — no hidden subscription for SMEs, no pay-to-list for agents beyond platform onboarding requirements outlined in the agent signup flow.',
       ],
     },
@@ -31,7 +27,7 @@ export const youthAgentConfig: SeoLandingConfig = {
       heading: 'For SMEs: when Youth Agents make business sense',
       paragraphs: [
         'Use agents when briefing travel destroys bid margin, when leadership is double-booked, or when exploring new provinces before committing branch costs.',
-        'R249 is predictable compared to flights, hotels and lost delivery days — especially for RFQs and mid-value tenders where full director travel is hard to justify.',
+        `${BRIEFING_PRICE_LABEL} is predictable compared to flights, hotels and lost delivery days — especially for RFQs and mid-value tenders where full director travel is hard to justify.`,
         'Agent reports translate session content for owners who price bids at night after client work — closing the information gap without physical presence.',
       ],
     },
@@ -97,7 +93,7 @@ export const youthAgentConfig: SeoLandingConfig = {
     {
       step: '2',
       title: 'Agent request confirmed',
-      text: 'SME pays R249 for attendance support on that specific briefing.',
+      text: `SME pays ${BRIEFING_PRICE_LABEL} for attendance support on that specific briefing.`,
     },
     {
       step: '3',
@@ -141,7 +137,7 @@ export const youthAgentConfig: SeoLandingConfig = {
   provinceFocus: [],
   highlights: [
     'Verified Youth Agent network for compulsory briefings',
-    'SMEs browse tenders free — R249 only per agent request',
+    `SMEs browse tenders free — ${BRIEFING_PRICE_LABEL} only per agent request`,
     'Structured post-briefing reports for bid teams',
     'Separate onboarding for youth agents and SMEs',
     'Official eTenders data drives real assignments',
@@ -149,7 +145,7 @@ export const youthAgentConfig: SeoLandingConfig = {
   features: [
     {
       title: 'For SMEs',
-      text: 'Free registration, live tenders, optional R249 attendance when you cannot be on site.',
+      text: `Free registration, live tenders, optional ${BRIEFING_PRICE_LABEL} attendance when you cannot be on site.`,
     },
     {
       title: 'For Youth Agents',
@@ -175,7 +171,7 @@ export const youthAgentConfig: SeoLandingConfig = {
     {
       question: 'Do agents pay to join the platform?',
       answer:
-        'Youth Agents follow a separate onboarding process. SMEs never pay to browse tenders — only R249 when requesting agent attendance.',
+        `Youth Agents follow a separate onboarding process. SMEs never pay to browse tenders — only ${BRIEFING_PRICE_LABEL} when requesting agent attendance.`,
     },
     ETENDERS_FAQ,
     {
