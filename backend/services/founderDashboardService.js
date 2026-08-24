@@ -412,7 +412,7 @@ async function loadPayoutEarningsByAgent(limit = 500) {
   const map = new Map()
   for (const doc of snap.docs) {
     const p = doc.data()
-    if (!p || !['eligible', 'held', 'paid'].includes(p.status)) continue
+    if (!p || !['eligible', 'held', 'batched', 'settled', 'paid'].includes(p.status)) continue
     const uid = String(p.youthAgentUid || '')
     if (!uid) continue
     const amount = Math.round(Number(p.payoutAmountCents) || YA_PAYOUT_CENTS)

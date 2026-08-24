@@ -176,6 +176,39 @@
         { "fieldPath": "youthAgentUid", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "youthAgentPayoutBatches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "periodKey", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "youthAgentPayoutBatches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "youthAgentPayoutBatches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "youthAgentUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "youthAgentPayouts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "youthAgentUid", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

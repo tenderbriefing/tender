@@ -3,6 +3,8 @@
  *
  * One payout liability per assignment/request. Eligibility is driven by evidence
  * submission (attendance + audio) — not Whisper, AI, or Founder approval.
+ *
+ * Monthly EFT: eligible jobs accrue until batched; batches settle via EFT.
  */
 const { getFirestore } = require('../../config/firebaseAdmin')
 const { sanitizeFirestoreData } = require('../../utils/sanitizeFirestoreData')
@@ -15,13 +17,16 @@ const {
   PAYOUT_VERSION,
   BRIEFING_PRICE_CURRENCY,
 } = require('../../constants/briefingPricing')
+const batchService = require('./youthAgentPayoutBatchService')
 
 const COL = 'youthAgentPayouts'
 
 const PAYOUT_TRANSITIONS = {
   pending: ['eligible', 'cancelled'],
-  eligible: ['held', 'paid', 'cancelled'],
+  eligible: ['held', 'batched', 'paid', 'cancelled'],
   held: ['eligible', 'cancelled'],
+  batched: ['settled'],
+  settled: [],
   paid: [],
   cancelled: [],
 }
@@ -35,6 +40,14 @@ function canTransition(from, to) {
   return (PAYOUT_TRANSITIONS[from] || []).includes(to)
 }
 
+function isSettledStatus(status) {
+  return status === 'settled' || status === 'paid'
+}
+
+function isTerminalStatus(status) {
+  return isSettledStatus(status) || status === 'cancelled'
+}
+
 /** Deterministic payout id — one liability per request/assignment. */
 function buildPayoutId(requestId) {
   return `ya-payout-${String(requestId).trim()}`
@@ -46,12 +59,22 @@ function assertTransition(from, to) {
   }
 }
 
+function periodKeyFromIso(iso) {
+  return String(iso || '').slice(0, 7)
+}
+
 async function logPayoutAudit(event) {
   await auditLogService.logEvent({
     type: 'youth_agent_payout',
     ...event,
     timestamp: nowIso(),
   })
+}
+
+async function agentHasPaidBatchForPeriod(youthAgentUid, periodKey) {
+  const batchId = batchService.buildBatchId(youthAgentUid, periodKey)
+  const batch = await batchService.getBatchById(batchId)
+  return batch?.status === 'paid'
 }
 
 /**
@@ -86,13 +109,15 @@ async function ensurePayoutOnEvidenceSubmitted({
     const snap = await tx.get(ref)
     if (snap.exists) {
       const existing = snap.data()
-      if (existing.status === 'paid' || existing.status === 'cancelled') {
+      if (isTerminalStatus(existing.status)) {
         return { payout: { payoutId, ...existing }, created: false, duplicate: true }
       }
       if (existing.status === 'held') {
         return { payout: { payoutId, ...existing }, created: false, held: true }
       }
-      // Refresh evidence flags on retry without creating duplicate liability.
+      if (existing.status === 'batched') {
+        return { payout: { payoutId, ...existing }, created: false, batched: true }
+      }
       const patch = sanitizeFirestoreData({
         attendanceVerified: Boolean(attendanceVerified),
         evidenceSubmitted: Boolean(evidenceSubmitted),
@@ -130,6 +155,10 @@ async function ensurePayoutOnEvidenceSubmitted({
       reportId: reportId || null,
       completedAt: completedAt || ts,
       eligibleAt: ts,
+      settlementBatchId: null,
+      batchedAt: null,
+      settledAt: null,
+      settledBy: null,
       paidAt: null,
       paidBy: null,
       paymentReference: null,
@@ -200,8 +229,9 @@ async function getFinanceSummary({ periodStartMs = null } = {}) {
   const snap = await db.collection(COL).limit(500).get()
   const payouts = snap.docs.map((d) => d.data())
 
-  let payoutsDueCents = 0
-  let payoutsPaidCents = 0
+  let accruedUnsettledCents = 0
+  let batchedAwaitingEftCents = 0
+  let settledCents = 0
   let payoutsHeldCents = 0
   let grossContributionAccruedCents = 0
 
@@ -212,20 +242,30 @@ async function getFinanceSummary({ periodStartMs = null } = {}) {
       if (Number.isFinite(t) && t < periodStartMs) continue
     }
     const amount = Math.round(Number(p.payoutAmountCents) || 0)
-    if (p.status === 'eligible') payoutsDueCents += amount
+    if (p.status === 'eligible' && !p.settlementBatchId) accruedUnsettledCents += amount
+    if (p.status === 'batched') batchedAwaitingEftCents += amount
+    if (isSettledStatus(p.status)) settledCents += amount
     if (p.status === 'held') payoutsHeldCents += amount
-    if (p.status === 'paid') payoutsPaidCents += amount
-    if (['eligible', 'held', 'paid'].includes(p.status)) {
+    if (['eligible', 'held', 'batched', 'settled', 'paid'].includes(p.status)) {
       grossContributionAccruedCents += Math.round(Number(p.grossContributionCents) || 0)
     }
   }
 
+  const batchSummary = await batchService.getBatchFinanceSummary({ periodStartMs })
+
   return {
-    payoutsDueCents,
+    /** @deprecated use accruedUnsettledCents */
+    payoutsDueCents: accruedUnsettledCents,
+    accruedUnsettledCents,
+    batchedAwaitingEftCents,
+    /** @deprecated use settledCents */
+    payoutsPaidCents: settledCents,
+    settledCents,
     payoutsHeldCents,
-    payoutsPaidCents,
+    outstandingYaLiabilityCents: accruedUnsettledCents + batchedAwaitingEftCents,
     grossContributionAccruedCents,
     payoutCount: payouts.length,
+    batchSummary,
   }
 }
 
@@ -235,8 +275,11 @@ async function holdPayout(payoutId, { actorUid, reason } = {}) {
   const snap = await ref.get()
   if (!snap.exists) throw new Error('Payout not found')
   const existing = snap.data()
+  if (existing.status === 'batched') {
+    throw new Error('Cannot hold a payout already included in a monthly batch')
+  }
   assertTransition(existing.status, 'held')
-  if (existing.status === 'paid') throw new Error('Cannot hold a paid payout')
+  if (isSettledStatus(existing.status)) throw new Error('Cannot hold a settled payout')
 
   const ts = nowIso()
   const patch = sanitizeFirestoreData({
@@ -274,9 +317,22 @@ async function releasePayoutHold(payoutId, { actorUid } = {}) {
   assertTransition('held', 'eligible')
 
   const ts = nowIso()
+  let eligibleAt = existing.eligibleAt || ts
+  const originalPeriod = periodKeyFromIso(eligibleAt)
+  const paidBatchExists = await agentHasPaidBatchForPeriod(
+    existing.youthAgentUid,
+    originalPeriod
+  )
+  let rolledForward = false
+  if (paidBatchExists) {
+    eligibleAt = ts
+    rolledForward = true
+  }
+
   const patch = sanitizeFirestoreData({
     status: 'eligible',
     eligibilityStatus: 'eligible',
+    eligibleAt,
     holdReason: null,
     heldBy: null,
     heldAt: null,
@@ -293,11 +349,14 @@ async function releasePayoutHold(payoutId, { actorUid } = {}) {
     amountCents: existing.payoutAmountCents,
     previousStatus: 'held',
     newStatus: 'eligible',
+    rolledForward,
+    originalPeriod: rolledForward ? originalPeriod : null,
   })
 
-  return { payoutId, ...existing, ...patch }
+  return { payoutId, ...existing, ...patch, rolledForward }
 }
 
+/** Legacy per-job settlement — prefer monthly batch markBatchPaid. */
 async function markPayoutPaid(
   payoutId,
   { actorUid, paymentReference, paymentMethod } = {}
@@ -309,8 +368,11 @@ async function markPayoutPaid(
     const snap = await tx.get(ref)
     if (!snap.exists) throw new Error('Payout not found')
     const existing = snap.data()
-    if (existing.status === 'paid') {
+    if (isSettledStatus(existing.status)) {
       return { payout: { payoutId, ...existing }, alreadyPaid: true }
+    }
+    if (existing.status === 'batched') {
+      throw new Error('Payout is in a monthly batch — mark the batch paid instead')
     }
     assertTransition(existing.status, 'paid')
     if (existing.status !== 'eligible' && existing.status !== 'held') {
@@ -322,7 +384,9 @@ async function markPayoutPaid(
       status: 'paid',
       eligibilityStatus: 'paid',
       paidAt: ts,
+      settledAt: ts,
       paidBy: actorUid || null,
+      settledBy: actorUid || null,
       paymentReference: paymentReference || null,
       paymentMethod: paymentMethod || 'manual',
       updatedAt: ts,
@@ -339,10 +403,11 @@ async function markPayoutPaid(
       youthAgentUid: result.payout.youthAgentUid,
       actorUid,
       amountCents: result.payout.payoutAmountCents,
-      previousStatus: result.payout.status === 'paid' ? 'eligible' : result.payout.status,
+      previousStatus: 'eligible',
       newStatus: 'paid',
       paymentReference,
       paymentMethod,
+      legacy: true,
     })
   }
 
@@ -360,30 +425,70 @@ async function getAgentEarningsSummary(agentId) {
 
   const payouts = snap.docs.map((d) => ({ payoutId: d.id, ...d.data() }))
   const completedBriefings = payouts.filter((p) =>
-    ['eligible', 'held', 'paid'].includes(p.status)
+    ['eligible', 'held', 'batched', 'settled', 'paid'].includes(p.status)
   ).length
-  const pendingPayoutCents = payouts
-    .filter((p) => p.status === 'eligible' || p.status === 'held')
+
+  const accruedCents = payouts
+    .filter((p) => p.status === 'eligible' && !p.settlementBatchId)
     .reduce((s, p) => s + (Number(p.payoutAmountCents) || 0), 0)
-  const paidEarningsCents = payouts
-    .filter((p) => p.status === 'paid')
+  const batchedCents = payouts
+    .filter((p) => p.status === 'batched')
+    .reduce((s, p) => s + (Number(p.payoutAmountCents) || 0), 0)
+  const heldCents = payouts
+    .filter((p) => p.status === 'held')
+    .reduce((s, p) => s + (Number(p.payoutAmountCents) || 0), 0)
+  const settledCents = payouts
+    .filter((p) => isSettledStatus(p.status))
     .reduce((s, p) => s + (Number(p.payoutAmountCents) || 0), 0)
 
-  const month = nowIso().slice(0, 7)
-  const monthEarningsCents = payouts
-    .filter((p) => p.status === 'paid' && String(p.paidAt || '').startsWith(month))
-    .reduce((s, p) => s + (Number(p.payoutAmountCents) || 0), 0)
+  const currentMonth = nowIso().slice(0, 7)
+  const currentMonthEligible = payouts.filter(
+    (p) =>
+      ['eligible', 'batched'].includes(p.status) &&
+      periodKeyFromIso(p.eligibleAt) === currentMonth
+  )
+  const currentMonthJobCount = currentMonthEligible.length
+  const currentMonthAccruedCents = currentMonthEligible.reduce(
+    (s, p) => s + (Number(p.payoutAmountCents) || 0),
+    0
+  )
+
+  const batchSnap = await db
+    .collection(batchService.BATCH_COL)
+    .where('youthAgentUid', '==', agentId)
+    .limit(24)
+    .get()
+    .catch(() => ({ docs: [] }))
+
+  const monthlyHistory = batchSnap.docs
+    .map((d) => ({ batchId: d.id, ...d.data() }))
+    .sort((a, b) => String(b.periodKey).localeCompare(String(a.periodKey)))
+    .map((b) => ({
+      periodKey: b.periodKey,
+      eligibleJobCount: b.eligibleJobCount,
+      grossEarningsCents: b.grossEarningsCents,
+      status: b.status,
+      paidAt: b.paidAt || null,
+      paymentReference: b.paymentReference || null,
+    }))
 
   return {
     completedBriefings,
-    pendingPayoutCents,
-    paidEarningsCents,
-    monthEarningsCents,
+    /** Accrued, not yet in a monthly batch */
+    pendingPayoutCents: accruedCents + batchedCents,
+    accruedCents,
+    batchedCents,
+    heldCents,
+    paidEarningsCents: settledCents,
+    settledEarningsCents: settledCents,
+    currentMonthJobCount,
+    currentMonthAccruedCents,
+    monthEarningsCents: currentMonthAccruedCents,
+    monthlyHistory,
     payouts: payouts.slice(0, 50),
   }
 }
 
-/** Resolve briefing revenue from attendance request for payout snapshot. */
 function briefingRevenueFromRequest(request) {
   return resolveRequestChargeCents(request)
 }
@@ -401,4 +506,5 @@ module.exports = {
   getAgentEarningsSummary,
   briefingRevenueFromRequest,
   canTransition,
+  isSettledStatus,
 }

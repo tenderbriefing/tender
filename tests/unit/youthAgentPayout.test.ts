@@ -97,8 +97,10 @@ describe('youthAgentPayoutService', () => {
   })
 
   it('enforces payout state machine', () => {
+    expect(svc.canTransition('eligible', 'batched')).toBe(true)
+    expect(svc.canTransition('batched', 'settled')).toBe(true)
     expect(svc.canTransition('eligible', 'paid')).toBe(true)
-    expect(svc.canTransition('paid', 'eligible')).toBe(false)
+    expect(svc.canTransition('settled', 'eligible')).toBe(false)
     expect(svc.canTransition('held', 'eligible')).toBe(true)
   })
 
