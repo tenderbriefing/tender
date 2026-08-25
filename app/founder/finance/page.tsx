@@ -22,8 +22,16 @@ type MonthlyBatch = {
   eligibleJobCount: number
   grossEarningsCents: number
   status: string
+  operationalStatus?: string
+  operationalStatusLabel?: string
+  bankingDetailsPresent?: boolean
   paidAt?: string | null
   paymentReference?: string | null
+  bankSummary?: {
+    bankName?: string
+    accountHolderName?: string
+    accountNumberMasked?: string
+  } | null
 }
 
 type FinancePayload = {
@@ -154,9 +162,25 @@ export default function FounderFinancePage() {
     }
   }
 
-  async function markBatchPaid(batchId: string) {
-    const ref = window.prompt('EFT payment reference (required):')
+  async function markBatchPaid(batchId: string, expectedCents: number) {
+    const ref = window.prompt('EFT / payment reference (required):')
     if (!ref) return
+    const amountZar = window.prompt(
+      `Amount paid in ZAR (must equal ${formatZarFromCents(expectedCents)}):`,
+      (expectedCents / 100).toFixed(2)
+    )
+    if (!amountZar) return
+    const paidCents = Math.round(Number(amountZar) * 100)
+    const paymentDate =
+      window.prompt('Payment date (YYYY-MM-DD):', new Date().toISOString().slice(0, 10)) ||
+      undefined
+    if (
+      !window.confirm(
+        `Record EFT ${ref} for ${formatZarFromCents(paidCents)} and mark this monthly batch paid? This settles all included jobs.`
+      )
+    ) {
+      return
+    }
     setActionId(batchId)
     try {
       const res = await authFetch(`/api/founder/payout-batches/${encodeURIComponent(batchId)}`, {
@@ -166,13 +190,17 @@ export default function FounderFinancePage() {
           action: 'mark_paid',
           paymentReference: ref,
           paymentMethod: 'EFT',
+          amountPaidCents: paidCents,
+          paymentDate,
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.success) throw new Error(json.error || 'Mark paid failed')
+      if (!res.ok || !json.success) throw new Error(json.error || 'Record EFT failed')
       await load()
+      setExpandedBatch(null)
+      setBatchDetail(null)
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Mark paid failed')
+      alert(err instanceof Error ? err.message : 'Record EFT failed')
     } finally {
       setActionId(null)
     }
@@ -303,17 +331,19 @@ export default function FounderFinancePage() {
                 <thead className="border-b border-slate-100 bg-slate-50 text-left text-xs uppercase text-slate-500">
                   <tr>
                     <th className="px-3 py-2">Youth Agent</th>
-                    <th className="px-3 py-2">Period</th>
-                    <th className="px-3 py-2">Eligible Jobs</th>
-                    <th className="px-3 py-2">Amount Due</th>
+                    <th className="px-3 py-2">Month</th>
+                    <th className="px-3 py-2">Jobs</th>
+                    <th className="px-3 py-2">Amount</th>
+                    <th className="px-3 py-2">Bank</th>
+                    <th className="px-3 py-2">Account</th>
                     <th className="px-3 py-2">Status</th>
-                    <th className="px-3 py-2">Actions</th>
+                    <th className="px-3 py-2">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.monthlyBatches.items.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-3 py-6 text-center text-slate-500">
+                      <td colSpan={8} className="px-3 py-6 text-center text-slate-500">
                         No monthly batches for this filter. Generate payouts for {batchPeriodKey}.
                       </td>
                     </tr>
@@ -329,8 +359,18 @@ export default function FounderFinancePage() {
                           <td className="px-3 py-2 font-semibold">
                             {formatZarFromCents(b.grossEarningsCents)}
                           </td>
-                          <td className="px-3 py-2 capitalize">
-                            {b.status === 'ready' ? 'Ready for EFT' : b.status}
+                          <td className="px-3 py-2 text-xs">
+                            {b.bankSummary?.bankName || '—'}
+                          </td>
+                          <td className="px-3 py-2 font-mono text-xs">
+                            {b.bankSummary?.accountNumberMasked ||
+                              (b.operationalStatus === 'missing_bank_details'
+                                ? 'Bank details required'
+                                : '—')}
+                          </td>
+                          <td className="px-3 py-2 text-xs">
+                            {b.operationalStatusLabel ||
+                              (b.status === 'ready' ? 'Ready for EFT' : b.status)}
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex flex-wrap gap-1">
@@ -339,18 +379,21 @@ export default function FounderFinancePage() {
                                 className="rounded border px-2 py-1 text-xs"
                                 onClick={() => openBatch(b.batchId)}
                               >
-                                {expandedBatch === b.batchId ? 'Hide' : 'Inspect'}
+                                {expandedBatch === b.batchId ? 'Hide' : 'View / Pay'}
                               </button>
-                              {b.status === 'ready' && (
-                                <button
-                                  type="button"
-                                  disabled={actionId === b.batchId}
-                                  className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs"
-                                  onClick={() => markBatchPaid(b.batchId)}
-                                >
-                                  Record EFT
-                                </button>
-                              )}
+                              {b.status === 'ready' &&
+                                b.operationalStatus !== 'missing_bank_details' && (
+                                  <button
+                                    type="button"
+                                    disabled={actionId === b.batchId}
+                                    className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs"
+                                    onClick={() =>
+                                      markBatchPaid(b.batchId, b.grossEarningsCents)
+                                    }
+                                  >
+                                    Record EFT
+                                  </button>
+                                )}
                               {b.status === 'paid' && (
                                 <span className="text-xs text-slate-500">
                                   {b.paidAt?.slice(0, 10) || 'Paid'}
@@ -361,20 +404,90 @@ export default function FounderFinancePage() {
                         </tr>
                         {expandedBatch === b.batchId && batchDetail && (
                           <tr>
-                            <td colSpan={6} className="bg-slate-50 px-3 py-3">
-                              <ul className="space-y-1 text-xs">
-                                {(
-                                  (batchDetail as { payouts?: Array<Record<string, unknown>> })
-                                    .payouts || []
-                                ).map((p) => (
-                                  <li key={String(p.payoutId)} className="font-mono">
-                                    {String(p.requestId)} · {String(p.tenderId)} · eligible{' '}
-                                    {String(p.eligibleAt || '').slice(0, 10)} ·{' '}
-                                    {formatZarFromCents(Number(p.payoutAmountCents) || 0)} ·{' '}
-                                    {String(p.status)}
-                                  </li>
-                                ))}
-                              </ul>
+                            <td colSpan={8} className="bg-slate-50 px-3 py-4">
+                              {(() => {
+                                const detail = batchDetail as {
+                                  batch?: Record<string, unknown>
+                                  payouts?: Array<Record<string, unknown>>
+                                  agent?: { displayName?: string | null; uid?: string }
+                                  liveBanking?: { isComplete?: boolean } | null
+                                }
+                                const batch = detail.batch || {}
+                                const bank = (batch.bankingSnapshot ||
+                                  batch.bankSummary ||
+                                  {}) as Record<string, unknown>
+                                return (
+                                  <div className="grid gap-4 text-xs md:grid-cols-2">
+                                    <div>
+                                      <p className="font-semibold text-slate-800">Youth Agent</p>
+                                      <p>
+                                        {detail.agent?.displayName ||
+                                          String(batch.youthAgentUid || '')}
+                                      </p>
+                                      <p className="font-mono text-slate-500">
+                                        {String(batch.youthAgentUid || '')}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="font-semibold text-slate-800">
+                                        Banking details (EFT)
+                                      </p>
+                                      {bank.accountHolderName ? (
+                                        <ul className="mt-1 space-y-0.5 font-mono">
+                                          <li>Holder: {String(bank.accountHolderName)}</li>
+                                          <li>Bank: {String(bank.bankName)}</li>
+                                          <li>
+                                            Account:{' '}
+                                            {String(
+                                              bank.accountNumber || bank.accountNumberMasked || '—'
+                                            )}
+                                          </li>
+                                          <li>Type: {String(bank.accountType || '—')}</li>
+                                          <li>Branch: {String(bank.branchCode || '—')}</li>
+                                          <li>
+                                            Profile v{String(bank.bankingProfileVersion || '—')}
+                                          </li>
+                                        </ul>
+                                      ) : (
+                                        <p className="mt-1 text-amber-800">
+                                          Bank details required
+                                          {detail.liveBanking?.isComplete
+                                            ? ' — agent has updated profile; record EFT to attach snapshot.'
+                                            : ' — ask the Youth Agent to add banking details on their profile.'}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="md:col-span-2">
+                                      <p className="font-semibold text-slate-800">
+                                        Included briefings
+                                      </p>
+                                      <ul className="mt-1 space-y-1">
+                                        {(detail.payouts || []).map((p) => (
+                                          <li key={String(p.payoutId)} className="font-mono">
+                                            {String(p.requestId)} · {String(p.tenderId)} · eligible{' '}
+                                            {String(p.eligibleAt || '').slice(0, 10)} ·{' '}
+                                            {formatZarFromCents(Number(p.payoutAmountCents) || 0)} ·{' '}
+                                            {String(p.status)}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                      {batch.status === 'ready' &&
+                                        batch.operationalStatus !== 'missing_bank_details' && (
+                                          <button
+                                            type="button"
+                                            className="mt-3 rounded border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold"
+                                            disabled={actionId === b.batchId}
+                                            onClick={() =>
+                                              markBatchPaid(b.batchId, b.grossEarningsCents)
+                                            }
+                                          >
+                                            Record EFT (external) & Mark Paid
+                                          </button>
+                                        )}
+                                    </div>
+                                  </div>
+                                )
+                              })()}
                             </td>
                           </tr>
                         )}

@@ -28,7 +28,15 @@ const mockTransaction = {
 }
 
 function docRef(col: string, id: string) {
-  return { id, _col: col }
+  return {
+    id,
+    _col: col,
+    get: async () => {
+      const key = `${col}/${id}`
+      const data = store.get(key)
+      return { exists: Boolean(data), data: () => data, id }
+    },
+  }
 }
 
 function docsForCollection(name: string) {
@@ -54,7 +62,7 @@ function queryChain(name: string) {
 
 const mockDb = {
   collection: vi.fn((name: string) => ({
-    doc: (id: string) => docRef(name, id),
+    doc: (id?: string) => docRef(name, id || `auto-${Math.random().toString(36).slice(2, 10)}`),
     ...queryChain(name),
   })),
   runTransaction: vi.fn(async (fn: (tx: typeof mockTransaction) => unknown) =>
@@ -75,6 +83,22 @@ function seedPayout(id: string, data: Record<string, unknown>) {
   })
 }
 
+function seedBanking(uid = 'agent-1') {
+  store.set(`youthAgentBankingProfiles/${uid}`, {
+    youthAgentUid: uid,
+    accountHolderName: 'Test Agent',
+    bankName: 'FNB',
+    accountNumber: '62123456789',
+    accountType: 'cheque',
+    branchCode: '250655',
+    version: 1,
+    createdAt: '2026-08-01T00:00:00.000Z',
+    updatedAt: '2026-08-01T00:00:00.000Z',
+    createdBy: uid,
+    updatedBy: uid,
+  })
+}
+
 describe('youthAgentPayoutBatchService', () => {
   let batchSvc: typeof import('../../backend/services/finance/youthAgentPayoutBatchService.js')
   let payoutSvc: typeof import('../../backend/services/finance/youthAgentPayoutService.js')
@@ -92,6 +116,7 @@ describe('youthAgentPayoutBatchService', () => {
     vi.spyOn(audit, 'logEvent').mockResolvedValue({})
 
     for (const path of [
+      '../../backend/services/finance/youthAgentBankingService.js',
       '../../backend/services/finance/youthAgentPayoutBatchService.js',
       '../../backend/services/finance/youthAgentPayoutService.js',
     ]) {
@@ -149,6 +174,7 @@ describe('youthAgentPayoutBatchService', () => {
   })
 
   it('marks batch paid and settles all linked jobs', async () => {
+    seedBanking()
     for (let i = 1; i <= 5; i++) {
       seedPayout(`ya-payout-req-${i}`, {
         youthAgentUid: 'agent-1',
@@ -163,7 +189,8 @@ describe('youthAgentPayoutBatchService', () => {
       actorUid: 'founder-1',
       paymentReference: 'EFT-2026-08-001',
       paymentMethod: 'EFT',
-    } as Record<string, string>)
+      amountPaidCents: 100000,
+    } as Record<string, unknown>)
     expect(paid.alreadyPaid).toBe(false)
     expect(paid.batch.status).toBe('paid')
     expect(paid.batch.paymentMethod).toBe('EFT')
@@ -177,6 +204,7 @@ describe('youthAgentPayoutBatchService', () => {
   })
 
   it('mark batch paid is idempotent on retry', async () => {
+    seedBanking()
     seedPayout('ya-payout-req-x', {
       youthAgentUid: 'agent-1',
       eligibleAt: '2026-08-11T10:00:00.000Z',
@@ -186,11 +214,13 @@ describe('youthAgentPayoutBatchService', () => {
     await batchSvc.markBatchPaid(batchId, {
       actorUid: 'founder-1',
       paymentReference: 'EFT-ONCE',
-    } as Record<string, string>)
+      amountPaidCents: 20000,
+    } as Record<string, unknown>)
     const again = await batchSvc.markBatchPaid(batchId, {
       actorUid: 'founder-1',
       paymentReference: 'EFT-ONCE',
-    } as Record<string, string>)
+      amountPaidCents: 20000,
+    } as Record<string, unknown>)
     expect(again.alreadyPaid).toBe(true)
   })
 

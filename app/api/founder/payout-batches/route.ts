@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const youthAgentUid = searchParams.get('youthAgentUid')
 
     const svc = require('../../../../../backend/services/finance/youthAgentPayoutBatchService.js')
-    const data = await svc.listBatches({
+    const data = await svc.listBatchesForFounder({
       periodKey: periodKey || null,
       status: status === 'all' ? null : status,
       youthAgentUid: youthAgentUid || null,

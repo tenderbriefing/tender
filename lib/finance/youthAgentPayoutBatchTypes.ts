@@ -4,6 +4,15 @@ export const YOUTH_AGENT_PAYOUT_BATCH_STATUSES = ['ready', 'paid', 'cancelled'] 
 
 export type YouthAgentPayoutBatchStatus = (typeof YOUTH_AGENT_PAYOUT_BATCH_STATUSES)[number]
 
+import type { BankingSnapshot } from './youthAgentBankingTypes'
+
+export type YouthAgentPayoutBatchReadyReason =
+  | 'ready_for_eft'
+  | 'missing_bank_details'
+  | 'already_paid'
+  | 'cancelled'
+  | 'legacy_no_snapshot'
+
 export interface YouthAgentPayoutBatchRecord {
   batchId: string
   youthAgentUid: string
@@ -18,6 +27,9 @@ export interface YouthAgentPayoutBatchRecord {
   payoutIds: string[]
   requestIds: string[]
   status: YouthAgentPayoutBatchStatus
+  /** Immutable banking details at batch generation time. Null on legacy batches. */
+  bankingSnapshot?: BankingSnapshot | null
+  bankingDetailsPresent?: boolean
   createdAt: string
   createdBy: string | null
   approvedAt: string | null
@@ -26,6 +38,10 @@ export interface YouthAgentPayoutBatchRecord {
   paidBy: string | null
   paymentMethod: 'EFT' | null
   paymentReference: string | null
+  paidAmountCents?: number | null
+  paymentDate?: string | null
+  paymentNote?: string | null
+  proofOfPaymentRef?: string | null
   updatedAt: string
 }
 
