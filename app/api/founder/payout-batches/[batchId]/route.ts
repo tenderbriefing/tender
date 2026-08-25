@@ -49,10 +49,20 @@ export async function PATCH(
           { status: 400 }
         )
       }
+      if (body.amountPaidCents == null && body.amountCents == null) {
+        return NextResponse.json(
+          { success: false, error: 'amountPaidCents is required and must match the batch total' },
+          { status: 400 }
+        )
+      }
       const result = await svc.markBatchPaid(params.batchId, {
         actorUid: access.user.uid,
         paymentReference: String(body.paymentReference),
         paymentMethod: body.paymentMethod ? String(body.paymentMethod) : 'EFT',
+        amountPaidCents: body.amountPaidCents ?? body.amountCents,
+        paymentDate: body.paymentDate || null,
+        paymentNote: body.paymentNote || null,
+        proofOfPaymentRef: body.proofOfPaymentRef || null,
       })
       return NextResponse.json({ success: true, data: result })
     }

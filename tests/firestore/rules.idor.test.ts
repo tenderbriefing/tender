@@ -639,4 +639,54 @@ describe('Youth Agent Workspace collections — IDOR matrix', () => {
       updateDoc(doc(firestoreAs(ADMIN), 'youthAgentPayoutBatches', batchId), { status: 'paid' })
     )
   })
+
+  it('youth agent banking profiles deny IDOR and client writes', async () => {
+    const id = AGENT_A
+    await seed('youthAgentBankingProfiles', id, {
+      youthAgentUid: AGENT_A,
+      accountHolderName: 'Agent A',
+      bankName: 'FNB',
+      accountNumber: '62123456789',
+      accountType: 'cheque',
+      branchCode: '250655',
+      version: 1,
+    })
+
+    await assertFails(getDoc(doc(firestoreAs(null), 'youthAgentBankingProfiles', id)))
+    await assertSucceeds(getDoc(doc(firestoreAs(AGENT_A), 'youthAgentBankingProfiles', id)))
+    await assertSucceeds(getDoc(doc(firestoreAs(ADMIN), 'youthAgentBankingProfiles', id)))
+    await assertFails(getDoc(doc(firestoreAs(AGENT_B), 'youthAgentBankingProfiles', id)))
+    await assertFails(getDoc(doc(firestoreAs(SME_A), 'youthAgentBankingProfiles', id)))
+
+    await assertFails(
+      setDoc(doc(firestoreAs(AGENT_A), 'youthAgentBankingProfiles', AGENT_A), {
+        accountNumber: '99999999999',
+      })
+    )
+    await assertFails(
+      updateDoc(doc(firestoreAs(AGENT_A), 'youthAgentBankingProfiles', id), {
+        accountNumber: '99999999999',
+      })
+    )
+    await assertFails(
+      updateDoc(doc(firestoreAs(ADMIN), 'youthAgentBankingProfiles', id), {
+        accountNumber: '111',
+      })
+    )
+
+    const histId = uid('bankhist')
+    await seed('youthAgentBankingProfileHistory', histId, {
+      youthAgentUid: AGENT_A,
+      accountNumber: '62123456789',
+      version: 1,
+    })
+    await assertFails(getDoc(doc(firestoreAs(AGENT_A), 'youthAgentBankingProfileHistory', histId)))
+    await assertFails(getDoc(doc(firestoreAs(SME_A), 'youthAgentBankingProfileHistory', histId)))
+    await assertSucceeds(getDoc(doc(firestoreAs(ADMIN), 'youthAgentBankingProfileHistory', histId)))
+    await assertFails(
+      setDoc(doc(firestoreAs(ADMIN), 'youthAgentBankingProfileHistory', uid('evil')), {
+        accountNumber: '1',
+      })
+    )
+  })
 })

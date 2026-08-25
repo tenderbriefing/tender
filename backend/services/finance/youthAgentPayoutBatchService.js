@@ -8,6 +8,7 @@ const { getFirestore } = require('../../config/firebaseAdmin')
 const { sanitizeFirestoreData } = require('../../utils/sanitizeFirestoreData')
 const auditLogService = require('../auditLogService')
 const { resolveYouthAgentPayoutCents, BRIEFING_PRICE_CURRENCY } = require('../../constants/briefingPricing')
+const bankingService = require('./youthAgentBankingService')
 
 const BATCH_COL = 'youthAgentPayoutBatches'
 const PAYOUT_COL = 'youthAgentPayouts'
@@ -101,7 +102,7 @@ async function listBatches({
   return { items, page: Number(page) || 1, pageSize: limit, total: items.length }
 }
 
-async function getBatchWithPayouts(batchId) {
+async function getBatchWithPayouts(batchId, { includeFullAccount = true } = {}) {
   const batch = await getBatchById(batchId)
   if (!batch) return null
   const db = getFirestore()
@@ -110,7 +111,46 @@ async function getBatchWithPayouts(batchId) {
     const snap = await db.collection(PAYOUT_COL).doc(payoutId).get()
     if (snap.exists) payouts.push({ payoutId: snap.id, ...snap.data() })
   }
-  return { batch, payouts }
+
+  let agentDisplayName = null
+  try {
+    const userSnap = await db.collection('users').doc(batch.youthAgentUid).get()
+    const agentSnap = await db.collection('agents').doc(batch.youthAgentUid).get()
+    agentDisplayName =
+      userSnap.data()?.displayName ||
+      agentSnap.data()?.name ||
+      agentSnap.data()?.fullName ||
+      null
+  } catch {
+    /* non-blocking */
+  }
+
+  // Live profile for "missing bank details" guidance (does not mutate snapshot).
+  let liveBanking = null
+  try {
+    const profile = await bankingService.getBankingProfile(batch.youthAgentUid)
+    liveBanking = bankingService.toPublic(profile)
+  } catch {
+    liveBanking = null
+  }
+
+  return {
+    batch: presentBatchForFounder(batch, { includeFullAccount }),
+    payouts,
+    agent: {
+      uid: batch.youthAgentUid,
+      displayName: agentDisplayName,
+    },
+    liveBanking,
+  }
+}
+
+async function listBatchesForFounder(opts = {}) {
+  const listed = await listBatches(opts)
+  return {
+    ...listed,
+    items: listed.items.map((b) => presentBatchForFounder(b, { includeFullAccount: false })),
+  }
 }
 
 /**
@@ -135,6 +175,11 @@ async function generateMonthlyBatches({ periodKey, actorUid } = {}) {
   for (const [youthAgentUid, payouts] of byAgent.entries()) {
     const batchId = buildBatchId(youthAgentUid, period.periodKey)
     const batchRef = db.collection(BATCH_COL).doc(batchId)
+
+    // Snapshot banking outside the payout transaction (read-only profile).
+    const bankingProfile = await bankingService.getBankingProfile(youthAgentUid)
+    const bankingSnapshot = bankingService.buildSnapshot(bankingProfile)
+    const bankingDetailsPresent = Boolean(bankingSnapshot)
 
     const result = await db.runTransaction(async (tx) => {
       const batchSnap = await tx.get(batchRef)
@@ -191,6 +236,8 @@ async function generateMonthlyBatches({ periodKey, actorUid } = {}) {
         payoutIds,
         requestIds,
         status: 'ready',
+        bankingSnapshot: bankingSnapshot || null,
+        bankingDetailsPresent,
         createdAt: ts,
         createdBy: actorUid || null,
         approvedAt: null,
@@ -199,6 +246,10 @@ async function generateMonthlyBatches({ periodKey, actorUid } = {}) {
         paidBy: null,
         paymentMethod: null,
         paymentReference: null,
+        paidAmountCents: null,
+        paymentDate: null,
+        paymentNote: null,
+        proofOfPaymentRef: null,
         updatedAt: ts,
       })
       tx.set(batchRef, batch)
@@ -214,6 +265,9 @@ async function generateMonthlyBatches({ periodKey, actorUid } = {}) {
         periodKey: period.periodKey,
         eligibleJobCount: result.batch.eligibleJobCount,
         grossEarningsCents: result.batch.grossEarningsCents,
+        bankingDetailsPresent,
+        bankingProfileVersion: bankingSnapshot?.bankingProfileVersion || null,
+        accountNumberMasked: bankingSnapshot?.accountNumberMasked || null,
       })
     }
     results.push({ youthAgentUid, batchId, ...result })
@@ -241,16 +295,50 @@ async function generateMonthlyBatches({ periodKey, actorUid } = {}) {
   }
 }
 
+function batchOperationalStatus(batch) {
+  if (!batch) return 'unknown'
+  if (batch.status === 'paid') return 'already_paid'
+  if (batch.status === 'cancelled') return 'cancelled'
+  if (batch.status !== 'ready') return String(batch.status || 'unknown')
+  if (batch.bankingDetailsPresent === false) return 'missing_bank_details'
+  if (batch.bankingSnapshot) return 'ready_for_eft'
+  // Pre-banking-feature batches
+  return 'legacy_no_snapshot'
+}
+
 /**
  * Record external EFT and settle all included job liabilities atomically.
+ * amountPaidCents must match batch.grossEarningsCents (fail closed).
  */
 async function markBatchPaid(
   batchId,
-  { actorUid, paymentReference, paymentMethod = 'EFT' } = {}
+  {
+    actorUid,
+    paymentReference,
+    paymentMethod = 'EFT',
+    amountPaidCents,
+    paymentDate,
+    paymentNote,
+    proofOfPaymentRef,
+  } = {}
 ) {
   if (!paymentReference) throw new Error('paymentReference is required')
   const db = getFirestore()
   const batchRef = db.collection(BATCH_COL).doc(batchId)
+
+  // Pre-read: attach live banking snapshot if batch was generated without one.
+  const preSnap = await batchRef.get()
+  if (!preSnap.exists) throw new Error('Batch not found')
+  const preBatch = preSnap.data()
+  let snapshotToAttach = null
+  if (preBatch.status === 'ready' && !preBatch.bankingSnapshot) {
+    const live = await bankingService.getBankingProfile(preBatch.youthAgentUid)
+    snapshotToAttach = bankingService.buildSnapshot(live)
+    if (!snapshotToAttach && preBatch.bankingDetailsPresent === false) {
+      throw new Error('Bank details required before recording EFT')
+    }
+    // Legacy batches (no bankingDetailsPresent field) may settle without snapshot.
+  }
 
   const result = await db.runTransaction(async (tx) => {
     const batchSnap = await tx.get(batchRef)
@@ -261,6 +349,22 @@ async function markBatchPaid(
     }
     if (batch.status !== 'ready') {
       throw new Error(`Cannot mark batch paid from status: ${batch.status}`)
+    }
+
+    const expectedCents = Math.round(Number(batch.grossEarningsCents) || 0)
+    if (amountPaidCents == null || amountPaidCents === '') {
+      throw new Error('amountPaidCents is required and must match the batch total')
+    }
+    const paidCents = Math.round(Number(amountPaidCents))
+    if (!Number.isFinite(paidCents) || paidCents !== expectedCents) {
+      throw new Error(
+        `Amount mismatch: expected ${expectedCents} cents, received ${paidCents}`
+      )
+    }
+
+    const bankingSnapshot = batch.bankingSnapshot || snapshotToAttach || null
+    if (!bankingSnapshot && batch.bankingDetailsPresent === false) {
+      throw new Error('Bank details required before recording EFT')
     }
 
     const ts = nowIso()
@@ -298,7 +402,17 @@ async function markBatchPaid(
       paidAt: ts,
       paidBy: actorUid || null,
       paymentMethod: paymentMethod || 'EFT',
-      paymentReference,
+      paymentReference: String(paymentReference).trim().slice(0, 120),
+      paidAmountCents: paidCents,
+      paymentDate: paymentDate ? String(paymentDate).slice(0, 32) : ts.slice(0, 10),
+      paymentNote: paymentNote ? String(paymentNote).slice(0, 1000) : null,
+      proofOfPaymentRef: proofOfPaymentRef ? String(proofOfPaymentRef).slice(0, 500) : null,
+      ...(bankingSnapshot && !batch.bankingSnapshot
+        ? {
+            bankingSnapshot,
+            bankingDetailsPresent: true,
+          }
+        : {}),
       updatedAt: ts,
     })
     tx.set(batchRef, batchPatch, { merge: true })
@@ -312,11 +426,76 @@ async function markBatchPaid(
       actorUid,
       paymentReference,
       paymentMethod,
+      paidAmountCents: result.batch.paidAmountCents,
       grossEarningsCents: result.batch.grossEarningsCents,
+      bankingProfileVersion: result.batch.bankingSnapshot?.bankingProfileVersion || null,
+      accountNumberMasked: result.batch.bankingSnapshot?.accountNumberMasked || null,
+    })
+  } else {
+    await logBatchAudit({
+      action: 'batch_mark_paid_retry',
+      entityId: batchId,
+      actorUid,
+      alreadyPaid: true,
     })
   }
 
   return result
+}
+
+/**
+ * Enrich batch list/detail for Founder Finance (masked bank summary).
+ */
+function presentBatchForFounder(batch, { includeFullAccount = false } = {}) {
+  if (!batch) return null
+  const snap = batch.bankingSnapshot || null
+  const operationalStatus = batchOperationalStatus(batch)
+  const bankSummary = snap
+    ? {
+        bankName: snap.bankName,
+        accountHolderName: snap.accountHolderName,
+        accountNumberMasked: snap.accountNumberMasked,
+        accountType: snap.accountType,
+        branchCode: snap.branchCode,
+        bankingProfileVersion: snap.bankingProfileVersion,
+        snapshottedAt: snap.snapshottedAt,
+        ...(includeFullAccount
+          ? {
+              accountNumber: snap.accountNumber,
+            }
+          : {}),
+      }
+    : null
+
+  return {
+    ...batch,
+    // Strip full account from list payloads unless explicitly requested.
+    bankingSnapshot: includeFullAccount
+      ? snap
+      : snap
+        ? {
+            bankingProfileVersion: snap.bankingProfileVersion,
+            accountHolderName: snap.accountHolderName,
+            bankName: snap.bankName,
+            accountNumberMasked: snap.accountNumberMasked,
+            accountType: snap.accountType,
+            branchCode: snap.branchCode,
+            snapshottedAt: snap.snapshottedAt,
+          }
+        : null,
+    bankSummary,
+    operationalStatus,
+    operationalStatusLabel:
+      operationalStatus === 'ready_for_eft'
+        ? 'Ready for EFT'
+        : operationalStatus === 'missing_bank_details'
+          ? 'Missing bank details'
+          : operationalStatus === 'already_paid'
+            ? 'Already paid'
+            : operationalStatus === 'legacy_no_snapshot'
+              ? 'Ready (legacy — no bank snapshot)'
+              : operationalStatus,
+  }
 }
 
 async function getBatchFinanceSummary({ periodStartMs = null } = {}) {
@@ -384,8 +563,11 @@ module.exports = {
   getBatchById,
   getBatchWithPayouts,
   listBatches,
+  listBatchesForFounder,
   generateMonthlyBatches,
   markBatchPaid,
   getBatchFinanceSummary,
   eligibleAtInPeriod,
+  batchOperationalStatus,
+  presentBatchForFounder,
 }

@@ -72,7 +72,7 @@ async function getFounderFinanceDashboard({
 
   const payoutSummary = await youthAgentPayouts.getFinanceSummary({ periodStartMs: startMs })
   const payoutList = await youthAgentPayouts.listPayouts({ status, page, pageSize })
-  const batchList = await youthAgentPayoutBatches.listBatches({
+  const batchList = await youthAgentPayoutBatches.listBatchesForFounder({
     periodKey: batchPeriodKey || null,
     status: batchStatus === 'all' ? null : batchStatus,
     pageSize: 100,
