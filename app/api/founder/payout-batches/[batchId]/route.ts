@@ -13,7 +13,7 @@ export async function GET(
     const access = await verifyFounderUser(request.headers.get('authorization'))
     if ('error' in access) return access.error
 
-    const svc = require('../../../../../../backend/services/finance/youthAgentPayoutBatchService.js')
+    const svc = require('../../../../../backend/services/finance/youthAgentPayoutBatchService.js')
     const data = await svc.getBatchWithPayouts(params.batchId)
     if (!data) {
       return NextResponse.json({ success: false, error: 'Batch not found' }, { status: 404 })
@@ -40,7 +40,7 @@ export async function PATCH(
 
     const body = await request.json()
     const action = String(body.action || '') as BatchAction
-    const svc = require('../../../../../../backend/services/finance/youthAgentPayoutBatchService.js')
+    const svc = require('../../../../../backend/services/finance/youthAgentPayoutBatchService.js')
 
     if (action === 'mark_paid') {
       if (!body.paymentReference) {

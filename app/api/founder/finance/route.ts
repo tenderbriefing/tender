@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const page = Number(searchParams.get('page') || 1)
     const pageSize = Number(searchParams.get('pageSize') || 25)
 
-    const svc = require('../../../../../backend/services/founderFinanceService.js')
+    const svc = require('../../../../backend/services/founderFinanceService.js')
     const data = await svc.getFounderFinanceDashboard({
       period,
       status,

@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const status = BATCH_STATUSES.has(statusRaw) ? statusRaw : 'all'
     const youthAgentUid = searchParams.get('youthAgentUid')
 
-    const svc = require('../../../../../backend/services/finance/youthAgentPayoutBatchService.js')
+    const svc = require('../../../../backend/services/finance/youthAgentPayoutBatchService.js')
     const data = await svc.listBatchesForFounder({
       periodKey: periodKey || null,
       status: status === 'all' ? null : status,
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const svc = require('../../../../../backend/services/finance/youthAgentPayoutBatchService.js')
+    const svc = require('../../../../backend/services/finance/youthAgentPayoutBatchService.js')
     const result = await svc.generateMonthlyBatches({
       periodKey,
       actorUid: access.user.uid,
