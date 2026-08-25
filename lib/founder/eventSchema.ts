@@ -51,6 +51,11 @@ export const PRODUCT_EVENT_NAMES = [
   'briefing_accepted',
   'briefing_declined',
   'briefing_report_submitted',
+  'private_tender_submitted',
+  'private_tender_approved',
+  'private_tender_published',
+  'private_tender_viewed',
+  'private_tender_briefing_booked',
 ] as const
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number]

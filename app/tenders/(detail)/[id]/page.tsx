@@ -10,6 +10,7 @@ import TenderActionPanel from '@/components/procurement/TenderActionPanel'
 import TenderHero from '@/components/procurement/TenderHero'
 import TenderIntelligence from '@/components/procurement/TenderIntelligence'
 import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
+import { isPrivateSectorTender } from '@/lib/privateTenders/publishMapper'
 import { getCatalogueInitialPage } from '@/lib/seo/catalogueServerData'
 import {
   getIndexableTenderById,
@@ -26,6 +27,7 @@ export default async function TenderDetailsPage({
 
   const isClosed = getTenderDisplayStatus(tender) === 'closed'
   const activeTenders = isClosed ? (await getCatalogueInitialPage()).tenders : []
+  const privateSector = isPrivateSectorTender(tender)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/20 pb-24 lg:pb-12">
@@ -51,7 +53,16 @@ export default async function TenderDetailsPage({
 
         <div className="mt-10 rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
           <p className="text-xs text-slate-500">
-            Source: Official eTenders data ·{' '}
+            {privateSector ? (
+              <>
+                Private Sector Tender — supplied by a third-party company and verified for
+                catalogue listing. TenderBriefing facilitates discovery and briefing attendance;
+                the publisher remains responsible for procurement evaluation and award. Bidders
+                must verify requirements from the official tender document.{' '}
+              </>
+            ) : (
+              <>Source: Official eTenders data · </>
+            )}
             <Link
               href="/tenders"
               className="font-semibold text-brand-800 hover:text-accent-600"

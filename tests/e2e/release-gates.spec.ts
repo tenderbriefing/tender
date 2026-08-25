@@ -45,6 +45,17 @@ test.describe('Route retirement & public accessibility floor', () => {
     await expect(main.first()).toBeVisible({ timeout: 15_000 })
   })
 
+  test('private tender submit page is reachable and noindex', async ({ page }) => {
+    const res = await page.goto('/submit-tender')
+    expect(res?.ok()).toBeTruthy()
+    await page.waitForLoadState('domcontentloaded')
+    await expect(page.getByRole('heading', { name: 'Publish a Private Tender' })).toBeVisible({
+      timeout: 15_000,
+    })
+    const robots = await page.locator('meta[name="robots"]').getAttribute('content')
+    expect(robots || '').toMatch(/noindex/i)
+  })
+
   test('signin page has labeled form controls', async ({ page }) => {
     await page.goto('/auth/signin')
     await page.waitForLoadState('domcontentloaded')

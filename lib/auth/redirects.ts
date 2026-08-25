@@ -61,6 +61,7 @@ export function adminNavForUser(opts: { showFounder: boolean; founderV2?: boolea
 export const PUBLIC_NAV = [
   { name: 'Home', href: '/' },
   { name: 'Tender Opportunities', href: '/tenders' },
+  { name: 'Publish a Tender', href: '/submit-tender' },
   { name: 'How It Works', href: '/how-it-works' },
   { name: 'Pricing', href: '/pricing' },
   { name: 'Support', href: '/support' },

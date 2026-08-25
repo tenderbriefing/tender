@@ -9,6 +9,7 @@ import {
 } from '@/lib/procurement/dates'
 import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
 import { getOfficialEtendersScope } from '@/lib/procurement/tenderDescription'
+import { isPrivateSectorTender } from '@/lib/privateTenders/publishMapper'
 
 function UrgencyChip({ tender }: { tender: TenderBriefing }) {
   const status = getTenderDisplayStatus(tender)
@@ -54,6 +55,7 @@ export default function TenderHero({ tender }: { tender: TenderBriefing }) {
   const closingDays = daysUntil(tender.closingDate)
   const briefingDays = daysUntil(tender.briefingDate)
   const officialScope = getOfficialEtendersScope(tender)
+  const privateSector = isPrivateSectorTender(tender)
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 text-white">
@@ -82,6 +84,11 @@ export default function TenderHero({ tender }: { tender: TenderBriefing }) {
 
         <div className="mt-6 flex flex-wrap items-center gap-2">
           <UrgencyChip tender={tender} />
+          {privateSector && (
+            <span className="inline-flex items-center rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white ring-1 ring-inset ring-white/20">
+              Private Sector Tender
+            </span>
+          )}
           {tender.briefingCompulsory && (
             <span className="inline-flex items-center gap-2 rounded-full bg-accent-500 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-900">
               <ShieldCheck className="h-3.5 w-3.5" />
@@ -111,10 +118,10 @@ export default function TenderHero({ tender }: { tender: TenderBriefing }) {
           <div className="rounded-xl bg-white/5 px-4 py-3 ring-1 ring-inset ring-white/10">
             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-accent-400">
               <Building2 className="h-3.5 w-3.5" />
-              Department
+              {privateSector ? 'Company' : 'Department'}
             </div>
             <p className="mt-1.5 text-sm font-semibold text-white line-clamp-2">
-              {tender.department || 'Department unavailable'}
+              {tender.department || tender.buyer || (privateSector ? 'Company unavailable' : 'Department unavailable')}
             </p>
           </div>
           <div className="rounded-xl bg-white/5 px-4 py-3 ring-1 ring-inset ring-white/10">

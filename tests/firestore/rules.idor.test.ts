@@ -693,3 +693,30 @@ describe('Youth Agent Workspace collections — IDOR matrix', () => {
     )
   })
 })
+
+describe('privateTenderSubmissions — Admin SDK only / IDOR', () => {
+  it('denies read and write to anonymous, SME, YA, and admin clients', async () => {
+    const id = uid('pts')
+    await seed('privateTenderSubmissions', id, {
+      companyName: 'Acme',
+      status: 'submitted',
+      title: 'Private tender',
+      tenderReference: 'ACME-1',
+    })
+
+    for (const actor of [null, SME_A, AGENT_A, ADMIN]) {
+      await assertFails(getDoc(doc(firestoreAs(actor), 'privateTenderSubmissions', id)))
+      await assertFails(
+        setDoc(doc(firestoreAs(actor), 'privateTenderSubmissions', uid('pts-write')), {
+          status: 'published',
+          companyName: 'Forged',
+        })
+      )
+      await assertFails(
+        updateDoc(doc(firestoreAs(actor), 'privateTenderSubmissions', id), {
+          status: 'published',
+        })
+      )
+    }
+  })
+})

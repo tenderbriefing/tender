@@ -34,6 +34,7 @@ export default function TenderFiltersBar({
     filters.search ||
     filters.province ||
     filters.department ||
+    filters.sourceSector ||
     filters.status !== 'active'
 
   return (
@@ -54,13 +55,33 @@ export default function TenderFiltersBar({
             type="search"
             value={filters.search}
             onChange={(e) => onChange({ ...filters, search: e.target.value })}
-            placeholder="Search compulsory briefings by title, description, or department…"
+            placeholder="Search by title, company, reference, or province…"
             className="w-full rounded-xl border border-slate-200 bg-slate-50/80 py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600/20"
             aria-label="Search compulsory briefings"
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Sector
+            </span>
+            <select
+              value={filters.sourceSector || ''}
+              onChange={(e) =>
+                onChange({
+                  ...filters,
+                  sourceSector: e.target.value as '' | 'public' | 'private',
+                })
+              }
+              className={selectClass}
+            >
+              <option value="">All</option>
+              <option value="public">Public Sector</option>
+              <option value="private">Private Sector</option>
+            </select>
+          </label>
+
           <label className="block">
             <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
               Province
@@ -81,7 +102,7 @@ export default function TenderFiltersBar({
 
           <label className="block">
             <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Department
+              Department / Company
             </span>
             <select
               value={filters.department}
