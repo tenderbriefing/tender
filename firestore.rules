@@ -685,6 +685,17 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Phase 2 organisation workspace — Admin SDK only (procurement APIs).
+    match /privateOrganisations/{organisationId} {
+      allow read, write: if false;
+    }
+    match /privateOrganisationMembers/{membershipId} {
+      allow read, write: if false;
+    }
+    match /privateTenderAuditEvents/{eventId} {
+      allow read, write: if false;
+    }
+
     match /enterpriseFieldOps/{docId} {
       allow read: if isAdmin();
       allow write: if false;

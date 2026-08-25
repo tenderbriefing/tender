@@ -4,13 +4,18 @@
  * Published opportunities use the canonical `tenderBriefings` model with sourceType=private.
  */
 
+/** Phase 1 + Phase 2 statuses (see statusMachine.ts for transitions). */
 export const PRIVATE_TENDER_SUBMISSION_STATUSES = [
+  'draft',
   'submitted',
   'under_review',
   'changes_requested',
   'approved',
   'rejected',
   'published',
+  'withdrawn',
+  'closed',
+  'archived',
 ] as const
 
 export type PrivateTenderSubmissionStatus =
@@ -89,6 +94,10 @@ export interface PrivateTenderSubmission {
   trackingToken: string
   status: PrivateTenderSubmissionStatus
 
+  /** Phase 2 — organisation workspace (absent on legacy Phase 1 guest rows). */
+  organisationId?: string | null
+  createdByUid?: string | null
+
   companyName: string
   registrationNumber: string
   website: string
@@ -122,10 +131,10 @@ export interface PrivateTenderSubmission {
   procurementContactEmail: string
   procurementContactPhone: string
 
-  tenderDocument: PrivateTenderDocumentMeta
+  tenderDocument: PrivateTenderDocumentMeta | null
   supportingDocuments: PrivateTenderDocumentMeta[]
 
-  submittedAt: string
+  submittedAt: string | null
   submittedByUid: string | null
   submittedByEmail: string | null
   submittedIpHash: string | null
@@ -135,6 +144,15 @@ export interface PrivateTenderSubmission {
   reviewedByEmail: string | null
   rejectionReason: string | null
   changesRequestedNote: string | null
+  changesRequestedCategory?: string | null
+  reviewHistory?: Array<{
+    at: string
+    action: string
+    note?: string | null
+    category?: string | null
+    actorUid?: string | null
+    actorEmail?: string | null
+  }>
 
   publishedTenderId: string | null
   publishedAt: string | null

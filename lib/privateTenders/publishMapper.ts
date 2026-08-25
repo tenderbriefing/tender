@@ -17,13 +17,17 @@ export function mapSubmissionToCanonicalTender(
     `priv-${submission.id}`
 
   const documents = [
-    {
-      id: 'tender-document',
-      title: submission.tenderDocument.fileName || 'Tender document',
-      url: `/api/tenders/${id}/documents/tender-document`,
-      format: submission.tenderDocument.contentType,
-      datePublished: submission.submittedAt || now,
-    },
+    ...(submission.tenderDocument
+      ? [
+          {
+            id: 'tender-document',
+            title: submission.tenderDocument.fileName || 'Tender document',
+            url: `/api/tenders/${id}/documents/tender-document`,
+            format: submission.tenderDocument.contentType,
+            datePublished: submission.submittedAt || now,
+          },
+        ]
+      : []),
     ...(submission.supportingDocuments || []).map((doc, index) => ({
       id: `supporting-${index + 1}`,
       title: doc.fileName || `Supporting document ${index + 1}`,

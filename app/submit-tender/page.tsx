@@ -16,6 +16,12 @@ export const metadata: Metadata = {
 }
 
 export default function SubmitPrivateTenderPage() {
+  const workspaceEnabled =
+    process.env.NEXT_PUBLIC_PRIVATE_TENDER_ORGANISATION_WORKSPACE_ENABLED === '1' ||
+    process.env.NEXT_PUBLIC_PRIVATE_TENDER_ORGANISATION_WORKSPACE_ENABLED === 'true' ||
+    process.env.NEXT_PUBLIC_PRIVATE_TENDER_ORGANISATION_WORKSPACE_ENABLED === 'yes' ||
+    process.env.NEXT_PUBLIC_PRIVATE_TENDER_ORGANISATION_WORKSPACE_ENABLED === 'on'
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/30">
       <Header />
@@ -30,6 +36,22 @@ export default function SubmitPrivateTenderPage() {
           Private companies can publish procurement opportunities with compulsory briefing sessions
           and reach SMEs through TenderBriefing.
         </p>
+
+        {workspaceEnabled && (
+          <div className="mt-6 rounded-2xl border border-brand-200 bg-brand-50/60 p-4 text-sm text-brand-950">
+            <p className="font-semibold">Organisation workspace available</p>
+            <p className="mt-1 text-brand-900/80">
+              Signed-in procurement teams can manage drafts, resubmissions, and tender history in the
+              organisation workspace. Guests may continue with this form.
+            </p>
+            <Link
+              href="/procurement"
+              className="mt-3 inline-flex rounded-xl bg-brand-800 px-4 py-2 text-sm font-semibold text-white"
+            >
+              Open procurement workspace
+            </Link>
+          </div>
+        )}
 
         <ul className="mt-6 space-y-2 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-700 shadow-sm">
           <li>Listing is subject to Founder verification.</li>

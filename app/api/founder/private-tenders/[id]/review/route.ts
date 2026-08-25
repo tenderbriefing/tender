@@ -27,6 +27,7 @@ export async function POST(
       {
         note: body.note || body.rejectionReason || '',
         rejectionReason: body.rejectionReason || body.note || '',
+        issueCategory: body.issueCategory || body.category || '',
         actorUid: access.user.uid,
         actorEmail: access.user.email,
       }
