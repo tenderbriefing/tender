@@ -16,7 +16,7 @@ Phase 1 private company tender intake, Founder verification, and canonical catal
 
 ## 4. Final SHA
 
-_Recorded at tip after pre-merge certification commit._
+`7c9cedd181a217f3fa4befde0733251861b3a405`
 
 ## 5. PR
 
