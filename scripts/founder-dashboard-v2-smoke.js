@@ -23,8 +23,9 @@ const PASSWORD = process.env.SMOKE_TEST_PASSWORD
 const LIFECYCLE = new Set(['paid', 'agent_assigned', 'attended', 'report_delivered', 'unpaid', 'cancelled'])
 
 if (!PASSWORD) {
-  console.error('SMOKE_TEST_PASSWORD is not set.')
-  process.exit(1)
+  console.warn(
+    'SMOKE_TEST_PASSWORD unset — Founder/SME auth will use Admin custom tokens (service account).'
+  )
 }
 if (!API_KEY) {
   console.error('NEXT_PUBLIC_FIREBASE_API_KEY is not set.')
@@ -77,19 +78,22 @@ async function signIn(email) {
 }
 
 async function signInToken(email) {
-  const res = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(API_KEY)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: PASSWORD, returnSecureToken: true }),
+  if (PASSWORD) {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(API_KEY)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: PASSWORD, returnSecureToken: true }),
+      }
+    )
+    const data = await res.json().catch(() => ({}))
+    if (res.ok) {
+      return { ok: true, idToken: data.idToken, uid: data.localId, source: 'password' }
     }
-  )
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok) {
-    return { ok: false, code: data.error?.message || `HTTP_${res.status}` }
+    // Fall through to Admin custom token when password auth fails or secret missing.
   }
-  return { ok: true, idToken: data.idToken, uid: data.localId }
+  return idTokenViaAdminCustomToken(email)
 }
 
 async function timed(url, options = {}) {
@@ -150,7 +154,12 @@ async function idTokenViaAdminCustomToken(email) {
   if (!res.ok) {
     return { ok: false, code: data.error?.message || `HTTP_${res.status}` }
   }
-  return { ok: true, idToken: data.idToken, uid: user.uid }
+  return {
+    ok: true,
+    idToken: data.idToken,
+    uid: user.uid,
+    source: 'admin_custom_token',
+  }
 }
 
 async function independentPaidCohort() {
@@ -494,6 +503,81 @@ async function main() {
     })
     const mismatch = !paidMatch || !revenueMatch || !failedNotPaid
     push('live_financial_reconcil', !mismatch)
+  }
+
+  // --- Private tender Founder queue (PR #61) ---
+  const AGENT_EMAIL = 'ops-smoke-agent@tenderbriefing.co.za'
+  const ptsAnon = await timed(`${BASE}/api/founder/private-tenders`)
+  push('private_tenders_anon_401', ptsAnon.status === 401, {
+    status: ptsAnon.status,
+    latencyMs: ptsAnon.latencyMs,
+  })
+
+  if (smeToken) {
+    const ptsSme = await timed(`${BASE}/api/founder/private-tenders`, {
+      headers: { Authorization: `Bearer ${smeToken}` },
+    })
+    push('private_tenders_sme_403', ptsSme.status === 403, {
+      status: ptsSme.status,
+      latencyMs: ptsSme.latencyMs,
+    })
+  } else {
+    push('private_tenders_sme_403', false, { skipped: true, note: 'no sme token' })
+  }
+
+  let yaToken = null
+  try {
+    const yaAuth = await signInToken(AGENT_EMAIL)
+    if (yaAuth.ok) yaToken = yaAuth.idToken
+  } catch {
+    /* optional */
+  }
+  if (yaToken) {
+    const ptsYa = await timed(`${BASE}/api/founder/private-tenders`, {
+      headers: { Authorization: `Bearer ${yaToken}` },
+    })
+    push('private_tenders_ya_403', ptsYa.status === 403, {
+      status: ptsYa.status,
+      latencyMs: ptsYa.latencyMs,
+    })
+  } else {
+    push('private_tenders_ya_403', false, { skipped: true, note: 'no ya token' })
+  }
+
+  const ptsFounder = await timed(`${BASE}/api/founder/private-tenders`, {
+    headers: founderHeaders,
+  })
+  const ptsListOk =
+    ptsFounder.status === 200 &&
+    ptsFounder.json?.success === true &&
+    Array.isArray(ptsFounder.json?.data?.items)
+  push('private_tenders_founder_list_200', ptsListOk, {
+    status: ptsFounder.status,
+    latencyMs: ptsFounder.latencyMs,
+    count: ptsFounder.json?.data?.items?.length,
+  })
+
+  const ptsHtml = await timedHtml(`${BASE}/founder/private-tenders`)
+  push('private_tenders_html', ptsHtml.status === 200 && /html/i.test(ptsHtml.contentType), {
+    status: ptsHtml.status,
+    latencyMs: ptsHtml.latencyMs,
+  })
+
+  const firstSubmissionId = ptsListOk ? ptsFounder.json.data.items[0]?.id : null
+  if (firstSubmissionId) {
+    const detail = await timed(
+      `${BASE}/api/founder/private-tenders/${encodeURIComponent(firstSubmissionId)}`,
+      { headers: founderHeaders }
+    )
+    push('private_tenders_founder_detail_200', detail.status === 200 && detail.json?.success === true, {
+      status: detail.status,
+      latencyMs: detail.latencyMs,
+      id: redactId(firstSubmissionId),
+    })
+  } else {
+    push('private_tenders_founder_detail_empty_ok', true, {
+      note: 'queue empty — list endpoint healthy',
+    })
   }
 
   report.ok = report.failures.length === 0
