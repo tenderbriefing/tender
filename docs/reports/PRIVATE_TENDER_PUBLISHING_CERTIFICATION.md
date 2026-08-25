@@ -16,7 +16,7 @@ Phase 1 private company tender intake, Founder verification, and canonical catal
 
 ## 4. Final SHA
 
-_Recorded after commit on this branch._
+`d0a146a6cb623d0c55e90855b1a5b8f3c4c4a9fc`
 
 ## 5. PR
 
