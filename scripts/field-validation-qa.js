@@ -86,7 +86,7 @@ async function markRequestPaid(requestId) {
   await db.collection('attendanceRequests').doc(requestId).update({
     paymentStatus: 'paid',
     paymentProvider: 'payfast',
-    paymentAmount: 24900,
+    paymentAmount: 34900,
     currency: 'ZAR',
     paidAt: now,
     updatedAt: now,

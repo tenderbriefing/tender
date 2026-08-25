@@ -105,11 +105,11 @@ curl -sS http://localhost:3000/api/integrations/health | jq '.summary,.integrati
 
 ## 5. PayFast Payments
 
-**Purpose:** R249.00 ZAR attendance support fee when an SME requests Youth Agent attendance at a compulsory briefing. Requests stay hidden from agents until `paymentStatus` is `paid`.
+**Purpose:** R349.00 ZAR attendance support fee when an SME requests Youth Agent attendance at a compulsory briefing. Requests stay hidden from agents until `paymentStatus` is `paid`. Historical bookings may still show R249.
 
 | Item | Value |
 |------|--------|
-| **Env** | `PAYFAST_MERCHANT_ID`, `PAYFAST_MERCHANT_KEY / PAYFAST_PASSPHRASE`, `NEXT_PUBLIC_ATTENDANCE_FEE_CENTS` (default `24900`), `NEXT_PUBLIC_ATTENDANCE_FEE_LABEL` (default `R249.00`) |
+| **Env** | `PAYFAST_MERCHANT_ID`, `PAYFAST_MERCHANT_KEY / PAYFAST_PASSPHRASE`, `NEXT_PUBLIC_ATTENDANCE_FEE_CENTS` (default `34900`), `NEXT_PUBLIC_ATTENDANCE_FEE_LABEL` (default `R349.00`) |
 | **Secret Manager** | `payfast-merchant-id`, `payfast-passphrase` |
 | **Service** | `backend/services/integrations/payfastService.js`, `backend/services/payments/attendancePaymentService.js` |
 | **API** | `POST /api/payments/payfast/create-checkout`, `POST /api/payments/payfast/confirm` |

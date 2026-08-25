@@ -1,5 +1,5 @@
 import type { SeoLandingConfig } from '@/lib/seo/landingTypes'
-import { ETENDERS_FAQ, R249_FAQ, SME_FREE_FAQ, BRIEFING_PRICE_LABEL } from './shared'
+import { ETENDERS_FAQ, BRIEFING_PRICE_FAQ, SME_FREE_FAQ, BRIEFING_PRICE_LABEL } from './shared'
 
 export const youthAgentConfig: SeoLandingConfig = {
   slug: 'youth-agent-tender-support',
@@ -162,7 +162,7 @@ export const youthAgentConfig: SeoLandingConfig = {
   ],
   faqs: [
     SME_FREE_FAQ,
-    R249_FAQ,
+    BRIEFING_PRICE_FAQ,
     {
       question: 'How do I become a Youth Agent on TenderBriefing?',
       answer:

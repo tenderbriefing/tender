@@ -147,7 +147,7 @@ async function main() {
   if (req) {
     check('paymentStatus is pending', req.paymentStatus === 'pending', req.paymentStatus)
     check('paymentProvider is yoco', req.paymentProvider === 'yoco', req.paymentProvider)
-    check('paymentAmount is 24900', req.paymentAmount === 24900, String(req.paymentAmount))
+    check('paymentAmount is 34900', req.paymentAmount === 34900, String(req.paymentAmount))
     check('currency is ZAR', req.currency === 'ZAR', req.currency)
     check(
       'paymentReference format TB-REQ-*',

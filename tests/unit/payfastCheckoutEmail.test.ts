@@ -42,7 +42,7 @@ describe('PayFast checkout email_address same-account guard', () => {
 
     const payfast = loadService()
     const result = payfast.createCheckoutPayload({
-      amountCents: 24900,
+      amountCents: 34900,
       mPaymentId: 'TB-REQ-test',
       itemName: 'Test',
       returnUrl: 'https://example.com/ok',
@@ -65,7 +65,7 @@ describe('PayFast checkout email_address same-account guard', () => {
 
     const payfast = loadService()
     const result = payfast.createCheckoutPayload({
-      amountCents: 24900,
+      amountCents: 34900,
       mPaymentId: 'TB-REQ-test',
       itemName: 'Test',
       returnUrl: 'https://example.com/ok',

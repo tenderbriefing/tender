@@ -103,7 +103,8 @@ describe('report SLA helpers', () => {
   })
 
   it('formats ZAR cents for receipts', () => {
-    expect(formatMoneyCents(24900, 'ZAR')).toBe('R249.00')
+    expect(formatMoneyCents(34900, 'ZAR')).toBe('R349.00')
+    expect(formatMoneyCents(24900, 'ZAR')).toBe('R249.00') // historical snapshot formatting
   })
 })
 

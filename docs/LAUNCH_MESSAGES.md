@@ -16,7 +16,7 @@ TenderBriefing helps South African SMEs never miss a *compulsory tender briefing
 ✅ Request a verified Youth Agent to attend on your behalf
 ✅ Receive a structured briefing report for your bid team
 
-Standard attendance support: R249 per briefing (pilot pricing).
+Standard attendance support: R349 per briefing.
 
 Start here: {{link}}/sme/onboarding
 
@@ -61,7 +61,7 @@ We are launching the TenderBriefing commercial pilot — a procurement intellige
 
 **What you get**
 - Free access to live government tender opportunities with compulsory briefing filters
-- Pay-per-briefing attendance support (R249 standard fee)
+- Pay-per-briefing attendance support (R349 standard fee)
 - Structured briefing reports after each session
 - WhatsApp status updates when enabled
 

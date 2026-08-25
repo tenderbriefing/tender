@@ -31,7 +31,7 @@ function sampleRequest(overrides: Record<string, unknown> = {}) {
     briefingVenue: 'Civic Centre',
     province: 'Gauteng',
     paymentStatus: 'pending',
-    quotedFee: 24900,
+    quotedFee: 34900,
     currency: 'ZAR',
     createdAt: '2026-08-06T18:00:00.000Z',
     ...overrides,
@@ -58,7 +58,8 @@ describe('founderOpsNotificationService helpers', () => {
   })
 
   it('formats ZAR fees and role labels', () => {
-    expect(notifyService.formatFee(24900, 'ZAR')).toBe('R249.00')
+    expect(notifyService.formatFee(34900, 'ZAR')).toBe('R349.00')
+    expect(notifyService.formatFee(24900, 'ZAR')).toBe('R249.00') // historical amount formatting
     expect(notifyService.roleLabel('sme')).toBe('SME')
     expect(notifyService.roleLabel('youth-agent')).toBe('Youth agent')
   })
@@ -82,7 +83,7 @@ describe('founderOpsNotificationService helpers', () => {
 
     const created = notifyService.buildAttendanceSummary(sampleRequest(), 'created')
     expect(created.idempotencyKey).toBe('attendance-request:req-abc123:created')
-    expect(created.feeLabel).toBe('R249.00')
+    expect(created.feeLabel).toBe('R349.00')
     expect(created.adminPath).toBe('/admin/operations')
     expect(created.paymentStatus).toBe('pending')
 

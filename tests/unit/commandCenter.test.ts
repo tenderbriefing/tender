@@ -17,7 +17,7 @@ function request(overrides: Record<string, unknown> = {}) {
     paidAt: '2026-08-18T11:20:00.000Z',
     createdAt: '2026-08-18T10:00:00.000Z',
     notifiedAgents: ['a1'],
-    quotedFee: 24900,
+    quotedFee: 34900,
     ...overrides,
   }
 }

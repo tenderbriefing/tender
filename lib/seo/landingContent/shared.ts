@@ -12,9 +12,6 @@ export const BRIEFING_PRICE_FAQ: SeoFaqItem = {
   answer: `The fixed ${BRIEFING_PRICE_LABEL} fee applies only when you request a verified Youth Agent to attend a compulsory tender briefing on your behalf. There is no monthly subscription, no paywall on tender discovery and no charge for browsing live opportunities synced from official eTenders data.`,
 }
 
-/** @deprecated Use BRIEFING_PRICE_FAQ */
-export const R249_FAQ = BRIEFING_PRICE_FAQ
-
 export { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 
 export const ETENDERS_FAQ: SeoFaqItem = {

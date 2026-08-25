@@ -23,8 +23,7 @@ export const metadata: Metadata = {
     default: 'Tender Briefing South Africa | Compulsory Government Tender Briefings',
     template: '%s | TenderBriefing',
   },
-  description:
-    'TenderBriefing helps South African SMEs discover compulsory tender briefings, track official eTenders opportunities and request Youth Agents for ${BRIEFING_PRICE_LABEL} when attendance is required.',
+  description: `TenderBriefing helps South African SMEs discover compulsory tender briefings, track official eTenders opportunities and request Youth Agents for ${BRIEFING_PRICE_LABEL} when attendance is required.`,
   keywords: [
     'tender briefing',
     'tender briefing South Africa',
@@ -41,8 +40,7 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: 'TenderBriefing',
     title: 'Tender Briefing South Africa | Compulsory Government Tender Briefings',
-    description:
-      'Discover compulsory government tender briefings across South Africa. Free for SMEs — ${BRIEFING_PRICE_LABEL} only when requesting a Youth Agent.',
+    description: `Discover compulsory government tender briefings across South Africa. Free for SMEs — ${BRIEFING_PRICE_LABEL} only when requesting a Youth Agent.`,
     images: ['/brand/og-logo.png'],
   },
   twitter: {

@@ -48,7 +48,7 @@ gcloud run services update "${SERVICE}" \
   --region="${REGION}" \
   --project="${PROJECT}" \
   --set-secrets=YOCO_SECRET_KEY=yoco-secret-key:latest,YOCO_WEBHOOK_SECRET=yoco-webhook-secret:latest \
-  --update-env-vars=NEXT_PUBLIC_ATTENDANCE_FEE_CENTS=24900,NEXT_PUBLIC_ATTENDANCE_FEE_LABEL=R249.00
+  --update-env-vars=NEXT_PUBLIC_ATTENDANCE_FEE_CENTS=34900,NEXT_PUBLIC_ATTENDANCE_FEE_LABEL=R349.00
 
 echo ""
 echo "=== 5. Verify (no secret values printed) ==="

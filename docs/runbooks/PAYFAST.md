@@ -2,7 +2,7 @@
 
 ## Authoritative flow
 
-1. SME creates attendance request (`paymentStatus=pending`, fee R249 server-side).
+1. SME creates attendance request (`paymentStatus=pending`, fee R349 server-side).
 2. `POST /api/payments/payfast/create-checkout` builds signed fields (amount from server).
 3. Browser POSTs to PayFast.
 4. Return/cancel URLs are UX only.
@@ -48,7 +48,7 @@ PayFast blocks merchants from paying into their own merchant account. This surfa
 | `PAYFAST_MODE` | `live` |
 | Secrets | `PAYFAST_MERCHANT_ID`, `PAYFAST_MERCHANT_KEY`, `PAYFAST_PASSPHRASE` from GSM |
 | Notify URL | `https://www.tenderbriefing.co.za/api/webhooks/payfast` |
-| Fee | Server `ATTENDANCE_FEE_CENTS` (default `24900`) |
+| Fee | Server `ATTENDANCE_FEE_CENTS` (default `34900` / R349.00) |
 
 ## Never
 

@@ -64,7 +64,7 @@ export default function ProgrammaticTendersPage({ slug, initial }: ProgrammaticT
               ))}
               <p className="rounded-2xl border border-accent-200 bg-accent-50/60 px-5 py-4 text-sm text-brand-900">
                 TenderBriefing is <strong>free for SMEs</strong>. Pay the fixed{' '}
-                <strong>${BRIEFING_PRICE_LABEL}</strong> fee only when you request a Youth Agent to attend a compulsory
+                <strong>{BRIEFING_PRICE_LABEL}</strong> fee only when you request a Youth Agent to attend a compulsory
                 briefing on your behalf.
               </p>
             </div>

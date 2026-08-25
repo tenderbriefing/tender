@@ -5,7 +5,7 @@
 
 ## Context
 
-Attendance booking requires collecting R249. Legacy Yoco/Stripe paths created parallel architectures and confusion.
+Attendance booking requires collecting R349 (legacy R249 records remain historically valid). Legacy Yoco/Stripe paths created parallel architectures and confusion.
 
 ## Decision
 

@@ -1,5 +1,5 @@
 import type { SeoLandingConfig } from '@/lib/seo/landingTypes'
-import { AGENT_DELEGATION_FAQ, ETENDERS_FAQ, R249_FAQ, SME_FREE_FAQ, BRIEFING_PRICE_LABEL } from './shared'
+import { AGENT_DELEGATION_FAQ, ETENDERS_FAQ, BRIEFING_PRICE_FAQ, SME_FREE_FAQ, BRIEFING_PRICE_LABEL } from './shared'
 
 export const rfqConfig: SeoLandingConfig = {
   slug: 'rfq-briefing-support',
@@ -163,7 +163,7 @@ export const rfqConfig: SeoLandingConfig = {
   ],
   faqs: [
     SME_FREE_FAQ,
-    R249_FAQ,
+    BRIEFING_PRICE_FAQ,
     {
       question: 'Does TenderBriefing handle private RFQs?',
       answer:
