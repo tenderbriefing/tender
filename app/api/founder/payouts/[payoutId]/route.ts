@@ -20,7 +20,7 @@ export async function PATCH(
 
     const body = await request.json()
     const action = String(body.action || '') as PayoutAction
-    const svc = require('../../../../../../backend/services/finance/youthAgentPayoutService.js')
+    const svc = require('../../../../../backend/services/finance/youthAgentPayoutService.js')
 
     if (action === 'hold') {
       const payout = await svc.holdPayout(payoutId, {
@@ -70,7 +70,7 @@ export async function GET(
     const access = await verifyFounderUser(request.headers.get('authorization'))
     if ('error' in access) return access.error
 
-    const svc = require('../../../../../../backend/services/finance/youthAgentPayoutService.js')
+    const svc = require('../../../../../backend/services/finance/youthAgentPayoutService.js')
     const payout = await svc.getPayoutById(params.payoutId)
     if (!payout) {
       return NextResponse.json({ success: false, error: 'Payout not found' }, { status: 404 })
