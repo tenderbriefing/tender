@@ -8,13 +8,13 @@
 
 ## 1. Executive Verdict
 
-**PASS WITH CONDITIONS**
+**PASS WITH CONDITIONS — PAYFAST PAYMENT STILL NOT SETTLED**
 
 Primary blocker:
 
 **BLOCKED — REAL PAYFAST SETTLEMENT REQUIRED**
 
-The authorised smoke request remains `paymentStatus: pending`. Live PayFast checkout is healthy and correctly priced at R349.00, but no successful ITN has marked the request paid. Phases C–H (YA liability, evidence, Whisper, AI report, Founder approval, SME delivery) cannot proceed on this request without fabricating payment success, which is forbidden.
+Continuation check (2026-08-25 ~07:08–07:10 UTC): production truth for `req-1787605208259-42bhi4` is still `paymentStatus: pending`. No `payfastPaymentId`, no `paidAt`, no ITN audit documents, and no `/api/webhooks/payfast` hits in the last 48h. SME confirmation/request page views and checkout regenerations were observed; those are **not** settlement. Phases C–H were **not** continued.
 
 ---
 
@@ -83,20 +83,36 @@ Feature flags (production):
 | Currency | ZAR |
 | Merchant reference | `TB-REQ-req-1787605208259-42bhi4` |
 | Provider | `payfast` |
-| Live checkout regenerate | **200** — `https://www.payfast.co.za/eng/process` |
+| Live checkout regenerate | **200** — `https://www.payfast.co.za/eng/process` (earlier probe; also 200 at ~06:43 UTC) |
 | Checkout amount field | **349.00** (client amount override ignored) |
 | Signature present | Yes |
-| `paymentStatus` | **`pending`** |
+| `paymentStatus` | **`pending`** (re-verified on resume) |
 | `payfastPaymentId` | `null` |
 | `paidAt` | `null` |
-| ITN received for this request | **No** (no audit docs; no paid transition) |
+| `paymentFailureReason` | `null` (not marked failed/cancelled in-app) |
+| ITN received for this request | **No** (no webhook traffic 48h; no payment audit docs) |
 | Idempotency on this request | N/A — never settled |
+| Browser return ≠ paid | Confirmed: confirmation/request GETs at ~07:05 UTC did **not** flip payment truth |
+
+### Continuation evidence (resume)
+
+| Observation | Detail |
+|-------------|--------|
+| `lastPaymentTransitionAt` | `2026-08-25T06:43:29.820Z` |
+| `lastPaymentTransitionBy` | SME uid (`dGkfbPee…`) — consistent with **checkout regeneration**, not ITN |
+| `payfastRedirectUrl` host | `https://www.payfast.co.za/eng/process` (checkout form action stored; not a paid receipt) |
+| Request `updatedAt` | `2026-08-25T06:43:30.448Z` |
+| Cloud logs ~07:05 UTC | SME confirmation page + attendance-request GET **200**; no PayFast ITN |
+| `/api/webhooks/payfast` (48h) | **No hits** |
+| `create-checkout` | Successful **200** at ~06:43; later **401** probes at ~07:05 (unauthenticated / session — not ITN) |
 
 Human continuation URL (authorised SME):
 
 `https://www.tenderbriefing.co.za/sme/requests/confirmation?requestId=req-1787605208259-42bhi4`
 
 **Settlement status: NOT COMPLETE**
+
+Authoritative rule: only validated PayFast ITN → `markRequestPaid` sets `paymentStatus: paid`. Browser return from PayFast alone is insufficient.
 
 ---
 
@@ -267,14 +283,9 @@ No new PR created for this certification attempt.
 
 ## 20. Remaining Blockers
 
-1. **Real R349 PayFast settlement** on `req-1787605208259-42bhi4` (ITN → `paymentStatus: paid`)
-2. Thereafter, complete Phases C–H on the **same** request:
-   - YA accept / authorised submission link
-   - Audio + attendance evidence
-   - Whisper transcription success
-   - AI report quality gate + PDF
-   - Founder approval (quality-gated)
-   - SME approved-report access + IDOR
+1. **Real R349 PayFast settlement** on `req-1787605208259-42bhi4` — ITN must set `paymentStatus: paid`, populate `payfastPaymentId` / `paidAt`, amount **34900**
+2. If payment was completed in the PayFast merchant dashboard but ITN never reached TenderBriefing: investigate notify_url delivery / ITN failures in PayFast (do **not** manually mark paid)
+3. Thereafter, complete Phases C–H on the **same** request (liability-on-evidence rule, Whisper, AI report, Founder approve, SME delivery)
 
 ---
 
@@ -282,9 +293,21 @@ No new PR created for this certification attempt.
 
 **No-ship for “PRODUCTION CERTIFIED — R349 COMMERCIAL + BRIEFING INTELLIGENCE”.**
 
-Commercial checkout path is production-ready (live PayFast, R349 snapshot, banking intact). Certification of the full commercial + BI chain remains blocked solely on **human completion of the live R349 payment** for the authorised smoke request.
+Resume result: payment still **not** settled in production. Do not continue BI workflow until ITN-backed paid truth exists.
 
-**Founder action:** Complete payment at the confirmation URL above using the smoke SME account, then re-run this certification from Phase B onward without creating a new paid booking.
+**Founder action:** Confirm in PayFast dashboard whether R349 for `TB-REQ-req-1787605208259-42bhi4` completed. If unpaid, complete checkout via the confirmation URL. If PayFast shows COMPLETE but TenderBriefing remains pending, treat as ITN delivery/reconciliation incident (admin reconcile path only with authoritative COMPLETE evidence — never forge paid). Then re-invoke this certification resume.
+
+---
+
+## 22. Resume log (2026-08-25)
+
+| Item | Status |
+|------|--------|
+| Production revision | `tenderbriefing-00130-6xv` @ 100% (unchanged) |
+| App SHA | `c6182f65666689ae352e2c1e987b0ce25845bc0d` (unchanged) |
+| Code / deploy | None |
+| Phases C–H | **Skipped** — settlement not confirmed |
+| Banking/EFT | Intact |
 
 ---
 
