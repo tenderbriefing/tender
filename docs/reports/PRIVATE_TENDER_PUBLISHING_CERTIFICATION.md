@@ -16,11 +16,11 @@ Phase 1 private company tender intake, Founder verification, and canonical catal
 
 ## 4. Final SHA
 
-`d0a146a6cb623d0c55e90855b1a5b8f3c4c4a9fc`
+`f1157b5163e8f9f8968170f6aec71b9fc0f05f72` (feature implementation `d0a146a`; docs tip)
 
 ## 5. PR
 
-_Recorded after `gh pr create`._
+https://github.com/tenderbriefing/tender/pull/61
 
 ## 6. Architecture
 
