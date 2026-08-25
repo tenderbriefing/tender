@@ -16,7 +16,7 @@ Phase 1 private company tender intake, Founder verification, and canonical catal
 
 ## 4. Final SHA
 
-`f1157b5163e8f9f8968170f6aec71b9fc0f05f72` (feature implementation `d0a146a`; docs tip)
+`abab9ebdeba3b3794abe1f759a2fdb3ad46519a8`
 
 ## 5. PR
 
