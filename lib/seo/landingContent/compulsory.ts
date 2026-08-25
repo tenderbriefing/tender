@@ -1,5 +1,5 @@
 import type { SeoLandingConfig } from '@/lib/seo/landingTypes'
-import { AGENT_DELEGATION_FAQ, COMPULSORY_DISQUALIFICATION_FAQ, ETENDERS_FAQ, R249_FAQ, SME_FREE_FAQ, BRIEFING_PRICE_LABEL } from './shared'
+import { AGENT_DELEGATION_FAQ, COMPULSORY_DISQUALIFICATION_FAQ, ETENDERS_FAQ, BRIEFING_PRICE_FAQ, SME_FREE_FAQ, BRIEFING_PRICE_LABEL } from './shared'
 
 export const compulsoryBriefingsConfig: SeoLandingConfig = {
   slug: 'compulsory-tender-briefings',
@@ -168,7 +168,7 @@ export const compulsoryBriefingsConfig: SeoLandingConfig = {
   ],
   faqs: [
     SME_FREE_FAQ,
-    R249_FAQ,
+    BRIEFING_PRICE_FAQ,
     COMPULSORY_DISQUALIFICATION_FAQ,
     AGENT_DELEGATION_FAQ,
     ETENDERS_FAQ,

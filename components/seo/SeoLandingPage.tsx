@@ -196,7 +196,7 @@ export default async function SeoLandingPage({ config }: { config: SeoLandingCon
 
           <p className="mt-10 rounded-2xl border border-accent-200 bg-accent-50/60 px-5 py-4 text-sm text-brand-900">
             <strong>Free for SMEs:</strong> discovering compulsory tender briefings on
-            TenderBriefing costs nothing. You only pay the fixed <strong>${BRIEFING_PRICE_LABEL}</strong> fee when
+            TenderBriefing costs nothing. You only pay the fixed <strong>{BRIEFING_PRICE_LABEL}</strong> fee when
             you request a verified Youth Agent to attend a compulsory briefing on your behalf.
           </p>
 

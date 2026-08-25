@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 /**
  * Chrome enforces CSP form-action across PayFast's redirect chain:
  * POST www.payfast.co.za/eng/process → 302 payment.payfast.io/...
- * Removing either host breaks live R249 checkout in Chromium.
+ * Removing either host breaks live R349 checkout in Chromium.
  */
 describe('PayFast CSP allowlist (production checkout)', () => {
   const src = fs.readFileSync(path.join(process.cwd(), 'next.config.js'), 'utf8')

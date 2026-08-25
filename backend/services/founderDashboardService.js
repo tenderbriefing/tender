@@ -65,7 +65,7 @@ function isPaidBooking(request) {
 
 /**
  * Authoritative amount on a paid record. Missing amounts are not invented as
- * bookings × R249; callers may count those rows separately.
+ * bookings × current list price; callers may count those rows separately.
  */
 function paidAmountCents(request) {
   const amount = Number(request.paymentAmount)
@@ -508,7 +508,7 @@ async function loadOverview(period, nowMs) {
     'Paid Bookings (All Time) counts attendanceRequests.paymentStatus == paid. Period views count paidAt within a bounded recent request cohort (≤500).',
     kpis.revenueCohortIncomplete
       ? 'All Time revenue is summed from the bounded paid cohort (≤500), which is smaller than the paid count aggregation — the rand total is a conservative recent-cohort figure, not a silent full-history total.'
-      : 'Revenue sums paymentAmount (else quotedFee) on those paid records. Rows without a stored amount are omitted from the sum — not estimated as bookings × R249.',
+      : 'Revenue sums paymentAmount (else quotedFee) on those paid records. Rows without a stored amount are omitted from the sum — not estimated as bookings × current list price.',
     'Upcoming Briefings are currently future paid/valid briefings (briefingDate after now, not cancelled) in the same cohort.',
     'Completed Briefings follow production workflow status == completed (executive analytics). All Time uses count(); period views filter the cohort.',
     'Business Activity uses bounded recent profiles (≤400 SME, ≤400 Youth Agent) plus the request cohort — not a full historical scan.',

@@ -110,7 +110,7 @@ async function markRequestPaidForSmoke(requestId) {
   await admin.firestore().collection('attendanceRequests').doc(requestId).update({
     paymentStatus: 'paid',
     paymentProvider: 'payfast',
-    paymentAmount: 24900,
+    paymentAmount: 34900,
     currency: 'ZAR',
     paidAt: now,
     updatedAt: now,

@@ -1,5 +1,5 @@
 import type { SeoLandingConfig } from '@/lib/seo/landingTypes'
-import { AGENT_DELEGATION_FAQ, COMPULSORY_DISQUALIFICATION_FAQ, ETENDERS_FAQ, R249_FAQ, SME_FREE_FAQ, BRIEFING_PRICE_LABEL } from './shared'
+import { AGENT_DELEGATION_FAQ, COMPULSORY_DISQUALIFICATION_FAQ, ETENDERS_FAQ, BRIEFING_PRICE_FAQ, SME_FREE_FAQ, BRIEFING_PRICE_LABEL } from './shared'
 
 export const southAfricaConfig: SeoLandingConfig = {
   slug: 'tender-briefings-south-africa',
@@ -165,7 +165,7 @@ export const southAfricaConfig: SeoLandingConfig = {
   ],
   faqs: [
     SME_FREE_FAQ,
-    R249_FAQ,
+    BRIEFING_PRICE_FAQ,
     {
       question: 'What is a tender briefing in South Africa?',
       answer:

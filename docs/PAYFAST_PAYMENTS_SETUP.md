@@ -1,6 +1,6 @@
 # PayFast payments — attendance support fee
 
-TenderBriefing charges SMEs **R249.00** (`24900` cents / `249.00` ZAR) via **PayFast** when they request Youth Agent attendance at a compulsory tender briefing. Youth Agents only see requests after payment is confirmed (`paymentStatus: paid`). Legacy requests may use `not_required`.
+TenderBriefing charges SMEs **R349.00** (`34900` cents / `349.00` ZAR) via **PayFast** when they request Youth Agent attendance at a compulsory tender briefing. Youth Agents only see requests after payment is confirmed (`paymentStatus: paid`). Legacy requests may use `not_required`. Historical bookings may still show R249 snapshots.
 
 Yoco has been retired; use PayFast only.
 
@@ -22,8 +22,8 @@ Sandbox (optional): [https://sandbox.payfast.co.za/](https://sandbox.payfast.co.
 | `PAYFAST_PASSPHRASE` | Salt passphrase (required for signed ITNs) |
 | `PAYFAST_MODE` | `live` (default in Cloud Run) or `sandbox` |
 | `PAYFAST_MERCHANT_EMAIL` | Optional. Merchant profile email; when set, checkout omits `email_address` if the SME email matches (avoids PayFast same-account prefill). Not a secret. |
-| `NEXT_PUBLIC_ATTENDANCE_FEE_CENTS` | Default `24900` |
-| `NEXT_PUBLIC_ATTENDANCE_FEE_LABEL` | Default `R249.00` |
+| `NEXT_PUBLIC_ATTENDANCE_FEE_CENTS` | Default `34900` |
+| `NEXT_PUBLIC_ATTENDANCE_FEE_LABEL` | Default `R349.00` |
 
 ## 3. ITN notify URL
 
@@ -73,7 +73,7 @@ Grant the Cloud Run service account `secretAccessor` on each secret. Deploy via 
 1. SME creates attendance request → API returns PayFast `formAction` + signed `fields`
 2. Browser auto-POSTs to `https://www.payfast.co.za/eng/process`
 3. Success → `/sme/requests/payment-success?requestId=…`
-4. Cancel → `/sme/requests/payment-cancelled?requestId=…` (retry via **Pay R249.00 with PayFast**)
+4. Cancel → `/sme/requests/payment-cancelled?requestId=…` (retry via **Pay R349.00 with PayFast**)
 5. ITN marks paid; agent notifications fire
 
 ## 6. When PayFast is not configured

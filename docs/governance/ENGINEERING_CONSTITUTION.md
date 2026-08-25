@@ -9,7 +9,7 @@ This constitution is the authoritative engineering contract for Tender Briefing.
 1. **One capability, one implementation.** No parallel payment providers, auth stacks, booking lifecycles, or config systems.
 2. **Server-authoritative.** Clients never set roles, prices, payment status, assignment, or tenant identity.
 3. **Fail closed.** Uncertain identity, permissions, config, or validation → deny.
-4. **Preserve validated journeys.** Tenders → Book an agent → attendance request → PayFast R249 → dispatch → `/sme/requests`.
+4. **Preserve validated journeys.** Tenders → Book an agent → attendance request → PayFast R349 → dispatch → `/sme/requests`.
 5. **Evidence before change.** Inventory callers, add regression tests, smallest safe change, verify, record.
 6. **Zero silent failure.** Critical paths emit structured logs and safe user errors.
 7. **Controlled complexity.** No abstractions without ≥2 real use cases. No speculative frameworks.
@@ -47,7 +47,7 @@ This constitution is the authoritative engineering contract for Tender Briefing.
 ## Payment standards
 
 - Sole provider: **PayFast**.
-- Fee: **R249.00** (`24900` cents) unless product explicitly changes it.
+- Fee: **R349.00** (`34900` cents). Historical bookings may retain R249 snapshots.
 - Amount calculated server-side only.
 - Client return/cancel URLs are UX only — never mark paid from redirects alone.
 

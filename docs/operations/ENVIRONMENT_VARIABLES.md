@@ -16,7 +16,7 @@ Never commit real secret values. Rotate via Google Secret Manager / hosting env.
 | `NEXT_PUBLIC_SITE_URL` | Canonical site / PayFast URLs | prod | No | `https://www.tenderbriefing.co.za` | Y | Platform | Wrong return URLs |
 | `NEXT_PUBLIC_ATTENDANCE_FEE_LABEL` | Display fee label | optional | No | string | - | Product | Label drift |
 | `NEXT_PUBLIC_ATTENDANCE_FEE_CENTS` | Client display fee (advisory) | optional | No | int | - | Product | Label drift |
-| `ATTENDANCE_FEE_CENTS` | Server charge amount | optional (defaults 24900) | No | int cents | - | Payments | Wrong fee if mis-set |
+| `ATTENDANCE_FEE_CENTS` | Server charge amount | optional (defaults 34900) | No | int cents | - | Payments | Wrong fee if mis-set |
 | `PAYFAST_MERCHANT_ID` | PayFast merchant | prod payments | Yes | string | S | Payments | Checkout fails |
 | `PAYFAST_MERCHANT_KEY` | PayFast key | prod payments | Yes | string | S | Payments | Checkout fails |
 | `PAYFAST_PASSPHRASE` | ITN/signature | prod payments | Yes | string | S | Payments | ITN reject |
