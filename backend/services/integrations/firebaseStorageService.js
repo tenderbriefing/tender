@@ -3,11 +3,15 @@ const { env, hasEnv, checkRequired, integrationResult, statusFromConfig } = requ
 const REQUIRED_ENV = ['FIREBASE_STORAGE_BUCKET']
 
 function resolveBucket() {
-  return (
+  const explicit =
     env('FIREBASE_STORAGE_BUCKET') ||
     env('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET') ||
     ''
-  )
+  if (explicit) return explicit
+  // Production Cloud Run always has FIREBASE_PROJECT_ID; default to the
+  // Firebase default bucket so Admin uploads work if env was omitted.
+  const projectId = env('FIREBASE_PROJECT_ID')
+  return projectId ? `${projectId}.firebasestorage.app` : ''
 }
 
 function getConfig() {
