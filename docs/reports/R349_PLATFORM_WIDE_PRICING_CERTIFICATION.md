@@ -23,11 +23,11 @@ Canonical current briefing price is **R349 / 34900**. Active customer-facing sur
 
 ## 4. Final SHA
 
-_(set after commit)_
+`72ec1724fc4782bf3ae0c701e72ba132a0ddece1`
 
 ## 5. PR
 
-_(set after open)_
+https://github.com/tenderbriefing/tender/pull/60
 
 ---
 
