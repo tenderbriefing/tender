@@ -22,11 +22,11 @@ Production baseline referenced by Founder brief:
 
 ## 4. Final SHA
 
-*(filled at PR open / tip of feature branch)*
+`670369fa86b4072320a80f5685b07f4c97c5a163`
 
 ## 5. PR
 
-*(URL filled after `gh pr create`)*
+Pending push — see GitHub PR for `feat/private-tender-organisation-workspace`
 
 ## 6. Files Changed
 
