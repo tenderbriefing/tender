@@ -22,11 +22,11 @@ Production baseline referenced by Founder brief:
 
 ## 4. Final SHA
 
-`670369fa86b4072320a80f5685b07f4c97c5a163`
+`f2d50af1d5958be4e7c32ed480c2d7a2ebe4a44e`
 
 ## 5. PR
 
-Pending push — see GitHub PR for `feat/private-tender-organisation-workspace`
+https://github.com/tenderbriefing/tender/pull/63
 
 ## 6. Files Changed
 
