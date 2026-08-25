@@ -22,7 +22,7 @@ Production baseline referenced by Founder brief:
 
 ## 4. Final SHA
 
-`f2d50af1d5958be4e7c32ed480c2d7a2ebe4a44e`
+`6dfa8649e22d83b8879197f1b56470a530d98534`
 
 ## 5. PR
 
