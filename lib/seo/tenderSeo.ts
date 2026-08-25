@@ -68,8 +68,9 @@ export function buildTenderMetadata(tender: TenderBriefing): Metadata {
     keywords: [
       'tender briefing South Africa',
       'compulsory tender briefing',
+      tender.sourceType === 'private' ? 'private sector tender' : 'government tender',
       tender.province || 'South Africa tenders',
-      tender.category || 'government tender',
+      tender.category || (tender.sourceType === 'private' ? 'private tender' : 'government tender'),
       procuringEntity(tender) || 'procurement',
       tender.tenderNumber || '',
     ].filter(Boolean),

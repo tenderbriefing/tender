@@ -77,6 +77,10 @@ export interface TenderBriefing {
   calendarEvents: CalendarEvent[]
   history: TenderBriefingHistoryEntry[]
   source: string
+  /** Sector provenance: private-company published opportunities vs public/eTenders. */
+  sourceType?: 'public' | 'private'
+  /** Link back to privateTenderSubmissions intake record when sourceType=private. */
+  privateSubmissionId?: string
   visibility?: 'public' | 'private'
   ownerUid?: string
   originalEmailId?: string

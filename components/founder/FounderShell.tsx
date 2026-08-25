@@ -40,6 +40,11 @@ const V2_NAV = [
     label: 'Finance',
     match: (p: string) => p.startsWith('/founder/finance'),
   },
+  {
+    href: '/founder/private-tenders',
+    label: 'Private tenders',
+    match: (p: string) => p.startsWith('/founder/private-tenders'),
+  },
 ] as const
 
 function navActive(pathname: string, href: string, exact = false) {

@@ -9,6 +9,8 @@ export interface ProcurementFilterState {
   category: string
   tenderType: string
   status: string
+  /** '' | public | private — sector provenance filter */
+  sourceSector: '' | 'public' | 'private'
   closingFrom: string
   closingTo: string
   briefingRequired: boolean
@@ -26,6 +28,7 @@ export const defaultProcurementFilters: ProcurementFilterState = {
   category: '',
   tenderType: '',
   status: 'active',
+  sourceSector: '',
   closingFrom: '',
   closingTo: '',
   briefingRequired: false,
@@ -48,6 +51,13 @@ export function filterTenders(
 ): TenderBriefing[] {
   return tenders.filter((t) => {
     if (filters.status && t.status !== filters.status) return false
+
+    if (filters.sourceSector === 'private') {
+      if (t.sourceType !== 'private' && t.source !== 'company_submission') return false
+    }
+    if (filters.sourceSector === 'public') {
+      if (t.sourceType === 'private' || t.source === 'company_submission') return false
+    }
 
     if (filters.compulsoryOnly && !t.briefingCompulsory) return false
     if (filters.briefingRequired && !t.briefingDate && !t.briefingCompulsory) return false
@@ -73,7 +83,8 @@ export function filterTenders(
 
     if (filters.search) {
       const q = filters.search.toLowerCase()
-      const hay = `${t.title} ${t.description} ${t.summary} ${t.department}`.toLowerCase()
+      const hay =
+        `${t.title} ${t.description} ${t.summary} ${t.department} ${t.buyer} ${t.tenderNumber} ${t.province} ${t.category}`.toLowerCase()
       if (!hay.includes(q)) return false
     }
 

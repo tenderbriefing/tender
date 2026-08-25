@@ -27,6 +27,10 @@ export function isPublicApiRoute(pathname: string, method: string): boolean {
   if (pathname === '/api/webhooks/yoco' && m === 'POST') return true
   if (pathname === '/api/support/tickets' && m === 'POST') return true
   if (pathname === '/api/product-events/auth-funnel' && m === 'POST') return true
+  if (pathname === '/api/private-tenders/submit' && m === 'POST') return true
+  if (pathname === '/api/private-tenders/upload' && m === 'POST') return true
+  if (/^\/api\/private-tenders\/status\/[^/]+$/.test(pathname) && m === 'GET') return true
+  if (/^\/api\/tenders\/[^/]+\/documents\/[^/]+$/.test(pathname) && m === 'GET') return true
 
   if (pathname === '/api/sync/run' && m === 'POST') return true
   if (pathname === '/api/automation/run' && m === 'POST') return true

@@ -680,6 +680,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Private company tender intake — Admin SDK only (Founder APIs).
+    match /privateTenderSubmissions/{submissionId} {
+      allow read, write: if false;
+    }
+
     match /enterpriseFieldOps/{docId} {
       allow read: if isAdmin();
       allow write: if false;

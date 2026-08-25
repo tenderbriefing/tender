@@ -13,17 +13,32 @@ const isProduction = process.env.NODE_ENV === 'production'
 
 function rateLimitPublicApi(request: NextRequest, pathname: string): NextResponse | null {
   const isSupportCreate = pathname === '/api/support/tickets' && request.method === 'POST'
+  const isPrivateTenderSubmit =
+    pathname === '/api/private-tenders/submit' && request.method === 'POST'
+  const isPrivateTenderUpload =
+    pathname === '/api/private-tenders/upload' && request.method === 'POST'
+  const isPrivateTenderStatus =
+    pathname.startsWith('/api/private-tenders/status/') && request.method === 'GET'
   if (
     !pathname.startsWith('/api/tender-briefings') &&
     pathname !== '/api/health/firestore' &&
-    !isSupportCreate
+    !isSupportCreate &&
+    !isPrivateTenderSubmit &&
+    !isPrivateTenderUpload &&
+    !isPrivateTenderStatus
   ) {
     return null
   }
 
   const ip = clientIpFromRequest(request)
   const key = `${ip}:${pathname.split('?')[0]}`
-  const limit = isSupportCreate ? 8 : pathname.includes('stats') ? 30 : 120
+  const limit = isSupportCreate || isPrivateTenderSubmit
+    ? 8
+    : isPrivateTenderUpload
+      ? 20
+      : pathname.includes('stats')
+        ? 30
+        : 120
   const result = checkRateLimit(key, limit, 60_000)
 
   if (!result.allowed) {

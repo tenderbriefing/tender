@@ -45,12 +45,18 @@ const EVENT_NAMES = new Set([
   'briefing_accepted',
   'briefing_declined',
   'briefing_report_submitted',
+  'private_tender_submitted',
+  'private_tender_approved',
+  'private_tender_published',
+  'private_tender_viewed',
+  'private_tender_briefing_booked',
 ])
 
 const METADATA_ALLOWLIST = new Set([
   'tenderId',
   'tenderNumber',
   'requestId',
+  'submissionId',
   'queryLength',
   'resultCount',
   'province',

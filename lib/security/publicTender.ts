@@ -103,6 +103,8 @@ export type PublicTenderBriefing = Pick<
   | 'detailUrl'
   | 'summary'
   | 'visibility'
+  | 'sourceType'
+  | 'source'
 > & {
   documents: Array<{
     id?: string
@@ -155,6 +157,8 @@ export function toPublicTenderBriefing(tender: TenderBriefing): PublicTenderBrie
       detailUrl: '',
       summary: '',
       visibility: 'private',
+      sourceType: tender.sourceType || 'public',
+      source: tender.source || '',
       documents: [],
     }
   }
@@ -185,6 +189,8 @@ export function toPublicTenderBriefing(tender: TenderBriefing): PublicTenderBrie
     detailUrl: tender.detailUrl,
     summary: tender.summary,
     visibility: tender.visibility || 'public',
+    sourceType: tender.sourceType || (tender.source === 'company_submission' ? 'private' : 'public'),
+    source: tender.source || '',
     documents: (tender.documents || []).map((doc) => ({
       id: doc.id,
       title: doc.title,

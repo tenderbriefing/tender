@@ -4,6 +4,7 @@ import Link from 'next/link'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import { formatProcurementDate } from '@/lib/procurement/dates'
 import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
+import { isPrivateSectorTender } from '@/lib/privateTenders/publishMapper'
 import StatusBadge from './StatusBadge'
 import RequestAttendanceAction from './RequestAttendanceAction'
 
@@ -14,14 +15,22 @@ interface TenderOpportunityCardProps {
 export default function TenderOpportunityCard({ tender }: TenderOpportunityCardProps) {
   const displayStatus = getTenderDisplayStatus(tender)
   const description = tender.summary || tender.description || ''
+  const privateSector = isPrivateSectorTender(tender)
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-xs font-bold text-brand-800">
-            {tender.tenderNumber || 'Tender'}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-mono text-xs font-bold text-brand-800">
+              {tender.tenderNumber || 'Tender'}
+            </p>
+            {privateSector && (
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 ring-1 ring-inset ring-slate-200">
+                Private Sector
+              </span>
+            )}
+          </div>
           <h3 className="mt-1 line-clamp-2 text-base font-semibold leading-snug text-slate-900">
             {tender.title}
           </h3>
@@ -35,9 +44,11 @@ export default function TenderOpportunityCard({ tender }: TenderOpportunityCardP
 
       <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
         <div>
-          <dt className="font-medium text-slate-500">Department</dt>
+          <dt className="font-medium text-slate-500">
+            {privateSector ? 'Company' : 'Department'}
+          </dt>
           <dd className="mt-0.5 line-clamp-2 font-medium text-slate-800">
-            {tender.department || '—'}
+            {tender.department || tender.buyer || '—'}
           </dd>
         </div>
         <div>

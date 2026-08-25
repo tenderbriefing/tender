@@ -145,6 +145,7 @@ module.exports = {
   REQUIRED_ENV,
   getConfig,
   getStatus,
+  getStorageBucket,
   uploadBriefingProof,
   healthCheck,
 }
