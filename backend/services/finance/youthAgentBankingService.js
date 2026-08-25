@@ -49,10 +49,13 @@ function isComplete(profile) {
   )
 }
 
-function validateInput(body) {
+function validateInput(body, { requireAccountNumber = true } = {}) {
   const accountHolderName = String(body.accountHolderName || '').trim().slice(0, 120)
   const bankName = String(body.bankName || '').trim().slice(0, 80)
-  const accountNumber = normalizeAccountNumber(body.accountNumber)
+  const rawAccount = body.accountNumber
+  const accountNumberProvided =
+    rawAccount !== undefined && rawAccount !== null && String(rawAccount).trim() !== ''
+  const accountNumber = accountNumberProvided ? normalizeAccountNumber(rawAccount) : null
   const accountType = String(body.accountType || '').trim().toLowerCase()
   const branchCode = normalizeBranchCode(body.branchCode)
   const bankAccountNickname = body.bankAccountNickname
@@ -67,8 +70,10 @@ function validateInput(body) {
   if (!ACCOUNT_TYPES.has(accountType)) {
     throw new Error('accountType must be cheque, savings, transmission, current, or other')
   }
-  if (!/^\d{5,20}$/.test(accountNumber)) {
-    throw new Error('accountNumber must be 5–20 digits')
+  if (requireAccountNumber || accountNumberProvided) {
+    if (!accountNumber || !/^\d{5,20}$/.test(accountNumber)) {
+      throw new Error('accountNumber must be 5–20 digits')
+    }
   }
   if (!/^\d{4,10}$/.test(branchCode)) {
     throw new Error('branchCode must be 4–10 digits')
@@ -78,6 +83,7 @@ function validateInput(body) {
     accountHolderName,
     bankName,
     accountNumber,
+    accountNumberProvided,
     accountType,
     branchCode,
     bankAccountNickname,
@@ -153,7 +159,6 @@ async function upsertBankingProfile(youthAgentUid, body, { actorUid } = {}) {
     throw new Error('Youth Agents may only update their own banking profile')
   }
 
-  const validated = validateInput(body)
   const db = getFirestore()
   const ref = db.collection(COL).doc(youthAgentUid)
   const ts = nowIso()
@@ -162,6 +167,15 @@ async function upsertBankingProfile(youthAgentUid, body, { actorUid } = {}) {
     const snap = await tx.get(ref)
     const existing = snap.exists ? snap.data() : null
     const nextVersion = existing ? Number(existing.version || 1) + 1 : 1
+
+    // Create requires account number; updates may omit it to keep the stored value.
+    const validated = validateInput(body, { requireAccountNumber: !existing })
+    const accountNumber = validated.accountNumberProvided
+      ? validated.accountNumber
+      : existing?.accountNumber
+    if (!accountNumber) {
+      throw new Error('accountNumber must be 5–20 digits')
+    }
 
     if (existing) {
       const historyRef = db.collection(HISTORY_COL).doc()
@@ -187,7 +201,14 @@ async function upsertBankingProfile(youthAgentUid, body, { actorUid } = {}) {
 
     const record = sanitizeFirestoreData({
       youthAgentUid,
-      ...validated,
+      accountHolderName: validated.accountHolderName,
+      bankName: validated.bankName,
+      accountNumber,
+      accountType: validated.accountType,
+      branchCode: validated.branchCode,
+      bankAccountNickname: validated.bankAccountNickname,
+      proofOfBankAccountRef:
+        validated.proofOfBankAccountRef ?? existing?.proofOfBankAccountRef ?? null,
       version: nextVersion,
       createdAt: existing?.createdAt || ts,
       createdBy: existing?.createdBy || actorUid || youthAgentUid,
@@ -195,7 +216,12 @@ async function upsertBankingProfile(youthAgentUid, body, { actorUid } = {}) {
       updatedBy: actorUid || youthAgentUid,
     })
     tx.set(ref, record)
-    return { profile: record, created: !existing, previousVersion: existing?.version || null }
+    return {
+      profile: record,
+      created: !existing,
+      previousVersion: existing?.version || null,
+      accountNumberChanged: Boolean(validated.accountNumberProvided),
+    }
   })
 
   await logBankingAudit({
@@ -207,6 +233,7 @@ async function upsertBankingProfile(youthAgentUid, body, { actorUid } = {}) {
     previousVersion: result.previousVersion,
     accountNumberMasked: maskAccountNumber(result.profile.accountNumber),
     bankName: result.profile.bankName,
+    accountNumberChanged: result.accountNumberChanged,
   })
 
   return result

@@ -620,10 +620,12 @@ describe('Youth Agent Workspace collections — IDOR matrix', () => {
       periodKey: '2026-08',
       grossEarningsCents: 100000,
       status: 'ready',
+      bankingSnapshot: { accountNumber: '62123456789', accountNumberMasked: '******6789' },
     })
 
     await assertFails(getDoc(doc(firestoreAs(null), 'youthAgentPayoutBatches', batchId)))
-    await assertSucceeds(getDoc(doc(firestoreAs(AGENT_A), 'youthAgentPayoutBatches', batchId)))
+    // YA cannot client-read batches (may contain full bankingSnapshot) — use server earnings APIs.
+    await assertFails(getDoc(doc(firestoreAs(AGENT_A), 'youthAgentPayoutBatches', batchId)))
     await assertSucceeds(getDoc(doc(firestoreAs(ADMIN), 'youthAgentPayoutBatches', batchId)))
     await assertFails(getDoc(doc(firestoreAs(AGENT_B), 'youthAgentPayoutBatches', batchId)))
     await assertFails(getDoc(doc(firestoreAs(SME_A), 'youthAgentPayoutBatches', batchId)))
@@ -640,7 +642,7 @@ describe('Youth Agent Workspace collections — IDOR matrix', () => {
     )
   })
 
-  it('youth agent banking profiles deny IDOR and client writes', async () => {
+  it('youth agent banking profiles deny client reads/writes including owner', async () => {
     const id = AGENT_A
     await seed('youthAgentBankingProfiles', id, {
       youthAgentUid: AGENT_A,
@@ -653,7 +655,8 @@ describe('Youth Agent Workspace collections — IDOR matrix', () => {
     })
 
     await assertFails(getDoc(doc(firestoreAs(null), 'youthAgentBankingProfiles', id)))
-    await assertSucceeds(getDoc(doc(firestoreAs(AGENT_A), 'youthAgentBankingProfiles', id)))
+    // Owner YA must use /api/agent/banking (masked) — no direct Firestore full-number read.
+    await assertFails(getDoc(doc(firestoreAs(AGENT_A), 'youthAgentBankingProfiles', id)))
     await assertSucceeds(getDoc(doc(firestoreAs(ADMIN), 'youthAgentBankingProfiles', id)))
     await assertFails(getDoc(doc(firestoreAs(AGENT_B), 'youthAgentBankingProfiles', id)))
     await assertFails(getDoc(doc(firestoreAs(SME_A), 'youthAgentBankingProfiles', id)))

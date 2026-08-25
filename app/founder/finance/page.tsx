@@ -481,7 +481,7 @@ export default function FounderFinancePage() {
                                               markBatchPaid(b.batchId, b.grossEarningsCents)
                                             }
                                           >
-                                            Record EFT &amp; Mark Batch Paid
+                                            Record EFT (external) & Mark Paid
                                           </button>
                                         )}
                                     </div>

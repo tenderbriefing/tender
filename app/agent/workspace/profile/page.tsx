@@ -97,7 +97,9 @@ export default function WorkspaceProfilePage() {
         body: JSON.stringify({
           accountHolderName: form.accountHolderName,
           bankName: form.bankName,
-          accountNumber: form.accountNumber,
+          ...(form.accountNumber.trim()
+            ? { accountNumber: form.accountNumber }
+            : {}),
           accountType: form.accountType,
           branchCode: form.branchCode,
           bankAccountNickname: form.bankAccountNickname || null,
@@ -233,15 +235,19 @@ export default function WorkspaceProfilePage() {
                 </label>
                 <label className="block text-sm">
                   <span className="text-xs font-semibold text-slate-500">
-                    Account number {banking ? '(re-enter to update)' : ''}
+                    Account number
+                    {banking
+                      ? ` (leave blank to keep ${banking.accountNumberMasked})`
+                      : ''}
                   </span>
                   <input
-                    required
+                    required={!banking}
                     inputMode="numeric"
                     autoComplete="off"
                     className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 font-mono"
                     value={form.accountNumber}
                     onChange={(e) => setForm({ ...form, accountNumber: e.target.value })}
+                    placeholder={banking ? 'Enter new number only if changing' : undefined}
                   />
                 </label>
                 <label className="block text-sm">

@@ -176,6 +176,37 @@ describe('youthAgentBankingService', () => {
     expect(history.length).toBe(1)
   })
 
+  it('keeps stored account number when update omits it', async () => {
+    await bankingSvc.upsertBankingProfile(
+      'agent-1',
+      {
+        accountHolderName: 'Jane Mokoena',
+        bankName: 'FNB',
+        accountNumber: '62123456789',
+        accountType: 'cheque',
+        branchCode: '250655',
+      },
+      { actorUid: 'agent-1' }
+    )
+    const updated = await bankingSvc.upsertBankingProfile(
+      'agent-1',
+      {
+        accountHolderName: 'Jane Mokoena',
+        bankName: 'Standard Bank',
+        accountType: 'savings',
+        branchCode: '051001',
+      },
+      { actorUid: 'agent-1' }
+    )
+    expect(updated.profile.version).toBe(2)
+    expect(updated.profile.bankName).toBe('Standard Bank')
+    expect(updated.profile.accountNumber).toBe('62123456789')
+    expect(updated.accountNumberChanged).toBe(false)
+    const pub = bankingSvc.toPublic(updated.profile)
+    expect(pub!.accountNumberMasked).toBe('******6789')
+    expect((pub as Record<string, unknown>).accountNumber).toBeUndefined()
+  })
+
   it('rejects invalid account data', async () => {
     await expect(
       bankingSvc.upsertBankingProfile(

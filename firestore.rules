@@ -402,14 +402,15 @@ service cloud.firestore {
     }
 
     match /youthAgentPayoutBatches/{batchId} {
-      allow read: if isAdmin()
-        || (isYouthAgent() && resource.data.youthAgentUid == request.auth.uid);
+      // Batches may contain immutable full bankingSnapshot — Admin SDK / Founder APIs only.
+      // Youth Agents receive earnings history via server APIs (no full account numbers).
+      allow read: if isAdmin();
       allow write: if false;
     }
 
-    // Banking profiles: server APIs only for writes. YA may read own profile.
+    // Banking profiles: server APIs only (YA GET returns masked; Founder via Admin SDK).
     match /youthAgentBankingProfiles/{uid} {
-      allow read: if isAdmin() || (isYouthAgent() && request.auth.uid == uid);
+      allow read: if isAdmin();
       allow write: if false;
     }
 
