@@ -181,6 +181,11 @@ async function updateMembership(id, patch, meta = {}, deps = {}) {
       err.status = 400
       throw err
     }
+    if (patch.role === 'owner' && current.role !== 'owner') {
+      const err = new Error('Owner role transfer is out of scope for Phase 2')
+      err.status = 400
+      throw err
+    }
     next.role = patch.role
   }
   if (patch.status !== undefined) {

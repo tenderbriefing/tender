@@ -720,3 +720,38 @@ describe('privateTenderSubmissions — Admin SDK only / IDOR', () => {
     }
   })
 })
+
+describe('Phase 2 org collections — Admin SDK only / IDOR', () => {
+  it('denies client access to organisations, members, and audit events', async () => {
+    await seed('privateOrganisations', uid('porg'), {
+      legalName: 'Acme',
+      status: 'active',
+      verificationStatus: 'unverified',
+    })
+    await seed('privateOrganisationMembers', uid('pom'), {
+      organisationId: uid('porg'),
+      uid: SME_A,
+      role: 'owner',
+      status: 'active',
+    })
+    await seed('privateTenderAuditEvents', uid('ptae'), {
+      submissionId: uid('pts'),
+      organisationId: uid('porg'),
+      eventType: 'tender_created',
+    })
+
+    for (const actor of [null, SME_A, AGENT_A, ADMIN]) {
+      await assertFails(getDoc(doc(firestoreAs(actor), 'privateOrganisations', uid('porg'))))
+      await assertFails(
+        getDoc(doc(firestoreAs(actor), 'privateOrganisationMembers', uid('pom')))
+      )
+      await assertFails(getDoc(doc(firestoreAs(actor), 'privateTenderAuditEvents', uid('ptae'))))
+      await assertFails(
+        setDoc(doc(firestoreAs(actor), 'privateOrganisations', uid('porg-forge')), {
+          legalName: 'Evil',
+          verificationStatus: 'verified',
+        })
+      )
+    }
+  })
+})

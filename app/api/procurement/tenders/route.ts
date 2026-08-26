@@ -30,6 +30,26 @@ export async function POST(request: NextRequest) {
     if ('response' in gated) return gated.response
     const body = await request.json().catch(() => ({}))
     const svc = require('../../../../backend/services/privateTenderSubmissionService.js')
+    const safeBody =
+      body && typeof body === 'object'
+        ? {
+            title: body.title,
+            tenderReference: body.tenderReference,
+            description: body.description,
+            category: body.category,
+            province: body.province,
+            municipality: body.municipality,
+            closingDate: body.closingDate,
+            closingTime: body.closingTime,
+            briefingDate: body.briefingDate,
+            briefingTime: body.briefingTime,
+            briefingVenue: body.briefingVenue,
+            briefingInstructions: body.briefingInstructions,
+            contactPersonName: body.contactPersonName,
+            contactEmail: body.contactEmail,
+            contactPhone: body.contactPhone,
+          }
+        : {}
     const tender = await svc.createOrgDraft({
       organisationId: gated.ctx.organisation.id,
       createdByUid: gated.ctx.uid,
@@ -42,7 +62,7 @@ export async function POST(request: NextRequest) {
         contactPersonName: gated.ctx.organisation.primaryContactName,
         contactEmail: gated.ctx.organisation.primaryContactEmail,
         contactPhone: gated.ctx.organisation.primaryContactPhone || '',
-        ...(body && typeof body === 'object' ? body : {}),
+        ...safeBody,
       },
     })
     return jsonOk({ tender }, 201)

@@ -364,6 +364,24 @@ async function reviewSubmission(id, action, opts = {}, deps = {}) {
       ],
     })
     await ref.set(next, { merge: true })
+    try {
+      const { writeAuditEvent } = require('./privateTenderAuditService')
+      await writeAuditEvent(
+        {
+          submissionId: id,
+          organisationId: submission.organisationId || null,
+          actorUid,
+          actorType: 'founder',
+          eventType: publish.created ? 'tender_published' : 'tender_publish_idempotent',
+          fromStatus: submission.status,
+          toStatus: 'published',
+          metadata: { publishedTenderId: publish.tenderId },
+        },
+        deps
+      )
+    } catch {
+      /* fail-soft */
+    }
     return {
       submission: { ...submission, ...next },
       publishedTenderId: publish.tenderId,
@@ -390,6 +408,23 @@ async function reviewSubmission(id, action, opts = {}, deps = {}) {
       ],
     })
     await ref.set(next, { merge: true })
+    try {
+      const { writeAuditEvent } = require('./privateTenderAuditService')
+      await writeAuditEvent(
+        {
+          submissionId: id,
+          organisationId: submission.organisationId || null,
+          actorUid,
+          actorType: 'founder',
+          eventType: 'tender_rejected',
+          fromStatus: submission.status,
+          toStatus: 'rejected',
+        },
+        deps
+      )
+    } catch {
+      /* fail-soft */
+    }
     return { submission: { ...submission, ...next } }
   }
 
@@ -457,6 +492,23 @@ async function reviewSubmission(id, action, opts = {}, deps = {}) {
       ],
     })
     await ref.set(next, { merge: true })
+    try {
+      const { writeAuditEvent } = require('./privateTenderAuditService')
+      await writeAuditEvent(
+        {
+          submissionId: id,
+          organisationId: submission.organisationId || null,
+          actorUid,
+          actorType: 'founder',
+          eventType: 'founder_review_started',
+          fromStatus: submission.status,
+          toStatus: 'under_review',
+        },
+        deps
+      )
+    } catch {
+      /* fail-soft */
+    }
     return { submission: { ...submission, ...next } }
   }
 
@@ -602,8 +654,39 @@ function applyDraftPatch(current, patch) {
   return next
 }
 
+function sanitizeDraftSeed(seed = {}) {
+  // Never accept trust/lifecycle fields from client seed payloads.
+  const safe = applyDraftPatch(emptyDraftFields(), seed || {})
+  delete safe.status
+  delete safe.organisationId
+  delete safe.createdByUid
+  delete safe.publishedTenderId
+  delete safe.publishedAt
+  delete safe.reviewedAt
+  delete safe.reviewedByUid
+  delete safe.reviewedByEmail
+  delete safe.submittedAt
+  delete safe.trackingToken
+  delete safe.id
+  delete safe.audit
+  delete safe.reviewHistory
+  return safe
+}
+
+function assertOrgOwnership(submission, organisationId) {
+  if (!organisationId) {
+    const err = new Error('organisationId is required')
+    err.status = 400
+    throw err
+  }
+  if (!submission || submission.organisationId !== organisationId) {
+    const err = new Error('Forbidden')
+    err.status = 403
+    throw err
+  }
+}
+
 async function createOrgDraft(meta = {}, deps = {}) {
-  const { canTransition } = require('./privateTenderStatusMachine')
   const db = getDb(deps)
   const organisationId = sliceStr(meta.organisationId, 80)
   const createdByUid = sliceStr(meta.createdByUid, 128)
@@ -615,17 +698,21 @@ async function createOrgDraft(meta = {}, deps = {}) {
   const ts = nowIso(meta.now)
   const id = `pts-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`
   const trackingToken = randomToken()
+  const seeded = sanitizeDraftSeed(meta.seed || {})
   const record = sanitizeFirestoreData({
     id,
     trackingToken,
+    ...seeded,
+    // Trust fields always win over any seed content.
     status: 'draft',
     organisationId,
     createdByUid,
-    ...emptyDraftFields(),
-    ...(meta.seed || {}),
-    companyName: sliceStr(meta.seed?.companyName || meta.companyName || '', 200),
-    contactPersonName: sliceStr(meta.seed?.contactPersonName || '', 120),
-    contactEmail: sliceStr(meta.seed?.contactEmail || meta.createdByEmail || '', 320),
+    companyName: sliceStr(
+      seeded.companyName || meta.companyName || '',
+      200
+    ),
+    contactPersonName: sliceStr(seeded.contactPersonName || '', 120),
+    contactEmail: sliceStr(seeded.contactEmail || meta.createdByEmail || '', 320),
     submittedAt: null,
     submittedByUid: null,
     submittedByEmail: null,
@@ -652,9 +739,6 @@ async function createOrgDraft(meta = {}, deps = {}) {
     createdAt: ts,
     updatedAt: ts,
   })
-  if (!canTransition('draft', 'submitted') && false) {
-    /* keep import used for static analysis */
-  }
   await db.collection(COLLECTION).doc(id).set(record)
   try {
     const { writeAuditEvent } = require('./privateTenderAuditService')
@@ -686,11 +770,7 @@ async function updateOrgDraft(id, patch, meta = {}, deps = {}) {
     throw err
   }
   const submission = { id: snap.id, ...snap.data() }
-  if (meta.organisationId && submission.organisationId !== meta.organisationId) {
-    const err = new Error('Forbidden')
-    err.status = 403
-    throw err
-  }
+  assertOrgOwnership(submission, meta.organisationId)
   if (!EDITABLE_STATUSES.has(submission.status)) {
     const err = new Error(`Cannot edit submission in status ${submission.status}`)
     err.status = 409
@@ -746,11 +826,7 @@ async function submitOrgDraft(id, meta = {}, deps = {}) {
       throw err
     }
     const submission = { id: snap.id, ...snap.data() }
-    if (meta.organisationId && submission.organisationId !== meta.organisationId) {
-      const err = new Error('Forbidden')
-      err.status = 403
-      throw err
-    }
+    assertOrgOwnership(submission, meta.organisationId)
     // Idempotent: already submitted/in review
     if (
       submission.status === 'submitted' ||
@@ -825,11 +901,7 @@ async function withdrawOrgSubmission(id, meta = {}, deps = {}) {
     throw err
   }
   const submission = { id: snap.id, ...snap.data() }
-  if (meta.organisationId && submission.organisationId !== meta.organisationId) {
-    const err = new Error('Forbidden')
-    err.status = 403
-    throw err
-  }
+  assertOrgOwnership(submission, meta.organisationId)
   if (!canOrganisationWithdraw(submission.status) || !canTransition(submission.status, 'withdrawn')) {
     const err = new Error('Withdrawal is not allowed for this status; contact Founder if published')
     err.status = 409
@@ -885,11 +957,7 @@ async function duplicateOrgSubmission(id, meta = {}, deps = {}) {
     err.status = 404
     throw err
   }
-  if (meta.organisationId && source.organisationId !== meta.organisationId) {
-    const err = new Error('Forbidden')
-    err.status = 403
-    throw err
-  }
+  assertOrgOwnership(source, meta.organisationId)
   const seed = {
     companyName: source.companyName,
     registrationNumber: source.registrationNumber,

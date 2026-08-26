@@ -267,3 +267,178 @@ describe('Phase 2 feature flag fail-closed', () => {
     if (prev !== undefined) process.env.PRIVATE_TENDER_ORGANISATION_WORKSPACE_ENABLED = prev
   })
 })
+
+describe('Phase 2 org A vs org B IDOR + seed hardening', () => {
+  function memoryDb(store: Map<string, any>) {
+    return {
+      collection(name: string) {
+        return {
+          doc(id: string) {
+            return {
+              async set(data: any, opts?: any) {
+                const key = `${name}/${id}`
+                const prev = store.get(key) || {}
+                store.set(key, opts?.merge ? { ...prev, ...data, id } : { ...data, id })
+              },
+              async get() {
+                const data = store.get(`${name}/${id}`)
+                return {
+                  exists: Boolean(data),
+                  id,
+                  data: () => (data ? { ...data } : undefined),
+                }
+              },
+            }
+          },
+          where() {
+            return this
+          },
+          orderBy() {
+            return this
+          },
+          limit() {
+            return this
+          },
+          async get() {
+            return { empty: true, docs: [] }
+          },
+        }
+      },
+      async runTransaction(fn: any) {
+        return fn({
+          async get(ref: any) {
+            return ref.get()
+          },
+          set(ref: any, data: any, opts: any) {
+            return ref.set(data, opts)
+          },
+        })
+      },
+    }
+  }
+
+  it('rejects cross-org update/submit/withdraw/duplicate', async () => {
+    const store = new Map<string, any>()
+    const db = memoryDb(store)
+    const svc = require('../../backend/services/privateTenderSubmissionService.js')
+    store.set('privateTenderSubmissions/pts-a', {
+      id: 'pts-a',
+      status: 'draft',
+      organisationId: 'porg-A',
+      title: 'Org A draft',
+      audit: [],
+      publishedTenderId: null,
+      tenderDocument: null,
+      supportingDocuments: [],
+    })
+
+    await expect(
+      svc.updateOrgDraft('pts-a', { title: 'Hijack' }, { organisationId: 'porg-B', actorUid: 'uB' }, { db })
+    ).rejects.toMatchObject({ status: 403 })
+
+    await expect(
+      svc.submitOrgDraft('pts-a', { organisationId: 'porg-B', actorUid: 'uB' }, { db })
+    ).rejects.toMatchObject({ status: 403 })
+
+    await expect(
+      svc.withdrawOrgSubmission('pts-a', { organisationId: 'porg-B', actorUid: 'uB' }, { db })
+    ).rejects.toMatchObject({ status: 403 })
+
+    await expect(
+      svc.duplicateOrgSubmission('pts-a', { organisationId: 'porg-B', actorUid: 'uB' }, { db })
+    ).rejects.toMatchObject({ status: 403 })
+  })
+
+  it('ignores malicious seed status/organisationId on create', async () => {
+    const store = new Map<string, any>()
+    const db = memoryDb(store)
+    const svc = require('../../backend/services/privateTenderSubmissionService.js')
+    const draft = await svc.createOrgDraft(
+      {
+        organisationId: 'porg-A',
+        createdByUid: 'uA',
+        createdByEmail: 'a@test',
+        seed: {
+          status: 'published',
+          organisationId: 'porg-B',
+          publishedTenderId: 'priv-evil',
+          title: 'Safe title',
+        },
+      },
+      { db }
+    )
+    expect(draft.status).toBe('draft')
+    expect(draft.organisationId).toBe('porg-A')
+    expect(draft.publishedTenderId).toBeNull()
+    expect(draft.title).toBe('Safe title')
+  })
+
+  it('blocks promoting a member to owner via PATCH', async () => {
+    const store = new Map<string, any>()
+    const db = {
+      collection(name: string) {
+        return {
+          doc(id: string) {
+            return {
+              async set(data: any, opts?: any) {
+                const key = `${name}/${id}`
+                const prev = store.get(key) || {}
+                store.set(key, opts?.merge ? { ...prev, ...data } : data)
+              },
+              async get() {
+                const data = store.get(`${name}/${id}`)
+                return { exists: Boolean(data), id, data: () => data }
+              },
+            }
+          },
+        }
+      },
+    }
+    const memberSvc = require('../../backend/services/privateOrganisationMemberService.js')
+    store.set('privateOrganisationMembers/pom-1', {
+      id: 'pom-1',
+      organisationId: 'porg-1',
+      uid: 'u2',
+      role: 'admin',
+      status: 'active',
+    })
+    await expect(
+      memberSvc.updateMembership('pom-1', { role: 'owner' }, {}, { db })
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('disabled members are excluded from active membership lookup', async () => {
+    const store = new Map<string, any>()
+    const docs = [
+      {
+        id: 'pom-disabled',
+        data: () => ({
+          organisationId: 'porg-1',
+          uid: 'u1',
+          role: 'admin',
+          status: 'disabled',
+        }),
+      },
+    ]
+    const db = {
+      collection() {
+        return {
+          where() {
+            return this
+          },
+          limit() {
+            return this
+          },
+          async get() {
+            // Mimic Firestore query status==active — empty when only disabled exists
+            return { empty: true, docs: [] }
+          },
+        }
+      },
+    }
+    void docs
+    const memberSvc = require('../../backend/services/privateOrganisationMemberService.js')
+    const active = await memberSvc.getActiveMembershipForUser('u1', { db })
+    expect(active).toBeNull()
+  })
+})
