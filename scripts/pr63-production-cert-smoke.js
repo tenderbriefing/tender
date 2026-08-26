@@ -63,7 +63,8 @@ async function idToken(email) {
 }
 
 async function ensureSmokeUser(email, userType = 'sme') {
-  const { getFirebaseAdmin } = require('../backend/config/firebaseAdmin')
+  const { getFirebaseAdmin, getFirestore } = require('../backend/config/firebaseAdmin')
+  const { ensureSmokeRoleProfiles } = require('./smoke-test-profiles')
   const admin = getFirebaseAdmin()
   let user
   try {
@@ -77,7 +78,15 @@ async function ensureSmokeUser(email, userType = 'sme') {
     })
   }
   await admin.auth().setCustomUserClaims(user.uid, { userType })
-  return user
+  // API auth requires a Firestore users profile (not Auth claims alone).
+  await ensureSmokeRoleProfiles(getFirestore(), {
+    uid: user.uid,
+    email,
+    displayName: 'Phase 2 Production Smoke',
+    userType,
+    extra: { companyName: 'TenderBriefing Phase 2 Smoke SME' },
+  })
+  return admin.auth().getUser(user.uid)
 }
 
 async function timed(url, options = {}) {
@@ -153,6 +162,22 @@ async function main() {
   })
 
   // If owner already has an org, reuse and rename for smoke clarity; else create.
+  // Reactivate prior archived smoke org so membership gate allows workspace APIs.
+  {
+    const existingProbe = await timed(`${BASE}/api/procurement/organisation`, { headers: ownerH })
+    const existingOrgId = existingProbe.json?.data?.organisation?.id
+    if (existingOrgId) {
+      await db.collection('privateOrganisations').doc(existingOrgId).set(
+        {
+          status: 'active',
+          legalName: 'TenderBriefing Phase 2 Production Smoke',
+          smokeReactivatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      )
+    }
+  }
+
   let orgRes = await timed(`${BASE}/api/procurement/organisation`, {
     method: 'POST',
     headers: ownerH,
@@ -421,15 +446,25 @@ async function main() {
   push('changes_requested_ok', changes.status === 200 && changes.json?.success, {
     status: changes.status,
     error: changes.json?.error,
+    resultStatus: changes.json?.data?.submission?.status || changes.json?.data?.status,
   })
 
-  const afterChanges = await timed(`${BASE}/api/procurement/tenders/${tender?.id}`, {
+  let afterChanges = await timed(`${BASE}/api/procurement/tenders/${tender?.id}`, {
     headers: ownerH,
   })
   tender = afterChanges.json?.data?.tender || tender
+  if (tender?.status !== 'changes_requested') {
+    // Brief retry — Founder write is awaited, but avoid false negatives on edge timing.
+    await new Promise((r) => setTimeout(r, 1000))
+    afterChanges = await timed(`${BASE}/api/procurement/tenders/${tender?.id}`, {
+      headers: ownerH,
+    })
+    tender = afterChanges.json?.data?.tender || tender
+  }
   push('org_sees_changes_requested', tender?.status === 'changes_requested', {
     status: tender?.status,
     note: tender?.changesRequestedNote ? 'present' : null,
+    http: afterChanges.status,
   })
 
   // —— Resubmit ——
@@ -656,13 +691,17 @@ async function main() {
     })
 
     const revokedDash = await timed(`${BASE}/api/procurement/dashboard`, { headers: memberH })
-    push('revoked_member_denied', revokedDash.status === 403, { status: revokedDash.status })
+    push('revoked_member_denied', revokedDash.status === 403, {
+      status: revokedDash.status,
+      error: revokedDash.json?.error,
+    })
 
     const revokedTender = await timed(`${BASE}/api/procurement/tenders/${report.ids.submissionId}`, {
       headers: memberH,
     })
     push('revoked_tender_denied', revokedTender.status === 403 || revokedTender.status === 404, {
       status: revokedTender.status,
+      error: revokedTender.json?.error,
     })
   }
 

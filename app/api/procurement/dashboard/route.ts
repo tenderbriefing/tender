@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   try {
     const gated = await requireProcurementAccess(request, 'view_tenders')
     if ('response' in gated) return gated.response
-    const svc = require('../../../../../backend/services/privateTenderSubmissionService.js')
+    const svc = require('../../../../backend/services/privateTenderSubmissionService.js')
     const dashboard = await svc.getOrgDashboardCounts(gated.ctx.organisation.id)
     return jsonOk(dashboard)
   } catch (error) {
