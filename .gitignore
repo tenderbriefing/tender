@@ -15,6 +15,10 @@
 /.next/
 /out/
 
+# optional CSD extraction script outputs (runtime uses lib/data/csdProcurementCatalog.ts)
+/csd_commodities.json
+/csd_commodities_categorized.json
+
 # production
 /build
 
