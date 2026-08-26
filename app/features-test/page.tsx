@@ -2,14 +2,9 @@
 
 import { useState } from 'react'
 import { 
-  BellIcon, 
   CloudArrowUpIcon, 
   ChartBarIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
-import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useAnalytics } from '@/hooks/useAnalytics'
 
 export default function FeaturesTestPage() {
@@ -19,7 +14,6 @@ export default function FeaturesTestPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
 
-  const pushNotifications = usePushNotifications()
   const analytics = useAnalytics()
 
   const handleFileUpload = async () => {
@@ -90,19 +84,6 @@ export default function FeaturesTestPage() {
     }
   }
 
-  const handlePushNotificationTest = async () => {
-    analytics.trackEvent({
-      action: 'push_notification_test',
-      category: 'notifications',
-    })
-
-    if (pushNotifications.permission === 'granted') {
-      await pushNotifications.sendTestNotification()
-    } else {
-      await pushNotifications.requestPermission()
-    }
-  }
-
   const handleAnalyticsTest = () => {
     analytics.trackEvent({
       action: 'analytics_test',
@@ -116,69 +97,16 @@ export default function FeaturesTestPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Advanced Features Test
           </h1>
           <p className="text-xl text-gray-600">
-            Test Push Notifications, File Processing, and Analytics
+            Test file processing and analytics (push notifications retired — Batch C)
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Push Notifications */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center mb-4">
-              <BellIcon className="h-8 w-8 text-blue-600 mr-3" />
-              <h3 className="text-xl font-semibold text-gray-900">Push Notifications</h3>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium">Support:</span>
-                {pushNotifications.isSupported ? (
-                  <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                ) : (
-                  <XCircleIcon className="h-5 w-5 text-red-500" />
-                )}
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium">Permission:</span>
-                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                  pushNotifications.permission === 'granted' 
-                    ? 'bg-green-100 text-green-800'
-                    : pushNotifications.permission === 'denied'
-                    ? 'bg-red-100 text-red-800'
-                    : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {pushNotifications.permission}
-                </span>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium">Token:</span>
-                <span className="text-xs text-gray-500 truncate">
-                  {pushNotifications.token ? 'Available' : 'Not available'}
-                </span>
-              </div>
-
-              <button
-                onClick={handlePushNotificationTest}
-                disabled={pushNotifications.isLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2 px-4 rounded-lg font-medium transition-colors"
-              >
-                {pushNotifications.isLoading ? 'Loading...' : 'Test Notification'}
-              </button>
-
-              {pushNotifications.error && (
-                <div className="text-red-600 text-sm">{pushNotifications.error}</div>
-              )}
-            </div>
-          </div>
-
-          {/* File Processing */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center mb-4">
               <CloudArrowUpIcon className="h-8 w-8 text-green-600 mr-3" />
@@ -244,7 +172,6 @@ export default function FeaturesTestPage() {
             </div>
           </div>
 
-          {/* Analytics */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center mb-4">
               <ChartBarIcon className="h-8 w-8 text-purple-600 mr-3" />
@@ -277,19 +204,9 @@ export default function FeaturesTestPage() {
           </div>
         </div>
 
-        {/* Status Overview */}
         <div className="mt-12 bg-white rounded-lg shadow-md p-6">
           <h3 className="text-xl font-semibold text-gray-900 mb-4">Feature Status</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-3">
-              <BellIcon className="h-6 w-6 text-blue-600" />
-              <div>
-                <p className="font-medium">Push Notifications</p>
-                <p className="text-sm text-gray-500">
-                  {pushNotifications.isSupported ? 'Supported' : 'Not Supported'}
-                </p>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center space-x-3">
               <CloudArrowUpIcon className="h-6 w-6 text-green-600" />
               <div>

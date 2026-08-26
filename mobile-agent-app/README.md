@@ -110,12 +110,5 @@ npm run mobile:agent:qa
 - [ ] Report submit  
 - [ ] Earnings + performance screens  
 - [ ] Offline queue (airplane mode → action → online sync)  
-- [ ] Push permission prompt (foundation)  
 
-## Play Store next steps
-
-1. Register `co.za.tenderbriefing.agent` in Google Play Console  
-2. Configure EAS production builds + signing  
-3. Add store listing, screenshots, data safety (location, camera, audio)  
-4. Wire FCM server key to backend push registration (`/api/push/register-token`)  
-5. Internal testing track → closed pilot → production  
+Push notifications were **retired** (Batch C). Native app does not request notification permission.

@@ -5,7 +5,6 @@ const { getFirestore } = require('../config/firebaseAdmin')
 const { sanitizeFirestoreData } = require('../utils/sanitizeFirestoreData')
 const notificationService = require('./notificationService')
 const { getStorage } = require('./storageAdapter')
-const pushNotificationService = require('./pushNotificationService')
 const { randomUUID } = require('crypto')
 const {
   DEFAULT_EXECUTION_BUDGET_MS,
@@ -105,29 +104,6 @@ async function executeEventNotifications(eventType, payload, channels) {
     const r = await notificationService.notify(notifyType, payload)
     results.push({ notifyType, results: r })
   }
-  if (channels.includes('push')) {
-    const recipients = new Set()
-    if (payload.smeId) recipients.add(payload.smeId)
-    if (payload.assignedAgentId) recipients.add(payload.assignedAgentId)
-    if (Array.isArray(payload.notifiedAgents)) {
-      for (const id of payload.notifiedAgents) recipients.add(id)
-    }
-    const copy = notificationService.notificationCopy
-      ? notificationService.notificationCopy(
-          NOTIFY_MAP[eventType]?.[0] || eventType,
-          payload
-        )
-      : { title: 'TenderBriefing', message: eventType.replace(/_/g, ' ') }
-    for (const userId of recipients) {
-      const pr = await pushNotificationService.sendPush({
-        userId,
-        title: copy.title,
-        body: copy.message,
-        data: { eventType, requestId: payload.id || payload.requestId },
-      })
-      results.push({ channel: 'push', userId, ...pr })
-    }
-  }
   return results
 }
 
@@ -149,12 +125,11 @@ async function handleReportUploaded(payload) {
   const notificationResults = await executeEventNotifications('report_uploaded', payload, [
     'whatsapp',
     'inbox',
-    'push',
   ])
   return { notificationResults, pdfMeta }
 }
 
-async function runEventHandler(eventType, payload, channels = ['whatsapp', 'inbox', 'push']) {
+async function runEventHandler(eventType, payload, channels = ['whatsapp', 'inbox']) {
   switch (eventType) {
     case 'report_uploaded':
       return handleReportUploaded(payload)
@@ -190,7 +165,7 @@ async function dispatchWorkflowEvent(eventType, payload = {}, options = {}) {
     completedAt: null,
     retryCount: existing?.retryCount || 0,
     error: null,
-    notificationChannels: options.channels || ['whatsapp', 'inbox', 'push'],
+    notificationChannels: options.channels || ['whatsapp', 'inbox'],
     recipients: options.recipients || [],
   })
 

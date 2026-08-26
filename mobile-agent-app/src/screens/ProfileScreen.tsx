@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { Alert, Linking, Text } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useAuth } from '../context/AuthContext'
-import { registerForPushNotifications } from '../services/push'
 import { getPendingCount } from '../offline/queue'
 import { Button, Card, Input, Screen, Title } from '../components/ui'
 import { colors } from '../theme/colors'
@@ -14,7 +13,6 @@ export default function ProfileScreen() {
   const [whatsapp, setWhatsapp] = useState('')
   const [province, setProvince] = useState('')
   const [pending, setPending] = useState(0)
-  const [pushToken, setPushToken] = useState<string | null>(null)
 
   useEffect(() => {
     AsyncStorage.getItem(PROFILE_KEY).then((raw) => {
@@ -25,7 +23,6 @@ export default function ProfileScreen() {
       }
     })
     getPendingCount().then(setPending)
-    registerForPushNotifications().then(setPushToken)
   }, [])
 
   const save = async () => {
@@ -60,9 +57,6 @@ export default function ProfileScreen() {
       ) : null}
       <Card>
         <Text style={{ color: colors.slate600 }}>Offline queue: {pending}</Text>
-        <Text style={{ color: colors.slate600, marginTop: 4 }}>
-          Push: {pushToken ? 'registered' : 'not registered'}
-        </Text>
       </Card>
       <Button title="Sign out" variant="danger" onPress={() => signOut()} />
     </Screen>

@@ -10,7 +10,7 @@ Never commit real secret values. Rotate via Google Secret Manager / hosting env.
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase web | prod | No | domain | build/runtime | Frontend | Auth broken |
 | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase web / JWT aud | prod | No | project id | build/runtime | Platform | Auth/API broken |
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Storage | prod | No | bucket | build/runtime | Frontend | Uploads fail |
-| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | FCM | optional | No | id | build/runtime | Frontend | Push degraded |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase web config (legacy FCM sender id in client SDK) | optional | No | id | build/runtime | Frontend | None — push retired |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase web | prod | No | id | build/runtime | Frontend | Auth broken |
 | `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` | Analytics | optional | No | G-… | - | Frontend | Analytics off |
 | `NEXT_PUBLIC_SITE_URL` | Canonical site / PayFast URLs | prod | No | `https://www.tenderbriefing.co.za` | Y | Platform | Wrong return URLs |

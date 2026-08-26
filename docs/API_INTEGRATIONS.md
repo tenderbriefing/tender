@@ -87,19 +87,16 @@ curl -sS http://localhost:3000/api/integrations/health | jq '.summary,.integrati
 
 ---
 
-## 4. Firebase Cloud Messaging (FCM)
+## 4. Push notifications (retired)
 
-**Purpose:** Push notifications to browser/mobile clients.
+**Status:** **Retired** (Batch C, 2026-08). Do not configure FCM for TenderBriefing.
 
 | Item | Value |
 |------|--------|
-| **Env** | `FCM_SERVER_KEY` (legacy) or Firebase Admin via service account |
-| **Service** | `backend/services/integrations/fcmService.js` |
-| **Firestore** | `users/{uid}.deviceTokens` (array of strings) |
-
-**Setup:** Firebase Console → Project settings → Cloud Messaging. For web, set `NEXT_PUBLIC_FIREBASE_VAPID_KEY` in client config.
-
-**Method:** `sendPushNotification({ userId, title, body, data })`
+| **Supported channels** | In-app inbox, Resend email, WhatsApp (fail-closed) |
+| **Legacy routes** | `POST /api/push-notifications/send`, `POST /api/push-notifications/subscribe`, `POST /api/push/register-token` → **410 Gone** (`PUSH_NOTIFICATIONS_RETIRED`) |
+| **Historical data** | `users/{uid}.deviceTokens` may exist — **read-only**; no new writes |
+| **Doc** | `docs/operations/PUSH_NOTIFICATIONS_RETIRED.md` |
 
 ---
 
@@ -293,7 +290,6 @@ backend/services/integrations/
   whatsappService.js
   firebaseStorageService.js
   mapsService.js
-  fcmService.js
   payfastService.js
   analyticsService.js
   openaiService.js

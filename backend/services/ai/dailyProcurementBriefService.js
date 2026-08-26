@@ -151,7 +151,7 @@ async function runDailyProcurementBrief(options = {}) {
     job: 'daily_procurement_brief',
     smeBriefs,
     agentBriefs,
-    channels: ['dashboard', 'whatsapp', 'push', 'email'],
+    channels: ['dashboard', 'whatsapp', 'email'],
     generatedAt: nowIso(),
     batch: { offset, batchSize, hasMore },
     aiProvider: 'rule-based',

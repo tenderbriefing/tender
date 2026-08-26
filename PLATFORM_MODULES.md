@@ -16,7 +16,7 @@ Standalone procurement intelligence and briefing operations platform (no RFQ Ass
 | `documentExtractionService.js` | PDF/text enrichment for briefing terms |
 | `aiSummaryService.js` | OpenAI or rule-based summaries |
 | `opportunityScoringService.js` | 0–100 opportunity score |
-| `notificationService.js` | Email/WhatsApp/push-ready events |
+| `notificationService.js` | Email/WhatsApp/in-app notification events |
 | `agentAssignmentService.js` | SME requests, agent accept/decline, reports |
 | `auditLogService.js` | JSONL logs in `backend/logs/` |
 | `tenderHistoryService.js` | Field-level change tracking |

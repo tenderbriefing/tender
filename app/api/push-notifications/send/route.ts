@@ -1,20 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin, isGuardResponse } from '@/lib/auth/apiGuards'
+import { NextResponse } from 'next/server'
 
-/**
- * Push send is not production-ready (previously used a placeholder FCM token).
- * Return 501 until a real token lookup + send path is implemented.
- */
-export async function POST(request: NextRequest) {
-  const guard = await requireAdmin(request)
-  if (isGuardResponse(guard)) return guard
+export const dynamic = 'force-dynamic'
 
+/** Push notifications retired — Batch C (2026-08). Use in-app, email, or WhatsApp. */
+export async function POST() {
   return NextResponse.json(
     {
       success: false,
-      error: 'Push notification send is not implemented. FCM token lookup required.',
-      code: 'PUSH_SEND_NOT_IMPLEMENTED',
+      error: {
+        code: 'PUSH_NOTIFICATIONS_RETIRED',
+        message: 'Push notifications are retired. Use in-app notifications, email, or WhatsApp.',
+      },
     },
-    { status: 501 }
+    { status: 410 }
   )
 }

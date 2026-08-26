@@ -212,6 +212,6 @@ npm run lint
 npm run build
 ```
 
-## Push (foundation)
+## Push notifications (retired)
 
-`POST /api/push/register-token` — stores FCM tokens on `users/{uid}.deviceTokens`.
+Push notifications were **retired** in Batch C (2026-08). Supported channels: **in-app inbox**, **Resend email**, **WhatsApp** (fail-closed when not configured). Legacy routes return **410 Gone** with code `PUSH_NOTIFICATIONS_RETIRED`. See `docs/operations/PUSH_NOTIFICATIONS_RETIRED.md`.

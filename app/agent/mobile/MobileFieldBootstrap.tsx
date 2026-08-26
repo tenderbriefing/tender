@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react'
 import { useAuth } from '@/components/providers/AuthProvider'
-import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { mobilePost } from '@/lib/mobile/mobileApi'
 import { setMobileSessionId } from '@/lib/mobile/telemetry'
 import { flushOfflineQueue } from '@/lib/mobile/syncService'
@@ -11,7 +10,6 @@ import { pingLocation, trackMobileEvent } from '@/lib/mobile/telemetry'
 
 export default function MobileFieldBootstrap({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
-  const push = usePushNotifications()
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -36,9 +34,6 @@ export default function MobileFieldBootstrap({ children }: { children: React.Rea
         /* non-blocking */
       }
       flushOfflineQueue()
-      if (push.isSupported && push.permission === 'default') {
-        push.requestPermission()
-      }
     })()
 
     pingTimer = setInterval(() => {

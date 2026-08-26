@@ -1,19 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { ensureRouteAccess, isAccessDenied } from '@/lib/auth/ensureRouteAccess'
+import { NextResponse } from 'next/server'
 
-/**
- * Topic subscribe was a fake-success stub. Fail closed until Admin SDK subscribe is wired.
- */
-export async function POST(request: NextRequest) {
-  const access = await ensureRouteAccess(request)
-  if (isAccessDenied(access)) return access
+export const dynamic = 'force-dynamic'
 
+/** Push topic subscribe retired — Batch C (2026-08). */
+export async function POST() {
   return NextResponse.json(
     {
       success: false,
-      error: 'Push topic subscribe is not implemented.',
-      code: 'PUSH_SUBSCRIBE_NOT_IMPLEMENTED',
+      error: {
+        code: 'PUSH_NOTIFICATIONS_RETIRED',
+        message: 'Push notifications are retired.',
+      },
     },
-    { status: 501 }
+    { status: 410 }
   )
 }

@@ -41,13 +41,6 @@
           "cameraPermission": "Allow TenderBriefing Agent to use the camera for field proof."
         }
       ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/icon.png",
-          "color": "#16a34a"
-        }
-      ],
       "expo-asset"
     ],
     "extra": {
