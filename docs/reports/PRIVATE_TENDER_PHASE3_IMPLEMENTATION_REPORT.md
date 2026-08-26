@@ -23,11 +23,11 @@ Phase 3 connects published private physical briefings to the existing R349 Youth
 
 ## 4. Final SHA
 
-`25f5be8fecc7e4674bcba33439a64dcb9d112945`
+`e4a9153bb15ecaf5776810dae2f10be4dba564d1`
 
 ## 5. PR
 
-_(filled after `gh pr create`)_
+https://github.com/tenderbriefing/tender/pull/64
 
 ## 6. Architecture summary
 
