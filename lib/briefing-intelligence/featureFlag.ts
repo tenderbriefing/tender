@@ -22,7 +22,21 @@ export function isBriefingAiReportGenerationEnabled(
   return v === '1' || v === 'true' || v === 'yes' || v === 'on'
 }
 
+/**
+ * Feature flag: hybrid long-audio chunking (ffmpeg + sequential Whisper).
+ * Fail-closed: requires BRIEFING_AUDIO_TRANSCRIPTION_ENABLED.
+ */
+export function isBriefingAudioChunkingEnabled(
+  raw: string | undefined | null = process.env.BRIEFING_AUDIO_CHUNKING_ENABLED
+): boolean {
+  if (!isBriefingAudioTranscriptionEnabled()) return false
+  if (raw == null) return false
+  const v = String(raw).trim().toLowerCase()
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on'
+}
+
 export const BRIEFING_AUDIO_TRANSCRIPTION_FLAG_KEY = 'briefing_audio_transcription' as const
+export const BRIEFING_AUDIO_CHUNKING_FLAG_KEY = 'briefing_audio_chunking' as const
 export const BRIEFING_AI_REPORT_GENERATION_FLAG_KEY = 'briefing_ai_report_generation' as const
 
 export const TRANSCRIPTION_MAX_ATTEMPTS = 3

@@ -86,7 +86,21 @@ export async function POST(request: NextRequest) {
       reportId: job.reportId,
       skipped: Boolean(result.skipped),
       transcriptId: result.transcriptId || null,
+      needsContinuation: Boolean(result.needsContinuation),
     })
+
+    if (result.needsContinuation) {
+      const { enqueueTranscriptionWorker } = await import(
+        '@/lib/briefing-intelligence/enqueueTranscription'
+      )
+      void enqueueTranscriptionWorker({
+        jobId: job.id,
+        reportId: job.reportId,
+        requestId: job.requestId,
+        tenderId: job.tenderId,
+      })
+    }
+
     return NextResponse.json({ success: true, data: result })
   }
 
