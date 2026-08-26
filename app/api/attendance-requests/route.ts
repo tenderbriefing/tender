@@ -93,6 +93,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Phase 3A: physical briefing booking enrichment is flag-gated; public bookings remain available.
+    const { isPrivateTenderBriefingBookingEnabled } = await import(
+      '@/lib/privateTenders/briefingOpsFlags'
+    )
+    const { isPhysicalBriefingBookable } = await import('@/lib/privateTenders/briefingFields')
+    const { buildPrivateTenderBookingSnapshot } = await import(
+      '@/lib/privateTenders/privateBookingSnapshot'
+    )
+    const bookingSnapshot = buildPrivateTenderBookingSnapshot(
+      tender as unknown as Record<string, unknown>
+    )
+    if (
+      isPrivateTenderBriefingBookingEnabled() &&
+      bookingSnapshot.source === 'private_tender' &&
+      tender &&
+      !isPhysicalBriefingBookable(tender as unknown as Record<string, unknown>)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Youth Agent booking applies to physical compulsory briefings. This private tender does not have a bookable physical briefing.',
+          code: 'BRIEFING_NOT_PHYSICAL',
+        },
+        { status: 400 }
+      )
+    }
+
     if (tender?.visibility === 'private') {
       const { smeHasPrivateBookAccess } = await import(
         '@/lib/security/privateTenderInvite'
@@ -126,26 +154,73 @@ export async function POST(request: NextRequest) {
     const result = await agentService.createRequest(
       {
         tenderId: body.tenderId,
-        tenderNumber: tender?.tenderNumber,
-        tenderTitle: tender?.title || body.tenderTitle,
+        tenderNumber: tender?.tenderNumber || bookingSnapshot.tenderNumber,
+        tenderTitle: tender?.title || body.tenderTitle || bookingSnapshot.tenderTitle,
         department: tender?.department,
         smeId: user.uid,
         smeName: user.displayName || body.smeName,
         smeCompany: user.companyName || body.smeCompany,
         smeEmail: user.email,
         smePhone: body.smePhone,
-        province: tender?.province || body.province,
-        briefingVenue: tender?.briefingVenue || body.briefingVenue,
-        briefingDate: tender?.briefingDate || body.briefingDate,
-        briefingTime: tender?.briefingTime || body.briefingTime,
+        province: tender?.province || body.province || bookingSnapshot.briefingSnapshot?.briefingProvince,
+        briefingVenue: tender?.briefingVenue || body.briefingVenue || bookingSnapshot.briefingSnapshot?.briefingVenue,
+        briefingDate: tender?.briefingDate || body.briefingDate || bookingSnapshot.briefingSnapshot?.briefingDate,
+        briefingTime:
+          tender?.briefingTime ||
+          body.briefingTime ||
+          bookingSnapshot.briefingSnapshot?.briefingStartTime,
         notes: body.notes,
         responsibilityAcknowledged: body.responsibilityAcknowledged === true,
         latitude: body.latitude,
         longitude: body.longitude,
         radiusKm: body.radiusKm,
+        // Phase 3A immutable private-tender linkage + pricing snapshot
+        source: bookingSnapshot.source,
+        privateTenderId: bookingSnapshot.privateTenderId,
+        privateSubmissionId: bookingSnapshot.privateSubmissionId,
+        organisationId: bookingSnapshot.organisationId,
+        briefingSnapshot: bookingSnapshot.briefingSnapshot,
+        briefingPriceCents: bookingSnapshot.briefingPriceCents,
+        paymentAmount: bookingSnapshot.paymentAmount,
+        quotedFee: bookingSnapshot.quotedFee,
+        currency: bookingSnapshot.currency,
+        pricingVersion: bookingSnapshot.pricingVersion,
       },
       agents
     )
+
+    // Durable product + private audit events (fail-soft)
+    try {
+      if (bookingSnapshot.source === 'private_tender' && isPrivateTenderBriefingBookingEnabled()) {
+        const events = require('../../../backend/services/productEventService.js')
+        if (typeof events.ingestProductEvent === 'function') {
+          await events.ingestProductEvent({
+            name: 'private_tender_briefing_booked',
+            uid: user.uid,
+            metadata: {
+              attendanceRequestId: result.request.id,
+              privateTenderId: bookingSnapshot.privateTenderId,
+              privateSubmissionId: bookingSnapshot.privateSubmissionId,
+            },
+          })
+        }
+        const { writeAuditEvent } = require('../../../backend/services/privateTenderAuditService.js')
+        await writeAuditEvent({
+          submissionId: bookingSnapshot.privateSubmissionId || bookingSnapshot.privateTenderId,
+          organisationId: bookingSnapshot.organisationId,
+          actorUid: user.uid,
+          actorType: 'sme',
+          eventType: 'private_tender_briefing_booking_created',
+          metadata: {
+            attendanceRequestId: result.request.id,
+            briefingPriceCents: bookingSnapshot.briefingPriceCents,
+            pricingVersion: bookingSnapshot.pricingVersion,
+          },
+        })
+      }
+    } catch {
+      /* fail-soft */
+    }
 
     const origin =
       request.headers.get('origin') ||

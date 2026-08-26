@@ -7,6 +7,13 @@ import type {
   StructuredMeetingMinutesReport,
 } from './meetingMinutesTypes'
 import { stripSpeakerLabels } from './meetingMinutesTypes'
+import {
+  attachV2SectionsIfEnabled,
+  BRIEFING_INTELLIGENCE_V2_OUTPUT_SCHEMA,
+  BRIEFING_INTELLIGENCE_V2_PROMPT_VERSION,
+  briefingIntelligenceV2SystemGuidance,
+} from './briefingIntelligenceV2'
+import { isBriefingIntelligenceV2Enabled } from '@/lib/privateTenders/briefingOpsFlags'
 
 export type BriefingSummaryInput = {
   reportId: string
@@ -191,11 +198,19 @@ function validateAndNormalize(raw: any, input: BriefingSummaryInput): BriefingSu
     throw new Error('Meeting minutes contained speaker labels — rejected')
   }
 
+  let promptVersion = briefingReportPromptVersion()
+  let finalStructured = structuredReport
+  const withV2 = attachV2SectionsIfEnabled(structuredReport as Record<string, unknown>, raw)
+  if (withV2.briefingIntelligenceV2) {
+    finalStructured = withV2 as typeof structuredReport
+    promptVersion = `${promptVersion}+${BRIEFING_INTELLIGENCE_V2_PROMPT_VERSION}`
+  }
+
   return {
     summary,
-    structuredReport,
+    structuredReport: finalStructured,
     model: process.env.BRIEFING_INTELLIGENCE_EXTRACT_MODEL || 'gpt-4o',
-    promptVersion: briefingReportPromptVersion(),
+    promptVersion,
     provider: 'openai',
   }
 }
@@ -223,7 +238,11 @@ export class OpenAIBriefingSummaryService implements BriefingSummaryService {
       'Official metadata fields (tender number, department, briefing date/venue, closing date/time) are authoritative — do not contradict them.',
       'Never include speaker labels, confidence scores, AI commentary, or internal processing metadata in the output.',
       'Return STRICT JSON only.',
-    ].join(' ')
+    ]
+    // Phase 3E — append v2 guidance only when flag is enabled (fail-closed).
+    const v2Guidance = briefingIntelligenceV2SystemGuidance()
+    if (v2Guidance) system.push(v2Guidance)
+    const systemPrompt = system.filter(Boolean).join(' ')
 
     const user = {
       officialMetadata: input.officialMetadata,
@@ -264,6 +283,9 @@ export class OpenAIBriefingSummaryService implements BriefingSummaryService {
             startSeconds: 'number|null',
           },
         ],
+        ...(isBriefingIntelligenceV2Enabled()
+          ? { briefingIntelligenceV2: BRIEFING_INTELLIGENCE_V2_OUTPUT_SCHEMA }
+          : {}),
       },
     }
 
@@ -279,7 +301,7 @@ export class OpenAIBriefingSummaryService implements BriefingSummaryService {
         max_tokens: 3500,
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: system },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: JSON.stringify(user) },
         ],
       }),

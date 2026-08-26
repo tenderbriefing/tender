@@ -81,6 +81,8 @@ export type StructuredMeetingMinutesReport = {
   provenance: ProvenanceRef[]
   /** Internal only — do not show in client PDF */
   documentComparisonStatus: 'full' | 'metadata_only' | 'unavailable'
+  /** Phase 3E — present when BRIEFING_INTELLIGENCE_V2_ENABLED */
+  briefingIntelligenceV2?: import('./briefingIntelligenceV2').BriefingIntelligenceV2Sections
 }
 
 export type BriefingReportJobStatus =

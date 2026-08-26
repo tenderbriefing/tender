@@ -153,6 +153,12 @@ export interface AttendanceRequest {
   reportDeliveredAt?: string | null
   reportSlaStatus?: 'pending' | 'submitted' | 'overdue' | 'unknown' | string | null
   reportSlaFallback?: string | null
+  /** Phase 3A — booking source + private tender linkage */
+  source?: 'private_tender' | 'public_tender' | 'other' | string | null
+  privateTenderId?: string | null
+  privateSubmissionId?: string | null
+  organisationId?: string | null
+  briefingSnapshot?: Record<string, unknown> | null
 }
 
 export interface BriefingReport {

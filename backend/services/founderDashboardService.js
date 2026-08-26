@@ -421,22 +421,65 @@ async function loadPayoutEarningsByAgent(limit = 500) {
   return map
 }
 
+function buildBriefingPipelineKpis(requests, reportsByRequestId = new Map(), nowMs = Date.now()) {
+  const paidUnassigned = requests.filter(
+    (r) => isPaidBooking(r) && r.status === 'pending' && !assignedAgentId(r)
+  ).length
+  const evidenceOutstanding = requests.filter((r) => {
+    if (!isPaidBooking(r) || !assignedAgentId(r)) return false
+    const report = reportsByRequestId.get(r.id)
+    const status = String(report?.status || '')
+    return !report || ['pending', 'awaiting_evidence'].includes(status)
+  }).length
+  const aiAwaitingFounderReview = [...reportsByRequestId.values()].filter((rep) =>
+    ['draft_ready', 'awaiting_founder_review', 'pending_approval', 'agent_reviewed'].includes(
+      String(rep.status || '')
+    )
+  ).length
+  const approvedAwaitingDelivery = [...reportsByRequestId.values()].filter((rep) => {
+    const s = String(rep.status || '')
+    return s === 'approved' || (s === 'finalized' && !rep.deliveredAt)
+  }).length
+  const privateSourceCount = requests.filter(
+    (r) => r.source === 'private_tender' || r.privateTenderId
+  ).length
+  return {
+    paidUnassigned,
+    evidenceOutstanding,
+    aiAwaitingFounderReview,
+    approvedAwaitingDelivery,
+    privateSourceCount,
+    upcomingBriefings: requests.filter((r) => isUpcomingPaid(r, nowMs)).length,
+  }
+}
+
 function buildBriefingRows(requests) {
   return requests.map((r) => {
     const life = presentationalLifecycle(r)
     const cents = isPaidBooking(r) ? paidAmountCents(r) : paidAmountCents(r)
+    const snap = r.briefingSnapshot && typeof r.briefingSnapshot === 'object' ? r.briefingSnapshot : {}
     return {
       id: r.id,
       sme: String(r.smeCompany || r.smeName || r.smeId || '—'),
       tender: String(r.tenderTitle || r.tenderNumber || r.tenderId || '—'),
-      briefingDate: toIso(r.briefingDate),
+      tenderNumber: String(r.tenderNumber || ''),
+      procuringOrganisation: String(r.department || r.organisationId || '—'),
+      briefingDate: toIso(r.briefingDate || snap.briefingDate),
+      briefingTime: String(r.briefingTime || snap.briefingStartTime || ''),
+      venue: String(r.briefingVenue || snap.briefingVenue || ''),
+      province: String(r.province || snap.briefingProvince || ''),
       amountCents: cents,
+      paymentStatus: String(r.paymentStatus || 'pending'),
       youthAgent: assignedAgentId(r)
         ? String(r.agentName || assignedAgentId(r))
         : null,
+      assignmentStatus: assignedAgentId(r) ? 'assigned' : 'unassigned',
       status: String(r.status || 'pending'),
       lifecycle: life.key,
       lifecycleLabel: life.label,
+      source: String(r.source || (r.privateTenderId ? 'private_tender' : 'public_tender')),
+      privateTenderId: r.privateTenderId || null,
+      organisationId: r.organisationId || null,
     }
   })
 }
@@ -523,6 +566,8 @@ async function loadOverview(period, nowMs) {
       revenueCents: kpis.revenueCents,
       upcomingBriefings: kpis.upcomingBriefings,
       completedBriefings: kpis.completedBriefings,
+      // Phase 3B/ops — pipeline visibility (additive)
+      ...buildBriefingPipelineKpis(requests, reportsByRequestId, nowMs),
     },
     activity: buildActivitySeries({ smeRegs, yaRegs, paidAtList, period, nowMs }),
     needsAttention: buildNeedsAttention(requests, reportsByRequestId),
@@ -698,6 +743,7 @@ module.exports = {
   buildSmeRows,
   buildAgentRows,
   buildBriefingRows,
+  buildBriefingPipelineKpis,
   buildActivitySeries,
   getFounderDashboard,
   resetFounderDashboardCacheForTests,

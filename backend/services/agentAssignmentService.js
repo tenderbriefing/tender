@@ -239,6 +239,7 @@ async function assignRequestToAgent(requestId, agent, { byAdmin = false } = {}) 
     throw new Error('Request already assigned to another agent')
   }
 
+  const previousAgentId = request.assignedAgentId || request.agentId || null
   const now = new Date().toISOString()
   const transitioned = applyWorkflowTransition(request, 'assigned', {
     role,
@@ -310,6 +311,21 @@ async function assignRequestToAgent(requestId, agent, { byAdmin = false } = {}) 
       '[agentAssignment] transactional email failed:',
       err instanceof Error ? err.message.slice(0, 160) : 'unknown'
     )
+  }
+
+  if (byAdmin && previousAgentId && previousAgentId !== agent.id) {
+    try {
+      const lifeNotify = require('./briefingLifecycleNotificationService')
+      await lifeNotify.notifyAssignmentChangedSafe({
+        requestId: transitioned.id,
+        previousAgentId,
+        agentId: agent.id,
+        tenderTitle: transitioned.tenderTitle,
+        tenderNumber: transitioned.tenderNumber,
+      })
+    } catch {
+      /* fail-soft */
+    }
   }
 
   return transitioned

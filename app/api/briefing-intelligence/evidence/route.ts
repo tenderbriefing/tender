@@ -254,6 +254,29 @@ export async function POST(request: NextRequest) {
     status: 'evidence_uploaded',
     briefingRunId: reportId,
     evidenceSubmittedAt,
+    // Phase 3D — evidence integrity metadata (no GPS/biometric surveillance)
+    evidenceIntegrity: {
+      submittedAt: evidenceSubmittedAt,
+      briefingDate: String((req as { briefingDate?: string })?.briefingDate || '') || null,
+      uploadActorUid: agentId,
+      sourceRequestId: requestId,
+      agentNote: agentObservations?.shortNote || null,
+      attendanceContext: {
+        arrivalTime: agentObservations?.arrivalTime || null,
+        briefingStartTime: agentObservations?.briefingStartTime || null,
+        briefingEndTime: agentObservations?.briefingEndTime || null,
+        approxAttendees: agentObservations?.approxAttendees ?? null,
+      },
+      files: {
+        audio: {
+          fileName: audioFile.name || null,
+          sizeBytes: audioFile.size || null,
+          contentType: audioFile.type || null,
+          storagePath: audioPath,
+        },
+        attendanceProofCount: attendanceEvidenceRefs.length,
+      },
+    },
     processingStartedAt: null,
     draftReadyAt: null,
     agentReviewedAt: null,
@@ -337,6 +360,18 @@ export async function POST(request: NextRequest) {
       attendanceFileCount: attendanceEvidenceRefs.length,
     },
   })
+
+  try {
+    const lifeNotify = require('../../../../../backend/services/briefingLifecycleNotificationService')
+    await lifeNotify.notifyEvidenceSubmittedSafe({
+      reportId,
+      requestId,
+      tenderTitle: (req as { tenderTitle?: string })?.tenderTitle,
+      tenderNumber: (req as { tenderNumber?: string })?.tenderNumber,
+    })
+  } catch {
+    /* fail-soft */
+  }
 
   // Async transcription: create job + enqueue worker (never blocks on Whisper).
   let transcriptionJobId: string | null = null

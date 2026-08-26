@@ -79,6 +79,29 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // Defense-in-depth: when AI report generation is enabled, require Founder approval stamp.
+  try {
+    const { isBriefingAiReportGenerationEnabled } = await import(
+      '@/lib/briefing-intelligence/featureFlag'
+    )
+    if (
+      isBriefingAiReportGenerationEnabled() &&
+      (report as { reportGenerationStatus?: string }).reportGenerationStatus &&
+      (report as { reportGenerationStatus?: string }).reportGenerationStatus !== 'approved'
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Founder approval required before SME delivery',
+          code: 'FOUNDER_APPROVAL_REQUIRED',
+        },
+        { status: 409 }
+      )
+    }
+  } catch {
+    /* if flag helper missing, status===final already gates deliver */
+  }
+
   const now = nowIso()
   const bucket = admin.storage().bucket()
   const pdfPath = `briefing-intelligence/${reportId}/pdf/${reportId}.pdf`
