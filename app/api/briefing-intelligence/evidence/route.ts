@@ -361,6 +361,18 @@ export async function POST(request: NextRequest) {
     },
   })
 
+  try {
+    const lifeNotify = require('../../../../../backend/services/briefingLifecycleNotificationService')
+    await lifeNotify.notifyEvidenceSubmittedSafe({
+      reportId,
+      requestId,
+      tenderTitle: (req as { tenderTitle?: string })?.tenderTitle,
+      tenderNumber: (req as { tenderNumber?: string })?.tenderNumber,
+    })
+  } catch {
+    /* fail-soft */
+  }
+
   // Async transcription: create job + enqueue worker (never blocks on Whisper).
   let transcriptionJobId: string | null = null
   try {

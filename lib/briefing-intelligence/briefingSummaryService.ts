@@ -9,9 +9,11 @@ import type {
 import { stripSpeakerLabels } from './meetingMinutesTypes'
 import {
   attachV2SectionsIfEnabled,
+  BRIEFING_INTELLIGENCE_V2_OUTPUT_SCHEMA,
   BRIEFING_INTELLIGENCE_V2_PROMPT_VERSION,
   briefingIntelligenceV2SystemGuidance,
 } from './briefingIntelligenceV2'
+import { isBriefingIntelligenceV2Enabled } from '@/lib/privateTenders/briefingOpsFlags'
 
 export type BriefingSummaryInput = {
   reportId: string
@@ -281,6 +283,9 @@ export class OpenAIBriefingSummaryService implements BriefingSummaryService {
             startSeconds: 'number|null',
           },
         ],
+        ...(isBriefingIntelligenceV2Enabled()
+          ? { briefingIntelligenceV2: BRIEFING_INTELLIGENCE_V2_OUTPUT_SCHEMA }
+          : {}),
       },
     }
 

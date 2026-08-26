@@ -241,6 +241,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
       nextStatus: 'final',
       meta: { versionId: version.id, briefingRunId: reportId },
     })
+    try {
+      const lifeNotify = require('../../../../../../backend/services/briefingLifecycleNotificationService')
+      await lifeNotify.notifyReportApprovedSafe({
+        reportId,
+        requestId: report.requestId,
+      })
+    } catch {
+      /* fail-soft */
+    }
   }
 
   return NextResponse.json({

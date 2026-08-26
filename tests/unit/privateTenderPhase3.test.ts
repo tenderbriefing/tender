@@ -19,6 +19,7 @@ import {
   normalizeBriefingIntelligenceV2,
   emptyBriefingIntelligenceV2,
   BRIEFING_INTELLIGENCE_V2_PROMPT_VERSION,
+  attachV2SectionsIfEnabled,
 } from '@/lib/briefing-intelligence/briefingIntelligenceV2'
 import { BRIEFING_PRICE_CENTS, PRICING_VERSION } from '@/lib/domain/briefingPricing'
 
@@ -141,7 +142,9 @@ describe('Phase 3 AI briefing intelligence v2', () => {
   it('normalizes v2 sections without fabricating', () => {
     const empty = emptyBriefingIntelligenceV2()
     expect(empty.tenderInformation).toEqual([])
+    expect(empty.executiveSummary).toBe('')
     const v2 = normalizeBriefingIntelligenceV2({
+      executiveSummary: 'Hard hats required on site',
       tenderInformation: ['Closing date in tender pack'],
       briefingSpecificInformation: ['Site visit emphasised'],
       amendmentsOrChanges: [
@@ -153,10 +156,26 @@ describe('Phase 3 AI briefing intelligence v2', () => {
       ],
       questionsAndAnswers: [{ question: 'Is JV allowed?', answer: 'Yes with letter' }],
       risksOrUncertainties: ['Audio unclear on insurance amount'],
+      recommendedSmeActions: ['Confirm Form A notarisation'],
     })
     expect(v2.briefingSpecificInformation[0]).toMatch(/Site visit/)
     expect(v2.amendmentsOrChanges[0].bidderImplication).toMatch(/notary/)
+    expect(v2.recommendedSmeActions[0]).toMatch(/Form A/)
     expect(BRIEFING_INTELLIGENCE_V2_PROMPT_VERSION).toMatch(/v2/)
+  })
+
+  it('attachV2 never pollutes from raw v1 blob', () => {
+    process.env.BRIEFING_INTELLIGENCE_V2_ENABLED = 'true'
+    const attached = attachV2SectionsIfEnabled(
+      { purposeOfBriefing: 'Session purpose' },
+      {
+        purposeOfBriefing: 'Session purpose',
+        questionsAndClarifications: [{ heading: 'Q', summary: 'A' }],
+      }
+    )
+    expect(attached.briefingIntelligenceV2?.clarityNotes.join(' ')).toMatch(/not returned/)
+    expect(attached.briefingIntelligenceV2?.questionsAndAnswers).toEqual([])
+    delete process.env.BRIEFING_INTELLIGENCE_V2_ENABLED
   })
 })
 

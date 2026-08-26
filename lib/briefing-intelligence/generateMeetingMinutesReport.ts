@@ -342,6 +342,17 @@ export async function generateMeetingMinutesReport(params: {
 
     const readyAt = nowIso()
     const qualityWarnings = [...(tq.warnings || []), ...(gate.warnings || [])]
+    try {
+      const { assessBriefingIntelligenceV2Quality } = await import(
+        '@/lib/briefing-intelligence/briefingIntelligenceV2'
+      )
+      const v2q = assessBriefingIntelligenceV2Quality(
+        (result.structuredReport as { briefingIntelligenceV2?: any })?.briefingIntelligenceV2
+      )
+      qualityWarnings.push(...v2q.warnings)
+    } catch {
+      /* optional */
+    }
     await docRef.set(
       {
         briefingRunId,
@@ -403,6 +414,21 @@ export async function generateMeetingMinutesReport(params: {
         briefingRunId,
       },
     })
+
+    try {
+      const lifeNotify = require('../../backend/services/briefingLifecycleNotificationService')
+      await lifeNotify.notifyDraftReadySafe({
+        reportId,
+        requestId: report.requestId,
+        tenderTitle: (report as { tenderTitle?: string }).tenderTitle,
+        version: versionRecord.version,
+        detail: qualityWarnings.length
+          ? `Draft ready with ${qualityWarnings.length} quality warning(s) for Founder review.`
+          : `Version ${versionRecord.version} awaiting Founder approval.`,
+      })
+    } catch {
+      /* fail-soft */
+    }
 
     logBriefingPipeline({
       briefingRunId,
@@ -496,6 +522,20 @@ export async function generateMeetingMinutesReport(params: {
       error: message,
       meta: { phase: 'report_generation', jobId, briefingRunId, errorCategory: category },
     })
+
+    try {
+      const lifeNotify = require('../../backend/services/briefingLifecycleNotificationService')
+      await lifeNotify.notifyAiFailureSafe({
+        reportId,
+        requestId: report.requestId,
+        attempt: claimed?.attempts || existingJob?.attempts || 1,
+        detail: `${category || 'error'}: ${String(message).slice(0, 180)}`,
+        smeSafeDetail:
+          'Briefing report generation needs operational retry. Evidence and Youth Agent eligibility are preserved.',
+      })
+    } catch {
+      /* fail-soft */
+    }
 
     logBriefingPipeline({
       briefingRunId,

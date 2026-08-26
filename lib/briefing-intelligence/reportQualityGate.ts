@@ -14,6 +14,7 @@ export type OfficialMetadataGate = {
   briefingDate: string
   briefingVenue: string
   closingDate: string | null
+  closingTime?: string | null
 }
 
 export type ReportQualityGateResult =
@@ -146,5 +147,6 @@ export function applyAuthoritativeTenderFields(
       briefingVenue: official.briefingVenue || report.cover.briefingVenue,
     },
     closingDate: official.closingDate ?? report.closingDate,
+    closingTime: official.closingTime ?? report.closingTime,
   }
 }

@@ -7,9 +7,10 @@ const { sanitizeFirestoreData } = require('../utils/sanitizeFirestoreData')
 
 const COLLECTION = 'briefingFollowUpUpdates'
 
-const UPDATE_TYPES = new Set([
+  const UPDATE_TYPES = new Set([
   'correction',
   'clarification',
+  'clarification_request',
   'site_visit_instruction',
   'revised_closing_date',
   'follow_up_note',
@@ -101,6 +102,17 @@ async function createFollowUpUpdate(input = {}, meta = {}, deps = {}) {
     /* fail-soft */
   }
 
+  try {
+    const lifeNotify = require('./briefingLifecycleNotificationService')
+    if (record.createdByType === 'sme' || updateType === 'clarification_request') {
+      await lifeNotify.notifyClarificationRequestedSafe(record)
+    } else {
+      await lifeNotify.notifyClarificationResponseSafe(record)
+    }
+  } catch {
+    /* fail-soft */
+  }
+
   return record
 }
 
@@ -157,6 +169,44 @@ async function reviewFollowUpUpdate(id, action, meta = {}, deps = {}) {
     )
   } catch {
     /* fail-soft */
+  }
+
+  if (action === 'approve') {
+    try {
+      const lifeNotify = require('./briefingLifecycleNotificationService')
+      await lifeNotify.notifyFounderOpsSafe(
+        lifeNotify.buildOpsSummary({
+          eventType: 'clarification_resolved',
+          headline: 'Clarification resolved / delivered',
+          subject: `[Resolved] ${current.title || id}`,
+          entityId: id,
+          requestId: current.briefingRequestId,
+          tenderTitle: current.title,
+          detail: 'Approved clarification is available to the SME as a subsequent update.',
+          idempotencyKey: lifeNotify.IdempotencyKeys.clarificationResolved(id),
+        })
+      )
+      const txEmail = require('./transactionalEmailService')
+      let request = {}
+      if (current.briefingRequestId) {
+        try {
+          const { getStorage } = require('./storageAdapter')
+          request = (await getStorage().getAttendanceRequestById?.(current.briefingRequestId)) || {}
+          if (!request?.id) {
+            const all = await getStorage().getAttendanceRequests({})
+            request = (all || []).find((r) => r.id === current.briefingRequestId) || {}
+          }
+        } catch {
+          request = { smeId: current.smeId, id: current.briefingRequestId }
+        }
+      }
+      await txEmail.sendSmeClarificationAvailableEmailSafe(
+        { ...current, ...patch },
+        { ...request, smeId: current.smeId || request.smeId }
+      )
+    } catch {
+      /* fail-soft */
+    }
   }
 
   return { ...current, ...patch }

@@ -320,6 +320,16 @@ export async function processBriefingIntelligenceReport(params: {
         tenderId: report.tenderId,
       })
 
+      try {
+        const lifeNotify = require('../../backend/services/briefingLifecycleNotificationService')
+        await lifeNotify.notifyTranscriptionCompletedSafe({
+          reportId,
+          requestId: report.requestId,
+        })
+      } catch {
+        /* fail-soft */
+      }
+
       await logBriefingIntelligenceAuditEvent({
         db,
         eventType: 'processing_started',

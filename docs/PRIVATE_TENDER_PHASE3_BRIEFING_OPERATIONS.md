@@ -125,13 +125,15 @@ TS: `lib/privateTenders/briefingOpsFlags.ts`
 
 ## Notification events
 
-Reuse existing architecture (founder ops notify, product events, TX email). Meaningful Phase 3 events include:
+Reuse existing architecture (`briefingLifecycleNotificationService`, founder ops, Resend TX email, product/audit events). Fail-soft + idempotent.
 
 | Audience | Events |
 | --- | --- |
-| SME | Booking/payment confirmation (existing), report ready (existing), approved clarification via history |
-| Youth Agent | Assignment / reminders / submission requirements (existing workflows) |
-| Founder | Paid awaiting assignment, evidence submitted, report awaiting review, follow-up pending review |
+| SME | Booking/payment confirmation; agent allocated; report ready (deliver); clarification available |
+| Youth Agent | Assignment; evidence correction required |
+| Founder | Created/paid; evidence submitted; transcription complete; AI draft ready; AI failure (no raw SME exposure); report approved; clarification requested/response/resolved; assignment reassigned; evidence correction |
+
+APIs: `POST /api/sme/briefing-clarifications`, `POST /api/founder/briefing-intelligence/[reportId]/evidence-correction`.
 
 Avoid spam; prefer operationally meaningful hooks already in the attendance + BI pipeline.
 
