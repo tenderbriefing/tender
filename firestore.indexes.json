@@ -266,6 +266,30 @@
         { "fieldPath": "submissionId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "briefingFollowUpUpdates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "briefingRequestId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "briefingFollowUpUpdates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "privateTenderId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "briefingFollowUpUpdates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "smeId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

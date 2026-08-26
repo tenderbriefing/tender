@@ -118,13 +118,21 @@ function buildSubmissionRecord(id, trackingToken, value, meta) {
     closingTime: value.closingTime || '',
     briefingRequired: true,
     briefingCompulsory: true,
+    briefingType: value.briefingType || (value.virtualBriefing ? 'online' : 'physical'),
     briefingDate: value.briefingDate,
     briefingTime: value.briefingTime,
+    briefingStartTime: value.briefingStartTime || value.briefingTime,
+    briefingEndTime: value.briefingEndTime || '',
     briefingVenue: value.briefingVenue,
+    briefingAddress: value.briefingAddress || '',
+    briefingProvince: value.briefingProvince || value.province || '',
+    briefingMunicipality: value.briefingMunicipality || value.municipality || '',
     briefingInstructions: value.briefingInstructions || '',
+    briefingContactDetails: value.briefingContactDetails || '',
+    briefingRegistrationDeadline: value.briefingRegistrationDeadline || '',
     registrationRequired: Boolean(value.registrationRequired),
     registrationInstructions: value.registrationInstructions || '',
-    virtualBriefing: Boolean(value.virtualBriefing),
+    virtualBriefing: Boolean(value.virtualBriefing) || value.briefingType === 'online',
     meetingLink: value.meetingLink || '',
     eligibilityRequirements: value.eligibilityRequirements || '',
     submissionInstructions: value.submissionInstructions || '',
@@ -264,9 +272,21 @@ function mapToCanonicalTender(submission, publishedTenderId, now) {
     publishedDate: ts.slice(0, 10),
     closingDate: submission.closingDate,
     briefingDate: submission.briefingDate,
-    briefingTime: submission.briefingTime,
+    briefingTime: submission.briefingStartTime || submission.briefingTime,
+    briefingStartTime: submission.briefingStartTime || submission.briefingTime,
+    briefingEndTime: submission.briefingEndTime || '',
     briefingVenue: submission.briefingVenue,
-    briefingCompulsory: true,
+    briefingAddress: submission.briefingAddress || '',
+    briefingProvince: submission.briefingProvince || submission.province || '',
+    briefingMunicipality: submission.briefingMunicipality || submission.municipality || '',
+    briefingInstructions: submission.briefingInstructions || '',
+    briefingContactDetails: submission.briefingContactDetails || '',
+    briefingRegistrationDeadline: submission.briefingRegistrationDeadline || '',
+    briefingType: submission.briefingType || (submission.virtualBriefing ? 'online' : 'physical'),
+    briefingCompulsory:
+      submission.briefingCompulsory !== false &&
+      (submission.briefingType || 'physical') !== 'none',
+    organisationId: submission.organisationId || null,
     briefingConfidence: 1,
     matchedBriefingTerms: ['compulsory', 'private sector'],
     contactPerson: submission.procurementContactName || submission.contactPersonName || '',
@@ -587,10 +607,18 @@ function emptyDraftFields() {
     closingTime: '',
     briefingRequired: true,
     briefingCompulsory: true,
+    briefingType: 'physical',
     briefingDate: '',
     briefingTime: '',
+    briefingStartTime: '',
+    briefingEndTime: '',
     briefingVenue: '',
+    briefingAddress: '',
+    briefingProvince: '',
+    briefingMunicipality: '',
     briefingInstructions: '',
+    briefingContactDetails: '',
+    briefingRegistrationDeadline: '',
     registrationRequired: false,
     registrationInstructions: '',
     virtualBriefing: false,
@@ -624,8 +652,16 @@ function applyDraftPatch(current, patch) {
     'closingTime',
     'briefingDate',
     'briefingTime',
+    'briefingStartTime',
+    'briefingEndTime',
     'briefingVenue',
+    'briefingAddress',
+    'briefingProvince',
+    'briefingMunicipality',
     'briefingInstructions',
+    'briefingContactDetails',
+    'briefingRegistrationDeadline',
+    'briefingType',
     'registrationInstructions',
     'meetingLink',
     'eligibilityRequirements',
@@ -636,6 +672,14 @@ function applyDraftPatch(current, patch) {
   ]
   for (const key of keys) {
     if (patch[key] !== undefined) next[key] = sliceStr(patch[key], key === 'description' ? 8000 : 500)
+  }
+  if (patch.briefingStartTime !== undefined && patch.briefingTime === undefined) {
+    next.briefingTime = sliceStr(patch.briefingStartTime, 32)
+  }
+  if (patch.briefingType !== undefined) {
+    const t = String(patch.briefingType).trim().toLowerCase()
+    next.briefingType = ['physical', 'online', 'none'].includes(t) ? t : next.briefingType || 'physical'
+    next.virtualBriefing = next.briefingType === 'online'
   }
   if (patch.briefingRequired !== undefined) next.briefingRequired = Boolean(patch.briefingRequired)
   if (patch.briefingCompulsory !== undefined) {

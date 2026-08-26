@@ -254,6 +254,29 @@ export async function POST(request: NextRequest) {
     status: 'evidence_uploaded',
     briefingRunId: reportId,
     evidenceSubmittedAt,
+    // Phase 3D — evidence integrity metadata (no GPS/biometric surveillance)
+    evidenceIntegrity: {
+      submittedAt: evidenceSubmittedAt,
+      briefingDate: String((req as { briefingDate?: string })?.briefingDate || '') || null,
+      uploadActorUid: agentId,
+      sourceRequestId: requestId,
+      agentNote: agentObservations?.shortNote || null,
+      attendanceContext: {
+        arrivalTime: agentObservations?.arrivalTime || null,
+        briefingStartTime: agentObservations?.briefingStartTime || null,
+        briefingEndTime: agentObservations?.briefingEndTime || null,
+        approxAttendees: agentObservations?.approxAttendees ?? null,
+      },
+      files: {
+        audio: {
+          fileName: audioFile.name || null,
+          sizeBytes: audioFile.size || null,
+          contentType: audioFile.type || null,
+          storagePath: audioPath,
+        },
+        attendanceProofCount: attendanceEvidenceRefs.length,
+      },
+    },
     processingStartedAt: null,
     draftReadyAt: null,
     agentReviewedAt: null,

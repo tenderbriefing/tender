@@ -29,6 +29,29 @@ export interface BriefingIntelligenceReport {
 
   // Timestamps for SLA
   evidenceSubmittedAt: string | null
+  /** Phase 3D — evidence integrity metadata (no GPS/biometric surveillance) */
+  evidenceIntegrity?: {
+    submittedAt: string
+    briefingDate: string | null
+    uploadActorUid: string
+    sourceRequestId: string
+    agentNote: string | null
+    attendanceContext?: {
+      arrivalTime: string | null
+      briefingStartTime: string | null
+      briefingEndTime: string | null
+      approxAttendees: number | null
+    }
+    files?: {
+      audio?: {
+        fileName: string | null
+        sizeBytes: number | null
+        contentType: string | null
+        storagePath: string | null
+      }
+      attendanceProofCount?: number
+    }
+  } | null
   processingStartedAt: string | null
   draftReadyAt: string | null
   agentReviewedAt: string | null

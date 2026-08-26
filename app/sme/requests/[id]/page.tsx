@@ -37,6 +37,9 @@ export default function SmeRequestDetailPage() {
   const router = useRouter()
   const [request, setRequest] = useState<EnrichedAttendanceRequest | null>(null)
   const [reports, setReports] = useState<BriefingReport[]>([])
+  const [followUps, setFollowUps] = useState<
+    Array<{ id: string; title: string; content: string; updateType?: string; createdAt?: string }>
+  >([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -57,6 +60,20 @@ export default function SmeRequestDetailPage() {
         }
       })
       .finally(() => setLoading(false))
+
+    // Phase 3G/F — approved clarifications linked to this briefing (fail-soft)
+    authFetch('/api/sme/briefing-history')
+      .then((r) => r.json())
+      .then((j) => {
+        if (!j.success) return
+        const updates = (j.data?.followUps || []).filter(
+          (u: { briefingRequestId?: string }) => u.briefingRequestId === id
+        )
+        setFollowUps(updates)
+      })
+      .catch(() => {
+        /* optional */
+      })
   }, [id, user])
 
   if (authLoading || loading) {
@@ -118,6 +135,12 @@ export default function SmeRequestDetailPage() {
 
           <div className="mt-6 flex flex-wrap items-center gap-2">
             <RequestStatusBadge status={request.status} />
+            {(request as { source?: string }).source === 'private_tender' ||
+            (request as { privateTenderId?: string }).privateTenderId ? (
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-100 ring-1 ring-inset ring-white/20">
+                Private tender briefing
+              </span>
+            ) : null}
             {tender?.briefingCompulsory && (
               <span className="inline-flex items-center gap-2 rounded-full bg-accent-500 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-900">
                 <ShieldCheck className="h-3.5 w-3.5" />
@@ -286,6 +309,37 @@ export default function SmeRequestDetailPage() {
                           View attendance proof
                         </a>
                       )}
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {followUps.length > 0 && (
+              <section className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50/50 to-white p-6 shadow-sm sm:p-7">
+                <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-800">
+                  <span className="h-1.5 w-6 rounded-full bg-amber-500" />
+                  Subsequent updates
+                </span>
+                <h2 className="mt-2 text-lg font-bold text-brand-900">Clarifications &amp; addenda</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Separate from the original approved briefing report — not a rewrite of that report.
+                </p>
+                <div className="mt-5 space-y-4">
+                  {followUps.map((u) => (
+                    <article key={u.id} className="rounded-2xl border border-amber-100 bg-white p-5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+                        {u.updateType || 'clarification'}
+                      </p>
+                      <h3 className="mt-1 text-base font-bold text-brand-900">{u.title}</h3>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+                        {u.content}
+                      </p>
+                      {u.createdAt ? (
+                        <p className="mt-2 text-xs text-slate-500">
+                          {new Date(u.createdAt).toLocaleString('en-ZA')}
+                        </p>
+                      ) : null}
                     </article>
                   ))}
                 </div>

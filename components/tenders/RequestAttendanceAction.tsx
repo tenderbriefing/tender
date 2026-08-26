@@ -8,7 +8,10 @@ import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import {
   BOOK_AGENT_CTA,
   BOOK_AGENT_SIGN_IN_CTA,
+  APPOINT_YOUTH_AGENT_CTA,
 } from '@/lib/booking/labels'
+import { isPrivateTenderBriefingBookingUiEnabled } from '@/lib/privateTenders/briefingOpsFlags'
+import { isPhysicalBriefingBookable } from '@/lib/privateTenders/briefingFields'
 
 interface RequestAttendanceActionProps {
   tender: TenderBriefing
@@ -30,6 +33,11 @@ export default function RequestAttendanceAction({
   const router = useRouter()
   const requestHref = `/tenders/${tender.id}/request-agent`
   const isClosed = getTenderDisplayStatus(tender) === 'closed'
+  const useAppointCta =
+    isPrivateTenderBriefingBookingUiEnabled() &&
+    (tender.sourceType === 'private' || Boolean((tender as { privateSubmissionId?: string }).privateSubmissionId)) &&
+    isPhysicalBriefingBookable(tender as unknown as Record<string, unknown>)
+  const smeCtaLabel = useAppointCta ? APPOINT_YOUTH_AGENT_CTA : BOOK_AGENT_CTA
 
   const compact =
     size === 'compact'
@@ -55,7 +63,7 @@ export default function RequestAttendanceAction({
         href={requestHref}
         className={`${base} bg-accent-500 text-brand-900 shadow-sm hover:bg-accent-400`}
       >
-        {BOOK_AGENT_CTA}
+        {smeCtaLabel}
       </Link>
     )
   }

@@ -696,6 +696,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Phase 3F — briefing clarifications / addenda (Admin SDK only).
+    match /briefingFollowUpUpdates/{updateId} {
+      allow read, write: if false;
+    }
+
     match /enterpriseFieldOps/{docId} {
       allow read: if isAdmin();
       allow write: if false;

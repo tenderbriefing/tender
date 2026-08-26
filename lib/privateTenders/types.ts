@@ -59,10 +59,19 @@ export interface PrivateTenderSubmissionInput {
 
   briefingRequired: boolean
   briefingCompulsory: boolean
+  /** Phase 3 — physical | online | none */
+  briefingType?: 'physical' | 'online' | 'none'
   briefingDate: string
   briefingTime: string
+  briefingStartTime?: string
+  briefingEndTime?: string
   briefingVenue: string
+  briefingAddress?: string
+  briefingProvince?: string
+  briefingMunicipality?: string
   briefingInstructions?: string
+  briefingContactDetails?: string
+  briefingRegistrationDeadline?: string
   registrationRequired?: boolean
   registrationInstructions?: string
   virtualBriefing?: boolean
