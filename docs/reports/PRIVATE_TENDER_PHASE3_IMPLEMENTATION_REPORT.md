@@ -23,7 +23,7 @@ Phase 3 connects published private physical briefings to the existing R349 Youth
 
 ## 4. Final SHA
 
-_(filled after commit)_
+`25f5be8fecc7e4674bcba33439a64dcb9d112945`
 
 ## 5. PR
 
