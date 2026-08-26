@@ -23,9 +23,9 @@
 
 Automated agents **cannot complete live PayFast card checkout**. Remaining gates requiring Founder (or authorised operator) in PayFast UI + post-payment lifecycle:
 
-1. Live R349 ITN → `paymentStatus=paid` exactly once  
-2. Assignment → YA evidence → **exactly one R200 liability**  
-3. BI v2 generation + Founder approval + SME delivery on that paid job  
+1. Live R349 ITN → `paymentStatus=paid` exactly once
+2. Assignment → YA evidence → **exactly one R200 liability**
+3. BI v2 generation + Founder approval + SME delivery on that paid job
 4. Follow-up + notifications on the **paid** lifecycle (Wave 4 already proved create/approve on smoke path)
 
 ---
@@ -190,21 +190,21 @@ Do not delete Firestore payment/finance/follow-up/audit data.
 
 **Blocking for PRODUCTION CERTIFIED**
 
-1. Founder completes live R349 on `req-1787761531376-5722tx` (or fresh equivalent)  
-2. Prove ITN → paid once; R200 liability count = 1  
-3. Complete YA evidence → BI v2 → Founder approve → SME delivery on that paid job  
-4. Re-verify notifications on paid transitions  
+1. Founder completes live R349 on `req-1787761531376-5722tx` (or fresh equivalent)
+2. Prove ITN → paid once; R200 liability count = 1
+3. Complete YA evidence → BI v2 → Founder approve → SME delivery on that paid job
+4. Re-verify notifications on paid transitions
 
 **Non-blocking**
 
-- Wave4 smoke archives cross-org users; primary smoke org reactivated  
-- Deep adversarial BI transcript matrix not re-run live this session  
+- Wave4 smoke archives cross-org users; primary smoke org reactivated
+- Deep adversarial BI transcript matrix not re-run live this session
 
 ---
 
 ## 14. Recommended Founder action
 
-1. Sign in as smoke SME (`ops-smoke-sme@tenderbriefing.co.za`)  
-2. Open attendance request **`req-1787761531376-5722tx`** and complete **live PayFast R349.00**  
-3. Notify ops to continue assignment → evidence → BI → approve → liability audit  
+1. Sign in as smoke SME (`ops-smoke-sme@tenderbriefing.co.za`)
+2. Open attendance request **`req-1787761531376-5722tx`** and complete **live PayFast R349.00**
+3. Continue assignment → evidence → BI → approve → liability audit
 4. Only then promote verdict to **PRODUCTION CERTIFIED — PRIVATE TENDER BRIEFING OPERATIONS PHASE 3**
