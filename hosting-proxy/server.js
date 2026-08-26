@@ -69,7 +69,13 @@ function proxyRequest(clientReq, clientRes) {
     const contentType = String(resHeaders['content-type'] || '');
     const pathname = target.pathname || '/';
 
-    if (isHtmlLike(contentType, pathname)) {
+    if (pathname.startsWith('/api/')) {
+      // Never let Firebase Hosting CDN cache API responses — authenticated 404s
+      // from IDOR denials must not poison later authorized GETs to the same path.
+      resHeaders['cache-control'] = 'private, no-store, no-cache, must-revalidate'
+      delete resHeaders['expires']
+      delete resHeaders['etag']
+    } else if (isHtmlLike(contentType, pathname)) {
       // Prevent Firebase Hosting CDN from pinning HTML for a year across deploys.
       resHeaders['cache-control'] =
         'public, max-age=0, s-maxage=0, must-revalidate';

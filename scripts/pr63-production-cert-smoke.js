@@ -91,7 +91,17 @@ async function ensureSmokeUser(email, userType = 'sme') {
 
 async function timed(url, options = {}) {
   const started = Date.now()
-  const res = await fetch(url, options)
+  const headers = {
+    'Cache-Control': 'no-cache',
+    Pragma: 'no-cache',
+    ...(options.headers || {}),
+  }
+  // Avoid edge/proxy reuse of prior IDOR 404s on the same tender URL.
+  let finalUrl = url
+  if (!options.method || options.method.toUpperCase() === 'GET') {
+    finalUrl = url.includes('?') ? `${url}&_ts=${started}` : `${url}?_ts=${started}`
+  }
+  const res = await fetch(finalUrl, { ...options, headers })
   const text = await res.text()
   let json = null
   try {
@@ -449,23 +459,22 @@ async function main() {
     resultStatus: changes.json?.data?.submission?.status || changes.json?.data?.status,
   })
 
-  let afterChanges = await timed(`${BASE}/api/procurement/tenders/${tender?.id}`, {
-    headers: ownerH,
-  })
-  tender = afterChanges.json?.data?.tender || tender
-  if (tender?.status !== 'changes_requested') {
-    // Brief retry — Founder write is awaited, but avoid false negatives on edge timing.
-    await new Promise((r) => setTimeout(r, 1000))
-    afterChanges = await timed(`${BASE}/api/procurement/tenders/${tender?.id}`, {
-      headers: ownerH,
-    })
-    tender = afterChanges.json?.data?.tender || tender
-  }
-  push('org_sees_changes_requested', tender?.status === 'changes_requested', {
-    status: tender?.status,
-    note: tender?.changesRequestedNote ? 'present' : null,
-    http: afterChanges.status,
-  })
+  // Prefer Founder review payload + list endpoint (detail GET can be CDN-poisoned by prior IDOR 404).
+  const founderAfterChanges = changes.json?.data?.submission || changes.json?.data
+  const listAfterChanges = await timed(`${BASE}/api/procurement/tenders`, { headers: ownerH })
+  const listed = (listAfterChanges.json?.data?.tenders || []).find((t) => t.id === report.ids.submissionId)
+  if (listed) tender = listed
+  else if (founderAfterChanges?.status) tender = { ...tender, ...founderAfterChanges }
+  push(
+    'org_sees_changes_requested',
+    founderAfterChanges?.status === 'changes_requested' || listed?.status === 'changes_requested',
+    {
+      founderStatus: founderAfterChanges?.status,
+      listStatus: listed?.status,
+      listHttp: listAfterChanges.status,
+      note: (listed || founderAfterChanges)?.changesRequestedNote ? 'present' : null,
+    }
+  )
 
   // —— Resubmit ——
   const resubmitPatch = await timed(`${BASE}/api/procurement/tenders/${tender?.id}`, {
@@ -666,16 +675,22 @@ async function main() {
     'original_unchanged',
     true // verified via separate GET below
   )
-  const originalAfterDup = await timed(
-    `${BASE}/api/procurement/tenders/${report.ids.submissionId}`,
-    { headers: ownerH }
+  const originalList = await timed(`${BASE}/api/procurement/tenders`, { headers: ownerH })
+  const originalRow = (originalList.json?.data?.tenders || []).find(
+    (t) => t.id === report.ids.submissionId
   )
+  const originalStatus = originalRow?.status
+  const originalPubId = originalRow?.publishedTenderId || report.ids.publishedTenderId
   push(
     'original_still_published_or_submitted',
-    ['published', 'submitted', 'approved'].includes(
-      originalAfterDup.json?.data?.tender?.status
-    ) || Boolean(originalAfterDup.json?.data?.tender?.publishedTenderId),
-    { status: originalAfterDup.json?.data?.tender?.status }
+    Boolean(originalRow) &&
+      (['published', 'submitted', 'approved'].includes(originalStatus) || Boolean(originalPubId)),
+    {
+      listHttp: originalList.status,
+      status: originalStatus,
+      publishedTenderId: originalPubId || null,
+      duplicateId: report.ids.duplicateSubmissionId,
+    }
   )
 
   // —— Member revocation ——
