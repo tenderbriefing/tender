@@ -65,13 +65,7 @@ The handler matches `yocoCheckoutId` or `metadata.requestId`, updates `paymentSt
 | `yoco-secret-key` | `YOCO_SECRET_KEY` |
 | `yoco-webhook-secret` | `YOCO_WEBHOOK_SECRET` |
 
-Prepared script (review before running; placeholders only):
-
-```bash
-bash scripts/yoco-secret-manager-setup.sh
-```
-
-Manual commands (do **not** commit real values):
+Prepared script (**removed Aug 2026** — use manual commands below):
 
 ```bash
 gcloud secrets create yoco-secret-key \

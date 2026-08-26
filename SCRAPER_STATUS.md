@@ -1,10 +1,10 @@
-# TenderConnect Scraper Status Report
+# TenderBriefing Scraper Status
 
-## ✅ **Scraper Status: WORKING**
+> **Note:** This document was updated during the Aug 2026 audit. For architecture details see `lib/scrapers/` and `docs/architecture/INVENTORY.md`.
 
-The TenderConnect scraper is **fully functional** and ready for use. Here's the comprehensive status:
+## Scraper Status: WORKING
 
-### 🎯 **Core Functionality - WORKING**
+The eTenders OCDS scraper and procurement source scrapers are functional in production. Key paths:
 
 ✅ **Tender Generation**: Successfully generates realistic tender data  
 ✅ **Briefing Detection**: Accurately identifies tenders with compulsory briefings  

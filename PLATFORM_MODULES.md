@@ -1,5 +1,9 @@
 # TenderBriefing Platform Modules
 
+> **Stale inventory.** This file describes the original MVP module list. For the current surface area see:
+> - `docs/architecture/INVENTORY.md` — route groups and capabilities
+> - `docs/architecture/API_INVENTORY.md` — full API catalogue (~172 routes)
+
 Standalone procurement intelligence and briefing operations platform (no RFQ Assist / Biddify dependencies).
 
 ## Backend services (`backend/services/`)

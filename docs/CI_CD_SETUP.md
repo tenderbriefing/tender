@@ -1,6 +1,8 @@
 # CI/CD setup (GitHub Actions → Firebase + Cloud Run)
 
-GitHub Actions deploy workflow lives at `.github/workflows/deploy.yml`. On each push to `master`/`main` it deploys Firebase (rules, indexes, storage, hosting), Cloud Run (`cloudbuild.yaml`), the europe-west1 hosting proxy, then verifies production URLs.
+**CI** (`.github/workflows/ci.yml`) runs on every PR and push to `master`: typecheck, lint, unit tests, QA gates, Firestore rules emulator, build, and public Playwright E2E.
+
+**Deploy** (`.github/workflows/deploy.yml`) is **manual only** (`workflow_dispatch`). It deploys Firebase (rules, indexes, storage, hosting), Cloud Run (`cloudbuild.yaml`), the europe-west1 hosting proxy, then verifies production URLs. It does **not** run automatically on push.
 
 **Requires** repository secret `FIREBASE_SERVICE_ACCOUNT` and a push token with **`workflow`** scope.
 
