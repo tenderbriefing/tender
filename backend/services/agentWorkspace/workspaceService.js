@@ -8,7 +8,6 @@ const { nowIso } = require('../ai/_shared')
 const lifecycle = require('../domain/lifecycleEnforcement')
 const mobileField = require('../mobile/mobileFieldService')
 const agentPerformance = require('../agentPerformanceService')
-const notificationService = require('../notificationService')
 
 const COL = {
   audit: 'agentWorkspaceAuditEvents',
@@ -174,19 +173,6 @@ async function transitionAssignment(requestId, agentId, toStatus, meta = {}) {
     payload: { from: data.status, to: toStatus },
   })
 
-  try {
-    await notificationService.notify({
-      userId: data.smeId,
-      channel: 'push',
-      event: 'agent_assignment_update',
-      title: 'Assignment update',
-      body: `Agent moved assignment to ${toStatus}`,
-      data: { requestId, status: toStatus },
-    })
-  } catch {
-    /* non-blocking */
-  }
-
   return { id: requestId, ...data, ...patch }
 }
 
@@ -298,21 +284,6 @@ async function submitFieldReport(agentId, requestId) {
   })
 
   const reqSnap = await db.collection('attendanceRequests').doc(requestId).get()
-  const smeId = reqSnap.data()?.smeId
-  if (smeId) {
-    try {
-      await notificationService.notify({
-        userId: smeId,
-        channel: 'push',
-        event: 'sme_report_uploaded',
-        title: 'Field report submitted',
-        body: 'Your youth agent submitted a field report for verification',
-        data: { requestId },
-      })
-    } catch {
-      /* non-blocking */
-    }
-  }
 
   return { id: snap.docs[0].id, ...data, ...patch, ...lockPatch }
 }
@@ -348,25 +319,6 @@ async function verifyFieldReport(smeId, requestId, decision, notes = '') {
     requestId,
     payload: { decision: status, draftId: snap.docs[0].id },
   })
-
-  const agentId = data.agentId || req.agentId
-  if (agentId) {
-    try {
-      await notificationService.notify({
-        userId: agentId,
-        channel: 'push',
-        event: 'agent_report_verified',
-        title: status === 'verified' ? 'Report verified' : 'Report needs revision',
-        body:
-          status === 'verified'
-            ? 'SME verified your field report'
-            : 'SME requested changes to your field report',
-        data: { requestId, status },
-      })
-    } catch {
-      /* non-blocking */
-    }
-  }
 
   return { id: snap.docs[0].id, ...data, ...patch }
 }
@@ -437,19 +389,6 @@ async function sendMessage(actor, { requestId, body, recipientId }) {
     requestId,
     payload: { messageId: ref.id },
   })
-
-  try {
-    await notificationService.notify({
-      userId: resolvedRecipient,
-      channel: 'push',
-      event: 'assignment_message',
-      title: 'New assignment message',
-      body: text.slice(0, 120),
-      data: { requestId },
-    })
-  } catch {
-    /* non-blocking */
-  }
 
   return { id: ref.id, ...doc }
 }

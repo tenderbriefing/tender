@@ -13,8 +13,6 @@ export async function GET(request: NextRequest) {
   try {
     const workflow = require('../../../../backend/services/workflowAutomationService')
     const whatsappService = require('../../../../backend/services/whatsappService')
-    const pushNotificationService = require('../../../../backend/services/pushNotificationService')
-
     const [telemetry, waStats] = await Promise.all([
       workflow.getWorkflowTelemetry({ limit: 30 }),
       whatsappService.getWhatsAppStats(30),
@@ -28,7 +26,6 @@ export async function GET(request: NextRequest) {
           configured: whatsappService.isConfigured(),
           ...waStats,
         },
-        push: pushNotificationService.getStatus(),
         jobs: workflow.listJobs(),
         checkedAt: new Date().toISOString(),
       },

@@ -14,7 +14,7 @@ This memo does **not** change Phase 3 certification status or commercial invaria
 
 | Capability | Recommendation | Rationale (one line) |
 |------------|----------------|----------------------|
-| **Push notifications** | **RETIRE** | Fake 501 API surface + no production FCM config; real ops covered by inbox, email, WhatsApp; native/PWA not wired end-to-end. |
+| **Push notifications** | **RETIRE** *(runtime retirement PR pending Founder merge)* | Fake 501 API surface + no production FCM config; real ops covered by inbox, email, WhatsApp; native/PWA not wired end-to-end. |
 | **SMS notifications** | **DEFER** | No production template uses SMS; legacy client stub is misleading; existing channels sufficient unless a named ops gap is identified. |
 | **Long-audio chunking** | **DESIGN NEXT** | Core BI service risk: 100MB upload vs ~25MB Whisper limit; chunking/ffmpeg not implemented; failures block transcript → report delivery. |
 

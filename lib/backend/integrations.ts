@@ -36,7 +36,6 @@ export function loadIntegrationService<T = Record<string, unknown>>(
     whatsapp: '../../backend/services/integrations/whatsappService.js',
     firebaseStorage: '../../backend/services/integrations/firebaseStorageService.js',
     maps: '../../backend/services/integrations/mapsService.js',
-    fcm: '../../backend/services/integrations/fcmService.js',
     payfast: '../../backend/services/integrations/payfastService.js',
     yoco: '../../backend/services/integrations/payfastService.js',
     openai: '../../backend/services/integrations/openaiService.js',

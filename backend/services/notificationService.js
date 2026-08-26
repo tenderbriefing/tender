@@ -2,7 +2,7 @@ const { getStorage } = require('./storageAdapter')
 const auditLogService = require('./auditLogService')
 const whatsappService = require('./whatsappService')
 
-const CHANNELS = ['email', 'whatsapp', 'push']
+const CHANNELS = ['email', 'whatsapp']
 
 const WHATSAPP_TEMPLATES = {
   sme_attendance_submitted:
@@ -467,10 +467,7 @@ async function notify(eventType, data) {
 
   switch (eventType) {
     case 'new_briefing_found':
-      notifications.push(
-        await dispatch('email', { template: 'new_briefing', data }),
-        await dispatch('push', { template: 'new_briefing', data })
-      )
+      notifications.push(await dispatch('email', { template: 'new_briefing', data }))
       break
     case 'briefing_venue_changed':
     case 'briefing_date_changed':
@@ -497,7 +494,6 @@ async function notify(eventType, data) {
     case 'payment_confirmed':
     case 'payment_failed':
       notifications.push(
-        await dispatch('push', { template: eventType, data }),
         await dispatch('email', { template: eventType, data }),
         await dispatch('whatsapp', { template: eventType, data })
       )

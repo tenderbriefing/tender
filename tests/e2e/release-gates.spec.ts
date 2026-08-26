@@ -22,6 +22,20 @@ test.describe('Route retirement & public accessibility floor', () => {
     expect([410, 401]).toContain(create.status())
   })
 
+  test('push notification routes return 410 when reachable', async ({ request }) => {
+    for (const path of [
+      '/api/push-notifications/send',
+      '/api/push-notifications/subscribe',
+      '/api/push/register-token',
+    ]) {
+      const res = await request.post(path, {
+        data: {},
+        headers: { Authorization: 'Bearer invalid' },
+      })
+      expect([410, 401]).toContain(res.status())
+    }
+  })
+
   test('/bookings redirects toward SME requests', async ({ page }) => {
     await page.goto('/bookings')
     await page.waitForLoadState('domcontentloaded')
