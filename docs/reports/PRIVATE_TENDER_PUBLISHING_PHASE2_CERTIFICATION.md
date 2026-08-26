@@ -22,7 +22,7 @@ Controlled Founder-authorised production rollout of PR #63 completed. Applicatio
 
 `fbd0509` (includes Phase 2 flag enablement, dashboard require-path hotfix, API CDN no-store proxy fix, production smoke harness)
 
-Certifying application tip for smoke: `42a1eaaec1b87f5f5062e598debe17333f4df023` on revision `tenderbriefing-00136-5z5` (full lifecycle **79/79**). Follow-up deploy `32948124755` ships hosting-proxy API cache hardening on tip `fbd0509`.
+Certifying application tip for full lifecycle smoke (**79/79**): `42a1eaa…` on `tenderbriefing-00136-5z5`. Follow-up deploy [32948124755](https://github.com/tenderbriefing/tender/actions/runs/32948124755) (`fbd0509`) shipped hosting-proxy API `private, no-store` hardening as **`tenderbriefing-00137-fbl` @ 100%**. Docs tip: `95b1bbf`.
 
 ## 6. Deployment run ID
 
@@ -31,7 +31,7 @@ Certifying application tip for smoke: `42a1eaaec1b87f5f5062e598debe17333f4df023`
 | Initial Phase 2 app+rules+indexes (+ UI flag bake) | [32941262277](https://github.com/tenderbriefing/tender/actions/runs/32941262277) | success → `tenderbriefing-00134-td9` |
 | Runtime flag enable (env update) | gcloud `services update` | `tenderbriefing-00135-hld` @ 100% |
 | Dashboard path hotfix | [32944385090](https://github.com/tenderbriefing/tender/actions/runs/32944385090) | success → `tenderbriefing-00136-5z5` |
-| API CDN no-store proxy | [32948124755](https://github.com/tenderbriefing/tender/actions/runs/32948124755) | triggered post-smoke |
+| API CDN no-store proxy | [32948124755](https://github.com/tenderbriefing/tender/actions/runs/32948124755) | success → `tenderbriefing-00137-fbl` |
 
 ## 7. Production SHA
 
@@ -39,9 +39,7 @@ Certifying application tip for smoke: `42a1eaaec1b87f5f5062e598debe17333f4df023`
 
 ## 8. Production revision
 
-**`tenderbriefing-00136-5z5`** (certifying)
-
-Rollback target (Phase 1 known-good): **`tenderbriefing-00133-zvg`**
+**`tenderbriefing-00137-fbl`** @ 100% (includes proxy API cache hardening). Lifecycle smoke certified on preceding app revision `tenderbriefing-00136-5z5`.
 
 ## 9. Traffic allocation
 
