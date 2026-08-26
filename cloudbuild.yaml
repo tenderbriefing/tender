@@ -44,6 +44,10 @@ steps:
 
       - NEXT_PUBLIC_PROCUREMENT_INTELLIGENCE_ENABLED=false
 
+      - --build-arg
+
+      - NEXT_PUBLIC_PRIVATE_TENDER_ORGANISATION_WORKSPACE_ENABLED=true
+
       - .
 
 
