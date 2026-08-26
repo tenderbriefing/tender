@@ -11,6 +11,7 @@ import { authFetch } from '@/lib/api/authenticatedFetch'
 type Submission = {
   id: string
   status: string
+  organisationId?: string | null
   companyName: string
   registrationNumber?: string
   website?: string
@@ -38,6 +39,8 @@ type Submission = {
   duplicateFlags?: string[]
   publishedTenderId?: string | null
   submittedAt: string
+  changesRequestedNote?: string | null
+  changesRequestedCategory?: string | null
   audit?: Array<{ at: string; action: string; note?: string | null }>
 }
 
@@ -51,6 +54,7 @@ export default function FounderPrivateTenderDetailPage({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState('')
+  const [issueCategory, setIssueCategory] = useState('other')
   const [submission, setSubmission] = useState<Submission | null>(null)
 
   const load = useCallback(async () => {
@@ -93,7 +97,11 @@ export default function FounderPrivateTenderDetailPage({
       const res = await authFetch(`/api/founder/private-tenders/${params.id}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, note }),
+        body: JSON.stringify({
+          action,
+          note,
+          issueCategory: action === 'request_changes' ? issueCategory : undefined,
+        }),
       })
       const json = await res.json()
       if (!res.ok || !json.success) throw new Error(json.error || 'Action failed')
@@ -170,6 +178,11 @@ export default function FounderPrivateTenderDetailPage({
                 <p className="text-sm capitalize text-slate-700">
                   Status: {String(submission.status).replace(/_/g, ' ')}
                 </p>
+                {submission.organisationId && (
+                  <p className="mt-1 font-mono text-xs text-slate-500">
+                    Org: {submission.organisationId}
+                  </p>
+                )}
               </div>
             </section>
 
@@ -235,6 +248,22 @@ export default function FounderPrivateTenderDetailPage({
               <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
                 Founder actions
               </h2>
+              <label className="mt-3 block text-sm">
+                <span className="font-semibold text-slate-700">Change-request category</span>
+                <select
+                  value={issueCategory}
+                  onChange={(e) => setIssueCategory(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                >
+                  <option value="missing_document">Missing document</option>
+                  <option value="incorrect_closing_date">Incorrect closing date</option>
+                  <option value="tender_reference_issue">Tender reference issue</option>
+                  <option value="briefing_details_incomplete">Briefing details incomplete</option>
+                  <option value="contact_details_incomplete">Contact details incomplete</option>
+                  <option value="formatting_data_quality">Formatting / data quality</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}

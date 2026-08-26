@@ -364,6 +364,24 @@ async function reviewSubmission(id, action, opts = {}, deps = {}) {
       ],
     })
     await ref.set(next, { merge: true })
+    try {
+      const { writeAuditEvent } = require('./privateTenderAuditService')
+      await writeAuditEvent(
+        {
+          submissionId: id,
+          organisationId: submission.organisationId || null,
+          actorUid,
+          actorType: 'founder',
+          eventType: publish.created ? 'tender_published' : 'tender_publish_idempotent',
+          fromStatus: submission.status,
+          toStatus: 'published',
+          metadata: { publishedTenderId: publish.tenderId },
+        },
+        deps
+      )
+    } catch {
+      /* fail-soft */
+    }
     return {
       submission: { ...submission, ...next },
       publishedTenderId: publish.tenderId,
@@ -390,6 +408,23 @@ async function reviewSubmission(id, action, opts = {}, deps = {}) {
       ],
     })
     await ref.set(next, { merge: true })
+    try {
+      const { writeAuditEvent } = require('./privateTenderAuditService')
+      await writeAuditEvent(
+        {
+          submissionId: id,
+          organisationId: submission.organisationId || null,
+          actorUid,
+          actorType: 'founder',
+          eventType: 'tender_rejected',
+          fromStatus: submission.status,
+          toStatus: 'rejected',
+        },
+        deps
+      )
+    } catch {
+      /* fail-soft */
+    }
     return { submission: { ...submission, ...next } }
   }
 
@@ -399,12 +434,23 @@ async function reviewSubmission(id, action, opts = {}, deps = {}) {
       err.status = 400
       throw err
     }
+    const category = sliceStr(opts.issueCategory || opts.category || '', 80) || null
+    const reviewEntry = {
+      at: ts,
+      action: 'changes_requested',
+      note,
+      category,
+      actorUid,
+      actorEmail,
+    }
     const next = sanitizeFirestoreData({
       status: 'changes_requested',
       reviewedAt: ts,
       reviewedByUid: actorUid,
       reviewedByEmail: actorEmail,
       changesRequestedNote: note,
+      changesRequestedCategory: category,
+      reviewHistory: [...(submission.reviewHistory || []), reviewEntry],
       updatedAt: ts,
       audit: [
         ...(submission.audit || []),
@@ -412,6 +458,24 @@ async function reviewSubmission(id, action, opts = {}, deps = {}) {
       ],
     })
     await ref.set(next, { merge: true })
+    try {
+      const { writeAuditEvent } = require('./privateTenderAuditService')
+      await writeAuditEvent(
+        {
+          submissionId: id,
+          organisationId: submission.organisationId || null,
+          actorUid,
+          actorType: 'founder',
+          eventType: 'changes_requested',
+          fromStatus: submission.status,
+          toStatus: 'changes_requested',
+          metadata: { category },
+        },
+        deps
+      )
+    } catch {
+      /* fail-soft */
+    }
     return { submission: { ...submission, ...next } }
   }
 
@@ -428,6 +492,23 @@ async function reviewSubmission(id, action, opts = {}, deps = {}) {
       ],
     })
     await ref.set(next, { merge: true })
+    try {
+      const { writeAuditEvent } = require('./privateTenderAuditService')
+      await writeAuditEvent(
+        {
+          submissionId: id,
+          organisationId: submission.organisationId || null,
+          actorUid,
+          actorType: 'founder',
+          eventType: 'founder_review_started',
+          fromStatus: submission.status,
+          toStatus: 'under_review',
+        },
+        deps
+      )
+    } catch {
+      /* fail-soft */
+    }
     return { submission: { ...submission, ...next } }
   }
 
@@ -484,6 +565,519 @@ async function getSignedDocumentUrl(storagePath, expiresMs = 15 * 60 * 1000) {
   return url
 }
 
+/* ─── Phase 2 organisation workspace helpers ─── */
+
+const EDITABLE_STATUSES = new Set(['draft', 'changes_requested'])
+
+function emptyDraftFields() {
+  return {
+    companyName: '',
+    registrationNumber: '',
+    website: '',
+    contactPersonName: '',
+    contactEmail: '',
+    contactPhone: '',
+    title: '',
+    tenderReference: '',
+    description: '',
+    category: '',
+    province: '',
+    municipality: '',
+    closingDate: '',
+    closingTime: '',
+    briefingRequired: true,
+    briefingCompulsory: true,
+    briefingDate: '',
+    briefingTime: '',
+    briefingVenue: '',
+    briefingInstructions: '',
+    registrationRequired: false,
+    registrationInstructions: '',
+    virtualBriefing: false,
+    meetingLink: '',
+    eligibilityRequirements: '',
+    submissionInstructions: '',
+    procurementContactName: '',
+    procurementContactEmail: '',
+    procurementContactPhone: '',
+    tenderDocument: null,
+    supportingDocuments: [],
+  }
+}
+
+function applyDraftPatch(current, patch) {
+  const next = { ...current }
+  const keys = [
+    'companyName',
+    'registrationNumber',
+    'website',
+    'contactPersonName',
+    'contactEmail',
+    'contactPhone',
+    'title',
+    'tenderReference',
+    'description',
+    'category',
+    'province',
+    'municipality',
+    'closingDate',
+    'closingTime',
+    'briefingDate',
+    'briefingTime',
+    'briefingVenue',
+    'briefingInstructions',
+    'registrationInstructions',
+    'meetingLink',
+    'eligibilityRequirements',
+    'submissionInstructions',
+    'procurementContactName',
+    'procurementContactEmail',
+    'procurementContactPhone',
+  ]
+  for (const key of keys) {
+    if (patch[key] !== undefined) next[key] = sliceStr(patch[key], key === 'description' ? 8000 : 500)
+  }
+  if (patch.briefingRequired !== undefined) next.briefingRequired = Boolean(patch.briefingRequired)
+  if (patch.briefingCompulsory !== undefined) {
+    next.briefingCompulsory = Boolean(patch.briefingCompulsory)
+  }
+  if (patch.registrationRequired !== undefined) {
+    next.registrationRequired = Boolean(patch.registrationRequired)
+  }
+  if (patch.virtualBriefing !== undefined) next.virtualBriefing = Boolean(patch.virtualBriefing)
+  if (patch.tenderDocument !== undefined) next.tenderDocument = patch.tenderDocument || null
+  if (patch.supportingDocuments !== undefined) {
+    next.supportingDocuments = Array.isArray(patch.supportingDocuments)
+      ? patch.supportingDocuments
+      : []
+  }
+  return next
+}
+
+function sanitizeDraftSeed(seed = {}) {
+  // Never accept trust/lifecycle fields from client seed payloads.
+  const safe = applyDraftPatch(emptyDraftFields(), seed || {})
+  delete safe.status
+  delete safe.organisationId
+  delete safe.createdByUid
+  delete safe.publishedTenderId
+  delete safe.publishedAt
+  delete safe.reviewedAt
+  delete safe.reviewedByUid
+  delete safe.reviewedByEmail
+  delete safe.submittedAt
+  delete safe.trackingToken
+  delete safe.id
+  delete safe.audit
+  delete safe.reviewHistory
+  return safe
+}
+
+function assertOrgOwnership(submission, organisationId) {
+  if (!organisationId) {
+    const err = new Error('organisationId is required')
+    err.status = 400
+    throw err
+  }
+  if (!submission || submission.organisationId !== organisationId) {
+    const err = new Error('Forbidden')
+    err.status = 403
+    throw err
+  }
+}
+
+async function createOrgDraft(meta = {}, deps = {}) {
+  const db = getDb(deps)
+  const organisationId = sliceStr(meta.organisationId, 80)
+  const createdByUid = sliceStr(meta.createdByUid, 128)
+  if (!organisationId || !createdByUid) {
+    const err = new Error('organisationId and createdByUid are required')
+    err.status = 400
+    throw err
+  }
+  const ts = nowIso(meta.now)
+  const id = `pts-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`
+  const trackingToken = randomToken()
+  const seeded = sanitizeDraftSeed(meta.seed || {})
+  const record = sanitizeFirestoreData({
+    id,
+    trackingToken,
+    ...seeded,
+    // Trust fields always win over any seed content.
+    status: 'draft',
+    organisationId,
+    createdByUid,
+    companyName: sliceStr(
+      seeded.companyName || meta.companyName || '',
+      200
+    ),
+    contactPersonName: sliceStr(seeded.contactPersonName || '', 120),
+    contactEmail: sliceStr(seeded.contactEmail || meta.createdByEmail || '', 320),
+    submittedAt: null,
+    submittedByUid: null,
+    submittedByEmail: null,
+    submittedIpHash: null,
+    reviewedAt: null,
+    reviewedByUid: null,
+    reviewedByEmail: null,
+    rejectionReason: null,
+    changesRequestedNote: null,
+    changesRequestedCategory: null,
+    reviewHistory: [],
+    publishedTenderId: null,
+    publishedAt: null,
+    duplicateFlags: [],
+    audit: [
+      {
+        at: ts,
+        action: 'tender_created',
+        actorUid: createdByUid,
+        actorEmail: meta.createdByEmail || null,
+        note: null,
+      },
+    ],
+    createdAt: ts,
+    updatedAt: ts,
+  })
+  await db.collection(COLLECTION).doc(id).set(record)
+  try {
+    const { writeAuditEvent } = require('./privateTenderAuditService')
+    await writeAuditEvent(
+      {
+        submissionId: id,
+        organisationId,
+        actorUid: createdByUid,
+        actorType: 'organisation_user',
+        eventType: 'tender_created',
+        fromStatus: null,
+        toStatus: 'draft',
+      },
+      deps
+    )
+  } catch {
+    /* fail-soft */
+  }
+  return record
+}
+
+async function updateOrgDraft(id, patch, meta = {}, deps = {}) {
+  const db = getDb(deps)
+  const ref = db.collection(COLLECTION).doc(String(id))
+  const snap = await ref.get()
+  if (!snap.exists) {
+    const err = new Error('Submission not found')
+    err.status = 404
+    throw err
+  }
+  const submission = { id: snap.id, ...snap.data() }
+  assertOrgOwnership(submission, meta.organisationId)
+  if (!EDITABLE_STATUSES.has(submission.status)) {
+    const err = new Error(`Cannot edit submission in status ${submission.status}`)
+    err.status = 409
+    throw err
+  }
+  const ts = nowIso(meta.now)
+  const merged = applyDraftPatch(submission, patch || {})
+  const next = sanitizeFirestoreData({
+    ...merged,
+    updatedAt: ts,
+    audit: [
+      ...(submission.audit || []),
+      {
+        at: ts,
+        action: 'draft_updated',
+        actorUid: meta.actorUid || null,
+        actorEmail: meta.actorEmail || null,
+        note: null,
+      },
+    ].slice(-50),
+  })
+  await ref.set(next, { merge: true })
+  try {
+    const { writeAuditEvent } = require('./privateTenderAuditService')
+    await writeAuditEvent(
+      {
+        submissionId: id,
+        organisationId: submission.organisationId || null,
+        actorUid: meta.actorUid || null,
+        actorType: 'organisation_user',
+        eventType: 'draft_updated',
+        fromStatus: submission.status,
+        toStatus: submission.status,
+      },
+      deps
+    )
+  } catch {
+    /* fail-soft */
+  }
+  return { ...submission, ...next }
+}
+
+async function submitOrgDraft(id, meta = {}, deps = {}) {
+  const { canTransition } = require('./privateTenderStatusMachine')
+  const db = getDb(deps)
+  const ref = db.collection(COLLECTION).doc(String(id))
+
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists) {
+      const err = new Error('Submission not found')
+      err.status = 404
+      throw err
+    }
+    const submission = { id: snap.id, ...snap.data() }
+    assertOrgOwnership(submission, meta.organisationId)
+    // Idempotent: already submitted/in review
+    if (
+      submission.status === 'submitted' ||
+      submission.status === 'under_review' ||
+      submission.status === 'published'
+    ) {
+      return { submission, alreadySubmitted: true }
+    }
+    if (!canTransition(submission.status, 'submitted')) {
+      const err = new Error(`Cannot submit from status ${submission.status}`)
+      err.status = 409
+      throw err
+    }
+
+    const ts = nowIso(meta.now)
+    const isResubmit = submission.status === 'changes_requested'
+    const next = sanitizeFirestoreData({
+      status: 'submitted',
+      submittedAt: submission.submittedAt || ts,
+      submittedByUid: meta.actorUid || submission.submittedByUid || null,
+      submittedByEmail: meta.actorEmail || submission.submittedByEmail || null,
+      submittedIpHash: hashIp(meta.ip) || submission.submittedIpHash || null,
+      lastSubmittedAt: ts,
+      updatedAt: ts,
+      audit: [
+        ...(submission.audit || []),
+        {
+          at: ts,
+          action: isResubmit ? 'tender_resubmitted' : 'tender_submitted',
+          actorUid: meta.actorUid || null,
+          actorEmail: meta.actorEmail || null,
+          note: null,
+        },
+      ],
+    })
+    tx.set(ref, next, { merge: true })
+    return {
+      submission: { ...submission, ...next },
+      alreadySubmitted: false,
+      resubmitted: isResubmit,
+    }
+  }).then(async (result) => {
+    try {
+      const { writeAuditEvent } = require('./privateTenderAuditService')
+      await writeAuditEvent(
+        {
+          submissionId: id,
+          organisationId: result.submission.organisationId || null,
+          actorUid: meta.actorUid || null,
+          actorType: 'organisation_user',
+          eventType: result.resubmitted ? 'tender_resubmitted' : 'tender_submitted',
+          fromStatus: result.alreadySubmitted ? result.submission.status : 'draft',
+          toStatus: 'submitted',
+        },
+        deps
+      )
+    } catch {
+      /* fail-soft */
+    }
+    return result
+  })
+}
+
+async function withdrawOrgSubmission(id, meta = {}, deps = {}) {
+  const { canOrganisationWithdraw, canTransition } = require('./privateTenderStatusMachine')
+  const db = getDb(deps)
+  const ref = db.collection(COLLECTION).doc(String(id))
+  const snap = await ref.get()
+  if (!snap.exists) {
+    const err = new Error('Submission not found')
+    err.status = 404
+    throw err
+  }
+  const submission = { id: snap.id, ...snap.data() }
+  assertOrgOwnership(submission, meta.organisationId)
+  if (!canOrganisationWithdraw(submission.status) || !canTransition(submission.status, 'withdrawn')) {
+    const err = new Error('Withdrawal is not allowed for this status; contact Founder if published')
+    err.status = 409
+    throw err
+  }
+  if (submission.publishedTenderId) {
+    const err = new Error('Published tenders require Founder intervention to cancel')
+    err.status = 409
+    throw err
+  }
+  const ts = nowIso(meta.now)
+  const next = sanitizeFirestoreData({
+    status: 'withdrawn',
+    updatedAt: ts,
+    withdrawnAt: ts,
+    withdrawnByUid: meta.actorUid || null,
+    audit: [
+      ...(submission.audit || []),
+      {
+        at: ts,
+        action: 'tender_withdrawn',
+        actorUid: meta.actorUid || null,
+        actorEmail: meta.actorEmail || null,
+        note: sliceStr(meta.note || '', 500) || null,
+      },
+    ],
+  })
+  await ref.set(next, { merge: true })
+  try {
+    const { writeAuditEvent } = require('./privateTenderAuditService')
+    await writeAuditEvent(
+      {
+        submissionId: id,
+        organisationId: submission.organisationId || null,
+        actorUid: meta.actorUid || null,
+        actorType: 'organisation_user',
+        eventType: 'tender_withdrawn',
+        fromStatus: submission.status,
+        toStatus: 'withdrawn',
+      },
+      deps
+    )
+  } catch {
+    /* fail-soft */
+  }
+  return { ...submission, ...next }
+}
+
+async function duplicateOrgSubmission(id, meta = {}, deps = {}) {
+  const source = await getSubmissionById(id, deps)
+  if (!source) {
+    const err = new Error('Submission not found')
+    err.status = 404
+    throw err
+  }
+  assertOrgOwnership(source, meta.organisationId)
+  const seed = {
+    companyName: source.companyName,
+    registrationNumber: source.registrationNumber,
+    website: source.website,
+    contactPersonName: source.contactPersonName,
+    contactEmail: source.contactEmail,
+    contactPhone: source.contactPhone,
+    title: source.title ? `${source.title} (copy)` : '',
+    tenderReference: '',
+    description: source.description,
+    category: source.category,
+    province: source.province,
+    municipality: source.municipality,
+    closingDate: '',
+    closingTime: source.closingTime || '',
+    briefingRequired: true,
+    briefingCompulsory: true,
+    briefingDate: '',
+    briefingTime: source.briefingTime || '',
+    briefingVenue: source.briefingVenue || '',
+    briefingInstructions: source.briefingInstructions || '',
+    registrationRequired: Boolean(source.registrationRequired),
+    registrationInstructions: source.registrationInstructions || '',
+    virtualBriefing: Boolean(source.virtualBriefing),
+    meetingLink: '',
+    eligibilityRequirements: source.eligibilityRequirements || '',
+    submissionInstructions: source.submissionInstructions || '',
+    procurementContactName: source.procurementContactName || '',
+    procurementContactEmail: source.procurementContactEmail || '',
+    procurementContactPhone: source.procurementContactPhone || '',
+    tenderDocument: null,
+    supportingDocuments: [],
+  }
+  const draft = await createOrgDraft(
+    {
+      organisationId: source.organisationId || meta.organisationId,
+      createdByUid: meta.actorUid || meta.createdByUid,
+      createdByEmail: meta.actorEmail,
+      companyName: seed.companyName,
+      seed,
+      now: meta.now,
+    },
+    deps
+  )
+  try {
+    const { writeAuditEvent } = require('./privateTenderAuditService')
+    await writeAuditEvent(
+      {
+        submissionId: draft.id,
+        organisationId: draft.organisationId,
+        actorUid: meta.actorUid || null,
+        actorType: 'organisation_user',
+        eventType: 'tender_duplicated',
+        fromStatus: null,
+        toStatus: 'draft',
+        metadata: { sourceSubmissionId: source.id },
+      },
+      deps
+    )
+  } catch {
+    /* fail-soft */
+  }
+  return draft
+}
+
+async function listOrgSubmissions(organisationId, filters = {}, deps = {}) {
+  const db = getDb(deps)
+  const limit = Math.min(Number(filters.limit) || 50, 100)
+  let query = db
+    .collection(COLLECTION)
+    .where('organisationId', '==', String(organisationId))
+    .orderBy('updatedAt', 'desc')
+    .limit(limit)
+
+  if (filters.status) {
+    query = db
+      .collection(COLLECTION)
+      .where('organisationId', '==', String(organisationId))
+      .where('status', '==', String(filters.status))
+      .orderBy('updatedAt', 'desc')
+      .limit(limit)
+  }
+
+  const snap = await query.get()
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+}
+
+async function getOrgDashboardCounts(organisationId, deps = {}) {
+  const items = await listOrgSubmissions(organisationId, { limit: 100 }, deps)
+  const counts = {
+    draft: 0,
+    under_review: 0,
+    changes_requested: 0,
+    published: 0,
+    closing_soon: 0,
+    closed: 0,
+    submitted: 0,
+    total: items.length,
+  }
+  const soon = Date.now() + 14 * 24 * 60 * 60 * 1000
+  for (const item of items) {
+    if (counts[item.status] !== undefined) counts[item.status] += 1
+    if (item.status === 'submitted' || item.status === 'under_review') {
+      /* under review bucket includes submitted awaiting Founder */
+      if (item.status === 'submitted') counts.under_review += 0
+    }
+    if (
+      (item.status === 'published' || item.status === 'submitted' || item.status === 'under_review') &&
+      item.closingDate
+    ) {
+      const close = new Date(`${item.closingDate}T23:59:59+02:00`).getTime()
+      if (close >= Date.now() && close <= soon) counts.closing_soon += 1
+    }
+    if (item.status === 'closed' || item.status === 'archived') counts.closed += 1
+  }
+  // Combine submitted into "under review" KPI for dashboard friendliness
+  counts.under_review = counts.under_review + counts.submitted
+  return { counts, recent: items.slice(0, 10) }
+}
+
 module.exports = {
   COLLECTION,
   createSubmission,
@@ -498,4 +1092,12 @@ module.exports = {
   getSignedDocumentUrl,
   findLikelyDuplicates,
   normalizeRef,
+  createOrgDraft,
+  updateOrgDraft,
+  submitOrgDraft,
+  withdrawOrgSubmission,
+  duplicateOrgSubmission,
+  listOrgSubmissions,
+  getOrgDashboardCounts,
+  EDITABLE_STATUSES,
 }
