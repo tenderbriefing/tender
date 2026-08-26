@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Extract CSD Commodities List from National Treasury PDF
-Purpose: Download and parse the official CSD commodities guide
+Purpose: Optional regeneration helper — runtime catalog is lib/data/csdProcurementCatalog.ts
+Outputs (csd_commodities*.json) are local artefacts; not imported by the app.
 """
 
 import requests
