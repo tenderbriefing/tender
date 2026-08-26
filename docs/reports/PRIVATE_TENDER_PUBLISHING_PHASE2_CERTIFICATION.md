@@ -20,7 +20,7 @@ Final re-certification of PR #63 after fixing blocking seed/ownership and role-e
 
 ## 5. Final certified PR head SHA
 
-*(set to tip after push of this certification commit)*
+`6b66f515bdf03bba5d6780954dc30bb5cfaa1322`
 
 ## 6. Current master SHA
 
