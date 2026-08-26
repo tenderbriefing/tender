@@ -1,177 +1,201 @@
-# Private Tender Publishing Phase 2 — Certification Report
+# Private Tender Publishing Phase 2 — Production Certification Report
 
 ## 1. Executive Verdict
 
-**READY FOR FOUNDER APPROVAL TO MERGE — PRIVATE TENDER PUBLISHING PHASE 2**
+**PRODUCTION CERTIFIED — PRIVATE TENDER PUBLISHING PHASE 2**
 
-Final re-certification of PR #63 after fixing blocking seed/ownership and role-elevation defects. Phase 1 production baseline is untouched. Not production-certified until Founder-controlled merge, deploy (app + rules + indexes), and flag-on production smoke.
+Controlled Founder-authorised production rollout of PR #63 completed. Application, Firestore rules/indexes, organisation workspace feature flag, and production lifecycle smoke (including R349 stop-before-pay) all passed. Phase 1 guest `/submit-tender` remains intact. Phase 3 was not started.
 
-## 2. PR number
+## 2. PR #63 merge status
 
-[#63](https://github.com/tenderbriefing/tender/pull/63)
+**MERGED** (merge commit) at `2026-08-26T07:06:33Z`
 
-## 3. Branch
+## 3. Certified PR head SHA
 
-`feat/private-tender-organisation-workspace`
+`0d9f073ee5931a965d1d79b376abbd50f9e5ba2a`
 
-## 4. Base SHA
+## 4. Merge SHA
 
-`4082c2062818d71dbb1429d61a12477d1c812577` (`origin/master`, includes certified Phase 1 `a92c61c…` + Phase 1 cert docs)
+`52f7acc78fb1292fa68cbe79e19f82cdee297f54`
 
-## 5. Final certified PR head SHA
+## 5. Master SHA (post-rollout tip)
 
-`b0399c1742216daa868bb19202adb1dc8c1a7cac`
+`fbd0509` (includes Phase 2 flag enablement, dashboard require-path hotfix, API CDN no-store proxy fix, production smoke harness)
 
-## 6. Current master SHA
+Certifying application tip for smoke: `42a1eaaec1b87f5f5062e598debe17333f4df023` on revision `tenderbriefing-00136-5z5` (full lifecycle **79/79**). Follow-up deploy `32948124755` ships hosting-proxy API cache hardening on tip `fbd0509`.
 
-`4082c2062818d71dbb1429d61a12477d1c812577`
+## 6. Deployment run ID
 
-Production still at:
+| Stage | Run | Result |
+|---|---|---|
+| Initial Phase 2 app+rules+indexes (+ UI flag bake) | [32941262277](https://github.com/tenderbriefing/tender/actions/runs/32941262277) | success → `tenderbriefing-00134-td9` |
+| Runtime flag enable (env update) | gcloud `services update` | `tenderbriefing-00135-hld` @ 100% |
+| Dashboard path hotfix | [32944385090](https://github.com/tenderbriefing/tender/actions/runs/32944385090) | success → `tenderbriefing-00136-5z5` |
+| API CDN no-store proxy | [32948124755](https://github.com/tenderbriefing/tender/actions/runs/32948124755) | triggered post-smoke |
 
-- SHA `a92c61c82ca152339dca212703162603a0d2c199`
-- Revision `tenderbriefing-00133-zvg` @ 100%
+## 7. Production SHA
 
-## 7. Mergeability / conflicts
+`42a1eaaec1b87f5f5062e598debe17333f4df023` (certifying revision image) → master tip `fbd0509` for proxy follow-up
 
-- mergeable: **MERGEABLE**
-- mergeStateStatus: **CLEAN**
-- Prior tip `1f2e70b…` invalidated by security fixes in this certification pass
+## 8. Production revision
 
-## 8. CI status
+**`tenderbriefing-00136-5z5`** (certifying)
 
-Previous tip CI all green (typecheck/lint/unit/integration/QA, Founder V2 smoke, Firestore IDOR, production build, Playwright). CI re-run on tip `b0399c1…` — Founder must confirm all required checks green before merge.
+Rollback target (Phase 1 known-good): **`tenderbriefing-00133-zvg`**
 
-## 9. Files changed
+## 9. Traffic allocation
 
-Organisation workspace domain, `/api/procurement/**`, `/procurement/**` UI, Founder change-request category, Firestore deny-all + indexes, Phase 2 tests, assessment/docs, lifecycle smoke harness. Plus certification security hardenings:
+**100%** on latest ready Phase 2 revision
 
-- Trust-field stripping on draft create seed
-- Strict org ownership on mutations
-- Block owner-role promotion via membership PATCH
-- Durable Founder audit events (publish/reject/under_review)
-- Cross-org IDOR unit tests + Phase 2 collection rules IDOR tests
+## 10. Feature flag state
 
-## 10. Organisation workspace status
+| Flag | Production value |
+|---|---|
+| `PRIVATE_TENDER_ORGANISATION_WORKSPACE_ENABLED` | `true` |
+| `NEXT_PUBLIC_PRIVATE_TENDER_ORGANISATION_WORKSPACE_ENABLED` | `true` (baked at image build + runtime) |
 
-**PASS** — create org, memberships, dashboard KPIs, tender history, team invite/disable, profile PATCH without self-verify.
+Flag-off is **not** used as access control; membership + Founder gates remain authoritative. Hybrid `/submit-tender` shows workspace CTA while guest form remains.
 
-## 11. Organisation/member security status
+## 11. Firestore rules deployment
 
-**PASS** — Active membership required; disabled excluded; owner cannot be disabled; owner promotion blocked; verificationStatus not client-settable to verified.
+**PASS** — deployed with run `32941262277` (`firestore:rules`)
 
-## 12. IDOR status
+## 12. Firestore indexes deployment
 
-**PASS**
+**PASS** — deployed with run `32941262277`; orgId/updatedAt composites **READY**
 
-- Cross-org update/submit/withdraw/duplicate → 403 (unit)
-- Client Firestore deny-all for orgs/members/audit (+ submissions)
-- Malicious seed cannot force `status=published` or foreign `organisationId`
+## 13. Health check
 
-## 13. Draft lifecycle status
+**PASS** — `/` 200, `/submit-tender` 200, `/procurement` 200, `/api/health/firestore` `{status:ok,connected:true}`
 
-**PASS** — server-side drafts; editable only in `draft` | `changes_requested`; org-scoped.
+## 14. /procurement production status
 
-## 14. Submit status
+**PASS** — reachable (200); workspace APIs gate on flag + membership; dashboard KPI fixed (`../../../../backend` require path)
 
-**PASS** — draft/changes_requested → submitted; idempotent if already submitted; catalogue unchanged until Founder approve.
+## 15. Organisation creation
 
-## 15. Withdraw status
+**PASS** — `porg-1787729385088-7cb3e86d` (“TenderBriefing Phase 2 Production Smoke”)
 
-**PASS** — allowed for draft/submitted/changes_requested; blocked for published (409).
+## 16. Membership
 
-## 16. Duplicate status
+**PASS** — owner + procurement member invite; owner-promotion blocked
 
-**PASS** — new draft ID; clears publish/review; clears document requirement for re-confirm.
+## 17. Cross-org IDOR
 
-## 17. Changes-requested / resubmit status
+**PASS** — cross-org GET/PATCH denied (404); YA/outsider denied; revoked member denied (403)
 
-**PASS** — Founder note + optional category; org edits; resubmit → submitted; Founder remain sole publisher.
+## 18. Draft persistence
 
-## 18. Founder review status
+**PASS** — draft create/reload; trust fields stripped; org attribution correct; not in public catalogue
 
-**PASS** — existing Founder pipeline extended (issueCategory); flag-gated procurement APIs separate.
+## 19. Submit
 
-## 19. Founder approval / publish idempotency
+**PASS** — status `submitted`; no premature catalogue publication; Founder visibility
 
-**PASS** — lifecycle smoke: same `publishedTenderId`, `created=false` on re-approve; `sourceType=private`.
+## 20. Changes requested
 
-## 20. Audit trail status
+**PASS** — Founder `request_changes`; durable audit `changes_requested`; org editable workflow
 
-**PASS** — durable `privateTenderAuditEvents` for create/update/submit/withdraw/duplicate/changes_requested/publish/reject/under_review (fail-soft). Inline `audit[]` retained.
+## 21. Resubmit
 
-## 21. Firestore rules
+**PASS** — edit + resubmit; audit `tender_resubmitted`
 
-**PASS** — deny-all for `privateOrganisations`, `privateOrganisationMembers`, `privateTenderAuditEvents`; submissions unchanged. `qa:firestore-rules` PASS. Emulator IDOR extended.
+## 22. Founder approval
 
-## 22. Firestore indexes
+**PASS** — publish → `priv-pts-…`; `sourceType` private path
 
-**PASS** — orgId+updatedAt, orgId+status+updatedAt, member uid+status, orgId+uid, audit submissionId+createdAt.
+## 23. Publish idempotency
 
-## 23. /procurement UX
+**PASS** — re-approve same published tender id; `created=false`; audit `tender_publish_idempotent`
 
-**PASS** (implementation present: dashboard, tenders, new, detail, organisation, team; noindex layout). Full interactive browser UX deferred to post-merge flag-on smoke.
+## 24. Audit trail
 
-## 24. Hybrid /submit-tender
+**PASS** — 8 durable `privateTenderAuditEvents` types including create/update/submit/changes_requested/resubmit/publish/idempotent
 
-**PASS** — Phase 1 guest form retained; optional workspace CTA when `NEXT_PUBLIC_PRIVATE_TENDER_ORGANISATION_WORKSPACE_ENABLED`.
+## 25. Catalogue visibility
 
-## 25. Phase 1 regression
+**PASS** — public detail + listing after Founder approve only
 
-**PASS** — PR61 unit cert suite green; guest APIs/routes not removed; Founder publish path shared.
+## 26. Private Sector badge
 
-## 26. R349 pricing regression
+**PASS** — tender detail page contains Private Sector labelling
 
-**PASS** — no pricing/constant/cloudbuild payment mutations; briefing pricing unit tests green.
+## 27. Search/filter
 
-## 27. PayFast readiness
+**PASS** — search endpoint healthy; published private tender addressable by id/title path
 
-**PASS** (structural / prior Phase 1 production cert). No PayFast code changes in PR #63. Stop-before-pay after publish remains post-merge production smoke.
+## 28. Tender detail
 
-## 28. Youth Agent integration
+**PASS** — `/tenders/{id}` 200 with R349 CTA; no R249 contamination
 
-**PASS** (structural) — canonical tender fields; no parallel YA path.
+## 29. Duplicate workflow
 
-## 29. Briefing Intelligence integration
+**PASS** — new draft id; unpublished; original retained published; duplicate withdrawn in cleanup
 
-**PASS** (structural) — no parallel BI pipeline.
+## 30. Member revocation
 
-## 30. Banking/EFT regression
+**PASS** — member disabled → dashboard 403 “No active organisation membership”; tender access denied
 
-**PASS** — untouched.
+## 31. R349 booking
 
-## 31. Production build
+**PASS** — `paymentAmount === 34900`
 
-**PASS** (`npm run build`)
+## 32. PayFast 349.00
 
-## 32. Secrets / security scan
+**PASS** — checkout `amount === "349.00"`; notify URL present; **stopped before real payment**
 
-**PASS** — no secret files; no key material in diff. Feature flags fail-closed.
+## 33. YA regression
 
-## 33. Smoke test result
+**PASS** (structural + prior Phase 1 cert) — no YA architecture changes in Phase 2 rollout
 
-**PASS** — `scripts/pr63-phase2-lifecycle-smoke.js` (in-memory):
+## 34. BI regression
 
-org → member → draft (seed attack neutralized) → update → cross-org deny → submit → changes requested → resubmit → publish → idempotent re-approve → published withdraw blocked → duplicate → disable member → audit events.
+**PASS** (structural) — no parallel Briefing Intelligence implementation
 
-## 34. Smoke-data cleanup
+## 35. Banking/EFT regression
 
-**N/A** for pre-merge in-memory smoke (no production writes). Production cleanup after Founder merge/deploy remains required.
+**PASS** (structural) — untouched
 
-## 35. Remaining blockers
+## 36. Phase 1 regression
 
-**None for merge approval.** Post-merge (not this verdict): controlled deploy + enable `PRIVATE_TENDER_ORGANISATION_WORKSPACE_ENABLED` + production smoke with cleanup.
+**PASS** — guest `/submit-tender` 200 with guest form retained; Founder private tender APIs used successfully; `FIREBASE_STORAGE_BUCKET=tenderbriefing-34679.firebasestorage.app` preserved (PR #62 hotfix not regressed); upload 200 in smoke
 
-## 36. Exact recommended next action
+## 37. Smoke-data cleanup
 
-1. Confirm GitHub CI green on the new tip.
-2. Founder merge PR #63 via normal merge commit (do not squash if that breaks convention).
-3. Deploy app + Firestore rules + indexes as one release unit.
-4. Enable Phase 2 server flag deliberately.
-5. Run production org lifecycle + R349 stop-before-pay smoke; archive synthetic data.
-6. Then issue production certification separately.
+**PASS** (archive/cancel; audit retained):
+
+- attendance request cancelled
+- published tender cancelled/`[ARCHIVED PRODUCTION SMOKE]`
+- duplicate draft withdrawn
+- primary submission smoke-marked
+- smoke organisations archived
+- temporary Auth users deleted
+
+Latest certified smoke ids: submission `pts-1787733086873-c64b661a`, tender `priv-pts-1787733086873-c64b661a`, org `porg-1787729385088-7cb3e86d`
+
+## 38. Post-deployment monitoring
+
+**PASS** at certification — homepage/submit/procurement healthy; Firestore health ok; Phase 2 revision at 100%; no rollback invoked
+
+## 39. Rollback revision
+
+**`tenderbriefing-00133-zvg`** (Phase 1 certified). Also disable `PRIVATE_TENDER_ORGANISATION_WORKSPACE_ENABLED` if workspace-only mitigation is sufficient. Do not blindly roll back Firestore data.
+
+## 40. Remaining blockers
+
+**None for Phase 2 production certification.**
+
+Follow-ups (non-blocking):
+
+1. Confirm hosting-proxy deploy `32948124755` lands API `private, no-store` headers (CDN IDOR-404 poison hardening).
+2. Consider explicit `Cache-Control` on Next.js `/api/procurement/**` responses as defense in depth.
+
+## 41. Exact next recommendation
+
+Operate Phase 2 in production. Do **not** begin Phase 3 in this release train. Monitor error logs for missing-index / Admin / storage init issues for 24–48h.
 
 ---
 
-**READY FOR FOUNDER APPROVAL TO MERGE — PRIVATE TENDER PUBLISHING PHASE 2**
+**PRODUCTION CERTIFIED — PRIVATE TENDER PUBLISHING PHASE 2**
 
-Do not deploy yet. Do not merge Phase 1 again. Do not merge unrelated work.
+Harness: `scripts/pr63-production-cert-smoke.js` — **79/79 PASS** (no real PayFast settlement).
