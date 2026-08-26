@@ -20,7 +20,7 @@ export async function POST(
 
     const body = await request.json().catch(() => ({}))
     const action = String(body.action || '').trim()
-    const svc = require('../../../../../backend/services/briefingFollowUpUpdateService.js')
+    const svc = require('../../../../../../backend/services/briefingFollowUpUpdateService.js')
     const update = await svc.reviewFollowUpUpdate(params.id, action, {
       actorUid: access.user.uid,
       actorEmail: access.user.email,
