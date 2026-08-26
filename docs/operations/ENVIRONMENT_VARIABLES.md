@@ -52,6 +52,7 @@ Never commit real secret values. Rotate via Google Secret Manager / hosting env.
 | `NEXT_PUBLIC_YOUTH_AGENT_WORKSPACE_ENABLED` | Advisory client mirror | optional (default false) | No | true/false | F | Product | Gate denial UI |
 | `YOUTH_AGENT_WORKSPACE_PILOT_UIDS` | YAW pilot UIDs | optional | Yes (prefer GSM) | uid,uid | F | Product/Ops | Deny-all when empty + flag false |
 | `BRIEFING_AUDIO_TRANSCRIPTION_ENABLED` | Async briefing audio transcription after evidence | optional (default false) | No | true/false | F | Product | Evidence still accepted; no Whisper jobs |
+| `BRIEFING_AUDIO_CHUNKING_ENABLED` | Long-audio hybrid chunking (requires transcription + ffmpeg) | optional (default false) | No | true/false | F | Product | Short audio uses direct path; enable only after cert |
 | `BRIEFING_AI_REPORT_GENERATION_ENABLED` | Meeting-minutes AI report after transcript | optional (default false) | No | true/false | F | Product | Transcript kept; no report jobs |
 | `BRIEFING_REPORT_PROMPT_VERSION` | Prompt version stamp on generated reports | optional | No | v1 | - | Product | Defaults to v1 |
 | `BRIEFING_INTELLIGENCE_PROVIDER` | `openai` or `mock` | optional | No | openai | - | Product | Mock for tests only |

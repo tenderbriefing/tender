@@ -1,23 +1,21 @@
-import { getFirebaseAdmin } from '@/lib/backend/firebaseAdmin'
-import type { BriefingIntelligenceReport, BriefingReportContent } from '@/lib/briefing-intelligence/types'
-import { getTranscriptionProvider } from '@/lib/briefing-intelligence/transcriptionService'
-import { logBriefingIntelligenceAuditEvent } from '@/lib/briefing-intelligence/auditService'
-import { syncSlaForReport } from '@/lib/briefing-intelligence/slaService'
-import { saveBriefingTranscript } from '@/lib/briefing-intelligence/transcriptStore'
+import type { Bucket } from '@google-cloud/storage'
+import type { Firestore, DocumentReference } from 'firebase-admin/firestore'
+import type { BriefingIntelligenceReport } from './types'
+import type { BriefingTranscriptionJob } from './transcriptionTypes'
 import {
-  claimTranscriptionJob,
   completeTranscriptionJob,
   failTranscriptionJob,
-  getTranscriptionJob,
-  transcriptionJobIdForReport,
-} from '@/lib/briefing-intelligence/transcriptionJobs'
+} from './transcriptionJobs'
+import { saveBriefingTranscript } from './transcriptStore'
+import { handoffAfterTranscriptSaved, type TranscriptionMeta } from './transcriptionHandoff'
+import { getTranscriptionProvider } from './transcriptionService'
 import {
   isBriefingAudioTranscriptionEnabled,
-  isBriefingAiReportGenerationEnabled,
-} from '@/lib/briefing-intelligence/featureFlag'
-import { fetchAttendanceAndTenderContext } from '@/lib/briefing-intelligence/tenderContext'
-
-export { fetchAttendanceAndTenderContext } from '@/lib/briefing-intelligence/tenderContext'
+  isBriefingAudioChunkingEnabled,
+} from './featureFlag'
+import { shouldUseChunkedTranscription } from './audioChunking/decision'
+import { estimateDurationMsFromSize } from './audioChunking/ffmpegMedia'
+import { processChunkedTranscription } from './processChunkedTranscription'
 
 function nowIso() {
   return new Date().toISOString()
@@ -30,12 +28,144 @@ function computeWordCount(text: string): number | null {
 }
 
 export type ProcessReportResult =
-  | { ok: true; reportId: string; skipped?: boolean; transcriptId?: string }
+  | { ok: true; reportId: string; skipped?: boolean; transcriptId?: string; needsContinuation?: boolean }
   | { ok: false; reportId: string; error: string; retryable: boolean }
 
+type AdminBucket = Bucket
+
 /**
- * Core processing: claim job (optional) → Whisper → store transcript → extract → draft_report.
- * Evidence submission remains valid even if this fails.
+ * Direct single-request Whisper transcription (short audio path).
+ */
+async function processDirectTranscription(params: {
+  db: Firestore
+  bucket: AdminBucket
+  docRef: DocumentReference
+  report: BriefingIntelligenceReport
+  reportId: string
+  jobId: string
+  actorUid: string
+  actorRole: 'admin' | 'system'
+  nextAttempts: number
+  transcriptionMode: 'direct'
+}): Promise<ProcessReportResult> {
+  const { db, bucket, docRef, report, reportId, jobId, actorUid, actorRole, nextAttempts } =
+    params
+
+  const file = bucket.file(report.audioFileRef!)
+  const [audioUrl] = await file.getSignedUrl({
+    action: 'read',
+    expires: Date.now() + 60 * 60 * 1000,
+  })
+
+  const provider = getTranscriptionProvider()
+  const transcription = await provider.transcribe(audioUrl)
+  const segments =
+    Array.isArray(transcription.segments) && transcription.segments.length > 0
+      ? transcription.segments
+      : [
+          {
+            id: 'seg-1',
+            speaker: 'Speaker 1',
+            startSeconds: 0,
+            endSeconds: transcription.durationSeconds ?? null,
+            text: transcription.transcriptText,
+          },
+        ]
+
+  const transcriptPath = `briefing-intelligence/${reportId}/transcripts/raw-${Date.now()}.json`
+  await bucket.file(transcriptPath).save(
+    Buffer.from(
+      JSON.stringify(
+        transcription.rawProviderPayload || {
+          text: transcription.transcriptText,
+          segments,
+          language: transcription.language,
+          duration: transcription.durationSeconds,
+        }
+      )
+    ),
+    {
+      contentType: 'application/json',
+      metadata: { reportId, requestId: report.requestId },
+      resumable: false,
+    }
+  )
+
+  const transcriptRecord = await saveBriefingTranscript({
+    db,
+    reportId,
+    requestId: report.requestId,
+    tenderId: report.tenderId,
+    agentId: report.agentId,
+    smeId: report.smeId,
+    transcriptionJobId: jobId,
+    sourceAudioPath: report.audioFileRef!,
+    language: transcription.language,
+    durationSeconds: transcription.durationSeconds ?? null,
+    fullText: transcription.transcriptText,
+    segments,
+    provider: transcription.provider,
+    model: transcription.model ?? null,
+    confidence: transcription.confidence,
+    rawProviderResponseRef: transcriptPath,
+  })
+
+  await completeTranscriptionJob({
+    db,
+    jobId,
+    transcriptId: transcriptRecord.id,
+    detectedLanguage: transcription.language,
+    audioDurationSeconds: transcription.durationSeconds ?? null,
+  })
+
+  const transcriptionMeta: TranscriptionMeta = {
+    provider: transcription.provider,
+    rawTranscriptRef: transcriptPath,
+    transcriptWordCount:
+      transcription.transcriptWordCount ?? computeWordCount(transcription.transcriptText),
+    language: transcription.language,
+    confidence: transcription.confidence,
+    completedAt: transcription.completedAt,
+    transcriptId: transcriptRecord.id,
+    segmentCount: segments.length,
+    durationSeconds: transcription.durationSeconds ?? null,
+    transcriptionMode: 'direct',
+  }
+
+  await docRef.set(
+    {
+      pipelineDiagnostics: {
+        currentStage: 'transcription_complete',
+        transcriptionMode: 'direct',
+        updatedAt: nowIso(),
+      },
+    },
+    { merge: true }
+  )
+
+  await handoffAfterTranscriptSaved({
+    db,
+    docRef,
+    report,
+    reportId,
+    jobId,
+    actorUid,
+    actorRole,
+    nextAttempts,
+    transcriptRecord,
+    transcriptionMeta,
+    fullText: transcription.transcriptText,
+    segments,
+    durationSeconds: transcription.durationSeconds ?? null,
+    provider: transcription.provider,
+    model: transcription.model ?? null,
+  })
+
+  return { ok: true, reportId, transcriptId: transcriptRecord.id }
+}
+
+/**
+ * Core processing: claim job → direct or chunked transcription → report handoff.
  */
 export async function processBriefingIntelligenceReport(params: {
   reportId: string
@@ -43,8 +173,10 @@ export async function processBriefingIntelligenceReport(params: {
   actorRole: 'admin' | 'system'
   force?: boolean
   jobId?: string
+  existingJob?: BriefingTranscriptionJob | null
 }): Promise<ProcessReportResult> {
   const { reportId, actorUid, actorRole, force = false } = params
+  const { getFirebaseAdmin } = await import('@/lib/backend/firebaseAdmin')
   const admin = getFirebaseAdmin()
   const db = admin.firestore()
   const docRef = db.collection('briefingIntelligenceReports').doc(reportId)
@@ -63,21 +195,24 @@ export async function processBriefingIntelligenceReport(params: {
     return { ok: true, reportId, skipped: true }
   }
 
+  const { claimTranscriptionJob, getTranscriptionJob, transcriptionJobIdForReport } =
+    await import('./transcriptionJobs')
+  const { logBriefingIntelligenceAuditEvent } = await import('./auditService')
+  const { syncSlaForReport } = await import('./slaService')
+
   const jobId = params.jobId || transcriptionJobIdForReport(reportId)
-  const existingJob = await getTranscriptionJob(db, jobId)
+  const existingJob = params.existingJob ?? (await getTranscriptionJob(db, jobId))
   let claimed = null as Awaited<ReturnType<typeof claimTranscriptionJob>>
 
   if (existingJob) {
     if (!force && existingJob.status === 'completed' && existingJob.transcriptId) {
-      return {
-        ok: true,
-        reportId,
-        skipped: true,
-        transcriptId: existingJob.transcriptId,
-      }
+      return { ok: true, reportId, skipped: true, transcriptId: existingJob.transcriptId }
     }
     if (!force && existingJob.status === 'processing') {
-      return { ok: true, reportId, skipped: true }
+      const lease = existingJob.processingLeaseExpiresAt
+      if (lease && Date.now() < new Date(lease).getTime()) {
+        return { ok: true, reportId, skipped: true }
+      }
     }
     claimed = await claimTranscriptionJob(db, jobId)
     if (!claimed && !force) {
@@ -85,7 +220,7 @@ export async function processBriefingIntelligenceReport(params: {
     }
   }
 
-  // If no job doc yet (admin force process), proceed without claim.
+  const job = claimed || existingJob
   const now = nowIso()
   const nextAttempts = (report.processingAttempts || 0) + 1
   await docRef.set(
@@ -115,6 +250,7 @@ export async function processBriefingIntelligenceReport(params: {
       processingAttempts: nextAttempts,
       jobId,
       transcriptionEnabled: isBriefingAudioTranscriptionEnabled(),
+      chunkingEnabled: isBriefingAudioChunkingEnabled(),
     },
   })
 
@@ -124,319 +260,83 @@ export async function processBriefingIntelligenceReport(params: {
     }
 
     const bucket = admin.storage().bucket()
-    const file = bucket.file(report.audioFileRef)
-    const [audioUrl] = await file.getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 60 * 60 * 1000,
-    })
-
-    const provider = getTranscriptionProvider()
-    const transcription = await provider.transcribe(audioUrl)
-    const segments =
-      Array.isArray(transcription.segments) && transcription.segments.length > 0
-        ? transcription.segments
-        : [
-            {
-              id: 'seg-1',
-              speaker: 'Speaker 1',
-              startSeconds: 0,
-              endSeconds: transcription.durationSeconds ?? null,
-              text: transcription.transcriptText,
-            },
-          ]
-
-    const transcriptPath = `briefing-intelligence/${reportId}/transcripts/raw-${Date.now()}.json`
-    await bucket.file(transcriptPath).save(
-      Buffer.from(
-        JSON.stringify(
-          transcription.rawProviderPayload || {
-            text: transcription.transcriptText,
-            segments,
-            language: transcription.language,
-            duration: transcription.durationSeconds,
-          }
-        )
-      ),
-      {
-        contentType: 'application/json',
-        metadata: {
-          uploadedBy: 'system',
-          reportId,
-          requestId: report.requestId,
-        },
-        resumable: false,
-      }
-    )
-
-    const transcriptRecord = await saveBriefingTranscript({
-      db,
-      reportId,
-      requestId: report.requestId,
-      tenderId: report.tenderId,
-      agentId: report.agentId,
-      smeId: report.smeId,
-      transcriptionJobId: jobId,
-      sourceAudioPath: report.audioFileRef,
-      language: transcription.language,
-      durationSeconds: transcription.durationSeconds ?? null,
-      fullText: transcription.transcriptText,
-      segments,
-      provider: transcription.provider,
-      model: transcription.model ?? null,
-      confidence: transcription.confidence,
-      rawProviderResponseRef: transcriptPath,
-    })
-
-    await completeTranscriptionJob({
-      db,
-      jobId,
-      transcriptId: transcriptRecord.id,
-      detectedLanguage: transcription.language,
-      audioDurationSeconds: transcription.durationSeconds ?? null,
-    })
-
-    const transcriptionMeta = {
-      provider: transcription.provider,
-      rawTranscriptRef: transcriptPath,
-      transcriptWordCount:
-        transcription.transcriptWordCount ?? computeWordCount(transcription.transcriptText),
-      language: transcription.language,
-      confidence: transcription.confidence,
-      completedAt: transcription.completedAt,
-      transcriptId: transcriptRecord.id,
-      segmentCount: segments.length,
-      durationSeconds: transcription.durationSeconds ?? null,
+    let sourceSizeBytes = Number(job?.audioSizeBytes || 0)
+    if (!sourceSizeBytes && report.audioFileSizeMb) {
+      sourceSizeBytes = Math.round(Number(report.audioFileSizeMb) * 1024 * 1024)
+    }
+    try {
+      const [metadata] = await bucket.file(report.audioFileRef).getMetadata()
+      sourceSizeBytes = Number(metadata.size || sourceSizeBytes || 0)
+    } catch {
+      /* tests / partial mocks — fall back to job/report size hints */
     }
 
-    // Prefer async meeting-minutes report generation when flagged (separate from Whisper).
-    if (isBriefingAiReportGenerationEnabled()) {
-      const { assessTranscriptQuality } = await import('@/lib/briefing-intelligence/transcriptQuality')
-      const {
-        briefingRunIdFromReportId,
-        logBriefingPipeline,
-      } = await import('@/lib/briefing-intelligence/pipelineTrace')
-      const briefingRunId = briefingRunIdFromReportId(reportId)
-
-      const quality = assessTranscriptQuality({
-        fullText: transcription.transcriptText,
-        durationSeconds: transcription.durationSeconds ?? null,
-        audioFileSizeMb: report.audioFileSizeMb,
-        segmentCount: segments.length,
-      })
-
-      logBriefingPipeline({
-        briefingRunId,
-        reportId,
-        requestId: report.requestId,
-        tenderId: report.tenderId,
-        jobId,
-        stage: 'transcription_complete',
-        status: quality.ok ? 'ok' : 'error',
-        provider: transcription.provider,
-        errorCategory: quality.ok ? null : quality.category,
-        detail: quality.ok ? null : quality.reason,
-      })
-
-      if (!quality.ok) {
-        const nowFail = nowIso()
-        await docRef.set(
-          {
-            briefingRunId,
-            transcription: transcriptionMeta,
-            status: 'processing',
-            updatedAt: nowFail,
-            reportGenerationStatus: 'failed_quality_gate',
-            lastError: quality.founderMessage.slice(0, 2000),
-            pipelineDiagnostics: {
-              briefingRunId,
-              currentStage: 'failed_quality_gate',
-              lastSuccessfulStage: 'transcription_complete',
-              failureStage: 'failed_quality_gate',
-              retryEligible: true,
-              lastErrorCategory: quality.category,
-              attemptCount: nextAttempts,
-              evidenceIntact: Boolean(report.audioFileRef),
-              transcriptIntact: true,
-              draftAvailable: false,
-              currentVersion: null,
-              approvedVersion: null,
-              qualityWarnings: [quality.founderMessage],
-              updatedAt: nowFail,
-            },
-          },
-          { merge: true }
-        )
-        // Transcript + evidence retained; do not auto-generate a polished draft.
-        return { ok: true, reportId, transcriptId: transcriptRecord.id }
-      }
-
-      const { createOrResetReportJob } = await import('@/lib/briefing-intelligence/reportJobs')
-      const { enqueueReportGenerationWorker } = await import(
-        '@/lib/briefing-intelligence/enqueueReportGeneration'
-      )
-      const reportJob = await createOrResetReportJob({
-        db,
-        reportId,
-        requestId: report.requestId,
-        tenderId: report.tenderId,
-        agentId: report.agentId,
-        smeId: report.smeId,
-        transcriptId: transcriptRecord.id,
-      })
-
-      const now2 = nowIso()
-      await docRef.set(
-        {
-          briefingRunId,
-          transcription: transcriptionMeta,
-          status: 'processing',
-          updatedAt: now2,
-          lastError: null,
-          reportGenerationStatus: 'waiting_for_transcript',
-          pipelineDiagnostics: {
-            briefingRunId,
-            currentStage: 'report_generating',
-            lastSuccessfulStage: 'transcription_complete',
-            failureStage: null,
-            retryEligible: true,
-            lastErrorCategory: null,
-            attemptCount: nextAttempts,
-            evidenceIntact: Boolean(report.audioFileRef),
-            transcriptIntact: true,
-            draftAvailable: false,
-            currentVersion: null,
-            approvedVersion: null,
-            qualityWarnings: quality.warnings,
-            updatedAt: now2,
-          },
-        },
-        { merge: true }
-      )
-
-      await enqueueReportGenerationWorker({
-        jobId: reportJob.id,
-        reportId,
-        requestId: report.requestId,
-        tenderId: report.tenderId,
-      })
-
+    let useChunked = false
+    if (isBriefingAudioChunkingEnabled()) {
+      const estimatedDurationMs = estimateDurationMsFromSize(sourceSizeBytes)
       try {
-        const lifeNotify = require('../../backend/services/briefingLifecycleNotificationService')
-        await lifeNotify.notifyTranscriptionCompletedSafe({
-          reportId,
-          requestId: report.requestId,
+        const decision = shouldUseChunkedTranscription({
+          chunkingFlagEnabled: true,
+          probe: {
+            durationMs: estimatedDurationMs,
+            sizeBytes: sourceSizeBytes,
+            codec: null,
+            bitrateKbps: null,
+          },
         })
-      } catch {
-        /* fail-soft */
+        useChunked = decision.mode === 'chunked'
+        console.info('[transcription] direct-vs-chunked decision', {
+          reportId,
+          mode: decision.mode,
+          reason: decision.reason,
+          sizeBytes: sourceSizeBytes,
+          estimatedDurationMs,
+        })
+      } catch (decisionErr) {
+        throw decisionErr
       }
+    }
 
-      await logBriefingIntelligenceAuditEvent({
+    if (useChunked && job) {
+      const chunked = await processChunkedTranscription({
         db,
-        eventType: 'processing_started',
+        bucket,
+        docRef,
+        report,
         reportId,
-        requestId: report.requestId,
-        agentId: report.agentId,
-        smeId: report.smeId,
+        job,
+        jobId,
         actorUid,
         actorRole,
-        nextStatus: 'processing',
-        meta: {
-          phase: 'report_generation_enqueued',
-          transcriptId: transcriptRecord.id,
-          reportJobId: reportJob.id,
-          briefingRunId,
-        },
+        nextAttempts,
+        sourceSizeBytes,
+        leaseOwner: jobId,
       })
-
-      return { ok: true, reportId, transcriptId: transcriptRecord.id }
+      return chunked
     }
 
-    // Legacy path: synchronous extract → draft_report (when AI report flag is off).
-    const tenderContext = await fetchAttendanceAndTenderContext({
+    return await processDirectTranscription({
       db,
-      requestId: report.requestId,
-      tenderId: report.tenderId,
+      bucket,
+      docRef,
+      report,
       reportId,
-    })
-
-    const extracted = await provider.extractIntelligence(transcription.transcriptText, tenderContext)
-
-    const now2 = nowIso()
-    const reportContent: BriefingReportContent = {
-      ...extracted,
-      coverHeader: {
-        ...extracted.coverHeader,
-        reportId,
-        reportDate: extracted.coverHeader.reportDate || now2,
-      },
-      sourceAndVerification: {
-        ...extracted.sourceAndVerification,
-        transcriptionProvider:
-          extracted.sourceAndVerification.transcriptionProvider || transcription.provider,
-        aiModel: extracted.sourceAndVerification.aiModel || transcription.model,
-        processingDate: extracted.sourceAndVerification.processingDate || now2,
-      },
-    }
-
-    const hasAttendanceEvidence =
-      Array.isArray(report.attendanceEvidenceRefs) && report.attendanceEvidenceRefs.length > 0
-    if (!hasAttendanceEvidence && reportContent?.attendanceVerification) {
-      reportContent.attendanceVerification = {
-        ...reportContent.attendanceVerification,
-        verified: false,
-        method: 'attendance_proof_missing',
-        notes: null,
-        redactedAttendeeCount: null,
-      }
-    }
-
-    reportContent.importantNotice =
-      'Standard disclaimer: This is a system-generated intelligence report draft. Always verify facts against the official tender documents.'
-    reportContent.reportCertification = {
-      certifiedBy: 'TenderBriefing Intelligence System',
-      certificationDate: now2,
-      reportVersion: '1.0',
-    }
-
-    await docRef.set(
-      {
-        transcription: transcriptionMeta,
-        reportContent,
-        status: 'draft_report',
-        draftReadyAt: now2,
-        updatedAt: now2,
-        lastError: null,
-      },
-      { merge: true }
-    )
-
-    await syncSlaForReport({ db, reportId, now: new Date(now2) })
-
-    await logBriefingIntelligenceAuditEvent({
-      db,
-      eventType: 'draft_ready',
-      reportId,
-      requestId: report.requestId,
-      agentId: report.agentId,
-      smeId: report.smeId,
+      jobId,
       actorUid,
       actorRole,
-      nextStatus: 'draft_report',
-      meta: {
-        transcriptWordCount: transcription.transcriptWordCount ?? null,
-        transcriptId: transcriptRecord.id,
-        segmentCount: segments.length,
-      },
+      nextAttempts,
+      transcriptionMode: 'direct',
     })
-
-    return { ok: true, reportId, transcriptId: transcriptRecord.id }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     const code =
       error && typeof error === 'object' && 'code' in error
         ? String((error as { code?: string }).code || 'transcription_failed')
         : 'transcription_failed'
-    const retryable = !['missing_audio'].includes(code)
+    const retryable =
+      !['missing_audio', 'audio_too_long', 'invalid_audio'].includes(code) &&
+      (code === 'chunk_retry' ||
+        !['chunk_failed'].includes(code))
 
     const failedJob = await failTranscriptionJob({
       db,
@@ -452,7 +352,6 @@ export async function processBriefingIntelligenceReport(params: {
         status: 'processing_failed',
         lastError: message.slice(0, 2000),
         updatedAt: failNow,
-        // Keep evidence; clear only AI artifacts so we never deliver stale content.
         reportContent: null,
         transcription: null,
         draftReadyAt: null,
@@ -481,3 +380,5 @@ export async function processBriefingIntelligenceReport(params: {
     return { ok: false, reportId, error: message, retryable: failedJob?.status === 'retrying' }
   }
 }
+
+export { fetchAttendanceAndTenderContext } from './tenderContext'

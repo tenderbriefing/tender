@@ -127,6 +127,30 @@ describe('briefing audio transcription jobs', () => {
     expect(second).toBeNull()
   })
 
+  it('allows reclaim when processing lease is stale', async () => {
+    const db = memoryDb() as any
+    const job = await createOrResetTranscriptionJob({
+      db,
+      reportId: 'TB-BR-TEST02B',
+      requestId: 'req-2b',
+      tenderId: 't-2b',
+      agentId: 'a-2b',
+      smeId: 's-2b',
+      audioStoragePath: 'path/a.mp3',
+      audioMimeType: null,
+      audioSizeBytes: null,
+      provider: 'mock',
+    })
+    const first = await claimTranscriptionJob(db, job.id)
+    expect(first?.status).toBe('processing')
+    await db.collection('briefingTranscriptionJobs').doc(job.id).set({
+      ...first,
+      processingLeaseExpiresAt: new Date(Date.now() - 1000).toISOString(),
+    })
+    const reclaimed = await claimTranscriptionJob(db, job.id)
+    expect(reclaimed?.status).toBe('processing')
+  })
+
   it('retries then permanently fails after max attempts', async () => {
     const db = memoryDb() as any
     const job = await createOrResetTranscriptionJob({

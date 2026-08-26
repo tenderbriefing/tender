@@ -2,6 +2,7 @@ import type { Firestore } from 'firebase-admin/firestore'
 import {
   TRANSCRIPTION_MAX_ATTEMPTS,
 } from './featureFlag'
+import { PROCESSING_LEASE_MS } from './audioChunking/constants'
 import type {
   BriefingTranscriptionJob,
   TranscriptionJobStatus,
@@ -118,9 +119,26 @@ export async function claimTranscriptionJob(
     if (!snap.exists) return null
     const job = snap.data() as BriefingTranscriptionJob
     if (job.status === 'completed') return null
-    if (job.status === 'processing') return null
+    if (job.status === 'processing') {
+      const leaseExp = job.processingLeaseExpiresAt
+        ? new Date(job.processingLeaseExpiresAt).getTime()
+        : job.processingStartedAt
+          ? new Date(job.processingStartedAt).getTime() + PROCESSING_LEASE_MS
+          : 0
+      if (Number.isFinite(leaseExp) && Date.now() < leaseExp) {
+        return null
+      }
+      // Stale processing — allow reclaim
+    } else if (job.status !== 'queued' && job.status !== 'retrying' && job.status !== 'failed') {
+      return null
+    }
     if (job.attempts >= job.maxAttempts && job.status === 'failed') return null
-    if (job.status !== 'queued' && job.status !== 'retrying' && job.status !== 'failed') {
+    if (
+      job.status !== 'processing' &&
+      job.status !== 'queued' &&
+      job.status !== 'retrying' &&
+      job.status !== 'failed'
+    ) {
       return null
     }
 
@@ -128,8 +146,9 @@ export async function claimTranscriptionJob(
     const next: BriefingTranscriptionJob = {
       ...job,
       status: 'processing',
-      attempts: job.attempts + 1,
+      attempts: job.status === 'processing' ? job.attempts : job.attempts + 1,
       processingStartedAt: now,
+      processingLeaseExpiresAt: new Date(Date.now() + PROCESSING_LEASE_MS).toISOString(),
       updatedAt: now,
       errorCode: null,
       errorMessage: null,

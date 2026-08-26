@@ -42,6 +42,8 @@ export type BriefingTranscriptionJob = {
   completedAt: string | null
   updatedAt: string
   nextAttemptAt: string | null
+  /** Stale lease — allows reclaim after timeout (chunking design §7). */
+  processingLeaseExpiresAt?: string | null
 }
 
 export type BriefingTranscriptRecord = {
