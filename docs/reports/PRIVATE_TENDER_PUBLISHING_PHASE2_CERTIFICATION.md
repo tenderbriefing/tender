@@ -20,7 +20,7 @@ Final re-certification of PR #63 after fixing blocking seed/ownership and role-e
 
 ## 5. Final certified PR head SHA
 
-`6b66f515bdf03bba5d6780954dc30bb5cfaa1322`
+`b0399c1742216daa868bb19202adb1dc8c1a7cac`
 
 ## 6. Current master SHA
 
@@ -39,7 +39,7 @@ Production still at:
 
 ## 8. CI status
 
-Previous tip CI all green (typecheck/lint/unit/integration/QA, Founder V2 smoke, Firestore IDOR, production build, Playwright). Re-push will re-run CI — wait for green before Founder merge.
+Previous tip CI all green (typecheck/lint/unit/integration/QA, Founder V2 smoke, Firestore IDOR, production build, Playwright). CI re-run on tip `b0399c1…` — Founder must confirm all required checks green before merge.
 
 ## 9. Files changed
 
