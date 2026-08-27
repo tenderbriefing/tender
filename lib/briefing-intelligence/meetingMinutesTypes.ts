@@ -24,8 +24,11 @@ export type BriefingQaPair = {
   question: string
   answer: string
   unresolved?: boolean
+  /** @deprecated Optional internal only — never required; never shown to SME. */
   sourceStartSeconds?: number | null
+  /** @deprecated Optional internal only — never required; never shown to SME. */
   sourceEndSeconds?: number | null
+  /** @deprecated Optional internal only — never required; never shown to SME. */
   transcriptSegmentIds?: string[]
 }
 
@@ -61,7 +64,8 @@ export type BriefingSummary = {
   mainPointsToRemember: Array<{ matter: string; detail: string }>
   unresolvedItems: Array<{ topic: string; reason: string }>
   verificationItems: Array<{ item: string; reason: string }>
-  provenance: ProvenanceRef[]
+  /** Optional legacy field — not required; not shown in SME PDF. */
+  provenance?: ProvenanceRef[]
   documentComparisonStatus?: 'full' | 'metadata_only' | 'unavailable'
 }
 
@@ -105,7 +109,8 @@ export type StructuredMeetingMinutesReport = {
   closingTime: string | null
   attendanceNote: string | null
   briefingCertificateNote: string | null
-  provenance: ProvenanceRef[]
+  /** Optional legacy field — not required; not shown in SME PDF. */
+  provenance?: ProvenanceRef[]
   documentComparisonStatus: 'full' | 'metadata_only' | 'unavailable'
   briefingIntelligenceV2?: import('./briefingIntelligenceV2').BriefingIntelligenceV2Sections
 }

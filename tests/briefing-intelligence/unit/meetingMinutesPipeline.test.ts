@@ -114,7 +114,6 @@ describe('meeting minutes summary + PDF', () => {
     )
     expect(result.structuredReport.durationAndTimelines).toMatch(/six months/i)
     expect(result.structuredReport.briefingCertificateNote).toBeTruthy()
-    expect(result.summary.provenance.length).toBeGreaterThan(0)
     expect(result.promptVersion).toBeTruthy()
     expect(result.structuredReport.amendments.length).toBeGreaterThanOrEqual(1)
     expect(result.structuredReport.amendments[0].tenderRequirement).toBeTruthy()

@@ -5,7 +5,6 @@ import type {
   BriefingQaPair,
   BriefingSummary,
   ClarificationKind,
-  ProvenanceRef,
   StructuredMeetingMinutesReport,
 } from './meetingMinutesTypes'
 import { NOT_DISCUSSED_IN_BRIEFING, stripSpeakerLabels } from './meetingMinutesTypes'
@@ -80,17 +79,13 @@ function normalizeQaPairs(raw: any): BriefingQaPair[] {
       .map((q: any) => {
         const unresolved = Boolean(q?.unresolved)
         const answerRaw = stripSpeakerLabels(String(q?.answer || ''))
+        // SME-facing: question/answer only — drop timestamps / segment ids.
         return {
           question: stripSpeakerLabels(String(q?.question || q?.heading || '')),
           answer: unresolved
             ? answerRaw || 'No definitive answer was recorded.'
             : answerRaw || 'No definitive answer was recorded.',
           unresolved,
-          sourceStartSeconds: typeof q?.sourceStartSeconds === 'number' ? q.sourceStartSeconds : null,
-          sourceEndSeconds: typeof q?.sourceEndSeconds === 'number' ? q.sourceEndSeconds : null,
-          transcriptSegmentIds: Array.isArray(q?.transcriptSegmentIds)
-            ? q.transcriptSegmentIds.map(String)
-            : undefined,
         }
       })
       .filter((q: BriefingQaPair) => q.question)
@@ -106,11 +101,6 @@ function normalizeQaPairs(raw: any): BriefingQaPair[] {
           String(q?.answer || q?.summary || (unresolved ? 'No definitive answer was recorded.' : ''))
         ),
         unresolved,
-        sourceStartSeconds: typeof q?.sourceStartSeconds === 'number' ? q.sourceStartSeconds : null,
-        sourceEndSeconds: typeof q?.sourceEndSeconds === 'number' ? q.sourceEndSeconds : null,
-        transcriptSegmentIds: Array.isArray(q?.transcriptSegmentIds)
-          ? q.transcriptSegmentIds.map(String)
-          : undefined,
       }
     })
     .filter((q: BriefingQaPair) => q.question)
@@ -198,25 +188,8 @@ function validateAndNormalize(raw: any, input: BriefingSummaryInput): BriefingSu
 
   const importantDates = normalizeImportantDates(raw)
 
-  const provenance: ProvenanceRef[] = (Array.isArray(raw?.provenance) ? raw.provenance : [])
-    .map((p: any) => ({
-      text: stripSpeakerLabels(String(p?.text || '')),
-      sourceType: (['briefing_audio', 'tender_document', 'combined', 'official_metadata'].includes(
-        p?.sourceType
-      )
-        ? p.sourceType
-        : 'briefing_audio') as ProvenanceRef['sourceType'],
-      transcriptSegmentIds: Array.isArray(p?.transcriptSegmentIds)
-        ? p.transcriptSegmentIds.map(String)
-        : undefined,
-      startSeconds: typeof p?.startSeconds === 'number' ? p.startSeconds : null,
-      endSeconds: typeof p?.endSeconds === 'number' ? p.endSeconds : null,
-      tenderDocumentChunkIds: Array.isArray(p?.tenderDocumentChunkIds)
-        ? p.tenderDocumentChunkIds.map(String)
-        : undefined,
-      page: typeof p?.page === 'number' ? p.page : null,
-    }))
-    .filter((p: ProvenanceRef) => p.text)
+  // Provenance / timestamps are optional legacy internals — never required; never surface to SME.
+  void raw?.provenance
 
   const summary: BriefingSummary = {
     purposeOfBriefing: purpose,
@@ -251,7 +224,6 @@ function validateAndNormalize(raw: any, input: BriefingSummaryInput): BriefingSu
     mainPointsToRemember,
     unresolvedItems,
     verificationItems,
-    provenance,
     documentComparisonStatus: input.documentComparisonStatus || 'metadata_only',
   }
 
@@ -304,7 +276,6 @@ function validateAndNormalize(raw: any, input: BriefingSummaryInput): BriefingSu
     briefingCertificateNote: meta.requiresBriefingCertificate
       ? 'The bidder should ensure that the officially required briefing certificate is included in the final bid submission where applicable.'
       : null,
-    provenance: summary.provenance,
     documentComparisonStatus: input.documentComparisonStatus || 'metadata_only',
   }
 
@@ -345,31 +316,13 @@ export class OpenAIBriefingSummaryService implements BriefingSummaryService {
 
   async summarize(input: BriefingSummaryInput): Promise<BriefingSummaryResult> {
     const system = [
-      'CORE RULE: AI minutes are a structured summary of the completed briefing transcript. The transcript remains the source of truth.',
-      'You summarise and structure a completed Speechmatics transcript into TenderBriefing meeting minutes.',
-      'You are NOT a transcription provider, external researcher, or tender-document reconstruction engine.',
-      'Write in clear third-person meeting-minutes style: "The Department explained…", "An attendee asked…", "The Department clarified…".',
-      'NEVER use speaker labels such as Speaker 1, Speaker 2, or Speaker 3.',
-      'HALLUCINATION CONTROLS (strict):',
-      '1. The transcript is the primary source of truth.',
-      '2. Do not invent facts.',
-      '3. Do not infer tender requirements that were not discussed in the transcript.',
-      '4. Do not use general procurement knowledge to fill gaps.',
-      '5. Do not fabricate questions, answers, dates, amounts, specifications, or deadlines.',
-      '6. Preserve uncertainty (copy tentative wording; set uncertain:true on dates when unclear).',
-      '7. If something is unclear, state that it is unclear and add a verificationItems entry.',
-      '8. If something was not discussed, use exactly: "Not discussed in the recorded briefing."',
-      '9. Distinguish facts from interpretation (risks/actions may interpret implications of transcript facts only).',
-      '10. Do not claim an amendment occurred unless the transcript clearly supports it. Set amendments[].kind to confirmed_change | clarification_only | possible_future_amendment.',
-      '11. Do not convert participant speculation into an official instruction — put speculative items in verificationItems.',
-      '12. Do not treat background noise or fragmented speech as reliable information.',
-      'Tender document text (if provided) is ONLY for comparing material clarifications/changes against what officials said. Never invent requirements from the tender document that were not discussed.',
-      'Official metadata (title, number, department, briefing date/venue, closing date/time) is authoritative for cover fields — do not invent missing metadata.',
-      'questionsAndAnswers is a major section: pair meaningful bidder questions with official answers. If no definitive answer was recorded, set unresolved:true and answer "No definitive answer was recorded."',
-      'Where segmentHints include timing, attach sourceStartSeconds/sourceEndSeconds and transcriptSegmentIds for amendments, deadlines, mandatory requirements, Q&A, and high-risk instructions. Do not invent timestamps.',
-      'Remove filler and conversational noise while preserving dates, numbers, requirements, clarifications, warnings, and bid-relevant actions.',
-      'Never include confidence scores, AI commentary, or internal processing metadata in client-facing fields.',
-      'Return STRICT JSON only matching outputSchema.',
+      'CORE RULE: Completed transcript in → structured tender briefing summary out. The transcript is the source of truth.',
+      'Summarise the briefing transcript into the JSON sections in outputSchema. Write clear third-person minutes.',
+      'NEVER use speaker labels (Speaker 1, etc.).',
+      'Rules: (1) Use only the transcript. (2) Never invent facts, questions, answers, dates, amounts, percentages, specs, or requirements. (3) Never fill gaps with generic procurement knowledge. (4) Preserve uncertainty. (5) If not discussed, use exactly "Not discussed in the recorded briefing." (6) If no definitive answer, use "No definitive answer was recorded." and unresolved:true. (7) Distinguish official statements from speculation — put speculation in verificationItems. (8) amendments[].kind must be clarification_only | confirmed_change | possible_future_amendment; never present speculation as an official amendment. (9) Do not reconstruct the full tender document. (10) Do not include timestamps, segment IDs, provenance, or source references.',
+      'Official metadata is authoritative for cover fields only — do not invent missing metadata.',
+      'Tender document text (if any) is only for comparing clarifications; never invent undiscussed requirements from it.',
+      'Return STRICT JSON only.',
     ]
     const v2Guidance = briefingIntelligenceV2SystemGuidance()
     if (v2Guidance) system.push(v2Guidance)
@@ -379,14 +332,8 @@ export class OpenAIBriefingSummaryService implements BriefingSummaryService {
       officialMetadata: input.officialMetadata,
       tenderDocumentTextForAmendmentComparisonOnly: input.tenderDocumentText.slice(0, 40_000),
       briefingTranscript: input.transcriptText.slice(0, 50_000),
-      segmentHints: input.transcriptSegments.slice(0, 120).map((s) => ({
-        id: s.id,
-        startSeconds: s.startSeconds,
-        endSeconds: s.endSeconds,
-        text: s.text.slice(0, 240),
-      })),
       outputSchema: {
-        purposeOfBriefing: 'string',
+        purposeOfBriefing: 'string — executive summary',
         departmentExplanation: ['string'],
         priorityDeliverables: ['string'],
         scopeClarifications: ['string'],
@@ -394,17 +341,7 @@ export class OpenAIBriefingSummaryService implements BriefingSummaryService {
         experienceRequirements: ['string'],
         keyRequirementsDiscussed: ['string'],
         submissionRequirements: ['string — or ["Not discussed in the recorded briefing."]'],
-        questionsAndAnswers: [
-          {
-            question: 'string',
-            answer: 'string',
-            unresolved: 'boolean?',
-            sourceStartSeconds: 'number|null',
-            sourceEndSeconds: 'number|null',
-            transcriptSegmentIds: ['string'],
-          },
-        ],
-        questionsAndClarifications: [{ heading: 'string', summary: 'string', unresolved: 'boolean?' }],
+        questionsAndAnswers: [{ question: 'string', answer: 'string', unresolved: 'boolean?' }],
         complianceClarifications: ['string'],
         durationAndTimelines: ['string'],
         importantDates: [{ date: 'string', description: 'string', uncertain: 'boolean?' }],
@@ -424,15 +361,6 @@ export class OpenAIBriefingSummaryService implements BriefingSummaryService {
         mainPointsToRemember: [{ matter: 'string', detail: 'string' }],
         unresolvedItems: [{ topic: 'string', reason: 'string' }],
         registrationAndCompliance: 'string',
-        provenance: [
-          {
-            text: 'string',
-            sourceType: 'briefing_audio|tender_document|combined|official_metadata',
-            transcriptSegmentIds: ['string'],
-            startSeconds: 'number|null',
-            endSeconds: 'number|null',
-          },
-        ],
         ...(isBriefingIntelligenceV2Enabled()
           ? { briefingIntelligenceV2: BRIEFING_INTELLIGENCE_V2_OUTPUT_SCHEMA }
           : {}),
@@ -555,26 +483,17 @@ export class MockBriefingSummaryService implements BriefingSummaryService {
               answer:
                 'The Department stated that the closing date remains 15 October 2026 at 11:00 and that no extension is currently planned.',
               unresolved: false,
-              sourceStartSeconds: 120,
-              sourceEndSeconds: 150,
-              transcriptSegmentIds: ['seg-qa-1'],
             },
             {
               question: 'Is a joint venture allowed for the CIDB grade requirement?',
               answer:
                 'The Department confirmed that a compliant joint venture may meet the CIDB Grade 4GB requirement if the JV certificate demonstrates the combined grading.',
               unresolved: false,
-              sourceStartSeconds: 160,
-              sourceEndSeconds: 190,
-              transcriptSegmentIds: ['seg-qa-2'],
             },
             {
               question: 'Will parking for contractor vehicles be provided on site?',
               answer: 'No definitive answer was recorded.',
               unresolved: true,
-              sourceStartSeconds: 200,
-              sourceEndSeconds: 220,
-              transcriptSegmentIds: ['seg-qa-3'],
             },
           ],
           questionsAndClarifications: [],
@@ -632,22 +551,6 @@ export class MockBriefingSummaryService implements BriefingSummaryService {
             },
           ],
           registrationAndCompliance: 'COIDA letter of good standing required.',
-          provenance: [
-            {
-              text: 'Closing date remains 15 October 2026 at 11:00',
-              sourceType: 'briefing_audio',
-              transcriptSegmentIds: ['seg-qa-1'],
-              startSeconds: 120,
-              endSeconds: 150,
-            },
-            {
-              text: 'Site access is restricted after 16:00',
-              sourceType: 'briefing_audio',
-              transcriptSegmentIds: ['seg-tech-1'],
-              startSeconds: 60,
-              endSeconds: 90,
-            },
-          ],
         }
       : isDpsa
       ? {
@@ -739,21 +642,6 @@ export class MockBriefingSummaryService implements BriefingSummaryService {
           unresolvedItems: [],
           registrationAndCompliance:
             'Bidders must meet State supplier compliance requirements as published in the tender documentation.',
-          provenance: [
-            {
-              text: 'The first draft is expected in October 2026.',
-              sourceType: 'briefing_audio',
-              transcriptSegmentIds: input.transcriptSegments[0] ? [input.transcriptSegments[0].id] : [],
-              startSeconds: input.transcriptSegments[0]?.startSeconds ?? 0,
-              endSeconds: input.transcriptSegments[0]?.endSeconds ?? null,
-            },
-            {
-              text: 'The project duration is six months.',
-              sourceType: 'combined',
-              transcriptSegmentIds: [],
-              tenderDocumentChunkIds: ['meta-duration'],
-            },
-          ],
         }
       : {
           purposeOfBriefing:
@@ -787,7 +675,6 @@ export class MockBriefingSummaryService implements BriefingSummaryService {
           ],
           unresolvedItems: [],
           registrationAndCompliance: '',
-          provenance: [],
         }
 
     const result = validateAndNormalize(raw, input)
