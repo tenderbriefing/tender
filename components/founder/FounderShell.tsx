@@ -16,6 +16,11 @@ const V1_NAV = [
     label: 'User Intelligence',
     match: (p: string) => p.startsWith('/founder/user-intelligence'),
   },
+  {
+    href: '/founder/outreach',
+    label: 'Outreach',
+    match: (p: string) => p.startsWith('/founder/outreach'),
+  },
 ] as const
 
 const V2_NAV = [
@@ -44,6 +49,11 @@ const V2_NAV = [
     href: '/founder/private-tenders',
     label: 'Private tenders',
     match: (p: string) => p.startsWith('/founder/private-tenders'),
+  },
+  {
+    href: '/founder/outreach',
+    label: 'Outreach',
+    match: (p: string) => p.startsWith('/founder/outreach'),
   },
 ] as const
 
