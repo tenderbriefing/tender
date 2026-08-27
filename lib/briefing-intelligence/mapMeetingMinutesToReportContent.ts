@@ -1,5 +1,6 @@
 import type { BriefingReportContent } from './types'
 import type { StructuredMeetingMinutesReport } from './meetingMinutesTypes'
+import { NOT_DISCUSSED_IN_BRIEFING } from './meetingMinutesTypes'
 
 /**
  * Map meeting-minutes structured content onto the existing BriefingReportContent
@@ -13,11 +14,69 @@ export function meetingMinutesToBriefingReportContent(
   const hasAttendance = opts?.hasAttendanceEvidence !== false
   const amendmentLines =
     minutes.amendments?.length > 0
-      ? minutes.amendments.map(
-          (a) =>
-            `${a.tenderRequirement} → ${a.briefingChange} (Implication: ${a.bidderImplication})`
-        )
+      ? minutes.amendments.map((a) => {
+          const kind = a.kind ? ` [${a.kind}]` : ''
+          return `${a.tenderRequirement} → ${a.briefingChange} (Implication: ${a.bidderImplication})${kind}`
+        })
       : minutes.amendmentsOrChanges || []
+
+  const qa =
+    minutes.questionsAndAnswers?.length > 0
+      ? minutes.questionsAndAnswers.map((q) => ({
+          question: q.question,
+          answer: q.answer,
+          askedBy: null as string | null,
+        }))
+      : minutes.questionsAndClarifications.map((q) => ({
+          question: q.heading,
+          answer: q.summary,
+          askedBy: null as string | null,
+        }))
+
+  const keyReqs = (
+    minutes.keyRequirementsDiscussed?.length
+      ? minutes.keyRequirementsDiscussed
+      : minutes.workExpected
+  ).map((requirement) => ({
+    requirement,
+    source: 'stated' as const,
+  }))
+
+  const keyDates = [
+    ...(minutes.closingDate
+      ? [{ date: minutes.closingDate, description: 'Tender closing date (official metadata)' }]
+      : []),
+    ...(minutes.importantDates || []).map((d) => ({
+      date: d.date,
+      description: d.uncertain ? `${d.description} (uncertain — verify)` : d.description,
+    })),
+  ]
+
+  const actions =
+    minutes.actionsForSme?.length > 0
+      ? minutes.actionsForSme.map((a) => ({
+          action: a.action,
+          priority: 'high' as const,
+          deadline: a.deadline,
+        }))
+      : minutes.mainPoints.map((p) => ({
+          action: `${p.matter}: ${p.detail}`,
+          priority: 'medium' as const,
+          deadline: null as string | null,
+        }))
+
+  const complianceRisks = [
+    ...(minutes.risksAndWatchOuts || []).map((r) => ({
+      risk: r,
+      severity: 'medium' as const,
+      mitigation: null as string | null,
+    })),
+    ...(minutes.verificationItems || []).map((v) => ({
+      risk: `Verification required: ${v.item} — ${v.reason}`,
+      severity: 'high' as const,
+      mitigation: null as string | null,
+    })),
+  ]
 
   return {
     coverHeader: {
@@ -42,35 +101,29 @@ export function meetingMinutesToBriefingReportContent(
         ? `${minutes.mainPoints[0].matter}: ${minutes.mainPoints[0].detail}`
         : minutes.whatDepartmentExplained[0] || minutes.purposeOfBriefing,
     },
-    keyRequirements: minutes.workExpected.map((requirement) => ({
-      requirement,
-      source: 'stated' as const,
-    })),
-    clarifications: minutes.scopeClarifications.map((c) => ({
-      question: 'Scope clarification',
-      answer: c,
-      source: 'stated' as const,
-    })),
-    questionsAndAnswers: minutes.questionsAndClarifications.map((q) => ({
-      question: q.heading,
-      answer: q.summary,
-      askedBy: null,
-    })),
+    keyRequirements: keyReqs,
+    clarifications: [
+      ...minutes.scopeClarifications.map((c) => ({
+        question: 'Scope clarification',
+        answer: c,
+        source: 'stated' as const,
+      })),
+      ...(minutes.submissionRequirements || [])
+        .filter((s) => s && s !== NOT_DISCUSSED_IN_BRIEFING)
+        .map((s) => ({
+          question: 'Submission requirement',
+          answer: s,
+          source: 'stated' as const,
+        })),
+    ],
+    questionsAndAnswers: qa,
     changesAndAddenda: amendmentLines.map((change) => ({
       change,
       impact: null,
     })),
-    complianceRisks: [],
-    keyDates: [
-      ...(minutes.closingDate
-        ? [{ date: minutes.closingDate, description: 'Tender closing date' }]
-        : []),
-    ],
-    recommendedActions: minutes.mainPoints.map((p) => ({
-      action: `${p.matter}: ${p.detail}`,
-      priority: 'medium' as const,
-      deadline: null,
-    })),
+    complianceRisks,
+    keyDates,
+    recommendedActions: actions,
     attendanceInfo: {
       estimatedAttendees: null,
       agentArrivalTime: null,
@@ -90,10 +143,12 @@ export function meetingMinutesToBriefingReportContent(
           redactedAttendeeCount: null,
         },
     agentFieldObservations: {
-      siteInspection: null,
+      siteInspection: minutes.technicalObservations?.length ? true : null,
       docsDistributed: null,
       importantAnnouncement: null,
-      generalNotes: null,
+      generalNotes: minutes.technicalObservations?.length
+        ? minutes.technicalObservations.join(' ')
+        : null,
     },
     sourceAndVerification: {
       audioRecorded: true,
@@ -103,11 +158,11 @@ export function meetingMinutesToBriefingReportContent(
       confidenceScore: null,
     },
     importantNotice:
-      'This is a TenderBriefing compulsory briefing session report. Always verify facts against the official tender documents.',
+      'This is a TenderBriefing compulsory briefing session report summarised from the completed transcript. Always verify facts against the official tender documents. The transcript remains the source of truth.',
     reportCertification: {
       certifiedBy: 'TenderBriefing',
       certificationDate: minutes.cover.reportDate,
-      reportVersion: 'meeting-minutes-v1',
+      reportVersion: 'meeting-minutes-v2-transcript-summary',
     },
   }
 }
