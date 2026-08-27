@@ -396,7 +396,7 @@ export async function POST(request: NextRequest) {
         audioStoragePath: audioPath,
         audioMimeType: audioFile.type || null,
         audioSizeBytes: audioFile.size || null,
-        provider: process.env.BRIEFING_INTELLIGENCE_PROVIDER || 'openai',
+        provider: process.env.BRIEFING_INTELLIGENCE_PROVIDER || 'speechmatics',
       })
       transcriptionJobId = job.id
       await enqueueTranscriptionWorker({

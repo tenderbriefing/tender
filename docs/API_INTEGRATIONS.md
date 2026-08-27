@@ -203,6 +203,23 @@ If `RESEND_API_KEY` is missing, welcome send is skipped with a warning — regis
 
 ---
 
+## 8b. Speechmatics Batch (briefing STT)
+
+**Purpose:** Default briefing audio transcription (replaces OpenAI Whisper). Report extraction / meeting minutes still use OpenAI when enabled.
+
+| Item | Value |
+|------|--------|
+| **Env** | `SPEECHMATICS_API_KEY`, optional `SPEECHMATICS_API_URL`, `SPEECHMATICS_LANGUAGE`, `SPEECHMATICS_OPERATING_POINT` |
+| **Provider flag** | `BRIEFING_INTELLIGENCE_PROVIDER=speechmatics` (default) |
+| **Secret Manager** | `Speechmatic_api` (mounted as `SPEECHMATICS_API_KEY`) |
+| **Service** | `lib/briefing-intelligence/speechmaticsTranscriptionProvider.ts` |
+
+**Scripts:** `SPEECHMATICS_API_KEY=... node scripts/save-speechmatics-key.js`
+
+**Legacy Whisper:** set `BRIEFING_INTELLIGENCE_PROVIDER=openai` (emergency fallback only).
+
+---
+
 ## 9. Google Calendar API (future)
 
 | Item | Value |

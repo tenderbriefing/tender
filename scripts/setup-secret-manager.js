@@ -13,6 +13,7 @@ const client = new SecretManagerServiceClient();
 
 const secretEnvKeys = {
   'Open_ai_Secret_Key': 'OPENAI_API_KEY',
+  'Speechmatic_api': 'SPEECHMATICS_API_KEY',
   'gmail-client-id': 'GMAIL_CLIENT_ID',
   'gmail-client-secret': 'GMAIL_CLIENT_SECRET',
   'firebase-api-key': 'NEXT_PUBLIC_FIREBASE_API_KEY',

@@ -1,5 +1,6 @@
 import type { BriefingReportContent } from './types'
 import { FormData } from 'undici'
+import { SpeechmaticsTranscriptionProvider } from './speechmaticsTranscriptionProvider'
 
 // Note: The task requirement defines the provider abstraction inline.
 // We implement it here with strong runtime validation and explicit "no inventing" logic.
@@ -642,9 +643,21 @@ export class MockTranscriptionProvider implements TranscriptionProvider {
 }
 
 export function getTranscriptionProvider(): TranscriptionProvider {
-  const mode = String(process.env.BRIEFING_INTELLIGENCE_PROVIDER || 'openai').toLowerCase()
+  const raw = process.env.BRIEFING_INTELLIGENCE_PROVIDER
+  const mode = String(raw || 'speechmatics').trim().toLowerCase()
+
   if (mode === 'mock') return new MockTranscriptionProvider()
-  // Default to OpenAI.
-  return new OpenAITranscriptionProvider()
+  // Explicit OpenAI Whisper — emergency / legacy only. Never an implicit fallback.
+  if (mode === 'openai' || mode === 'whisper') {
+    return new OpenAITranscriptionProvider()
+  }
+  // Default (unset or explicit speechmatics).
+  if (mode === 'speechmatics' || raw == null || String(raw).trim() === '') {
+    return new SpeechmaticsTranscriptionProvider()
+  }
+
+  throw new Error(
+    `Invalid BRIEFING_INTELLIGENCE_PROVIDER="${mode}". Supported: speechmatics, openai, whisper, mock`
+  )
 }
 
