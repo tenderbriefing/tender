@@ -2,7 +2,7 @@ import { isBriefingAudioTranscriptionEnabled } from './featureFlag'
 
 /**
  * Fire-and-forget enqueue of the transcription worker.
- * Never blocks the Youth Agent evidence upload response on Whisper completion.
+ * Never blocks the Youth Agent evidence upload response on transcription completion.
  */
 export async function enqueueTranscriptionWorker(params: {
   jobId: string

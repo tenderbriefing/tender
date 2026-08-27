@@ -55,14 +55,13 @@ Never commit real secret values. Rotate via Google Secret Manager / hosting env.
 | `BRIEFING_AUDIO_CHUNKING_ENABLED` | Long-audio hybrid chunking (requires transcription + ffmpeg) | optional (default false) | No | true/false | F | Product | Short audio uses direct path; enable only after cert |
 | `BRIEFING_AI_REPORT_GENERATION_ENABLED` | Meeting-minutes AI report after transcript | optional (default false) | No | true/false | F | Product | Transcript kept; no report jobs |
 | `BRIEFING_REPORT_PROMPT_VERSION` | Prompt version stamp on generated reports | optional | No | v1 | - | Product | Defaults to v1 |
-| `BRIEFING_INTELLIGENCE_PROVIDER` | `speechmatics` (default), `openai` (legacy Whisper), or `mock` | optional | No | speechmatics | - | Product | Mock for tests only |
+| `BRIEFING_INTELLIGENCE_PROVIDER` | `speechmatics` (sole STT) or `mock` (tests) | optional | No | speechmatics | - | Product | `openai`/`whisper` rejected (Whisper retired) |
 | `SPEECHMATICS_API_KEY` | Speechmatics Batch API key (STT); GSM secret `Speechmatic_api` | if provider speechmatics | Yes | string | S | AI | Transcription fails |
 | `SPEECHMATICS_API_URL` | Speechmatics Batch base URL | optional | No | `https://eu1.asr.api.speechmatics.com` | - | AI | Wrong region |
 | `SPEECHMATICS_LANGUAGE` | Speechmatics language code | optional | No | en | - | AI | Wrong language pack |
 | `SPEECHMATICS_OPERATING_POINT` | `enhanced` or `standard` | optional | No | enhanced | - | AI | Quality/cost tradeoff |
-| `BRIEFING_INTELLIGENCE_TRANSCRIBE_MODEL` | Legacy Whisper model (only if provider=openai) | optional | No | whisper-1 | - | Product | Unused when Speechmatics |
-| `BRIEFING_INTELLIGENCE_EXTRACT_MODEL` | Extraction model (OpenAI) | optional | No | gpt-4o | - | Product | Default gpt-4o |
-| `OPENAI_API_KEY` | OpenAI API (report extract / minutes; legacy Whisper) | if extract/minutes or provider openai | Yes | sk-… | S | AI | Extract/minutes fails |
+| `BRIEFING_INTELLIGENCE_EXTRACT_MODEL` | Extraction model (OpenAI chat) | optional | No | gpt-4o | - | Product | Default gpt-4o |
+| `OPENAI_API_KEY` | OpenAI API (AI minutes / extract — **not** STT) | if minutes/extract enabled | Yes | sk-… | S | AI | Extract/minutes fails |
 | `APP_URL` / `NEXT_PUBLIC_APP_URL` | Base URL for worker self-enqueue | prod if transcription on | No | https://… | Y | Platform | Jobs stay queued |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Admin SDK | prod | Yes | JSON | S | Platform | Server auth/Firestore broken |
 | `FIREBASE_PROJECT_ID` | Admin project | prod | No | project id | Y | Platform | Admin SDK broken |

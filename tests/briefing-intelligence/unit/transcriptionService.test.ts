@@ -104,82 +104,11 @@ describe('Briefing Intelligence transcriptionService', () => {
     )
   })
 
-  it('handles null/unknown states (language + confidence) from Whisper transcription', async () => {
+  it('OpenAI provider refuses Whisper transcription (retired)', async () => {
     const provider = new OpenAITranscriptionProvider({ apiKey: 'sk-test' })
-
-    const fetchMock = vi.fn(async (url: string) => {
-      if (url === 'https://signed.example/audio.mp3') {
-        return {
-          ok: true,
-          headers: new Headers({ 'content-type': 'audio/mpeg' }),
-          arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
-        }
-      }
-      if (url.includes('/audio/transcriptions')) {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({
-            text: 'hello world',
-          }),
-        }
-      }
-      throw new Error(`Unexpected fetch url: ${url}`)
-    })
-
-    ;(globalThis as any).fetch = fetchMock
-
-    const res = await provider.transcribe('https://signed.example/audio.mp3')
-    expect(res.provider).toBe('openai-whisper')
-    expect(res.transcriptText).toBe('hello world')
-    expect(res.transcriptWordCount).toBe(2)
-    expect(res.language).toBeNull()
-    expect(res.confidence).toBeNull()
-    expect(res.completedAt).toBeTruthy()
-    expect(res.segments.length).toBeGreaterThanOrEqual(1)
-    expect(res.segments[0].speaker).toBe('Speaker 1')
-    expect(res.segments[0].text).toBe('hello world')
-  })
-
-  it('preserves timestamped segments from verbose_json without inventing speaker names', async () => {
-    const provider = new OpenAITranscriptionProvider({ apiKey: 'sk-test' })
-
-    const fetchMock = vi.fn(async (url: string) => {
-      if (url === 'https://signed.example/audio.mp3') {
-        return {
-          ok: true,
-          headers: new Headers({ 'content-type': 'audio/mpeg' }),
-          arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
-        }
-      }
-      if (url.includes('/audio/transcriptions')) {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({
-            text: 'Hello there. More words.',
-            language: 'en',
-            duration: 10.5,
-            segments: [
-              { start: 0, end: 4.2, text: ' Hello there.' },
-              { start: 4.2, end: 10.5, text: ' More words.' },
-            ],
-          }),
-        }
-      }
-      throw new Error(`Unexpected fetch url: ${url}`)
-    })
-
-    ;(globalThis as any).fetch = fetchMock
-
-    const res = await provider.transcribe('https://signed.example/audio.mp3')
-    expect(res.segments).toHaveLength(2)
-    expect(res.segments[0].startSeconds).toBe(0)
-    expect(res.segments[0].endSeconds).toBe(4.2)
-    expect(res.segments[0].speaker).toBe('Speaker 1')
-    expect(res.segments[1].speaker).toBe('Speaker 1')
-    expect(res.durationSeconds).toBe(10.5)
-    expect(res.language).toBe('en')
+    await expect(provider.transcribe('https://signed.example/audio.mp3')).rejects.toThrow(
+      /Whisper transcription has been retired/i
+    )
   })
 
   it('mock closing-date fixture includes speaker-separated timestamps', async () => {
@@ -188,34 +117,6 @@ describe('Briefing Intelligence transcriptionService', () => {
     expect(res.segments.length).toBeGreaterThanOrEqual(2)
     expect(res.segments.some((s) => s.speaker === 'Speaker 2')).toBe(true)
     expect(res.transcriptText).toMatch(/19 September 2026/)
-  })
-
-  it('never generates extraction when Whisper transcription returns empty text', async () => {
-    const provider = new OpenAITranscriptionProvider({ apiKey: 'sk-test' })
-
-    const fetchMock = vi.fn(async (url: string) => {
-      if (url === 'https://signed.example/audio.mp3') {
-        return {
-          ok: true,
-          headers: new Headers({ 'content-type': 'audio/mpeg' }),
-          arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
-        }
-      }
-      if (url.includes('/audio/transcriptions')) {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ text: '   ' }),
-        }
-      }
-      throw new Error(`Unexpected fetch url: ${url}`)
-    })
-
-    ;(globalThis as any).fetch = fetchMock
-
-    await expect(provider.transcribe('https://signed.example/audio.mp3')).rejects.toThrow(
-      /empty text/i
-    )
   })
 })
 
@@ -456,11 +357,11 @@ describe('provider selection', () => {
     expect(getTranscriptionProvider()).toBeInstanceOf(SpeechmaticsTranscriptionProvider)
   })
 
-  it('selects OpenAI Whisper explicitly (no silent fallback)', () => {
+  it('rejects openai and whisper as retired transcription providers', () => {
     process.env.BRIEFING_INTELLIGENCE_PROVIDER = 'openai'
-    expect(getTranscriptionProvider()).toBeInstanceOf(OpenAITranscriptionProvider)
+    expect(() => getTranscriptionProvider()).toThrow(/retired/i)
     process.env.BRIEFING_INTELLIGENCE_PROVIDER = 'whisper'
-    expect(getTranscriptionProvider()).toBeInstanceOf(OpenAITranscriptionProvider)
+    expect(() => getTranscriptionProvider()).toThrow(/retired/i)
   })
 
   it('selects mock provider', () => {

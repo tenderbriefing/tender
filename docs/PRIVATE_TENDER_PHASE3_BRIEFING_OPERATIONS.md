@@ -25,7 +25,7 @@ Organisation / guest private tender
                       └─ Existing PayFast path (unchanged)
                            └─ YA assignment (explainable recommendations; Founder assigns)
                                 └─ Evidence integrity metadata (3D)
-                                     └─ Whisper → AI minutes (+ v2 sections when flagged)
+                                     └─ Speechmatics → AI minutes (+ v2 sections when flagged)
                                           └─ Founder approve → SME delivery
                                                └─ briefingFollowUpUpdates (append-only, Founder-gated)
 ```
