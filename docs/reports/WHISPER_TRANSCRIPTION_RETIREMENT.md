@@ -2,7 +2,10 @@
 
 **Date:** 2026-08-27  
 **Branch:** `chore/retire-whisper-transcription`  
-**Status:** Implementation complete — merge/deploy pending certification  
+**Status:** **PRODUCTION CERTIFIED — WHISPER TRANSCRIPTION RETIRED**  
+**PR:** [#80](https://github.com/tenderbriefing/tender/pull/80)  
+**Merge SHA:** `a84ed0905823c6a0b0c940c8e5bc4a69c9d6cdcc`  
+**Deploy:** [33109843542](https://github.com/tenderbriefing/tender/actions/runs/33109843542) → `tenderbriefing-00150-q4g`
 
 ---
 
