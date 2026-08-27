@@ -12,6 +12,7 @@ import { dashboardPathForRole } from '@/lib/auth/redirects'
 import { POST_REGISTRATION_WELCOME_PATH } from '@/lib/auth/postRegistrationWelcome'
 import { sendWelcomeEmailSafe } from '@/lib/services/welcomeEmail'
 import {
+  applyRegistrationCellphone,
   createPlatformProfile,
   hasFullRegistrationPayload,
   logProfileSetupFailure,
@@ -184,7 +185,15 @@ export async function POST(request: NextRequest) {
     }
 
     const role: GoogleBootstrapRole = resolved.role
-    const onboardingCompleted = hasFullRegistrationPayload(role, body.additionalData)
+    const phoneApplied = applyRegistrationCellphone(body.additionalData)
+    if (!phoneApplied.ok) {
+      return NextResponse.json(
+        { success: false, error: phoneApplied.error, code: 'INVALID_CELLPHONE' },
+        { status: 400 }
+      )
+    }
+    const additionalData = phoneApplied.data
+    const onboardingCompleted = hasFullRegistrationPayload(role, additionalData)
 
     const userProfile = await createPlatformProfile(db, {
       uid,
@@ -194,7 +203,7 @@ export async function POST(request: NextRequest) {
       authenticationProvider: authProvider,
       providerIds,
       photoURL,
-      additionalData: body.additionalData,
+      additionalData,
       onboardingCompleted,
     })
 
