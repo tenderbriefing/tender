@@ -463,7 +463,7 @@ export class MockBriefingSummaryService implements BriefingSummaryService {
 }
 
 export function getBriefingSummaryService(): BriefingSummaryService {
-  const provider = (process.env.BRIEFING_INTELLIGENCE_PROVIDER || 'openai').toLowerCase()
+  const provider = (process.env.BRIEFING_INTELLIGENCE_PROVIDER || 'speechmatics').toLowerCase()
   if (provider === 'mock') return new MockBriefingSummaryService()
   return new OpenAIBriefingSummaryService()
 }

@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         audioSizeBytes: report.audioFileSizeMb
           ? Math.round(report.audioFileSizeMb * 1024 * 1024)
           : null,
-        provider: process.env.BRIEFING_INTELLIGENCE_PROVIDER || 'openai',
+        provider: process.env.BRIEFING_INTELLIGENCE_PROVIDER || 'speechmatics',
       })
 
       if (force && job.status === 'completed') {

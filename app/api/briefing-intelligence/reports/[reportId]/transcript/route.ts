@@ -133,7 +133,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     audioSizeBytes: report.audioFileSizeMb
       ? Math.round(report.audioFileSizeMb * 1024 * 1024)
       : null,
-    provider: process.env.BRIEFING_INTELLIGENCE_PROVIDER || 'openai',
+    provider: process.env.BRIEFING_INTELLIGENCE_PROVIDER || 'speechmatics',
   })
 
   // Force reset to queued if previously completed/failed for retry.

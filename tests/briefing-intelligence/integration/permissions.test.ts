@@ -158,7 +158,7 @@ describe('Briefing Intelligence permissions (IDOR)', () => {
         audioFileSizeMb: 1,
         attendanceEvidenceRefs: ['workspace-evidence/att/1.png'],
         transcription: {
-          provider: 'openai-whisper',
+          provider: 'speechmatics',
           rawTranscriptRef: `briefing-intelligence/${reportId}/transcripts/raw.json`,
           transcriptWordCount: 10,
           language: null,

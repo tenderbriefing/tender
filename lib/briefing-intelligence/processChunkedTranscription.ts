@@ -313,10 +313,14 @@ export async function processChunkedTranscription(params: {
     await setProcessingStatus(db, processingId, 'assembling')
     console.info('[transcription] reconstruction started', { reportId, chunkCount: chunks.length })
 
+    const assembledProvider =
+      chunks.find((c) => c.provider)?.provider ||
+      String(process.env.BRIEFING_INTELLIGENCE_PROVIDER || 'speechmatics') + '-chunked'
+
     const assembled = assembleTranscriptFromChunks({
       chunks,
       sourceDurationMs: probe.durationMs,
-      provider: 'openai-whisper-chunked',
+      provider: assembledProvider,
       model: null,
     })
 
