@@ -14,6 +14,8 @@ export function sha256Buffer(buf: Buffer): string {
 
 export function isFfmpegMockMode(): boolean {
   const raw = String(process.env.BRIEFING_AUDIO_FFMPEG_MODE || '').trim().toLowerCase()
+  // Explicit real mode for opt-in pilots even under vitest NODE_ENV=test.
+  if (raw === 'real') return false
   return raw === 'mock' || process.env.NODE_ENV === 'test'
 }
 

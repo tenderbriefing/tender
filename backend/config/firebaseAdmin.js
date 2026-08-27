@@ -111,9 +111,14 @@ function initializeFirebaseAdmin() {
   }
 
   try {
+    const storageBucket =
+      process.env.FIREBASE_STORAGE_BUCKET ||
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+      undefined
     admin.initializeApp({
       credential,
       projectId,
+      ...(storageBucket ? { storageBucket } : {}),
     })
     initialized = true
     logInitSuccess(projectId)
