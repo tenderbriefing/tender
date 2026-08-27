@@ -32,9 +32,17 @@ function report(partial: Partial<StructuredMeetingMinutesReport> = {}): Structur
     scopeClarifications: [],
     workExpected: [],
     experienceRequired: '',
+    keyRequirementsDiscussed: [],
+    submissionRequirements: ['Not discussed in the recorded briefing.'],
     questionsAndClarifications: [],
+    questionsAndAnswers: [],
     registrationAndCompliance: '',
     durationAndTimelines: '',
+    importantDates: [],
+    technicalObservations: [],
+    risksAndWatchOuts: [],
+    actionsForSme: [],
+    verificationItems: [],
     mainPoints: [],
     amendments: [],
     amendmentsOrChanges: [],
@@ -55,12 +63,22 @@ describe('reportQualityGate', () => {
     expect(r.ok).toBe(true)
   })
 
-  it('rejects empty substantive content', () => {
+  it('allows purpose-only limited briefings with a warning (not a hard fail)', () => {
     const r = runMeetingMinutesQualityGate({
-      report: report({ whatDepartmentExplained: [], purposeOfBriefing: 'x' }),
+      report: report({ whatDepartmentExplained: [], purposeOfBriefing: 'Short briefing overview.' }),
       official,
     })
-    // purpose alone is not enough — substantive count is 0
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.warnings.some((w) => /Limited transcript content/i.test(w))).toBe(true)
+    }
+  })
+
+  it('rejects empty purpose', () => {
+    const r = runMeetingMinutesQualityGate({
+      report: report({ purposeOfBriefing: '', whatDepartmentExplained: [] }),
+      official,
+    })
     expect(r.ok).toBe(false)
   })
 

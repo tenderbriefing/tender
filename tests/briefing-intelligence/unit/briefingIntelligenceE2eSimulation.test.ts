@@ -41,14 +41,28 @@ function baseReport(overrides: Partial<StructuredMeetingMinutesReport> = {}): St
     scopeClarifications: [],
     workExpected: [],
     experienceRequired: '',
+    keyRequirementsDiscussed: [],
+    submissionRequirements: ['Not discussed in the recorded briefing.'],
     questionsAndClarifications: [
       {
         heading: 'Closing date',
         summary: 'An attendee asked whether closing would move; Department said official date stands.',
       },
     ],
+    questionsAndAnswers: [
+      {
+        question: 'Closing date',
+        answer: 'An attendee asked whether closing would move; Department said official date stands.',
+        unresolved: false,
+      },
+    ],
     registrationAndCompliance: '',
     durationAndTimelines: '',
+    importantDates: [],
+    technicalObservations: [],
+    risksAndWatchOuts: [],
+    actionsForSme: [],
+    verificationItems: [],
     mainPoints: [{ matter: 'Compulsory attendance', detail: 'Certificate required with bid.' }],
     amendments: [
       {

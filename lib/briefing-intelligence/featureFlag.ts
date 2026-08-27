@@ -45,6 +45,6 @@ export const REPORT_GENERATION_MAX_ATTEMPTS = 3
 export function briefingReportPromptVersion(
   raw: string | undefined | null = process.env.BRIEFING_REPORT_PROMPT_VERSION
 ): string {
-  const v = String(raw || 'v1').trim()
-  return v || 'v1'
+  const v = String(raw || 'v2-transcript-summary').trim()
+  return v || 'v2-transcript-summary'
 }

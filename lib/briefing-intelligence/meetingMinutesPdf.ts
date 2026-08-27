@@ -229,16 +229,30 @@ export async function renderMeetingMinutesPdf(input: MeetingMinutesPdfInput): Pr
     )
   }
 
-  section('1. Purpose of the Briefing', [r.purposeOfBriefing])
+  section('1. Executive summary', [r.purposeOfBriefing])
   bullets('2. What the Department Explained', r.whatDepartmentExplained)
-  bullets('3. Priority Deliverables', r.priorityDeliverables)
+  bullets('3. Key requirements discussed', r.keyRequirementsDiscussed?.length ? r.keyRequirementsDiscussed : r.priorityDeliverables)
   bullets('4. Scope / Project Clarifications', r.scopeClarifications)
   bullets('5. Work Expected From the Successful Service Provider', r.workExpected)
   if (r.experienceRequired) section('6. Experience Required', [r.experienceRequired])
+  bullets(
+    '7. Submission requirements',
+    r.submissionRequirements?.length
+      ? r.submissionRequirements
+      : ['Not discussed in the recorded briefing.']
+  )
 
-  if (r.questionsAndClarifications.length) {
+  const qaPairs =
+    Array.isArray(r.questionsAndAnswers) && r.questionsAndAnswers.length
+      ? r.questionsAndAnswers
+      : (r.questionsAndClarifications || []).map((q) => ({
+          question: q.heading,
+          answer: q.summary,
+          unresolved: false,
+        }))
+  if (qaPairs.length) {
     ensureSpace(28)
-    page.drawText('7. Questions and Clarifications', {
+    page.drawText('8. Questions and answers', {
       x: MARGIN,
       y: y - 12,
       size: 11,
@@ -246,38 +260,68 @@ export async function renderMeetingMinutesPdf(input: MeetingMinutesPdfInput): Pr
       color: brandBlue,
     })
     y -= 18
-    for (const q of r.questionsAndClarifications) {
-      const heading = stripSpeakerLabels(q.heading)
-      const summary = stripSpeakerLabels(q.summary)
-      if (heading) {
-        const hw = wrapText(heading, fontBold, 9.5, CONTENT_WIDTH)
-        for (const line of hw) {
+    for (const q of qaPairs) {
+      const question = stripSpeakerLabels((q as { question?: string }).question || '')
+      const answer = stripSpeakerLabels((q as { answer?: string }).answer || '')
+      if (question) {
+        ensureSpace(14)
+        page.drawText('Question', {
+          x: MARGIN,
+          y: y - 10,
+          size: 9,
+          font: fontBold,
+          color: muted,
+        })
+        y -= 12
+        for (const line of wrapText(question, fontBold, 9.5, CONTENT_WIDTH)) {
           ensureSpace(13)
           page.drawText(line, { x: MARGIN, y: y - 10, size: 9.5, font: fontBold, color: ink })
           y -= 13
         }
       }
-      for (const line of wrapText(summary, font, 9.5, CONTENT_WIDTH)) {
-        ensureSpace(13)
-        page.drawText(line, { x: MARGIN, y: y - 10, size: 9.5, font, color: ink })
-        y -= 13
+      if (answer) {
+        ensureSpace(14)
+        page.drawText('Answer', {
+          x: MARGIN,
+          y: y - 10,
+          size: 9,
+          font: fontBold,
+          color: muted,
+        })
+        y -= 12
+        for (const line of wrapText(answer, font, 9.5, CONTENT_WIDTH)) {
+          ensureSpace(13)
+          page.drawText(line, { x: MARGIN, y: y - 10, size: 9.5, font, color: ink })
+          y -= 13
+        }
       }
-      y -= 6
+      y -= 8
     }
     y -= 4
   }
 
   if (r.registrationAndCompliance) {
-    section('8. Registration and Compliance', [r.registrationAndCompliance])
+    section('9. Registration and Compliance', [r.registrationAndCompliance])
   }
-  if (r.durationAndTimelines) {
-    section('9. Duration and Timelines', [r.durationAndTimelines])
+
+  if (r.importantDates?.length) {
+    bullets(
+      '10. Important dates and deadlines',
+      r.importantDates.map((d) => {
+        const uncertain = d.uncertain ? ' (uncertain — verify)' : ''
+        return `${d.date} — ${d.description}${uncertain}`
+      })
+    )
+  } else if (r.durationAndTimelines) {
+    section('10. Duration and Timelines', [r.durationAndTimelines])
   }
+
+  bullets('11. Technical / site observations', r.technicalObservations || [])
 
   // Amendments — high commercial priority
   {
     ensureSpace(28)
-    page.drawText('Amendments, Clarifications & Changes', {
+    page.drawText('12. Clarifications and changes', {
       x: MARGIN,
       y: y - 12,
       size: 11,
@@ -300,7 +344,14 @@ export async function renderMeetingMinutesPdf(input: MeetingMinutesPdfInput): Pr
       for (let i = 0; i < amendments.length; i++) {
         const a = amendments[i]
         ensureSpace(40)
-        page.drawText(`Item ${i + 1}`, {
+        const kindLabel = a.kind
+          ? a.kind === 'confirmed_change'
+            ? 'Confirmed change'
+            : a.kind === 'possible_future_amendment'
+              ? 'Possible future amendment'
+              : 'Clarification only'
+          : null
+        page.drawText(kindLabel ? `Item ${i + 1} (${kindLabel})` : `Item ${i + 1}`, {
           x: MARGIN,
           y: y - 10,
           size: 9,
@@ -336,9 +387,25 @@ export async function renderMeetingMinutesPdf(input: MeetingMinutesPdfInput): Pr
     }
   }
 
+  bullets('13. Risks and bidder watch-outs', r.risksAndWatchOuts || [])
+
+  if (r.actionsForSme?.length) {
+    bullets(
+      '14. Actions for the SME',
+      r.actionsForSme.map((a) => (a.deadline ? `${a.action} (by ${a.deadline})` : a.action))
+    )
+  }
+
+  if (r.verificationItems?.length) {
+    bullets(
+      '15. Items requiring verification',
+      r.verificationItems.map((v) => `${v.item} — ${v.reason}`)
+    )
+  }
+
   if (r.mainPoints.length) {
     ensureSpace(28)
-    page.drawText('10. Main Points to Remember', {
+    page.drawText('16. Main Points to Remember', {
       x: MARGIN,
       y: y - 12,
       size: 11,
@@ -346,7 +413,6 @@ export async function renderMeetingMinutesPdf(input: MeetingMinutesPdfInput): Pr
       color: brandBlue,
     })
     y -= 18
-    // Simple two-column table header
     ensureSpace(16)
     page.drawText('Matter', { x: MARGIN, y: y - 10, size: 9, font: fontBold, color: muted })
     page.drawText('What Was Said', {
@@ -394,11 +460,11 @@ export async function renderMeetingMinutesPdf(input: MeetingMinutesPdfInput): Pr
     r.closingTime ? `Tender closing time: ${r.closingTime}` : null,
     r.briefingCertificateNote,
   ].filter(Boolean) as string[]
-  if (closingBits.length) section('Closing', closingBits)
+  if (closingBits.length) section('Closing (official metadata)', closingBits)
 
   // Attendance
   ensureSpace(28)
-  page.drawText('11. Attendance Evidence', {
+  page.drawText('17. Attendance Evidence', {
     x: MARGIN,
     y: y - 12,
     size: 11,

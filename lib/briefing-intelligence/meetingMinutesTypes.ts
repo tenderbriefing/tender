@@ -1,6 +1,6 @@
 /**
  * Meeting-minutes report types (client-facing structured content).
- * Transcript remains internal; this schema must NOT include speaker labels.
+ * Transcript remains the source of truth; this schema must NOT include speaker labels.
  */
 
 export type ProvenanceSourceType = 'briefing_audio' | 'tender_document' | 'combined' | 'official_metadata'
@@ -10,8 +10,23 @@ export type ProvenanceRef = {
   sourceType: ProvenanceSourceType
   transcriptSegmentIds?: string[]
   startSeconds?: number | null
+  endSeconds?: number | null
   tenderDocumentChunkIds?: string[]
   page?: number | null
+}
+
+/** Standard phrase when a section has no transcript support. */
+export const NOT_DISCUSSED_IN_BRIEFING = 'Not discussed in the recorded briefing.'
+
+export type ClarificationKind = 'confirmed_change' | 'clarification_only' | 'possible_future_amendment'
+
+export type BriefingQaPair = {
+  question: string
+  answer: string
+  unresolved?: boolean
+  sourceStartSeconds?: number | null
+  sourceEndSeconds?: number | null
+  transcriptSegmentIds?: string[]
 }
 
 export type BriefingSummary = {
@@ -19,6 +34,7 @@ export type BriefingSummary = {
   departmentExplanation: string[]
   priorityDeliverables: string[]
   scopeClarifications: string[]
+  questionsAndAnswers: BriefingQaPair[]
   questionsAndClarifications: Array<{
     heading: string
     summary: string
@@ -26,22 +42,26 @@ export type BriefingSummary = {
   }>
   experienceRequirements: string[]
   complianceClarifications: string[]
+  keyRequirementsDiscussed: string[]
+  submissionRequirements: string[]
   durationAndTimelines: string[]
-  importantDates: string[]
-  /** Structured amendments — high commercial priority. Prefer over free-text list. */
+  importantDates: Array<{ date: string; description: string; uncertain?: boolean }>
   amendments: Array<{
     tenderRequirement: string
     briefingChange: string
     bidderImplication: string
+    kind?: ClarificationKind
   }>
   /** @deprecated prefer amendments[] */
   amendmentsOrChanges: string[]
   workExpected: string[]
+  technicalObservations: string[]
+  risksAndWatchOuts: string[]
+  actionsForSme: Array<{ action: string; deadline: string | null }>
   mainPointsToRemember: Array<{ matter: string; detail: string }>
   unresolvedItems: Array<{ topic: string; reason: string }>
-  /** Internal only — not shown in client PDF by default */
+  verificationItems: Array<{ item: string; reason: string }>
   provenance: ProvenanceRef[]
-  /** Internal: whether full tender PDF text was available for comparison */
   documentComparisonStatus?: 'full' | 'metadata_only' | 'unavailable'
 }
 
@@ -61,27 +81,32 @@ export type StructuredMeetingMinutesReport = {
   scopeClarifications: string[]
   workExpected: string[]
   experienceRequired: string
+  keyRequirementsDiscussed: string[]
+  submissionRequirements: string[]
   questionsAndClarifications: Array<{ heading: string; summary: string }>
+  questionsAndAnswers: BriefingQaPair[]
   registrationAndCompliance: string
   durationAndTimelines: string
+  importantDates: Array<{ date: string; description: string; uncertain?: boolean }>
+  technicalObservations: string[]
+  risksAndWatchOuts: string[]
+  actionsForSme: Array<{ action: string; deadline: string | null }>
+  verificationItems: Array<{ item: string; reason: string }>
   mainPoints: Array<{ matter: string; detail: string }>
   amendments: Array<{
     tenderRequirement: string
     briefingChange: string
     bidderImplication: string
+    kind?: ClarificationKind
   }>
-  /** Fallback free-text when structured amendments empty (legacy) */
   amendmentsOrChanges: string[]
   amendmentsNoneMessage: string | null
   closingDate: string | null
   closingTime: string | null
   attendanceNote: string | null
   briefingCertificateNote: string | null
-  /** Internal provenance retained for audit */
   provenance: ProvenanceRef[]
-  /** Internal only — do not show in client PDF */
   documentComparisonStatus: 'full' | 'metadata_only' | 'unavailable'
-  /** Phase 3E — present when BRIEFING_INTELLIGENCE_V2_ENABLED */
   briefingIntelligenceV2?: import('./briefingIntelligenceV2').BriefingIntelligenceV2Sections
 }
 

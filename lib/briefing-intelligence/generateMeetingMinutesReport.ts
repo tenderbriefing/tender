@@ -470,10 +470,17 @@ export async function generateMeetingMinutesReport(params: {
           code === 'empty_transcript' ||
           code === 'low_quality_transcript' ||
           code === 'hallucination_guard'
-    const category = classifyErrorMessage(message)
-    const retryable = !['missing_transcript', 'empty_transcript', 'low_quality_transcript', 'hallucination_guard', 'quality_gate', 'ai_schema'].includes(
-      code
-    ) && !qualityGate
+    const category = classifyErrorMessage(`${code} ${message}`)
+    const retryable =
+      ![
+        'missing_transcript',
+        'empty_transcript',
+        'low_quality_transcript',
+        'hallucination_guard',
+        'quality_gate',
+        'ai_schema',
+        'ai_invalid_json',
+      ].includes(code) && !qualityGate
 
     await failReportJob({
       db,

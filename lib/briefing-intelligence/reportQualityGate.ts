@@ -93,15 +93,22 @@ export function runMeetingMinutesQualityGate(params: {
     }
   }
 
+  // Empty optional sections (or "Not discussed…") are allowed for short legitimate briefings.
   const substantive =
     (report.whatDepartmentExplained?.length || 0) +
     (report.priorityDeliverables?.length || 0) +
     (report.scopeClarifications?.length || 0) +
     (report.mainPoints?.length || 0) +
     (report.amendments?.length || 0) +
-    (report.questionsAndClarifications?.length || 0)
+    (report.questionsAndClarifications?.length || 0) +
+    (report.questionsAndAnswers?.length || 0) +
+    (report.keyRequirementsDiscussed?.length || 0) +
+    (report.importantDates?.length || 0) +
+    (report.technicalObservations?.length || 0) +
+    (report.risksAndWatchOuts?.length || 0) +
+    (report.actionsForSme?.length || 0)
 
-  if (substantive === 0) {
+  if (substantive === 0 && !report.purposeOfBriefing?.trim()) {
     return {
       ok: false,
       category: 'quality_gate',
@@ -111,6 +118,18 @@ export function runMeetingMinutesQualityGate(params: {
       warnings,
       discrepancies,
     }
+  }
+
+  if (substantive === 0 && report.purposeOfBriefing?.trim()) {
+    warnings.push(
+      'Limited transcript content: optional sections may state "Not discussed in the recorded briefing."'
+    )
+  }
+
+  if ((report.verificationItems?.length || 0) > 0) {
+    warnings.push(
+      `${report.verificationItems.length} item(s) require verification against tender documents or the procuring entity.`
+    )
   }
 
   const blob = JSON.stringify(report)

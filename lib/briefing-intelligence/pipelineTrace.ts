@@ -92,6 +92,29 @@ export function classifyProviderHttpStatus(status: number): BriefingErrorCategor
 export function classifyErrorMessage(message: string): BriefingErrorCategory {
   const m = String(message || '').toLowerCase()
   if (!m) return 'unknown'
+  // AI-minutes failures (must not be misclassified as transcription failures).
+  if (
+    m.includes('openai summary') ||
+    m.includes('ai_provider') ||
+    m.includes('ai minutes') ||
+    m.includes('meeting minutes missing')
+  ) {
+    if (m.includes('rate limit') || m.includes('429') || m.includes('ai_provider_rate_limit')) {
+      return 'provider_rate_limit'
+    }
+    if (m.includes('timeout') || m.includes('timed out') || m.includes('ai_provider_timeout')) {
+      return 'provider_timeout'
+    }
+    if (m.includes('unauthorized') || m.includes('api key') || m.includes('ai_provider_auth')) {
+      return 'provider_auth'
+    }
+    if (m.includes('invalid json') || m.includes('no content')) return 'ai_invalid_json'
+    if (m.includes('schema') || m.includes('speaker labels') || m.includes('purposeofbriefing')) {
+      return 'ai_schema'
+    }
+    if (m.includes('5xx') || /\b5\d\d\b/.test(m)) return 'provider_5xx'
+    return 'unknown'
+  }
   if (m.includes('openai_api_key') || m.includes('api key') || m.includes('unauthorized')) {
     return 'provider_auth'
   }

@@ -267,8 +267,11 @@ export default function FounderBriefingMinutesPage() {
       {m ? (
         <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-800">
           <h2 className="text-lg font-semibold text-slate-900">Generated minutes</h2>
+          <p className="text-xs text-slate-500">
+            Structured summary of the completed transcript. Review the transcript link before approving delivery.
+          </p>
           <section>
-            <h3 className="font-semibold text-slate-900">Purpose</h3>
+            <h3 className="font-semibold text-slate-900">Executive summary</h3>
             <p className="mt-1">{m.purposeOfBriefing}</p>
           </section>
           {(m.whatDepartmentExplained || []).length > 0 ? (
@@ -281,17 +284,101 @@ export default function FounderBriefingMinutesPage() {
               </ul>
             </section>
           ) : null}
-          {(m.questionsAndClarifications || []).length > 0 ? (
+          {(m.keyRequirementsDiscussed || []).length > 0 ? (
             <section>
-              <h3 className="font-semibold text-slate-900">Questions and Clarifications</h3>
+              <h3 className="font-semibold text-slate-900">Key requirements discussed</h3>
+              <ul className="mt-1 list-disc pl-5 space-y-1">
+                {m.keyRequirementsDiscussed.map((x: string, i: number) => (
+                  <li key={i}>{x}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          {(m.submissionRequirements || []).length > 0 ? (
+            <section>
+              <h3 className="font-semibold text-slate-900">Submission requirements</h3>
+              <ul className="mt-1 list-disc pl-5 space-y-1">
+                {m.submissionRequirements.map((x: string, i: number) => (
+                  <li key={i}>{x}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          {(m.questionsAndAnswers || m.questionsAndClarifications || []).length > 0 ? (
+            <section>
+              <h3 className="font-semibold text-slate-900">Questions and answers</h3>
               <div className="mt-2 space-y-3">
-                {m.questionsAndClarifications.map((q: any, i: number) => (
-                  <div key={i}>
-                    <div className="font-medium">{q.heading}</div>
-                    <p className="mt-0.5">{q.summary}</p>
+                {(m.questionsAndAnswers?.length
+                  ? m.questionsAndAnswers
+                  : m.questionsAndClarifications
+                ).map((q: any, i: number) => (
+                  <div key={i} className="rounded border border-slate-100 p-2">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Question</div>
+                    <div className="font-medium">{q.question || q.heading}</div>
+                    <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Answer</div>
+                    <p className="mt-0.5">{q.answer || q.summary}</p>
+                    {q.unresolved ? (
+                      <p className="mt-1 text-xs text-amber-800">No definitive answer was recorded.</p>
+                    ) : null}
                   </div>
                 ))}
               </div>
+            </section>
+          ) : null}
+          {(m.amendments || []).length > 0 ? (
+            <section>
+              <h3 className="font-semibold text-slate-900">Clarifications and changes</h3>
+              <ul className="mt-2 space-y-2">
+                {m.amendments.map((a: any, i: number) => (
+                  <li key={i} className="rounded border border-slate-100 p-2">
+                    {a.kind ? (
+                      <div className="text-xs font-medium text-slate-500">{String(a.kind).replace(/_/g, ' ')}</div>
+                    ) : null}
+                    <div>{a.briefingChange}</div>
+                    {a.bidderImplication ? (
+                      <div className="mt-1 text-xs text-slate-600">Implication: {a.bidderImplication}</div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          {(m.importantDates || []).length > 0 ? (
+            <section>
+              <h3 className="font-semibold text-slate-900">Important dates</h3>
+              <ul className="mt-1 list-disc pl-5 space-y-1">
+                {m.importantDates.map((d: any, i: number) => (
+                  <li key={i}>
+                    <strong>{d.date}</strong> — {d.description}
+                    {d.uncertain ? ' (uncertain — verify)' : ''}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          {(m.verificationItems || []).length > 0 ? (
+            <section className="rounded border border-amber-200 bg-amber-50 p-3">
+              <h3 className="font-semibold text-amber-950">Items requiring verification</h3>
+              <ul className="mt-1 list-disc pl-5 space-y-1 text-amber-950">
+                {m.verificationItems.map((v: any, i: number) => (
+                  <li key={i}>
+                    <strong>{v.item}</strong> — {v.reason}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          {(m.actionsForSme || []).length > 0 ? (
+            <section>
+              <h3 className="font-semibold text-slate-900">Actions for the SME</h3>
+              <ul className="mt-1 list-disc pl-5 space-y-1">
+                {m.actionsForSme.map((a: any, i: number) => (
+                  <li key={i}>
+                    {a.action}
+                    {a.deadline ? ` (by ${a.deadline})` : ''}
+                  </li>
+                ))}
+              </ul>
             </section>
           ) : null}
           {(m.mainPoints || []).length > 0 ? (
