@@ -1,6 +1,6 @@
 /**
  * Controlled long-audio pilot certification (local / Founder-authorised).
- * Run: LONG_AUDIO_PILOT=1 SPEECHMATICS_API_KEY=... npx vitest run tests/briefing-intelligence/integration/longAudioPilotCert.test.ts
+ * Run: LONG_AUDIO_PILOT=1 BRIEFING_AUDIO_FFMPEG_MODE=real SPEECHMATICS_API_KEY=... npx vitest run tests/briefing-intelligence/integration/longAudioPilotCert.test.ts
  *
  * Does NOT enable production chunking. Requires ffmpeg locally.
  * Uses Speechmatics Batch (default STT); Whisper is no longer the pilot provider.
@@ -157,6 +157,7 @@ pilot('long-audio pilot certification', () => {
       throw new Error('ffmpeg/ffprobe not available — pilot requires local ffmpeg')
     }
     delete process.env.BRIEFING_AUDIO_FFMPEG_MODE
+    process.env.BRIEFING_AUDIO_FFMPEG_MODE = 'real'
     process.env.BRIEFING_AUDIO_TRANSCRIPTION_ENABLED = 'true'
     process.env.BRIEFING_AUDIO_CHUNKING_ENABLED = 'true'
     expect(isBriefingAudioChunkingEnabled()).toBe(true)

@@ -259,7 +259,11 @@ export async function processBriefingIntelligenceReport(params: {
       throw Object.assign(new Error('Missing audioFileRef on report'), { code: 'missing_audio' })
     }
 
-    const bucket = admin.storage().bucket()
+    const bucketName =
+      process.env.FIREBASE_STORAGE_BUCKET ||
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+      undefined
+    const bucket = bucketName ? admin.storage().bucket(bucketName) : admin.storage().bucket()
     let sourceSizeBytes = Number(job?.audioSizeBytes || 0)
     if (!sourceSizeBytes && report.audioFileSizeMb) {
       sourceSizeBytes = Math.round(Number(report.audioFileSizeMb) * 1024 * 1024)
