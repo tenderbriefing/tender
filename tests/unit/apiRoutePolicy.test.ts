@@ -22,4 +22,11 @@ describe('apiRoutePolicy', () => {
     expect(isPublicApiRoute('/api/private-tenders/status/abc123token', 'GET')).toBe(true)
     expect(isPublicApiRoute('/api/founder/private-tenders', 'GET')).toBe(false)
   })
+
+  it('allows briefing workers through middleware; handlers still require sync secret', () => {
+    expect(isPublicApiRoute('/api/briefing-intelligence/transcription/worker', 'POST')).toBe(true)
+    expect(isPublicApiRoute('/api/briefing-intelligence/report/worker', 'POST')).toBe(true)
+    expect(isPublicApiRoute('/api/briefing-intelligence/transcription/worker', 'GET')).toBe(false)
+    expect(isPublicApiRoute('/api/briefing-intelligence/evidence', 'POST')).toBe(false)
+  })
 })
