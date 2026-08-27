@@ -14,7 +14,13 @@ import {
   isBriefingAudioChunkingEnabled,
 } from './featureFlag'
 import { shouldUseChunkedTranscription } from './audioChunking/decision'
-import { estimateDurationMsFromSize } from './audioChunking/ffmpegMedia'
+import {
+  downloadGcsToTemp,
+  estimateDurationMsFromSize,
+  isFfmpegMockMode,
+  probeAudioFile,
+  withTempDir,
+} from './audioChunking/ffmpegMedia'
 import { processChunkedTranscription } from './processChunkedTranscription'
 
 function nowIso() {
@@ -277,12 +283,33 @@ export async function processBriefingIntelligenceReport(params: {
 
     let useChunked = false
     if (isBriefingAudioChunkingEnabled()) {
-      const estimatedDurationMs = estimateDurationMsFromSize(sourceSizeBytes)
+      let durationMs = estimateDurationMsFromSize(sourceSizeBytes)
+      // Size-only estimates assume ~480 B/s speech and can exceed the 120 min cap for
+      // compressed mp3 (e.g. 30 MB ≈ 65 min at 64 kbps). Prefer ffprobe when available.
+      if (report.audioFileRef && !isFfmpegMockMode()) {
+        try {
+          const probed = await withTempDir('bap-pre-', async (tempDir) => {
+            const localSource = await downloadGcsToTemp({
+              bucket,
+              storagePath: report.audioFileRef!,
+              tempDir,
+              fileName: 'source-audio',
+            })
+            return probeAudioFile(localSource, sourceSizeBytes)
+          })
+          durationMs = probed.durationMs
+        } catch (probeErr) {
+          console.warn('[transcription] ffprobe pre-decision failed — using size estimate', {
+            reportId,
+            error: probeErr instanceof Error ? probeErr.message : String(probeErr),
+          })
+        }
+      }
       try {
         const decision = shouldUseChunkedTranscription({
           chunkingFlagEnabled: true,
           probe: {
-            durationMs: estimatedDurationMs,
+            durationMs,
             sizeBytes: sourceSizeBytes,
             codec: null,
             bitrateKbps: null,
@@ -294,7 +321,7 @@ export async function processBriefingIntelligenceReport(params: {
           mode: decision.mode,
           reason: decision.reason,
           sizeBytes: sourceSizeBytes,
-          estimatedDurationMs,
+          durationMs,
         })
       } catch (decisionErr) {
         throw decisionErr
