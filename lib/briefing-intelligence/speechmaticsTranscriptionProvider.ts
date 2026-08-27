@@ -323,7 +323,7 @@ export class SpeechmaticsTranscriptionProvider implements TranscriptionProvider 
 
   /**
    * Intelligence extraction remains OpenAI (or meeting-minutes path).
-   * Speechmatics replaces Whisper STT only.
+   * Speechmatics is the sole STT provider — Whisper retired.
    */
   async extractIntelligence(
     transcript: string,

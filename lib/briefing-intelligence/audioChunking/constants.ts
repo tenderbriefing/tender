@@ -8,7 +8,7 @@ export const TARGET_CHUNK_DURATION_MS = 10 * 60 * 1000
 /** Hard ceiling per chunk (15 minutes). */
 export const HARD_MAX_CHUNK_DURATION_MS = 15 * 60 * 1000
 
-/** Target max bytes per chunk (below Whisper ~25 MB limit). */
+/** Target max bytes per chunk (below typical STT provider ~25 MB request limits). */
 export const TARGET_MAX_CHUNK_BYTES = 20 * 1024 * 1024
 
 /** Never exceed provider limit. */

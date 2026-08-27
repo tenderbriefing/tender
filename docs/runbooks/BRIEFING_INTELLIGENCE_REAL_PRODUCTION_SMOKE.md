@@ -37,7 +37,7 @@ Using Report ID / `briefingRunId`:
 
 - [ ] Submission persisted (`evidence_uploaded` → processing)
 - [ ] Transcription job created (`tj-{reportId}`)
-- [ ] Whisper completes; transcript persisted
+- [ ] Speechmatics completes; transcript persisted
 - [ ] Report job runs; draft PDF generated
 - [ ] `reportGenerationStatus=draft_ready` (or `failed_quality_gate` with clear reason)
 - [ ] Evidence still intact if AI fails
@@ -72,6 +72,6 @@ Using Report ID / `briefingRunId`:
 ## Certification decision
 
 **PASS:** all stages succeed and report quality is acceptable.  
-**FAIL:** security, integrity, workflow, Whisper/OpenAI, or material accuracy defect.
+**FAIL:** security, integrity, workflow, Speechmatics/OpenAI minutes, or material accuracy defect.
 
 Only after PASS may production certification be upgraded to **PRODUCTION CERTIFIED**.

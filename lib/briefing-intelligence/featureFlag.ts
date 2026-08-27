@@ -1,5 +1,5 @@
 /**
- * Feature flag: briefing audio transcription (async Whisper + transcript storage).
+ * Feature flag: briefing audio transcription (async Speechmatics + transcript storage).
  * Fail-closed: unset/false disables job creation; evidence upload still succeeds.
  */
 export function isBriefingAudioTranscriptionEnabled(
@@ -23,7 +23,7 @@ export function isBriefingAiReportGenerationEnabled(
 }
 
 /**
- * Feature flag: hybrid long-audio chunking (ffmpeg + sequential Whisper).
+ * Feature flag: hybrid long-audio chunking (ffmpeg + sequential Speechmatics).
  * Fail-closed: requires BRIEFING_AUDIO_TRANSCRIPTION_ENABLED.
  */
 export function isBriefingAudioChunkingEnabled(

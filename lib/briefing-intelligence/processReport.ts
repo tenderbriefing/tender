@@ -40,7 +40,7 @@ export type ProcessReportResult =
 type AdminBucket = Bucket
 
 /**
- * Direct single-request Whisper transcription (short audio path).
+ * Direct single-request Speechmatics transcription (short audio path).
  */
 async function processDirectTranscription(params: {
   db: Firestore

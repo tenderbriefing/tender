@@ -1,5 +1,4 @@
 import type { BriefingReportContent } from './types'
-import { FormData } from 'undici'
 import { SpeechmaticsTranscriptionProvider } from './speechmaticsTranscriptionProvider'
 
 // Note: The task requirement defines the provider abstraction inline.
@@ -257,10 +256,14 @@ function extractJson(text: string): unknown {
   return null
 }
 
+/**
+ * OpenAI chat extraction for briefing intelligence (NOT transcription).
+ * Whisper STT was retired — Speechmatics is the sole transcription provider.
+ * This class remains for extractIntelligence / legacy handoff paths only.
+ */
 export class OpenAITranscriptionProvider implements TranscriptionProvider {
   private apiKey: string
   private baseUrl = 'https://api.openai.com/v1'
-  private modelTranscribe: string
   private modelExtract: string
 
   constructor(opts?: { apiKey?: string }) {
@@ -272,7 +275,6 @@ export class OpenAITranscriptionProvider implements TranscriptionProvider {
       throw new Error('OPENAI_API_KEY is required for briefing intelligence extraction')
     }
     this.apiKey = apiKey
-    this.modelTranscribe = process.env.BRIEFING_INTELLIGENCE_TRANSCRIBE_MODEL || 'whisper-1'
     this.modelExtract = process.env.BRIEFING_INTELLIGENCE_EXTRACT_MODEL || 'gpt-4o'
   }
 
@@ -294,96 +296,14 @@ export class OpenAITranscriptionProvider implements TranscriptionProvider {
     return res.json()
   }
 
-  async transcribe(audioUrl: string): Promise<TranscriptionResult> {
-    const audioRes = await fetch(audioUrl)
-    if (!audioRes.ok) {
-      throw new Error(`Failed to download audio for transcription: ${audioRes.status}`)
-    }
-
-    const contentType =
-      audioRes.headers.get('content-type') || 'application/octet-stream'
-    const arrayBuffer = await audioRes.arrayBuffer()
-    const blob = new Blob([arrayBuffer as any], { type: contentType })
-
-    const fd = new FormData()
-    fd.append('model', this.modelTranscribe)
-    // OpenAI expects `file` to be a form file. undici Blob works in Node fetch.
-    fd.append('file', blob, 'audio')
-    // verbose_json returns timestamped segments (no diarisation on whisper-1).
-    fd.append('response_format', 'verbose_json')
-
-    const res = await fetch(`${this.baseUrl}/audio/transcriptions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: fd as any,
-    })
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      throw new Error(`OpenAI transcription failed: ${res.status} ${text}`.slice(0, 2000))
-    }
-
-    const data: any = await res.json()
-    const transcriptText = String(data?.text || '').trim()
-
-    if (!transcriptText) {
-      throw new Error('Transcription returned empty text')
-    }
-
-    const segments: TranscriptionResult['segments'] = []
-    const rawSegments = Array.isArray(data?.segments) ? data.segments : []
-    for (let i = 0; i < rawSegments.length; i++) {
-      const seg = rawSegments[i]
-      const text = String(seg?.text || '').trim()
-      if (!text) continue
-      const start = typeof seg?.start === 'number' ? seg.start : 0
-      const end = typeof seg?.end === 'number' ? seg.end : null
-      // whisper-1 does not diarise; do not invent speaker identities.
-      segments.push({
-        id: `seg-${i + 1}`,
-        speaker: 'Speaker 1',
-        startSeconds: start,
-        endSeconds: end,
-        text,
-      })
-    }
-
-    if (segments.length === 0) {
-      segments.push({
-        id: 'seg-1',
-        speaker: 'Speaker 1',
-        startSeconds: 0,
-        endSeconds: typeof data?.duration === 'number' ? data.duration : null,
-        text: transcriptText,
-      })
-    }
-
-    return {
-      provider: 'openai-whisper',
-      transcriptText,
-      transcriptWordCount: countWords(transcriptText),
-      language: typeof data?.language === 'string' ? data.language : null,
-      confidence: null, // Whisper does not reliably provide confidence.
-      completedAt: nowIso(),
-      segments,
-      durationSeconds: typeof data?.duration === 'number' ? data.duration : null,
-      model: this.modelTranscribe,
-      rawProviderPayload: {
-        language: data?.language ?? null,
-        duration: data?.duration ?? null,
-        segmentCount: segments.length,
-        // Omit full token arrays to reduce storage; keep segment text/times.
-        segments: segments.map((s) => ({
-          id: s.id,
-          speaker: s.speaker,
-          start: s.startSeconds,
-          end: s.endSeconds,
-          text: s.text,
-        })),
-      },
-    }
+  /**
+   * Whisper STT retired. Transcription must use Speechmatics.
+   * Interface retained so this class can still implement TranscriptionProvider for extractIntelligence.
+   */
+  async transcribe(_audioUrl: string): Promise<TranscriptionResult> {
+    throw new Error(
+      'Whisper transcription has been retired. Use BRIEFING_INTELLIGENCE_PROVIDER=speechmatics (Speechmatics Batch STT).'
+    )
   }
 
   async extractIntelligence(
@@ -642,22 +562,29 @@ export class MockTranscriptionProvider implements TranscriptionProvider {
   }
 }
 
+/**
+ * Sole production STT: Speechmatics. Mock for tests.
+ * openai/whisper values are rejected (Whisper transcription retired).
+ * OpenAI remains used only for extractIntelligence / meeting minutes — not via this selector.
+ */
 export function getTranscriptionProvider(): TranscriptionProvider {
   const raw = process.env.BRIEFING_INTELLIGENCE_PROVIDER
   const mode = String(raw || 'speechmatics').trim().toLowerCase()
 
   if (mode === 'mock') return new MockTranscriptionProvider()
-  // Explicit OpenAI Whisper — emergency / legacy only. Never an implicit fallback.
+
   if (mode === 'openai' || mode === 'whisper') {
-    return new OpenAITranscriptionProvider()
+    throw new Error(
+      `BRIEFING_INTELLIGENCE_PROVIDER="${mode}" is retired. Whisper transcription is no longer available. Use speechmatics.`
+    )
   }
-  // Default (unset or explicit speechmatics).
+
   if (mode === 'speechmatics' || raw == null || String(raw).trim() === '') {
     return new SpeechmaticsTranscriptionProvider()
   }
 
   throw new Error(
-    `Invalid BRIEFING_INTELLIGENCE_PROVIDER="${mode}". Supported: speechmatics, openai, whisper, mock`
+    `Invalid BRIEFING_INTELLIGENCE_PROVIDER="${mode}". Supported: speechmatics, mock`
   )
 }
 
