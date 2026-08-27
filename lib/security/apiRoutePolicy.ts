@@ -34,6 +34,9 @@ export function isPublicApiRoute(pathname: string, method: string): boolean {
 
   if (pathname === '/api/sync/run' && m === 'POST') return true
   if (pathname === '/api/automation/run' && m === 'POST') return true
+  // Briefing workers: middleware-public; handlers require x-sync-secret / admin Bearer.
+  if (pathname === '/api/briefing-intelligence/transcription/worker' && m === 'POST') return true
+  if (pathname === '/api/briefing-intelligence/report/worker' && m === 'POST') return true
 
   return false
 }
