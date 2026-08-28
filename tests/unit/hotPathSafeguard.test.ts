@@ -86,6 +86,14 @@ describe('hot-path Firestore safeguards', () => {
     expect(s).toMatch(/requestIds:/)
   })
 
+  it('SME dashboard bootstrap loader bounds attendance and report reads', () => {
+    const s = src('lib/sme/loadSmeDashboardBootstrap.ts')
+    expect(s).toMatch(/getAttendanceRequests\(\{\s*smeId:\s*uid,\s*limit:\s*ATTENDANCE_LIMIT/)
+    expect(s).toMatch(/requestIds:\s*requestIds\.slice\(0,\s*30\)/)
+    expect(s).not.toMatch(/getAttendanceRequests\(\s*\)/)
+    expect(s).not.toMatch(/getTenderBriefings\s*\(/)
+  })
+
   it('catalogue SSR uses a single bounded paginated read', () => {
     const s = src('lib/seo/catalogueServerData.ts')
     expect(s).toMatch(/listTenderBriefingsPage\(/)

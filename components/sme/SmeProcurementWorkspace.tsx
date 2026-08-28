@@ -6,7 +6,7 @@ import { authFetch } from '@/lib/api/authenticatedFetch'
 import ProcurementEmptyState from '@/components/operations/ProcurementEmptyState'
 import { Bookmark, Building2, Calendar, CheckSquare, ClipboardList, MapPin, Star } from 'lucide-react'
 
-interface WorkspaceData {
+export interface SmeWorkspacePanelData {
   trackedTenders: Array<{ id: string; title?: string; tenderNumber?: string }>
   savedTenders: Array<{ id: string; title?: string; tenderNumber?: string }>
   workspace: {
@@ -17,6 +17,13 @@ interface WorkspaceData {
   completedReports: number
   closingSoonCount: number
   attendanceRequests: number
+}
+
+interface SmeProcurementWorkspaceProps {
+  /** Preloaded from SME dashboard bootstrap — skips initial fetch when set. */
+  initialData?: SmeWorkspacePanelData
+  skipFetch?: boolean
+  externalLoading?: boolean
 }
 
 function Section({
@@ -50,9 +57,13 @@ function Section({
   )
 }
 
-export default function SmeProcurementWorkspace() {
-  const [data, setData] = useState<WorkspaceData | null>(null)
-  const [loading, setLoading] = useState(true)
+export default function SmeProcurementWorkspace({
+  initialData,
+  skipFetch = false,
+  externalLoading = false,
+}: SmeProcurementWorkspaceProps = {}) {
+  const [data, setData] = useState<SmeWorkspacePanelData | null>(initialData ?? null)
+  const [loading, setLoading] = useState(() => (skipFetch ? externalLoading : true))
 
   const load = useCallback(async () => {
     try {
@@ -65,8 +76,13 @@ export default function SmeProcurementWorkspace() {
   }, [])
 
   useEffect(() => {
+    if (skipFetch) {
+      if (initialData) setData(initialData)
+      setLoading(externalLoading)
+      return
+    }
     load()
-  }, [load])
+  }, [load, skipFetch, initialData, externalLoading])
 
   if (loading) {
     return <p className="text-sm text-slate-500">Loading procurement workspace…</p>

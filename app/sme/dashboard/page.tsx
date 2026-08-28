@@ -11,6 +11,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import DashboardWelcome from '@/components/dashboard/DashboardWelcome'
 import DashboardKpiGrid from '@/components/dashboard/DashboardKpiGrid'
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
+import { useSmeDashboardBootstrap } from '@/hooks/useSmeDashboardBootstrap'
 import RecentActivity from '@/components/dashboard/RecentActivity'
 import QuickActions from '@/components/dashboard/QuickActions'
 import { TrustStrip } from '@/components/procurement/TrustDisclaimer'
@@ -29,7 +30,29 @@ const CalendarIntegration = dynamic(
 export default function SmeDashboardPage() {
   const { user, userProfile, loading } = useAuth()
   const router = useRouter()
-  const { metrics, loading: metricsLoading } = useDashboardMetrics(Boolean(user))
+  const isSmeUser = userProfile?.userType === 'sme'
+  const sessionReady = Boolean(user)
+
+  const { data: bootstrap, loading: bootstrapLoading, error: bootstrapError } =
+    useSmeDashboardBootstrap(isSmeUser && sessionReady)
+  const { metrics: adminMetrics, loading: adminMetricsLoading } = useDashboardMetrics(
+    !isSmeUser && sessionReady
+  )
+  const { metrics: smeFallbackMetrics, loading: smeFallbackLoading } = useDashboardMetrics(
+    isSmeUser && sessionReady && Boolean(bootstrapError)
+  )
+
+  const bootstrapReady = isSmeUser && !bootstrapLoading && !bootstrapError
+  const useBootstrapFeed = isSmeUser && !bootstrapError
+
+  const metrics = isSmeUser
+    ? bootstrap?.metrics ?? smeFallbackMetrics
+    : adminMetrics
+  const metricsLoading = isSmeUser
+    ? bootstrapError
+      ? smeFallbackLoading
+      : bootstrapLoading
+    : adminMetricsLoading
 
   useEffect(() => {
     if (loading) return
@@ -60,6 +83,22 @@ export default function SmeDashboardPage() {
   const sessionUser = user ?? auth.currentUser
   if (!sessionUser) return null
 
+  const workspaceBootstrap = bootstrap?.workspace
+  const workspacePanelData = workspaceBootstrap
+    ? {
+        trackedTenders: workspaceBootstrap.trackedTenders,
+        savedTenders: workspaceBootstrap.savedTenders,
+        workspace: {
+          watchedDepartments: workspaceBootstrap.workspace.watchedDepartments,
+          watchedProvinces: workspaceBootstrap.workspace.watchedProvinces,
+        },
+        upcomingBriefings: workspaceBootstrap.upcomingBriefings,
+        completedReports: workspaceBootstrap.completedReports,
+        closingSoonCount: workspaceBootstrap.closingSoonCount,
+        attendanceRequests: workspaceBootstrap.attendanceRequests,
+      }
+    : undefined
+
   return (
     <div className="procurement-shell">
       <Header />
@@ -84,14 +123,23 @@ export default function SmeDashboardPage() {
         </div>
 
         <div className="mt-8">
-          <SmeProcurementWorkspace />
+          <SmeProcurementWorkspace
+            initialData={bootstrapReady ? workspacePanelData : undefined}
+            skipFetch={useBootstrapFeed}
+            externalLoading={useBootstrapFeed ? bootstrapLoading : false}
+          />
         </div>
 
         <div className="mt-8">
           <QuickActions userType="sme" />
         </div>
         <div className="mt-8">
-          <RecentActivity userType="sme" />
+          <RecentActivity
+            userType="sme"
+            initialActivities={bootstrapReady ? bootstrap?.recentActivities : undefined}
+            skipFetch={useBootstrapFeed}
+            externalLoading={useBootstrapFeed ? bootstrapLoading : false}
+          />
         </div>
       </main>
       <Footer />
