@@ -301,6 +301,18 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Founder SME Outreach — Admin SDK / Founder APIs only.
+    match /founderOutreachCampaigns/{campaignId} {
+      allow read, write: if false;
+      match /deliveries/{deliveryId} {
+        allow read, write: if false;
+      }
+    }
+
+    match /emailSuppressions/{emailId} {
+      allow read, write: if false;
+    }
+
     match /syncStatus/{docId} {
       allow read: if isAdmin();
       allow write: if false;
