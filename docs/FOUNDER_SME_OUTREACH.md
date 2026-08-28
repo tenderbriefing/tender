@@ -1,6 +1,10 @@
-# Founder SME Outreach (v1)
+# Founder Outreach
 
-Founder-only tool to upload a cleaned SME `.xlsx` list and send one approved invitation via the existing Resend infrastructure.
+Founder-only tool to upload a cleaned `.xlsx` list and send approved invitations via the existing Resend infrastructure.
+
+**Multi-audience documentation:** see [FOUNDER_OUTREACH.md](./FOUNDER_OUTREACH.md) for SME + Youth Agent campaigns.
+
+This file documents the original SME-only v1 scope; behaviour is unchanged for `sme_invitation` campaigns.
 
 ## Route
 

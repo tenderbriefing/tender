@@ -2,8 +2,8 @@ import {
   OUTREACH_MAX_RECIPIENTS,
   OUTREACH_MAX_UPLOAD_BYTES,
   OUTREACH_MAX_WORKBOOK_ROWS,
-  OUTREACH_TEMPLATE_VERSION,
 } from './featureFlag'
+import type { OutreachCampaignType, OutreachTemplateVersion } from './campaignTypes'
 
 export type OutreachRowStatus = 'ready' | 'invalid' | 'duplicate' | 'suppressed'
 
@@ -37,8 +37,8 @@ export type OutreachDeliveryStatus =
 
 export type OutreachCampaign = {
   id: string
-  type: 'sme_invitation'
-  templateVersion: typeof OUTREACH_TEMPLATE_VERSION
+  type: OutreachCampaignType
+  templateVersion: OutreachTemplateVersion
   originalFileName: string
   totalRows: number
   validRows: number
@@ -69,7 +69,7 @@ export type OutreachDelivery = {
   email: string
   normalisedEmail: string
   status: OutreachDeliveryStatus
-  templateVersion: typeof OUTREACH_TEMPLATE_VERSION
+  templateVersion: OutreachTemplateVersion
   resendMessageId: string | null
   attemptCount: number
   errorCode: string | null

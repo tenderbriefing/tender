@@ -7,8 +7,12 @@ import { FounderShell } from '@/components/founder/FounderShell'
 import { authFetch } from '@/lib/api/authenticatedFetch'
 import { isFounderSmeOutreachEnabledClient } from '@/lib/founder/outreach/clientFlag'
 
+type OutreachCampaignType = 'sme_invitation' | 'youth_agent_invitation'
+
 type CampaignSummary = {
   id: string
+  type?: OutreachCampaignType
+  templateVersion?: string
   originalFileName: string
   createdAt: string
   status: string
@@ -30,6 +34,7 @@ type PreviewRow = {
 type ValidateData = {
   campaign: {
     id: string
+    type: OutreachCampaignType
     originalFileName: string
     totalRows: number
     validRows: number
@@ -46,11 +51,39 @@ type ValidateData = {
     ctaUrl: string
     templateVersion: string
     textExcerpt: string
+    campaignType: OutreachCampaignType
+    audienceLabel: string
   }
+}
+
+const AUDIENCE_OPTIONS: {
+  type: OutreachCampaignType
+  label: string
+  description: string
+  columns: string
+}[] = [
+  {
+    type: 'sme_invitation',
+    label: 'SME Invitation',
+    description: 'Invite businesses to book Youth Agents for compulsory briefings.',
+    columns: 'Name, Company Name, Email',
+  },
+  {
+    type: 'youth_agent_invitation',
+    label: 'Youth Agent Invitation',
+    description: 'Recruit prospective Youth Agents to join TenderBriefing.',
+    columns: 'Name, Email (Company Name optional)',
+  },
+]
+
+function audienceLabel(type?: OutreachCampaignType): string {
+  if (type === 'youth_agent_invitation') return 'Youth Agent Invitation'
+  return 'SME Invitation'
 }
 
 export default function FounderOutreachPage() {
   const flagOn = isFounderSmeOutreachEnabledClient()
+  const [campaignType, setCampaignType] = useState<OutreachCampaignType>('sme_invitation')
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
   const [sending, setSending] = useState(false)
@@ -59,6 +92,9 @@ export default function FounderOutreachPage() {
   const [authorisedList, setAuthorisedList] = useState(false)
   const [history, setHistory] = useState<CampaignSummary[]>([])
   const [activeResult, setActiveResult] = useState<any>(null)
+
+  const selectedAudience = AUDIENCE_OPTIONS.find((o) => o.type === campaignType)!
+  const isYouth = campaignType === 'youth_agent_invitation'
 
   const loadHistory = useCallback(async () => {
     if (!flagOn) return
@@ -75,11 +111,20 @@ export default function FounderOutreachPage() {
     void loadHistory()
   }, [loadHistory])
 
+  function onAudienceChange(type: OutreachCampaignType) {
+    setCampaignType(type)
+    setValidated(null)
+    setActiveResult(null)
+    setConfirmSend(false)
+    setAuthorisedList(false)
+    setFile(null)
+  }
+
   if (!flagOn) {
     return (
-      <FounderShell title="SME Outreach" subtitle="Invitations">
+      <FounderShell title="Outreach" subtitle="Invitations">
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          Founder SME Outreach is disabled in this environment (
+          Founder Outreach is disabled in this environment (
           <code className="font-mono text-xs">FOUNDER_SME_OUTREACH_ENABLED</code>).
         </div>
       </FounderShell>
@@ -97,6 +142,7 @@ export default function FounderOutreachPage() {
     try {
       const fd = new FormData()
       fd.append('file', file)
+      fd.append('campaignType', campaignType)
       const res = await authFetch('/api/founder/outreach/validate', { method: 'POST', body: fd })
       const json = await res.json()
       if (!res.ok || !json.success) throw new Error(json.error || 'Validation failed')
@@ -143,11 +189,13 @@ export default function FounderOutreachPage() {
   }
 
   const c = validated?.campaign
+  const activeType: OutreachCampaignType =
+    validated?.campaign.type || activeResult?.campaign?.type || campaignType
 
   return (
     <FounderShell
-      title="SME Outreach"
-      subtitle="Upload a cleaned Excel list and send the approved invitation"
+      title="Outreach"
+      subtitle="Send approved SME or Youth Agent invitation campaigns"
       actions={
         <Link href="/founder" className="text-sm font-medium text-slate-600 underline">
           Overview
@@ -156,10 +204,37 @@ export default function FounderOutreachPage() {
     >
       <div className="space-y-8">
         <section className="rounded-lg border border-slate-200 bg-white p-5">
+          <h2 className="text-base font-semibold text-slate-900">Create outreach campaign</h2>
+          <p className="mt-1 text-sm text-slate-600">Choose an audience, then upload a cleaned Excel list.</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {AUDIENCE_OPTIONS.map((opt) => {
+              const selected = campaignType === opt.type
+              return (
+                <button
+                  key={opt.type}
+                  type="button"
+                  onClick={() => onAudienceChange(opt.type)}
+                  className={`rounded-lg border p-4 text-left transition ${
+                    selected
+                      ? 'border-emerald-600 bg-emerald-50 ring-1 ring-emerald-600'
+                      : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="font-semibold text-slate-900">{opt.label}</div>
+                  <p className="mt-1 text-sm text-slate-600">{opt.description}</p>
+                </button>
+              )
+            })}
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 bg-white p-5">
           <h2 className="text-base font-semibold text-slate-900">Upload Excel database</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Required columns: <strong>Name</strong>, <strong>Company Name</strong>, <strong>Email</strong>.
-            .xlsx only.
+            Campaign: <strong>{selectedAudience.label}</strong>
+          </p>
+          <p className="mt-1 text-sm text-slate-600">
+            Required columns: <strong>{selectedAudience.columns}</strong>. .xlsx only.
           </p>
           <form onSubmit={onValidate} className="mt-4 flex flex-wrap items-end gap-3">
             <div>
@@ -187,6 +262,12 @@ export default function FounderOutreachPage() {
           <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
             <h2 className="text-base font-semibold text-slate-900">Campaign preview</h2>
             <p className="text-sm text-slate-600">
+              Audience:{' '}
+              <span className="font-medium text-slate-900">
+                {validated.emailPreview.audienceLabel}
+              </span>
+            </p>
+            <p className="text-sm text-slate-600">
               File: <span className="font-medium text-slate-900">{c.originalFileName}</span>
             </p>
             <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6 text-sm">
@@ -199,7 +280,16 @@ export default function FounderOutreachPage() {
             </div>
 
             <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-              You are about to send this invitation to <strong>{c.sendableRows}</strong> SMEs.
+              {isYouth ? (
+                <>
+                  You are about to send the Youth Agent invitation to{' '}
+                  <strong>{c.sendableRows}</strong> recipients.
+                </>
+              ) : (
+                <>
+                  You are about to send this invitation to <strong>{c.sendableRows}</strong> SMEs.
+                </>
+              )}
             </p>
 
             <div className="overflow-x-auto">
@@ -207,7 +297,9 @@ export default function FounderOutreachPage() {
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500">
                     <th className="py-2 pr-3 font-medium">Name</th>
-                    <th className="py-2 pr-3 font-medium">Company Name</th>
+                    {!isYouth ? (
+                      <th className="py-2 pr-3 font-medium">Company Name</th>
+                    ) : null}
                     <th className="py-2 pr-3 font-medium">Email</th>
                     <th className="py-2 font-medium">Status</th>
                   </tr>
@@ -216,7 +308,7 @@ export default function FounderOutreachPage() {
                   {validated.preview.map((r, i) => (
                     <tr key={i} className="border-b border-slate-100">
                       <td className="py-2 pr-3">{r.name}</td>
-                      <td className="py-2 pr-3">{r.companyName}</td>
+                      {!isYouth ? <td className="py-2 pr-3">{r.companyName}</td> : null}
                       <td className="py-2 pr-3">{r.email}</td>
                       <td className="py-2 capitalize">{r.status}</td>
                     </tr>
@@ -232,6 +324,9 @@ export default function FounderOutreachPage() {
               <div>
                 CTA: {validated.emailPreview.ctaLabel} → {validated.emailPreview.ctaUrl}
               </div>
+              <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-slate-200 bg-white p-2 text-xs text-slate-600">
+                {validated.emailPreview.textExcerpt}
+              </pre>
             </div>
 
             <form onSubmit={onSend} className="space-y-3">
@@ -252,7 +347,9 @@ export default function FounderOutreachPage() {
                   className="mt-1"
                 />
                 <span>
-                  I confirm I want to send this invitation to {c.sendableRows} recipients.
+                  {isYouth
+                    ? `I confirm I want to send the Youth Agent invitation to ${c.sendableRows} recipients.`
+                    : `I confirm I want to send this invitation to ${c.sendableRows} recipients.`}
                 </span>
               </label>
               <button
@@ -260,7 +357,11 @@ export default function FounderOutreachPage() {
                 disabled={sending || !confirmSend || !authorisedList || c.sendableRows < 1}
                 className="rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {sending ? 'Sending…' : 'SEND INVITATIONS'}
+                {sending
+                  ? 'Sending…'
+                  : isYouth
+                    ? 'SEND YOUTH AGENT INVITATIONS'
+                    : 'SEND INVITATIONS'}
               </button>
             </form>
           </section>
@@ -269,6 +370,10 @@ export default function FounderOutreachPage() {
         {activeResult?.campaign ? (
           <section className="rounded-lg border border-slate-200 bg-white p-5">
             <h2 className="text-base font-semibold text-slate-900">Campaign results</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Audience:{' '}
+              <strong>{audienceLabel(activeResult.campaign.type as OutreachCampaignType)}</strong>
+            </p>
             <p className="mt-1 text-sm capitalize text-slate-600">
               Status: <strong>{activeResult.campaign.status.replace(/_/g, ' ')}</strong>
             </p>
@@ -284,7 +389,8 @@ export default function FounderOutreachPage() {
                 <ul className="mt-2 space-y-1 text-sm text-slate-700">
                   {activeResult.failed.map((f: any, i: number) => (
                     <li key={i}>
-                      {f.name} · {f.companyName} · {f.errorCode || 'failed'}
+                      {f.name}
+                      {f.companyName ? ` · ${f.companyName}` : ''} · {f.errorCode || 'failed'}
                     </li>
                   ))}
                 </ul>
@@ -311,7 +417,8 @@ export default function FounderOutreachPage() {
                   <div>
                     <div className="font-medium text-slate-900">{h.originalFileName}</div>
                     <div className="text-xs text-slate-500">
-                      {h.createdAt} · {h.status} · sent {h.sentCount}/{h.sendableRows}
+                      {audienceLabel(h.type)} · {h.createdAt} · {h.status} · sent {h.sentCount}/
+                      {h.sendableRows}
                     </div>
                   </div>
                   <button

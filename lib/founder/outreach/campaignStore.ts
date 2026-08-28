@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto'
 import type { Firestore } from 'firebase-admin/firestore'
-import { OUTREACH_TEMPLATE_VERSION } from './featureFlag'
+import { templateVersionForCampaignType } from './campaignTypes'
+import type { OutreachCampaignType } from './campaignTypes'
 import { listSuppressedAmong } from './suppression'
 import type { ParsedOutreachRow, OutreachCampaign, OutreachDelivery } from './types'
 import { OUTREACH_CAMPAIGNS } from './types'
@@ -33,8 +34,9 @@ export async function createValidatedCampaign(params: {
   rows: ParsedOutreachRow[]
   createdByUid: string
   createdByEmail: string
+  campaignType: OutreachCampaignType
 }): Promise<{ campaign: OutreachCampaign; preview: ParsedOutreachRow[] }> {
-  const { db, fileName, rows, createdByUid, createdByEmail } = params
+  const { db, fileName, rows, createdByUid, createdByEmail, campaignType } = params
   const readyEmails = rows.filter((r) => r.status === 'ready').map((r) => r.normalisedEmail)
   const suppressed = await listSuppressedAmong(db, readyEmails)
 
@@ -55,10 +57,12 @@ export async function createValidatedCampaign(params: {
   const idempotencyKey = `outreach:${campaignId}`
   const createdAt = nowIso()
 
+  const templateVersion = templateVersionForCampaignType(campaignType)
+
   const campaign: OutreachCampaign = {
     id: campaignId,
-    type: 'sme_invitation',
-    templateVersion: OUTREACH_TEMPLATE_VERSION,
+    type: campaignType,
+    templateVersion,
     originalFileName: String(fileName || 'upload.xlsx').slice(0, 200),
     totalRows: adjusted.length,
     validRows: adjusted.filter((r) => r.status === 'ready' || r.status === 'suppressed').length,
@@ -87,6 +91,8 @@ export async function createValidatedCampaign(params: {
     JSON.stringify({
       event: 'founder_outreach_campaign_created',
       campaignId,
+      campaignType,
+      templateVersion,
       totalRows: campaign.totalRows,
       sendableRows: campaign.sendableRows,
       suppressedRows: campaign.suppressedRows,
@@ -113,7 +119,7 @@ export async function createValidatedCampaign(params: {
       email: r.email,
       normalisedEmail: r.normalisedEmail,
       status,
-      templateVersion: OUTREACH_TEMPLATE_VERSION,
+      templateVersion,
       resendMessageId: null,
       attemptCount: 0,
       errorCode: r.reason || null,

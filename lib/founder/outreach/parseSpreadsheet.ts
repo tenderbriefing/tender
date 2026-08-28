@@ -5,6 +5,7 @@ import {
   OUTREACH_MAX_WORKBOOK_ROWS,
 } from './featureFlag'
 import type { ParsedOutreachRow } from './types'
+import type { OutreachCampaignType } from './campaignTypes'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -55,7 +56,12 @@ export type ParseSpreadsheetResult =
  * Parse a Founder-uploaded .xlsx buffer into Name / Company Name / Email rows.
  * Does not execute formulas beyond SheetJS cell values already stored.
  */
-export function parseOutreachXlsx(buffer: Buffer, opts?: { fileName?: string }): ParseSpreadsheetResult {
+export function parseOutreachXlsx(
+  buffer: Buffer,
+  opts?: { fileName?: string; campaignType?: OutreachCampaignType }
+): ParseSpreadsheetResult {
+  const campaignType = opts?.campaignType ?? 'sme_invitation'
+  const youthAgent = campaignType === 'youth_agent_invitation'
   const name = String(opts?.fileName || '').toLowerCase()
   if (name && !name.endsWith('.xlsx')) {
     return { ok: false, error: 'Only .xlsx files are accepted.', code: 'invalid_extension' }
@@ -120,7 +126,7 @@ export function parseOutreachXlsx(buffer: Buffer, opts?: { fileName?: string }):
   if (col.name == null) {
     return { ok: false, error: 'Missing required column: Name', code: 'missing_header_name' }
   }
-  if (col.companyName == null) {
+  if (!youthAgent && col.companyName == null) {
     return {
       ok: false,
       error: 'Missing required column: Company Name',
@@ -140,13 +146,15 @@ export function parseOutreachXlsx(buffer: Buffer, opts?: { fileName?: string }):
   for (let r = 1; r < matrix.length; r++) {
     const line = matrix[r] || []
     const nameVal = String(line[col.name!] ?? '').trim()
-    const companyVal = String(line[col.companyName!] ?? '').trim()
+    const companyVal =
+      col.companyName != null ? String(line[col.companyName] ?? '').trim() : ''
     const emailRaw = String(line[col.email!] ?? '').trim()
     const rowNumber = r + 1
 
     if (!nameVal && !companyVal && !emailRaw) continue
 
-    if (!nameVal || !companyVal || !emailRaw) {
+    const missingCompany = !youthAgent && !companyVal
+    if (!nameVal || !emailRaw || missingCompany) {
       invalidRows += 1
       rows.push({
         name: nameVal,
@@ -156,7 +164,7 @@ export function parseOutreachXlsx(buffer: Buffer, opts?: { fileName?: string }):
         status: 'invalid',
         reason: !nameVal
           ? 'missing_name'
-          : !companyVal
+          : missingCompany
             ? 'missing_company'
             : 'missing_email',
         rowNumber,

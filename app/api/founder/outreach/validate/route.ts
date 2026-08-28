@@ -4,7 +4,8 @@ import { isFounderSmeOutreachEnabled, OUTREACH_MAX_UPLOAD_BYTES } from '@/lib/fo
 import { parseOutreachXlsx } from '@/lib/founder/outreach/parseSpreadsheet'
 import { createValidatedCampaign } from '@/lib/founder/outreach/campaignStore'
 import { getFirebaseAdmin } from '@/lib/backend/firebaseAdmin'
-import { renderSmeInvitationV1 } from '@/lib/founder/outreach/emailTemplate'
+import { renderOutreachEmail } from '@/lib/founder/outreach/templateRegistry'
+import { parseOutreachCampaignType, audienceLabel } from '@/lib/founder/outreach/campaignTypes'
 import { checkRateLimit, clientIpFromRequest } from '@/lib/security/rateLimit'
 
 export const dynamic = 'force-dynamic'
@@ -41,6 +42,20 @@ export async function POST(request: NextRequest) {
   if (!file || typeof file === 'string') {
     return NextResponse.json({ success: false, error: 'file is required' }, { status: 400 })
   }
+
+  const campaignTypeRaw = form.get('campaignType')
+  const campaignType = parseOutreachCampaignType(campaignTypeRaw)
+  if (!campaignType) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'campaignType must be sme_invitation or youth_agent_invitation',
+        code: 'invalid_campaign_type',
+      },
+      { status: 400 }
+    )
+  }
+
   const blob = file as File
   const fileName = blob.name || 'upload.xlsx'
   if (!fileName.toLowerCase().endsWith('.xlsx')) {
@@ -57,7 +72,7 @@ export async function POST(request: NextRequest) {
   }
 
   const buffer = Buffer.from(await blob.arrayBuffer())
-  const parsed = parseOutreachXlsx(buffer, { fileName })
+  const parsed = parseOutreachXlsx(buffer, { fileName, campaignType })
   if (!parsed.ok) {
     return NextResponse.json(
       { success: false, error: parsed.error, code: parsed.code },
@@ -73,11 +88,13 @@ export async function POST(request: NextRequest) {
       rows: parsed.rows,
       createdByUid: auth.user.uid,
       createdByEmail: auth.user.email || '',
+      campaignType,
     })
 
-    const sampleEmail = renderSmeInvitationV1({
-      name: preview.find((r) => r.status === 'ready')?.name || 'Alex',
-      companyName: preview.find((r) => r.status === 'ready')?.companyName || 'Example Co',
+    const sampleReady = preview.find((r) => r.status === 'ready')
+    const sampleEmail = renderOutreachEmail(campaignType, {
+      name: sampleReady?.name || 'Alex',
+      companyName: sampleReady?.companyName || 'Example Co',
       email: 'preview@example.com',
       unsubscribeUrl: 'https://www.tenderbriefing.co.za/api/outreach/unsubscribe?token=preview',
     })
@@ -100,6 +117,8 @@ export async function POST(request: NextRequest) {
           ctaUrl: sampleEmail.ctaUrl,
           templateVersion: sampleEmail.templateVersion,
           textExcerpt: sampleEmail.text.slice(0, 500),
+          campaignType,
+          audienceLabel: audienceLabel(campaignType),
         },
       },
     })
