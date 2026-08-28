@@ -39,7 +39,6 @@ export function homePathForProfile(profile?: {
 export const SME_NAV = [
   { name: 'Tender Opportunities', href: '/tenders' },
   { name: 'My Requests', href: '/sme/requests' },
-  { name: 'Verify reports', href: '/sme/verify' },
   { name: 'Profile', href: '/settings' },
 ] as const
 

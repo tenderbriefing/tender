@@ -20,7 +20,6 @@ export default function robots(): MetadataRoute.Robots {
           '/sme/dashboard',
           '/sme/onboarding',
           '/sme/book-agent',
-          '/sme/verify',
           '/agent/dashboard',
           '/agent/workspace',
           '/agent/onboarding',
