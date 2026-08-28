@@ -108,12 +108,13 @@ describe('youth-agent-invitation-v1 template', () => {
   const unsubscribeUrl = 'https://www.tenderbriefing.co.za/api/outreach/unsubscribe?token=test'
 
   it('uses exact approved subject', () => {
-    expect(YOUTH_AGENT_OUTREACH_SUBJECT).toBe('Earn R200 attending tender briefings near you')
+    expect(YOUTH_AGENT_OUTREACH_SUBJECT).toBe('Invitation to become Youth Agents')
     const rendered = renderYouthAgentInvitationV1(
       { name: 'Calvin Makhubela', email: 'calvin@example.com', unsubscribeUrl },
       env
     )
-    expect(rendered.subject).toBe('Earn R200 attending tender briefings near you')
+    expect(rendered.subject).toBe('Invitation to become Youth Agents')
+    expect(rendered.html).not.toContain('Earn R200 attending tender briefings near you')
   })
 
   it('personalises greeting from first name only', () => {

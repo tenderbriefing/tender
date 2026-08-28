@@ -36,7 +36,7 @@ export const OUTREACH_CTA_PATH = '/tenders' as const
 export const YOUTH_AGENT_OUTREACH_TEMPLATE_VERSION = 'youth-agent-invitation-v1' as const
 
 export const YOUTH_AGENT_OUTREACH_SUBJECT =
-  'Earn R200 attending tender briefings near you' as const
+  'Invitation to become Youth Agents' as const
 
 export const YOUTH_AGENT_OUTREACH_CTA_LABEL = 'JOIN AS A YOUTH AGENT' as const
 
