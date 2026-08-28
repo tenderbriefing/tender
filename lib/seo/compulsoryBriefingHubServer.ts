@@ -38,7 +38,7 @@ export type PeriodHubData = {
   scanned: number
 }
 
-async function scanCompulsoryPublicTenders(options?: {
+export async function scanCompulsoryPublicTenders(options?: {
   province?: string
   pageSize?: number
   scanBudget?: number

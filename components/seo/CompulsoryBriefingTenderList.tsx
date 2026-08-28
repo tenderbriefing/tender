@@ -7,6 +7,8 @@ import { getOfficialEtendersScope } from '@/lib/procurement/tenderDescription'
 import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import { showAgentBookingCta } from '@/lib/seo/compulsoryBriefingHubs'
+import { resolveOrganisationFromTender } from '@/lib/seo/organisationRegistry'
+import { organisationHubPath } from '@/lib/seo/organisationHubs'
 
 function statusLabel(tender: TenderBriefing): string {
   const status = getTenderDisplayStatus(tender)
@@ -18,9 +20,12 @@ function statusLabel(tender: TenderBriefing): string {
 export default function CompulsoryBriefingTenderList({
   tenders,
   heading,
+  linkOrganisationHubs = false,
 }: {
   tenders: TenderBriefing[]
   heading?: string
+  /** When true, organisation names link to canonical org hubs if registered. */
+  linkOrganisationHubs?: boolean
 }) {
   if (tenders.length === 0) return null
 
@@ -33,6 +38,10 @@ export default function CompulsoryBriefingTenderList({
           const venue =
             tender.briefingVenue?.trim() ||
             (tender.meetingLink?.trim() ? 'Virtual briefing' : 'Venue TBC')
+          const orgLabel = tender.department || tender.buyer || 'Organisation unavailable'
+          const orgEntry = linkOrganisationHubs
+            ? resolveOrganisationFromTender(tender)
+            : null
           return (
             <li
               key={tender.id}
@@ -55,7 +64,16 @@ export default function CompulsoryBriefingTenderList({
                 {scope}
               </Link>
               <p className="mt-2 text-sm text-slate-600">
-                {tender.department || tender.buyer || 'Organisation unavailable'}
+                {orgEntry ? (
+                  <Link
+                    href={organisationHubPath(orgEntry.slug)}
+                    className="font-medium text-brand-800 hover:underline"
+                  >
+                    {orgLabel}
+                  </Link>
+                ) : (
+                  orgLabel
+                )}
               </p>
               {tender.briefingDate ? (
                 <p className="mt-2 text-sm font-medium text-accent-700">

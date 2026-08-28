@@ -2,11 +2,15 @@ import Link from 'next/link'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import { categoryBrowsePath } from '@/lib/seo/programmaticRoutes'
 import { getIndexableProvinceHubHref } from '@/lib/seo/compulsoryBriefingHubServer'
+import { getIndexableOrganisationHubHref } from '@/lib/seo/organisationHubServer'
 import { briefingInstantInRange, getBriefingPeriodRange } from '@/lib/seo/compulsoryBriefingPeriods'
 import { periodHubPath } from '@/lib/seo/compulsoryBriefingHubs'
 
 export default async function TenderDetailContextLinks({ tender }: { tender: TenderBriefing }) {
-  const provinceHubHref = await getIndexableProvinceHubHref(tender.province)
+  const [provinceHubHref, organisationHub] = await Promise.all([
+    getIndexableProvinceHubHref(tender.province),
+    getIndexableOrganisationHubHref(tender),
+  ])
   const categoryHref = categoryBrowsePath(tender)
   const thisWeekRange = getBriefingPeriodRange('this-week')
   const showThisWeekLink = briefingInstantInRange(tender, thisWeekRange)
@@ -34,6 +38,16 @@ export default async function TenderDetailContextLinks({ tender }: { tender: Ten
             Tender briefing agent
           </Link>
         </li>
+        {organisationHub ? (
+          <li>
+            <Link
+              href={organisationHub.href}
+              className="inline-flex min-h-[44px] items-center rounded-xl border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-800 hover:bg-brand-100"
+            >
+              More compulsory briefing tenders from {organisationHub.label}
+            </Link>
+          </li>
+        ) : null}
         {provinceHubHref ? (
           <li>
             <Link

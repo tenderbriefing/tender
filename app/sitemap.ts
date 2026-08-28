@@ -5,7 +5,15 @@ import {
   listIndexablePeriodHubSlugs,
   listIndexableProvinceHubSlugs,
 } from '@/lib/seo/compulsoryBriefingHubServer'
+import {
+  listIndexableOrganisationHubSlugs,
+  shouldShowOrganisationDirectory,
+} from '@/lib/seo/organisationHubServer'
 import { periodHubPath, provinceHubPath } from '@/lib/seo/compulsoryBriefingHubs'
+import {
+  organisationDirectoryPath,
+  organisationHubPath,
+} from '@/lib/seo/organisationHubs'
 import { getIndexableTenders } from '@/lib/seo/publicTenders'
 import { SITEMAP_TENDER_URL_CAP } from '@/lib/seo/sitemapPolicy'
 import { RESOURCE_ARTICLES } from '@/lib/seo/resources'
@@ -55,10 +63,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let provinceHubEntries: MetadataRoute.Sitemap = []
   let periodHubEntries: MetadataRoute.Sitemap = []
+  let organisationHubEntries: MetadataRoute.Sitemap = []
+  let organisationDirectoryEntries: MetadataRoute.Sitemap = []
   try {
-    const [provinceSlugs, periodSlugs] = await Promise.all([
+    const [provinceSlugs, periodSlugs, organisationSlugs, showOrgDirectory] = await Promise.all([
       listIndexableProvinceHubSlugs(),
       listIndexablePeriodHubSlugs(),
+      listIndexableOrganisationHubSlugs(),
+      shouldShowOrganisationDirectory(),
     ])
     provinceHubEntries = provinceSlugs.map((slug) => ({
       url: `${SITE_URL}${provinceHubPath(slug)}`,
@@ -72,9 +84,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 0.84,
     }))
+    organisationHubEntries = organisationSlugs.map((slug) => ({
+      url: `${SITE_URL}${organisationHubPath(slug)}`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.83,
+    }))
+    if (showOrgDirectory) {
+      organisationDirectoryEntries = [
+        {
+          url: `${SITE_URL}${organisationDirectoryPath()}`,
+          lastModified: now,
+          changeFrequency: 'daily',
+          priority: 0.8,
+        },
+      ]
+    }
   } catch {
     provinceHubEntries = []
     periodHubEntries = []
+    organisationHubEntries = []
+    organisationDirectoryEntries = []
   }
 
   const resourceEntries: MetadataRoute.Sitemap = RESOURCE_ARTICLES.map((article) => ({
@@ -103,6 +133,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...programmaticEntries,
     ...provinceHubEntries,
     ...periodHubEntries,
+    ...organisationDirectoryEntries,
+    ...organisationHubEntries,
     ...resourceEntries,
     ...tenderEntries,
   ]
