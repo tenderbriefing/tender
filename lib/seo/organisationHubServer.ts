@@ -4,19 +4,16 @@ import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import {
   compareBriefingDateAsc,
   compareBriefingDateDesc,
-  HUB_PAGE_SIZE,
-  HUB_SCAN_BUDGET,
   PROVINCE_HUB_HISTORICAL_LIMIT,
   PROVINCE_HUB_UPCOMING_LIMIT,
 } from './compulsoryBriefingHubs'
-import { scanCompulsoryPublicTenders } from './compulsoryBriefingHubServer'
 import {
   ORGANISATION_SEO_REGISTRY,
   getOrganisationBySlug,
-  organisationMatchesEntry,
   resolveOrganisationFromTender,
   type OrganisationSeoEntry,
 } from './organisationRegistry'
+import { scanCompulsoryPublicTendersForOrganisation } from './organisationHubScan'
 import {
   isOrganisationHubIndexable,
   organisationHubPath,
@@ -31,23 +28,6 @@ export type OrganisationHubData = {
   historical: TenderBriefing[]
   counts: OrganisationHubCounts
   scanned: number
-}
-
-let sharedScanPromise: Promise<{ items: TenderBriefing[]; scanned: number }> | null = null
-
-async function getSharedCompulsoryScan() {
-  if (!sharedScanPromise) {
-    sharedScanPromise = scanCompulsoryPublicTenders({
-      pageSize: HUB_PAGE_SIZE,
-      scanBudget: HUB_SCAN_BUDGET,
-    }).finally(() => {
-      // Allow refresh on next request cycle in long-lived processes.
-      setTimeout(() => {
-        sharedScanPromise = null
-      }, 60_000)
-    })
-  }
-  return sharedScanPromise
 }
 
 function splitHubLists(items: TenderBriefing[]) {
@@ -75,9 +55,8 @@ export const loadOrganisationHubData = cache(
     const entry = getOrganisationBySlug(slug)
     if (!entry) return null
 
-    const { items, scanned } = await getSharedCompulsoryScan()
-    const matched = items.filter((t) => organisationMatchesEntry(t, entry))
-    const { upcoming, historical, counts } = splitHubLists(matched)
+    const { items, scanned } = await scanCompulsoryPublicTendersForOrganisation(entry)
+    const { upcoming, historical, counts } = splitHubLists(items)
 
     return { entry, upcoming, historical, counts, scanned }
   }
@@ -86,16 +65,14 @@ export const loadOrganisationHubData = cache(
 /** Request-scoped cache so metadata + page agree on the same indexable set. */
 export const listIndexableOrganisationEntries = cache(
   async (): Promise<OrganisationSeoEntry[]> => {
-    const { items } = await getSharedCompulsoryScan()
-    const indexable: OrganisationSeoEntry[] = []
-
-    for (const entry of ORGANISATION_SEO_REGISTRY) {
-      const matched = items.filter((t) => organisationMatchesEntry(t, entry))
-      const { counts } = splitHubLists(matched)
-      if (isOrganisationHubIndexable(counts)) indexable.push(entry)
-    }
-
-    return indexable
+    const entries = await Promise.all(
+      ORGANISATION_SEO_REGISTRY.map(async (entry) => {
+        const data = await loadOrganisationHubData(entry.slug)
+        if (!data || !isOrganisationHubIndexable(data.counts)) return null
+        return entry
+      })
+    )
+    return entries.filter((entry): entry is OrganisationSeoEntry => entry !== null)
   }
 )
 
