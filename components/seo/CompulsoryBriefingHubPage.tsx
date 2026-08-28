@@ -186,10 +186,12 @@ export default function CompulsoryBriefingHubPage(props: CompulsoryBriefingHubPa
               <CompulsoryBriefingTenderList
                 heading="Upcoming compulsory briefings"
                 tenders={props.data.upcoming}
+                linkOrganisationHubs
               />
               <CompulsoryBriefingTenderList
                 heading="Recent closed compulsory briefings"
                 tenders={props.data.historical}
+                linkOrganisationHubs
               />
             </div>
           ) : (
@@ -197,7 +199,7 @@ export default function CompulsoryBriefingHubPage(props: CompulsoryBriefingHubPa
               {props.data.groupedByDate.map((group) => (
                 <section key={group.ymd}>
                   <h2 className="text-lg font-bold text-brand-900">{group.dateLabel}</h2>
-                  <CompulsoryBriefingTenderList tenders={group.tenders} />
+                  <CompulsoryBriefingTenderList tenders={group.tenders} linkOrganisationHubs />
                 </section>
               ))}
             </div>
