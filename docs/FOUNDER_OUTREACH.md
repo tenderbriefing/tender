@@ -13,7 +13,7 @@ Founder-only tool to upload a cleaned `.xlsx` list and send one of two approved 
 | Audience | Campaign type | Template | Subject |
 |----------|---------------|----------|---------|
 | SME Invitation | `sme_invitation` | `sme-invitation-v1` | Compulsory briefings, without the travel |
-| Youth Agent Invitation | `youth_agent_invitation` | `youth-agent-invitation-v1` | Earn R200 attending tender briefings near you |
+| Youth Agent Invitation | `youth_agent_invitation` | `youth-agent-invitation-v1` | Invitation to become Youth Agents |
 
 Historical SME campaigns remain unchanged (`type: sme_invitation`, `templateVersion: sme-invitation-v1`).
 

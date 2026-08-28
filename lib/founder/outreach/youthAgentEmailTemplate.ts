@@ -12,7 +12,6 @@ import { buildUnsubscribeToken } from './unsubscribeToken'
 
 const {
   EmailShell,
-  EmailTitle,
   EmailIntro,
   PrimaryButton,
   InfoPanel,
@@ -57,7 +56,6 @@ export function renderYouthAgentInvitationV1(
       </ul>`
 
   const bodyHtml = `
-    ${EmailTitle('Earn R200 attending tender briefings near you')}
     ${EmailIntro(`Hi ${escapeHtml(first)},`)}
     <p style="margin:0 0 16px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#334155;">
       Want to earn R200 for attending a tender briefing?
@@ -100,7 +98,7 @@ export function renderYouthAgentInvitationV1(
     : ''
 
   const html = EmailShell({
-    preheader: 'Earn R200 for attending tender briefings near you.',
+    preheader: YOUTH_AGENT_OUTREACH_SUBJECT,
     bodyHtml: bodyHtml + footerExtra,
     env,
     includeSecurityNotice: false,
