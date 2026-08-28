@@ -21,13 +21,21 @@ export default function CompulsoryBriefingTenderList({
   tenders,
   heading,
   linkOrganisationHubs = false,
+  indexableOrganisationSlugs,
 }: {
   tenders: TenderBriefing[]
   heading?: string
-  /** When true, organisation names link to canonical org hubs if registered. */
+  /** When true, organisation names may link to hubs that currently qualify. */
   linkOrganisationHubs?: boolean
+  /** Slugs that currently meet the organisation hub index threshold. */
+  indexableOrganisationSlugs?: ReadonlySet<string> | readonly string[]
 }) {
   if (tenders.length === 0) return null
+
+  const indexable =
+    indexableOrganisationSlugs instanceof Set
+      ? indexableOrganisationSlugs
+      : new Set(indexableOrganisationSlugs || [])
 
   return (
     <section>
@@ -39,9 +47,12 @@ export default function CompulsoryBriefingTenderList({
             tender.briefingVenue?.trim() ||
             (tender.meetingLink?.trim() ? 'Virtual briefing' : 'Venue TBC')
           const orgLabel = tender.department || tender.buyer || 'Organisation unavailable'
-          const orgEntry = linkOrganisationHubs
-            ? resolveOrganisationFromTender(tender)
-            : null
+          const resolved =
+            linkOrganisationHubs && indexable.size > 0
+              ? resolveOrganisationFromTender(tender)
+              : null
+          const orgEntry =
+            resolved && indexable.has(resolved.slug) ? resolved : null
           return (
             <li
               key={tender.id}
