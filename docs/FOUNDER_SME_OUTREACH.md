@@ -38,7 +38,7 @@ Required columns (header whitespace/case tolerant):
 ## Template
 
 - Version: `sme-invitation-v1`
-- Subject: `A compulsory tender briefing shouldn’t slow your business down`
+- Subject: `Compulsory briefings, without the travel`
 - CTA: **VIEW TENDER BRIEFINGS** → `https://www.tenderbriefing.co.za/tenders`
 - Personalisation: first name from Name only
 - HTML + plain text; unsubscribe footer + List-Unsubscribe headers
