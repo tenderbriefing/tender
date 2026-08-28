@@ -158,6 +158,15 @@ describe('SEO Phase 2B — route and sitemap wiring', () => {
     expect(hub).toMatch(/breadcrumbJsonLd/)
     expect(hub).toMatch(/itemListJsonLd/)
   })
+  it('gates province/period organisation name links on indexability', () => {
+    const list = src('components/seo/CompulsoryBriefingTenderList.tsx')
+    expect(list).toMatch(/indexableOrganisationSlugs/)
+    expect(list).toMatch(/indexable\.has\(resolved\.slug\)/)
+    const province = src('lib/seo/provinceHubRoute.tsx')
+    expect(province).toMatch(/listIndexableOrganisationHubSlugs/)
+    const period = src('app/compulsory-tender-briefings/[period]/page.tsx')
+    expect(period).toMatch(/listIndexableOrganisationHubSlugs/)
+  })
 })
 
 describe('SEO Phase 2B — commercial safeguards', () => {

@@ -22,6 +22,7 @@ type ProvinceHubProps = {
   title: string
   intro: string
   data: ProvinceHubData
+  indexableOrganisationSlugs?: readonly string[]
 }
 
 type PeriodHubProps = {
@@ -30,6 +31,7 @@ type PeriodHubProps = {
   title: string
   intro: string
   data: PeriodHubData
+  indexableOrganisationSlugs?: readonly string[]
 }
 
 export type CompulsoryBriefingHubPageProps = ProvinceHubProps | PeriodHubProps
@@ -47,6 +49,7 @@ export default function CompulsoryBriefingHubPage(props: CompulsoryBriefingHubPa
       ? provinceBrowsePath(props.data.province) ||
         `/tenders?province=${encodeURIComponent(props.data.province)}`
       : null
+  const indexableOrganisationSlugs = props.indexableOrganisationSlugs || []
 
   const breadcrumbs =
     props.kind === 'province'
@@ -187,11 +190,13 @@ export default function CompulsoryBriefingHubPage(props: CompulsoryBriefingHubPa
                 heading="Upcoming compulsory briefings"
                 tenders={props.data.upcoming}
                 linkOrganisationHubs
+                indexableOrganisationSlugs={indexableOrganisationSlugs}
               />
               <CompulsoryBriefingTenderList
                 heading="Recent closed compulsory briefings"
                 tenders={props.data.historical}
                 linkOrganisationHubs
+                indexableOrganisationSlugs={indexableOrganisationSlugs}
               />
             </div>
           ) : (
@@ -199,7 +204,11 @@ export default function CompulsoryBriefingHubPage(props: CompulsoryBriefingHubPa
               {props.data.groupedByDate.map((group) => (
                 <section key={group.ymd}>
                   <h2 className="text-lg font-bold text-brand-900">{group.dateLabel}</h2>
-                  <CompulsoryBriefingTenderList tenders={group.tenders} linkOrganisationHubs />
+                  <CompulsoryBriefingTenderList
+                    tenders={group.tenders}
+                    linkOrganisationHubs
+                    indexableOrganisationSlugs={indexableOrganisationSlugs}
+                  />
                 </section>
               ))}
             </div>

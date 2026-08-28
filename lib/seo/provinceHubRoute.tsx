@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import CompulsoryBriefingHubPage from '@/components/seo/CompulsoryBriefingHubPage'
 import { buildPageMetadata } from '@/lib/seo/metadata'
 import { loadProvinceHubData } from '@/lib/seo/compulsoryBriefingHubServer'
+import { listIndexableOrganisationHubSlugs } from '@/lib/seo/organisationHubServer'
 import {
   isProvinceHubIndexable,
   provinceHubDescription,
@@ -48,7 +49,10 @@ export function createProvinceCompulsoryBriefingsPage(slug: string) {
     const province = resolveProvinceSlug(slug)
     if (!province) notFound()
 
-    const data = await loadProvinceHubData(province, slug)
+    const [data, indexableOrganisationSlugs] = await Promise.all([
+      loadProvinceHubData(province, slug),
+      listIndexableOrganisationHubSlugs(),
+    ])
     const path = provinceHubPath(slug)
 
     return (
@@ -58,6 +62,7 @@ export function createProvinceCompulsoryBriefingsPage(slug: string) {
         title={provinceHubTitle(province)}
         intro={provinceHubIntro(province)}
         data={data}
+        indexableOrganisationSlugs={indexableOrganisationSlugs}
       />
     )
   }

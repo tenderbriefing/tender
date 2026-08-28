@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import CompulsoryBriefingHubPage from '@/components/seo/CompulsoryBriefingHubPage'
 import { buildPageMetadata } from '@/lib/seo/metadata'
 import { loadPeriodHubData } from '@/lib/seo/compulsoryBriefingHubServer'
+import { listIndexableOrganisationHubSlugs } from '@/lib/seo/organisationHubServer'
 import {
   isBriefingPeriodSlug,
   type BriefingPeriodSlug,
@@ -62,7 +63,10 @@ export default async function PeriodCompulsoryBriefingsPage({
 }) {
   if (!isBriefingPeriodSlug(params.period)) notFound()
 
-  const data = await loadPeriodHubData(params.period)
+  const [data, indexableOrganisationSlugs] = await Promise.all([
+    loadPeriodHubData(params.period),
+    listIndexableOrganisationHubSlugs(),
+  ])
   const path = periodHubPath(params.period)
 
   return (
@@ -72,6 +76,7 @@ export default async function PeriodCompulsoryBriefingsPage({
       title={`${periodHubTitle(params.period)} in South Africa`}
       intro={periodHubIntro(params.period)}
       data={data}
+      indexableOrganisationSlugs={indexableOrganisationSlugs}
     />
   )
 }
