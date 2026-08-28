@@ -38,6 +38,9 @@ export function isPublicApiRoute(pathname: string, method: string): boolean {
   if (pathname === '/api/briefing-intelligence/transcription/worker' && m === 'POST') return true
   if (pathname === '/api/briefing-intelligence/report/worker' && m === 'POST') return true
 
+  // Marketing outreach unsubscribe — public, signed token; no login required.
+  if (pathname === '/api/outreach/unsubscribe' && (m === 'GET' || m === 'POST')) return true
+
   return false
 }
 

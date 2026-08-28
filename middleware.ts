@@ -19,13 +19,17 @@ function rateLimitPublicApi(request: NextRequest, pathname: string): NextRespons
     pathname === '/api/private-tenders/upload' && request.method === 'POST'
   const isPrivateTenderStatus =
     pathname.startsWith('/api/private-tenders/status/') && request.method === 'GET'
+  const isOutreachUnsubscribe =
+    pathname === '/api/outreach/unsubscribe' &&
+    (request.method === 'GET' || request.method === 'POST')
   if (
     !pathname.startsWith('/api/tender-briefings') &&
     pathname !== '/api/health/firestore' &&
     !isSupportCreate &&
     !isPrivateTenderSubmit &&
     !isPrivateTenderUpload &&
-    !isPrivateTenderStatus
+    !isPrivateTenderStatus &&
+    !isOutreachUnsubscribe
   ) {
     return null
   }
@@ -36,9 +40,11 @@ function rateLimitPublicApi(request: NextRequest, pathname: string): NextRespons
     ? 8
     : isPrivateTenderUpload
       ? 20
-      : pathname.includes('stats')
+      : pathname === '/api/outreach/unsubscribe'
         ? 30
-        : 120
+        : pathname.includes('stats')
+          ? 30
+          : 120
   const result = checkRateLimit(key, limit, 60_000)
 
   if (!result.allowed) {

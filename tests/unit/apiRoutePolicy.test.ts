@@ -28,5 +28,7 @@ describe('apiRoutePolicy', () => {
     expect(isPublicApiRoute('/api/briefing-intelligence/report/worker', 'POST')).toBe(true)
     expect(isPublicApiRoute('/api/briefing-intelligence/transcription/worker', 'GET')).toBe(false)
     expect(isPublicApiRoute('/api/briefing-intelligence/evidence', 'POST')).toBe(false)
+    expect(isPublicApiRoute('/api/outreach/unsubscribe', 'GET')).toBe(true)
+    expect(isPublicApiRoute('/api/outreach/unsubscribe', 'POST')).toBe(true)
   })
 })
