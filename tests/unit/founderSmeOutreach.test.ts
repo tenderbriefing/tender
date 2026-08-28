@@ -5,7 +5,6 @@ import {
   OUTREACH_MAX_RECIPIENTS,
   OUTREACH_SUBJECT,
   OUTREACH_CTA_LABEL,
-  OUTREACH_CTA_PATH,
   OUTREACH_TEMPLATE_VERSION,
 } from '@/lib/founder/outreach/featureFlag'
 import {
@@ -121,8 +120,14 @@ describe('outreach spreadsheet parse', () => {
   })
 })
 
+const OLD_OUTREACH_SUBJECT =
+  "A compulsory tender briefing shouldn't slow your business down"
+
 describe('sme-invitation-v1 template', () => {
-  it('uses approved subject, CTA, and first-name merge', () => {
+  const env = { ...process.env, NEXT_PUBLIC_SITE_URL: 'https://www.tenderbriefing.co.za' }
+
+  it('uses new approved subject for new campaigns', () => {
+    expect(OUTREACH_SUBJECT).toBe('Compulsory briefings, without the travel')
     const rendered = renderSmeInvitationV1(
       {
         name: 'Thabo Molefe',
@@ -130,19 +135,44 @@ describe('sme-invitation-v1 template', () => {
         email: 'thabo@example.com',
         unsubscribeUrl: 'https://www.tenderbriefing.co.za/api/outreach/unsubscribe?token=test',
       },
-      { ...process.env, NEXT_PUBLIC_SITE_URL: 'https://www.tenderbriefing.co.za' }
+      env
+    )
+    expect(rendered.subject).toBe('Compulsory briefings, without the travel')
+    expect(rendered.subject).toBe(OUTREACH_SUBJECT)
+    expect(rendered.subject).not.toBe(OLD_OUTREACH_SUBJECT)
+    expect(rendered.html).not.toContain(OLD_OUTREACH_SUBJECT)
+    expect(rendered.text).not.toContain(OLD_OUTREACH_SUBJECT)
+  })
+
+  it('preserves approved body copy, greeting, CTA, footer, EmailShell, and unsubscribe', () => {
+    const rendered = renderSmeInvitationV1(
+      {
+        name: 'Thabo Molefe',
+        companyName: 'Molefe Logistics',
+        email: 'thabo@example.com',
+        unsubscribeUrl: 'https://www.tenderbriefing.co.za/api/outreach/unsubscribe?token=test',
+      },
+      env
     )
     expect(rendered.templateVersion).toBe(OUTREACH_TEMPLATE_VERSION)
-    expect(rendered.subject).toBe(OUTREACH_SUBJECT)
     expect(rendered.ctaLabel).toBe(OUTREACH_CTA_LABEL)
-    expect(rendered.ctaUrl).toBe(`https://www.tenderbriefing.co.za${OUTREACH_CTA_PATH}`)
+    expect(rendered.ctaLabel).toBe('VIEW TENDER BRIEFINGS')
+    expect(rendered.ctaUrl).toBe('https://www.tenderbriefing.co.za/tenders')
     expect(rendered.html).toContain('VIEW TENDER BRIEFINGS')
-    expect(rendered.html).toContain('/tenders')
+    expect(rendered.html).toContain('https://www.tenderbriefing.co.za/tenders')
     expect(rendered.html).toContain('Hi Thabo')
-    expect(rendered.html).toContain('Unsubscribe')
+    expect(rendered.html).toContain(
+      'We’d like to invite you to use TenderBriefing to book a Youth Agent to attend a compulsory tender briefing on behalf of your company — anywhere in South Africa.'
+    )
+    expect(rendered.html).toContain('You run the business. We attend the briefing.')
+    expect(rendered.html).toContain('Unsubscribe from outreach emails')
+    expect(rendered.html).toContain('TenderBriefing')
+    expect(rendered.html).toMatch(/logo|tenderbriefing/i)
     expect(rendered.html).not.toContain('transactional message')
     expect(rendered.html).not.toContain('<script')
+    expect(rendered.text).toContain('Hi Thabo')
     expect(rendered.text).toContain('VIEW TENDER BRIEFINGS')
+    expect(rendered.text).toContain('You run the business. We attend the briefing.')
     expect(rendered.text).toContain('Unsubscribe from outreach emails')
     // XSS escape
     const xss = renderSmeInvitationV1({

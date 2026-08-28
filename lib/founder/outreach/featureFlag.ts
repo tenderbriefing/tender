@@ -26,8 +26,7 @@ export const OUTREACH_SEND_CONCURRENCY = 3
 
 export const OUTREACH_TEMPLATE_VERSION = 'sme-invitation-v1' as const
 
-export const OUTREACH_SUBJECT =
-  "A compulsory tender briefing shouldn’t slow your business down" as const
+export const OUTREACH_SUBJECT = 'Compulsory briefings, without the travel' as const
 
 export const OUTREACH_CTA_LABEL = 'VIEW TENDER BRIEFINGS' as const
 
