@@ -41,6 +41,9 @@ describe('SEO Phase 2B — organisation registry', () => {
     ).toBe('prasa')
     expect(resolveOrganisationFromTender({ department: 'PRASA' })?.slug).toBe('prasa')
     expect(resolveOrganisationFromTender({ buyer: 'ESKOM' })?.slug).toBe('eskom')
+    expect(
+      resolveOrganisationFromTender({ department: 'Limpopo - Public Works' })?.slug
+    ).toBe('public-works')
     expect(resolveOrganisationFromTender({ department: 'Unknown Entity XYZ' })).toBeNull()
   })
 
@@ -133,10 +136,12 @@ describe('SEO Phase 2B — route and sitemap wiring', () => {
     expect(sitemap).toMatch(/organisationHubPath/)
   })
 
-  it('uses shared bounded scan for organisation hubs', () => {
+  it('uses organisation-specific bounded scan for organisation hubs', () => {
     const server = src('lib/seo/organisationHubServer.ts')
-    expect(server).toMatch(/scanCompulsoryPublicTenders/)
-    expect(server).toMatch(/getSharedCompulsoryScan/)
+    const scan = src('lib/seo/organisationHubScan.ts')
+    expect(server).toMatch(/scanCompulsoryPublicTendersForOrganisation/)
+    expect(server).not.toMatch(/getSharedCompulsoryScan/)
+    expect(scan).toMatch(/ORG_HUB_SCAN_BUDGET/)
     expect(server).not.toMatch(/getAllTenders/)
   })
 

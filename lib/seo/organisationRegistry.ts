@@ -173,6 +173,26 @@ export function getOrganisationBySlug(slug: string): OrganisationSeoEntry | null
   return BY_SLUG[slug.trim().toLowerCase()] ?? null
 }
 
+/** Minimum normalised alias length for contained-phrase matching (provincial variants). */
+const MIN_CONTAINED_ALIAS_LENGTH = 5
+
+function normalisedLabelMatchesEntry(
+  label: string | null | undefined,
+  entry: OrganisationSeoEntry
+): boolean {
+  const norm = normaliseOrganisationLabel(label)
+  if (!norm) return false
+
+  if (BY_ALIAS.has(norm) && BY_ALIAS.get(norm)!.slug === entry.slug) return true
+
+  const keys = [
+    ...entry.aliases.map((alias) => normaliseOrganisationLabel(alias)),
+    normaliseOrganisationLabel(entry.displayName),
+  ].filter((key) => key.length >= MIN_CONTAINED_ALIAS_LENGTH)
+
+  return keys.some((key) => norm.includes(key))
+}
+
 export function resolveOrganisationFromTender(tender: {
   department?: string | null
   buyer?: string | null
@@ -181,6 +201,10 @@ export function resolveOrganisationFromTender(tender: {
   const buyer = normaliseOrganisationLabel(tender.buyer)
   if (dept && BY_ALIAS.has(dept)) return BY_ALIAS.get(dept)!
   if (buyer && BY_ALIAS.has(buyer)) return BY_ALIAS.get(buyer)!
+
+  for (const entry of ORGANISATION_SEO_REGISTRY) {
+    if (organisationMatchesEntry(tender, entry)) return entry
+  }
   return null
 }
 
@@ -188,8 +212,10 @@ export function organisationMatchesEntry(
   tender: { department?: string | null; buyer?: string | null },
   entry: OrganisationSeoEntry
 ): boolean {
-  const resolved = resolveOrganisationFromTender(tender)
-  return resolved?.slug === entry.slug
+  return (
+    normalisedLabelMatchesEntry(tender.department, entry) ||
+    normalisedLabelMatchesEntry(tender.buyer, entry)
+  )
 }
 
 export function allOrganisationSlugs(): string[] {
