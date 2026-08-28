@@ -47,7 +47,7 @@ Post-merge fixes on master (same release train):
 - **Validate counts:** total=1, valid=1, invalid=0, duplicate=0, suppressed=0, sendable=1
 - **Resend acceptance:** yes (`sentCount=1`, `failedCount=0`, status `completed`)
 - **Message ID captured:** yes (redacted `9aa1…7995`)
-- **Subject (validated in preview):** `A compulsory tender briefing shouldn’t slow your business down`
+- **Subject (validated in preview, pre-subject-update PR):** `A compulsory tender briefing shouldn’t slow your business down`
 - **CTA:** `VIEW TENDER BRIEFINGS` → `https://www.tenderbriefing.co.za/tenders` (HTTP 200)
 - **Idempotent re-send:** repeat confirm → `sentThisTick=0`, `processedThisTick=0`
 
