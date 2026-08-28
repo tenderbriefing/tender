@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { authFetch } from '@/lib/api/authenticatedFetch'
+import { usePageVisibleInterval } from '@/hooks/usePageVisibleInterval'
 
 export interface SmeDashboardMetrics {
   role: 'sme'
@@ -69,9 +70,9 @@ export function useDashboardMetrics(enabled = true) {
 
   useEffect(() => {
     load()
-    const interval = setInterval(() => load(true), 60000)
-    return () => clearInterval(interval)
   }, [load])
+
+  usePageVisibleInterval(() => load(true), 60000, enabled)
 
   return { metrics, loading, error, refresh: () => load(true) }
 }

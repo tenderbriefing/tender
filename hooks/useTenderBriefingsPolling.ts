@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { SyncStatus, TenderBriefing } from '@/lib/tenderBriefing/types'
+import { usePageVisibleInterval } from '@/hooks/usePageVisibleInterval'
 
 interface UseTenderBriefingsOptions {
   pollIntervalMs?: number
@@ -97,14 +98,11 @@ export function useTenderBriefings(options: UseTenderBriefingsOptions = {}) {
 
   useEffect(() => {
     if (!enabled) return
+    if (hasInitial) return
     fetchTenders()
-  }, [enabled, fetchTenders])
+  }, [enabled, fetchTenders, hasInitial])
 
-  useEffect(() => {
-    if (!enabled) return
-    const interval = setInterval(() => fetchTenders(true), pollIntervalMs)
-    return () => clearInterval(interval)
-  }, [enabled, fetchTenders, pollIntervalMs])
+  usePageVisibleInterval(() => fetchTenders(true), pollIntervalMs, enabled)
 
   return {
     tenders,

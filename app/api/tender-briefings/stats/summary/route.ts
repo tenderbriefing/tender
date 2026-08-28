@@ -15,7 +15,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: stats })
     }
 
-    return NextResponse.json({ success: true, data: toPublicTenderStats(stats) })
+    const body = { success: true, data: toPublicTenderStats(stats) }
+    return NextResponse.json(body, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+      },
+    })
   } catch (error) {
     return NextResponse.json(
       {
