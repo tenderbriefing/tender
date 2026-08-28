@@ -11,6 +11,23 @@ import type { AttendanceRequest, TenderBriefing } from '@/lib/tenderBriefing/typ
 
 export const dynamic = 'force-dynamic'
 
+type StorageLike = {
+  getTenderBriefings: (filters?: Record<string, unknown>) => Promise<TenderBriefing[]>
+  getTenderBriefingById: (id: string) => Promise<TenderBriefing | null>
+  getTendersByIds?: (ids: string[]) => Promise<TenderBriefing[]>
+  getAttendanceRequests: (filters?: Record<string, unknown>) => Promise<AttendanceRequest[]>
+}
+
+async function loadTendersByIds(storage: StorageLike, ids: string[]): Promise<TenderBriefing[]> {
+  const unique = Array.from(new Set(ids.filter(Boolean)))
+  if (!unique.length) return []
+  if (typeof storage.getTendersByIds === 'function') {
+    return storage.getTendersByIds(unique)
+  }
+  const rows = await Promise.all(unique.map((id) => storage.getTenderBriefingById(id)))
+  return rows.filter((t): t is TenderBriefing => Boolean(t))
+}
+
 type BuiltCalendarEvent = {
   id?: string
   type?: string
@@ -96,7 +113,7 @@ async function resolveSmeTenderIds(
 
   const [workspace, requests] = await Promise.all([
     smeWorkspace.getWorkspaceDoc(uid),
-    storage.getAttendanceRequests({ smeId: uid }),
+    storage.getAttendanceRequests({ smeId: uid, limit: 100 }),
   ])
 
   const meta = new Map<string, { requestId?: string; scopeSource?: ScopedCalendarEvent['scopeSource'] }>()
@@ -128,8 +145,8 @@ async function resolveAgentTenderIds(
   storage: { getAttendanceRequests: (filters?: Record<string, unknown>) => Promise<AttendanceRequest[]> }
 ): Promise<{ ids: Set<string>; meta: Map<string, { requestId?: string; scopeSource?: ScopedCalendarEvent['scopeSource'] }> }> {
   const [mine, pending] = await Promise.all([
-    storage.getAttendanceRequests({ agentId: uid }),
-    storage.getAttendanceRequests({ status: 'pending' }),
+    storage.getAttendanceRequests({ agentId: uid, limit: 100 }),
+    storage.getAttendanceRequests({ status: 'pending', limit: 500 }),
   ])
 
   const meta = new Map<string, { requestId?: string; scopeSource?: ScopedCalendarEvent['scopeSource'] }>()
@@ -169,7 +186,7 @@ export async function GET(request: NextRequest) {
   if (isAccessDenied(access)) return access
 
   try {
-    const storage = backend.getStorage()
+    const storage = backend.getStorage() as StorageLike
     const calendar = backend.calendar()
     const { searchParams } = new URL(request.url)
 
@@ -177,7 +194,7 @@ export async function GET(request: NextRequest) {
     // Catalogue is admin-only. SMEs/agents always get a personal feed (unless fetching one tender).
     const wantCatalogue = access.userType === 'admin' || Boolean(tenderId)
 
-    let tenders = await storage.getTenderBriefings()
+    let tenders: TenderBriefing[] = []
     let metaByTenderId:
       | Map<string, { requestId?: string; scopeSource?: ScopedCalendarEvent['scopeSource'] }>
       | undefined
@@ -189,19 +206,19 @@ export async function GET(request: NextRequest) {
       if (access.userType === 'sme') {
         const { ids, meta } = await resolveSmeTenderIds(access.uid, storage)
         metaByTenderId = meta
-        tenders = tenders.filter((t) => ids.has(t.id))
+        tenders = await loadTendersByIds(storage, Array.from(ids))
       } else if (access.userType === 'youth-agent') {
         const { ids, meta } = await resolveAgentTenderIds(access.uid, storage)
         metaByTenderId = meta
-        tenders = tenders.filter((t) => ids.has(t.id))
+        tenders = await loadTendersByIds(storage, Array.from(ids))
       }
     } else if (access.userType === 'admin' && !tenderId) {
-      // Admin catalogue: prefer compulsory, else any tender with a briefing date
-      const compulsoryTenders = tenders.filter((t) => t.briefingCompulsory === true)
+      const allTenders = await storage.getTenderBriefings({ compulsoryOnly: true, limit: 5000 })
+      const compulsoryTenders = allTenders.filter((t) => t.briefingCompulsory === true)
       tenders =
         compulsoryTenders.length > 0
           ? compulsoryTenders
-          : tenders.filter((t) => Boolean(t.briefingDate))
+          : allTenders.filter((t) => Boolean(t.briefingDate))
       metaByTenderId = new Map(
         tenders.map((t) => [t.id, { scopeSource: 'catalogue' as const }])
       )

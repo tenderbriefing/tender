@@ -137,6 +137,19 @@ class JsonStorageAdapter {
     )
   }
 
+  async getTendersByIds(ids = []) {
+    const unique = [...new Set((ids || []).map((id) => String(id || '').trim()).filter(Boolean))]
+    if (!unique.length) return []
+    const items = readCollection(JSON_FILES.TENDER_BRIEFINGS, [])
+    const byKey = new Map()
+    for (const t of items) {
+      byKey.set(t.id, t)
+      if (t.ocid) byKey.set(t.ocid, t)
+      if (t.tenderNumber) byKey.set(t.tenderNumber, t)
+    }
+    return unique.map((id) => byKey.get(id)).filter(Boolean)
+  }
+
   async getTenderBriefingById(id) {
     return this.getTenderById(id)
   }
@@ -339,6 +352,10 @@ class FirestoreStorageAdapter {
 
   async getTenderById(id) {
     return this._getService().getTenderById(id)
+  }
+
+  async getTendersByIds(ids) {
+    return this._getService().getTendersByIds(ids)
   }
 
   async getTenderBriefingById(id) {

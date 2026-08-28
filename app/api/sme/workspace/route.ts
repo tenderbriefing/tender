@@ -2,15 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { backend } from '@/lib/backend/loadServices'
 import { verifyApiUser, unauthorizedResponse } from '@/lib/auth/verifyApiUser'
 import { emptySmeWorkspace } from '@/lib/sme/workspaceTypes'
+import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 
 export const dynamic = 'force-dynamic'
 
 const COLLECTION = 'smeWorkspace'
 
-function daysUntil(dateStr: string) {
-  const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return null
-  return Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+type StorageWithBatchTenders = ReturnType<typeof backend.getStorage> & {
+  getTendersByIds?: (ids: string[]) => Promise<TenderBriefing[]>
+}
+
+async function loadTendersByIds(
+  storage: StorageWithBatchTenders,
+  ids: string[]
+): Promise<TenderBriefing[]> {
+  const unique = Array.from(new Set((ids || []).map((id) => String(id || '').trim()).filter(Boolean)))
+  if (!unique.length) return []
+  if (typeof storage.getTendersByIds === 'function') {
+    return storage.getTendersByIds(unique)
+  }
+  const rows = await Promise.all(unique.map((id) => storage.getTenderBriefingById(id)))
+  return rows.filter((t): t is TenderBriefing => Boolean(t))
 }
 
 export async function GET(request: NextRequest) {
@@ -21,9 +33,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'SME access required' }, { status: 403 })
     }
 
-    const uid = user.userType === 'admin' ? user.uid : user.uid
+    const uid = user.uid
     const firebaseAdmin = backend.loadBackendService<{
-      getFirestore: () => { collection: (name: string) => { doc: (id: string) => { get: () => Promise<{ exists: boolean; data: () => Record<string, unknown> | undefined }> } } }
+      getFirestore: () => {
+        collection: (name: string) => {
+          doc: (id: string) => {
+            get: () => Promise<{ exists: boolean; data: () => Record<string, unknown> | undefined }>
+          }
+        }
+      }
     }>('firebaseAdmin')
     const db = firebaseAdmin.getFirestore()
 
@@ -37,15 +55,24 @@ export async function GET(request: NextRequest) {
       /* collection may not exist yet — return empty workspace */
     }
 
-    const storage = backend.getStorage()
-    const [allTenders, requests, reports] = await Promise.all([
-      storage.getTenderBriefings(),
-      storage.getAttendanceRequests(),
-      storage.getBriefingReports(),
+    const storage = backend.getStorage() as StorageWithBatchTenders
+    const catalogueStats = require('../../../../backend/services/catalogueStatsService.js') as {
+      readCatalogueSummary: () => Promise<Record<string, unknown> | null>
+    }
+
+    const [summary, mine, refTenders] = await Promise.all([
+      catalogueStats.readCatalogueSummary(),
+      storage.getAttendanceRequests({ smeId: uid, limit: 100 }),
+      loadTendersByIds(storage, [...workspace.trackedTenderIds, ...workspace.savedTenderIds]),
     ])
 
-    const tenderMap = new Map(allTenders.map((t) => [t.id, t]))
-    const mine = requests.filter((r) => r.smeId === uid)
+    const tenderMap = new Map(refTenders.map((t) => [t.id, t]))
+    const requestIds = new Set(mine.map((r) => r.id))
+    let completedReports = 0
+    if (requestIds.size > 0) {
+      const reports = await storage.getBriefingReports({ limit: 200 })
+      completedReports = reports.filter((r) => requestIds.has(r.requestId)).length
+    }
 
     const mapTenderRef = (id: string) => {
       const t = tenderMap.get(id)
@@ -71,15 +98,6 @@ export async function GET(request: NextRequest) {
         status: r.status,
       }))
 
-    const completedReports = reports.filter((r) =>
-      mine.some((m) => m.id === r.requestId)
-    ).length
-
-    const closingSoonCount = allTenders.filter((t) => {
-      const days = t.closingDate ? daysUntil(t.closingDate) : null
-      return days !== null && days >= 0 && days <= 7
-    }).length
-
     return NextResponse.json({
       success: true,
       data: {
@@ -88,7 +106,7 @@ export async function GET(request: NextRequest) {
         savedTenders: workspace.savedTenderIds.map(mapTenderRef),
         upcomingBriefings,
         completedReports,
-        closingSoonCount,
+        closingSoonCount: Number(summary?.closingWithin7Days || 0),
         attendanceRequests: mine.length,
       },
     })

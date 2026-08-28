@@ -116,6 +116,35 @@ async function getTenderById(id) {
   return null
 }
 
+/** Batch fetch tenders by document id (chunks of 10 for Firestore getAll). */
+async function getTendersByIds(ids = []) {
+  const unique = [...new Set((ids || []).map((id) => String(id || '').trim()).filter(Boolean))]
+  if (!unique.length) return []
+
+  const db = getFirestore()
+  const byId = new Map()
+
+  for (let i = 0; i < unique.length; i += 10) {
+    const chunk = unique.slice(i, i + 10)
+    const refs = chunk.map((id) => db.collection(COLLECTIONS.TENDER_BRIEFINGS).doc(id))
+    const snaps = await db.getAll(...refs)
+    for (const snap of snaps) {
+      if (snap.exists) {
+        const row = docToObject(snap)
+        if (row?.id) byId.set(row.id, row)
+      }
+    }
+  }
+
+  const missing = unique.filter((id) => !byId.has(id))
+  for (const id of missing) {
+    const row = await getTenderById(id)
+    if (row?.id) byId.set(row.id, row)
+  }
+
+  return unique.map((id) => byId.get(id)).filter(Boolean)
+}
+
 async function upsertTenders(tenders) {
   if (!tenders?.length) return { written: 0 }
 
@@ -416,6 +445,7 @@ module.exports = {
   ATTENDANCE_BOUNDED_HARD_CAP,
   getAllTenders,
   getTenderById,
+  getTendersByIds,
   upsertTenders,
   saveAttendanceRequest,
   getAttendanceRequests,
