@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { auth } from '@/lib/firebase'
@@ -12,18 +13,23 @@ import DashboardKpiGrid from '@/components/dashboard/DashboardKpiGrid'
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
 import RecentActivity from '@/components/dashboard/RecentActivity'
 import QuickActions from '@/components/dashboard/QuickActions'
-import CalendarIntegration from '@/components/dashboard/CalendarIntegration'
 import { TrustStrip } from '@/components/procurement/TrustDisclaimer'
 import SmeProcurementWorkspace from '@/components/sme/SmeProcurementWorkspace'
 import SmeHowItWorksCard from '@/components/sme/SmeHowItWorksCard'
-import OperationalIntelligencePanel from '@/components/procurement/OperationalIntelligencePanel'
-import { useOperationalIntelligence } from '@/hooks/useOperationalIntelligence'
+
+const CalendarIntegration = dynamic(
+  () => import('@/components/dashboard/CalendarIntegration'),
+  {
+    loading: () => (
+      <div className="h-48 animate-pulse rounded-xl border border-slate-200 bg-slate-50" />
+    ),
+  }
+)
 
 export default function SmeDashboardPage() {
   const { user, userProfile, loading } = useAuth()
   const router = useRouter()
   const { metrics, loading: metricsLoading } = useDashboardMetrics(Boolean(user))
-  const { data: intelligence, loading: intelligenceLoading } = useOperationalIntelligence()
 
   useEffect(() => {
     if (loading) return
@@ -59,7 +65,7 @@ export default function SmeDashboardPage() {
       <Header />
       <div className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-          <TrustStrip lastSync={intelligence?.lastSync} syncHealth={intelligence?.syncHealth} />
+          <TrustStrip />
         </div>
       </div>
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -67,10 +73,6 @@ export default function SmeDashboardPage() {
 
         <div className="mt-6">
           <SmeHowItWorksCard />
-        </div>
-
-        <div className="mt-6">
-          <OperationalIntelligencePanel data={intelligence} loading={intelligenceLoading} compact />
         </div>
 
         <div className="mt-8">

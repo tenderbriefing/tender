@@ -30,6 +30,76 @@ export async function GET(request: NextRequest) {
 
     const storage = backend.getStorage()
     const syncService = backend.incrementalSync()
+    const catalogueStats = require('../../backend/services/catalogueStatsService.js') as {
+      readCatalogueSummary: () => Promise<Record<string, unknown> | null>
+    }
+
+    if (user.userType === 'sme') {
+      const [summary, mine] = await Promise.all([
+        catalogueStats.readCatalogueSummary(),
+        storage.getAttendanceRequests({ smeId: user.uid, limit: 100 }),
+      ])
+      const requestIds = new Set(mine.map((r) => r.id))
+      let completedReports = 0
+      if (requestIds.size > 0) {
+        const reports = await storage.getBriefingReports({ limit: 200 })
+        completedReports = reports.filter((r) => requestIds.has(r.requestId)).length
+      }
+      const upcoming = mine.filter(
+        (r) =>
+          (r.status === 'assigned' || r.status === 'accepted' || r.status === 'pending') &&
+          isBriefingThisWeek(r.briefingDate)
+      ).length
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          role: 'sme',
+          activeOpportunities: Number(summary?.totalBriefings || 0),
+          attendanceRequests: mine.length,
+          upcomingBriefings: upcoming,
+          closingSoon: Number(summary?.closingWithin7Days || 0),
+          completedReports,
+          pendingAttendance: mine.filter((r) => r.status === 'pending').length,
+        },
+      })
+    }
+
+    if (user.userType === 'youth-agent') {
+      const uid = user.uid
+      const [pendingAvailable, mine, profile] = await Promise.all([
+        typeof storage.countDocuments === 'function'
+          ? storage.countDocuments('attendanceRequests', { status: 'pending' })
+          : storage
+              .getAttendanceRequests({ status: 'pending', limit: 200 })
+              .then((rows) => rows.length),
+        storage.getAttendanceRequests({ agentId: uid, limit: 100 }),
+        backend.users().getUserById(uid),
+      ])
+      const assigned = mine.filter(
+        (r) => r.status === 'assigned' || r.status === 'accepted'
+      ).length
+      const completed = mine.filter((r) => r.status === 'completed').length
+      let agentReports = 0
+      if (completed > 0) {
+        const reports = await storage.getBriefingReports({ limit: 200 })
+        agentReports = reports.filter((r) => r.agentId === uid).length
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          role: 'youth-agent',
+          availableAssignments: pendingAvailable,
+          assignedBriefings: assigned,
+          completedReports: agentReports,
+          reliabilityScore: profile?.reliabilityScore ?? 100,
+          missedBriefings: profile?.missedBriefingCount ?? 0,
+          acceptedBriefings: profile?.acceptedBriefingCount ?? assigned,
+        },
+      })
+    }
+
     const [tenders, requests, reports, syncStatus] = await Promise.all([
       storage.getTenderBriefings(),
       storage.getAttendanceRequests(),
@@ -63,60 +133,6 @@ export async function GET(request: NextRequest) {
           syncHealth: syncStatus.apiHealth || 'unknown',
           schedulerHealth: syncStatus.isRunning ? 'running' : 'idle',
           lastSuccessfulSync: syncStatus.lastSuccessfulSync,
-        },
-      })
-    }
-
-    if (user.userType === 'sme') {
-      const mine = requests.filter((r) => r.smeId === user.uid)
-      const upcoming = mine.filter(
-        (r) =>
-          (r.status === 'assigned' || r.status === 'accepted' || r.status === 'pending') &&
-          isBriefingThisWeek(r.briefingDate)
-      ).length
-      const completedReports = reports.filter((r) =>
-        mine.some((m) => m.id === r.requestId)
-      ).length
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          role: 'sme',
-          activeOpportunities: tenders.filter((t) => t.status === 'active').length,
-          attendanceRequests: mine.length,
-          upcomingBriefings: upcoming,
-          closingSoon,
-          completedReports,
-          pendingAttendance: mine.filter((r) => r.status === 'pending').length,
-        },
-      })
-    }
-
-    if (user.userType === 'youth-agent') {
-      const uid = user.uid
-      const available = requests.filter((r) => r.status === 'pending').length
-      const assigned = requests.filter(
-        (r) =>
-          (r.status === 'assigned' || r.status === 'accepted') &&
-          (r.assignedAgentId === uid || r.agentId === uid)
-      ).length
-      const completed = requests.filter(
-        (r) =>
-          r.status === 'completed' &&
-          (r.assignedAgentId === uid || r.agentId === uid)
-      ).length
-      const profile = await backend.users().getUserById(uid)
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          role: 'youth-agent',
-          availableAssignments: available,
-          assignedBriefings: assigned,
-          completedReports: reports.filter((r) => r.agentId === uid).length,
-          reliabilityScore: profile?.reliabilityScore ?? 100,
-          missedBriefings: profile?.missedBriefingCount ?? 0,
-          acceptedBriefings: profile?.acceptedBriefingCount ?? assigned,
         },
       })
     }

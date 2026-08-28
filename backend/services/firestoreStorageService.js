@@ -157,6 +157,12 @@ async function getAttendanceRequests(filters = {}) {
     query = query.where('status', '==', filters.status)
   }
 
+  if (filters.smeId) {
+    query = query.where('smeId', '==', filters.smeId)
+  } else if (filters.agentId) {
+    query = query.where('assignedAgentId', '==', filters.agentId)
+  }
+
   const cap = Number(filters.limit)
   if (Number.isFinite(cap) && cap > 0) {
     query = query.limit(Math.min(cap, ATTENDANCE_BOUNDED_HARD_CAP))
@@ -165,7 +171,6 @@ async function getAttendanceRequests(filters = {}) {
   const snapshot = await query.get()
   let items = snapshot.docs.map((doc) => docToObject(doc))
 
-  if (filters.smeId) items = items.filter((r) => r.smeId === filters.smeId)
   if (filters.agentId) {
     items = items.filter(
       (r) => r.agentId === filters.agentId || r.assignedAgentId === filters.agentId
