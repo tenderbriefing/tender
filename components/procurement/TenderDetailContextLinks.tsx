@@ -1,10 +1,15 @@
 import Link from 'next/link'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
-import { categoryBrowsePath, provinceBrowsePath } from '@/lib/seo/programmaticRoutes'
+import { categoryBrowsePath } from '@/lib/seo/programmaticRoutes'
+import { getIndexableProvinceHubHref } from '@/lib/seo/compulsoryBriefingHubServer'
+import { briefingInstantInRange, getBriefingPeriodRange } from '@/lib/seo/compulsoryBriefingPeriods'
+import { periodHubPath } from '@/lib/seo/compulsoryBriefingHubs'
 
-export default function TenderDetailContextLinks({ tender }: { tender: TenderBriefing }) {
-  const provinceHref = provinceBrowsePath(tender.province)
+export default async function TenderDetailContextLinks({ tender }: { tender: TenderBriefing }) {
+  const provinceHubHref = await getIndexableProvinceHubHref(tender.province)
   const categoryHref = categoryBrowsePath(tender)
+  const thisWeekRange = getBriefingPeriodRange('this-week')
+  const showThisWeekLink = briefingInstantInRange(tender, thisWeekRange)
 
   return (
     <nav
@@ -29,17 +34,27 @@ export default function TenderDetailContextLinks({ tender }: { tender: TenderBri
             Tender briefing agent
           </Link>
         </li>
-        {provinceHref ? (
+        {provinceHubHref ? (
           <li>
             <Link
-              href={provinceHref}
+              href={provinceHubHref}
               className="inline-flex min-h-[44px] items-center rounded-xl border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-800 hover:bg-brand-100"
             >
-              {tender.province} tenders
+              More compulsory briefings in {tender.province}
             </Link>
           </li>
         ) : null}
-        {categoryHref && categoryHref !== provinceHref ? (
+        {showThisWeekLink ? (
+          <li>
+            <Link
+              href={periodHubPath('this-week')}
+              className="inline-flex min-h-[44px] items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              View briefings this week
+            </Link>
+          </li>
+        ) : null}
+        {categoryHref ? (
           <li>
             <Link
               href={categoryHref}

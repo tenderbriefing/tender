@@ -1,6 +1,7 @@
 import { PROGRAMMATIC_TENDER_PAGES, PROGRAMMATIC_SLUGS } from '@/lib/seo/programmaticPages'
+import { PROVINCE_NAME_TO_SLUG } from '@/lib/procurement/provinces'
 
-/** Province slugs that map to a Firestore province equality filter. */
+/** Province slugs that map to a Firestore province equality filter (legacy browse pages). */
 export const PROGRAMMATIC_PROVINCE_BY_SLUG: Record<string, string> = {
   gauteng: 'Gauteng',
   'western-cape': 'Western Cape',
@@ -8,14 +9,24 @@ export const PROGRAMMATIC_PROVINCE_BY_SLUG: Record<string, string> = {
 }
 
 /** Reverse lookup: province display name → browse slug when it exists. */
-export const PROVINCE_SLUG_BY_NAME: Record<string, string> = Object.fromEntries(
-  Object.entries(PROGRAMMATIC_PROVINCE_BY_SLUG).map(([slug, name]) => [name, slug])
-)
+export const PROVINCE_SLUG_BY_NAME: Record<string, string> = {
+  ...Object.fromEntries(
+    Object.entries(PROGRAMMATIC_PROVINCE_BY_SLUG).map(([slug, name]) => [name, slug])
+  ),
+  ...PROVINCE_NAME_TO_SLUG,
+}
 
 export function provinceBrowsePath(province?: string | null): string | null {
   if (!province?.trim()) return null
   const slug = PROVINCE_SLUG_BY_NAME[province.trim()]
   return slug ? `/tenders/${slug}` : null
+}
+
+/** Phase 2A province compulsory-briefing hub (all 9 provinces when slug exists). */
+export function provinceCompulsoryHubPath(province?: string | null): string | null {
+  if (!province?.trim()) return null
+  const slug = PROVINCE_NAME_TO_SLUG[province.trim()]
+  return slug ? `/tenders/${slug}/compulsory-briefings` : null
 }
 
 /** Link to an existing category/industry programmatic page when the tender text matches. */
