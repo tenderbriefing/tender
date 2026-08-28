@@ -1,11 +1,13 @@
 import type { Metadata } from 'next'
 import MarketingPageLayout from '@/components/marketing/MarketingPageLayout'
 import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
+import { buildPageMetadata } from '@/lib/seo/metadata'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: 'Terms of Service',
-  description: 'TenderBriefing platform terms of service for SMEs and Youth Agents.',
-}
+  description: `TenderBriefing terms of service for SMEs and Youth Agents. Compulsory tender briefing attendance support from ${BRIEFING_PRICE_LABEL} when requested.`,
+  path: '/terms',
+})
 
 export default function TermsPage() {
   return (

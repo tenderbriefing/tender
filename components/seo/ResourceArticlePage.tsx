@@ -3,7 +3,7 @@ import MarketingPageLayout from '@/components/marketing/MarketingPageLayout'
 import JsonLd from '@/components/seo/JsonLd'
 import SeoFaqSection, { SeoCtaBand } from '@/components/seo/SeoFaqSection'
 import type { ResourceArticle } from '@/lib/seo/resources'
-import { breadcrumbJsonLd, faqPageJsonLd } from '@/lib/seo/structuredData'
+import { breadcrumbJsonLd, faqPageJsonLd, articleJsonLd } from '@/lib/seo/structuredData'
 import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 
 export default function ResourceArticlePage({ article }: { article: ResourceArticle }) {
@@ -16,6 +16,14 @@ export default function ResourceArticlePage({ article }: { article: ResourceArti
   return (
     <>
       <JsonLd data={breadcrumbs} />
+      <JsonLd
+        data={articleJsonLd({
+          title: article.title,
+          description: article.metaDescription,
+          path: `/resources/${article.slug}`,
+          publishedAt: article.publishedAt,
+        })}
+      />
       {article.faqs && article.faqs.length > 0 && <JsonLd data={faqPageJsonLd(article.faqs)} />}
       <MarketingPageLayout
         eyebrow="Resources · Procurement guides"

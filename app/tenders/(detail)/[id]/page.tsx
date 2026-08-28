@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import TenderBreadcrumbs from '@/components/seo/TenderBreadcrumbs'
 import ClosedTenderBanner from '@/components/procurement/ClosedTenderBanner'
 import TenderDetailContextLinks from '@/components/procurement/TenderDetailContextLinks'
 import RelatedActiveTenders from '@/components/procurement/RelatedActiveTenders'
@@ -32,6 +33,7 @@ export default async function TenderDetailsPage({
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/20 pb-24 lg:pb-12">
       <Header />
+      <TenderBreadcrumbs tender={tender} />
       <ClosedTenderBanner tender={tender} />
       <TenderHero tender={tender} />
 

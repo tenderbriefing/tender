@@ -4,13 +4,20 @@ import AnimateIn from '@/components/ui/AnimateIn'
 import WhatsAppIconLink from '@/components/ui/WhatsAppIconLink'
 import ContactForm from '@/components/contact/ContactForm'
 import { SUPPORT_EMAIL } from '@/lib/contact'
+import { buildPageMetadata } from '@/lib/seo/metadata'
 import { Mail, MapPin } from 'lucide-react'
 
-export const metadata: Metadata = {
-  title: 'Contact',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Contact TenderBriefing',
   description:
-    'Get in touch with the TenderBriefing team for support, partnerships, and enterprise enquiries.',
-}
+    'Contact TenderBriefing for SME onboarding, Youth Agent verification, platform support, and enterprise partnerships across South Africa.',
+  path: '/contact',
+  keywords: [
+    'contact TenderBriefing',
+    'tender briefing support South Africa',
+    'SME procurement support',
+  ],
+})
 
 export default function ContactPage() {
   return (

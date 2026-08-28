@@ -57,10 +57,10 @@ function baseTender(overrides: Partial<TenderBriefing> = {}): TenderBriefing {
 }
 
 describe('SEO metadata — active tender', () => {
-  it('produces unique title with organisation and self-referencing canonical', () => {
+  it('produces reference-first title and self-referencing canonical', () => {
     const tender = baseTender()
     const meta = buildTenderMetadata(tender)
-    expect(buildTenderPageTitle(tender)).toMatch(/Department of Public Works|Dep/i)
+    expect(buildTenderPageTitle(tender)).toMatch(/^TND-2026-001 — /)
     expect(buildTenderPageTitle(tender)).not.toBe('Tender | TenderBriefing')
     expect(meta.alternates?.canonical).toBe(`${SITE_URL}/tenders/tb-seo-1`)
     expect(meta.robots).toEqual({ index: true, follow: true })
@@ -70,6 +70,7 @@ describe('SEO metadata — active tender', () => {
     const description = buildTenderPageDescription(baseTender())
     expect(description).toContain('TND-2026-001')
     expect(description).toContain('Department of Public Works')
+    expect(description).not.toMatch(/undefined|null|Invalid Date/i)
   })
 })
 

@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import {
-  formatProcurementDate,
   formatProcurementDateTime,
   isBriefingPast,
+  parseProcurementDate,
   resolveBriefingDateTime,
   toSastIsoString,
 } from '@/lib/procurement/dates'
@@ -10,39 +10,93 @@ import { getOfficialEtendersScope } from '@/lib/procurement/tenderDescription'
 import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import { buildPageMetadata } from './metadata'
-import { absoluteUrl, truncateMeta } from './site'
+import { SITE_NAME, absoluteUrl, truncateMeta } from './site'
 
 function procuringEntity(tender: TenderBriefing): string {
   return tender.department || tender.buyer || ''
 }
 
+/** Human-readable SEO date — e.g. "28 August 2026". Returns empty when invalid. */
+export function formatSeoVisibleDate(value?: string | null): string {
+  const d = parseProcurementDate(value)
+  if (!d) return ''
+  return d.toLocaleDateString('en-ZA', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+function formatSeoVisibleDateTime(date?: string | null, time?: string | null): string {
+  const datePart = formatSeoVisibleDate(date)
+  if (!datePart) return ''
+  const full = formatProcurementDateTime(date, time)
+  if (full === '—' || !full.includes(' at ')) return datePart
+  const timePart = full.split(' at ').slice(1).join(' at ')
+  return timePart ? `${datePart} at ${timePart}` : datePart
+}
+
 export function buildTenderPageTitle(tender: TenderBriefing): string {
-  const scope = getOfficialEtendersScope(tender)
-  const titlePart = scope || tender.title || tender.tenderNumber || 'Tender opportunity'
-  const org = procuringEntity(tender)
-  const composed = org ? `${titlePart} | ${org}` : titlePart
-  return truncateMeta(composed, 70)
+  const ref = tender.tenderNumber?.trim()
+  const shortTitle =
+    getOfficialEtendersScope(tender) || tender.title?.trim() || 'Tender opportunity'
+
+  if (ref) {
+    const withTitle = `${ref} — ${shortTitle}`
+    if (withTitle.length <= 58) return truncateMeta(withTitle, 65)
+    if (tender.briefingCompulsory) {
+      const compulsory = `${ref} — Compulsory Briefing Tender`
+      if (compulsory.length <= 65) return compulsory
+    }
+    return truncateMeta(`${ref} — ${truncateMeta(shortTitle, 36)}`, 65)
+  }
+
+  if (tender.briefingCompulsory && shortTitle.length <= 45) {
+    return truncateMeta(`${shortTitle} — Compulsory Briefing`, 65)
+  }
+
+  return truncateMeta(shortTitle, 65)
 }
 
 export function buildTenderPageDescription(tender: TenderBriefing): string {
-  const scope = getOfficialEtendersScope(tender)
   const org = procuringEntity(tender)
-  const tenderRef = tender.tenderNumber ? `tender ${tender.tenderNumber}` : 'this opportunity'
+  const ref = tender.tenderNumber?.trim() || 'this tender'
   const isClosed = getTenderDisplayStatus(tender) === 'closed'
 
-  const parts = [
-    isClosed
-      ? `Closed ${tenderRef}${org ? ` from ${org}` : ''}. Historical procurement record on TenderBriefing.`
-      : `View ${tenderRef}${org ? ` from ${org}` : ''}, including closing date, briefing details, requirements and tender documents on TenderBriefing.`,
-    scope && scope !== tender.title ? scope : '',
-    tender.province ? `Province: ${tender.province}.` : '',
-    tender.briefingDate && !isClosed
-      ? `Compulsory briefing on ${formatProcurementDateTime(tender.briefingDate, tender.briefingTime)}.`
-      : '',
-    tender.closingDate ? `Closing ${formatProcurementDate(tender.closingDate)}.` : '',
-  ].filter(Boolean)
+  if (isClosed) {
+    const parts = [
+      `Closed tender ${ref}`,
+      org ? `from ${org}` : '',
+      tender.briefingDate
+        ? `Briefing was ${formatSeoVisibleDateTime(tender.briefingDate, tender.briefingTime)}`
+        : '',
+      tender.province ? `in ${tender.province}` : '',
+      tender.closingDate ? `Closing ${formatSeoVisibleDate(tender.closingDate)}` : '',
+      'Historical record on TenderBriefing',
+    ].filter(Boolean)
+    return truncateMeta(parts.join('. ').replace(/\.\s+\./g, '. '))
+  }
 
-  return truncateMeta(parts.join(' '))
+  const segments = [`View ${ref}`, org ? `from ${org}` : ''].filter(Boolean)
+  let description = segments.join(' ')
+
+  if (tender.briefingCompulsory && tender.briefingDate) {
+    const briefing = formatSeoVisibleDateTime(tender.briefingDate, tender.briefingTime)
+    if (briefing) {
+      description += `. Compulsory briefing ${briefing}`
+      if (tender.province) description += ` in ${tender.province}`
+    }
+  } else if (tender.province) {
+    description += `. Province: ${tender.province}`
+  }
+
+  if (tender.closingDate) {
+    const closing = formatSeoVisibleDate(tender.closingDate)
+    if (closing) description += `. Closing ${closing}`
+  }
+
+  description += '. View tender and briefing details on TenderBriefing.'
+  return truncateMeta(description)
 }
 
 export function tenderHasUsefulHistoricalContent(tender: TenderBriefing): boolean {
@@ -157,15 +211,34 @@ export function buildTenderBreadcrumbJsonLd(tender: TenderBriefing) {
       {
         '@type': 'ListItem',
         position: 2,
-        name: 'Tender opportunities',
+        name: 'Tenders',
         item: absoluteUrl('/tenders'),
       },
       {
         '@type': 'ListItem',
         position: 3,
-        name: truncateMeta(scope || tender.title || tender.tenderNumber, 80),
+        name: truncateMeta(
+          tender.tenderNumber || scope || tender.title || 'Tender',
+          80
+        ),
         item: absoluteUrl(`/tenders/${tender.id}`),
       },
     ],
+  }
+}
+
+export function buildTenderWebPageJsonLd(tender: TenderBriefing) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: buildTenderPageTitle(tender),
+    description: buildTenderPageDescription(tender),
+    url: absoluteUrl(`/tenders/${tender.id}`),
+    inLanguage: 'en-ZA',
+    isPartOf: {
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: absoluteUrl('/'),
+    },
   }
 }

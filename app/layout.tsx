@@ -20,10 +20,11 @@ export const revalidate = 60
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Tender Briefing South Africa | Compulsory Government Tender Briefings',
+    default: 'Compulsory Tender Briefings for South African SMEs',
     template: '%s | TenderBriefing',
   },
-  description: `TenderBriefing helps South African SMEs discover compulsory tender briefings, track official eTenders opportunities and request Youth Agents for ${BRIEFING_PRICE_LABEL} when attendance is required.`,
+  description:
+    'Tender discovery and Youth Agent attendance for physical compulsory tender briefings across South Africa. Track official eTenders opportunities and request attendance support when required.',
   keywords: [
     'tender briefing',
     'tender briefing South Africa',
@@ -39,13 +40,13 @@ export const metadata: Metadata = {
     locale: 'en_ZA',
     url: SITE_URL,
     siteName: 'TenderBriefing',
-    title: 'Tender Briefing South Africa | Compulsory Government Tender Briefings',
-    description: `Discover compulsory government tender briefings across South Africa. Free for SMEs — ${BRIEFING_PRICE_LABEL} only when requesting a Youth Agent.`,
+    title: 'Compulsory Tender Briefings for South African SMEs | TenderBriefing',
+    description: `Discover compulsory tender briefings across South Africa. Free SME registration — ${BRIEFING_PRICE_LABEL} only when requesting a Youth Agent for physical briefing attendance.`,
     images: ['/brand/og-logo.png'],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Tender Briefing South Africa | TenderBriefing',
+    title: 'Compulsory Tender Briefings for South African SMEs | TenderBriefing',
     description:
       'Compulsory tender briefings, official eTenders data and Youth Agent attendance support for South African SMEs.',
     images: ['/brand/og-logo.png'],

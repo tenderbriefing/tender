@@ -2,13 +2,20 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import MarketingPageLayout from '@/components/marketing/MarketingPageLayout'
 import AnimateIn from '@/components/ui/AnimateIn'
+import { buildPageMetadata } from '@/lib/seo/metadata'
 import { ArrowRight, MapPin, Star, TrendingUp, Wallet } from 'lucide-react'
 
-export const metadata: Metadata = {
-  title: 'Youth Agents',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Youth Agents for Compulsory Tender Briefings',
   description:
-    'Join TenderBriefing as a Youth Agent — earn income attending compulsory government tender briefings on behalf of SMEs.',
-}
+    'Join TenderBriefing as a Youth Agent and attend compulsory government tender briefings on behalf of South African SMEs.',
+  path: '/youth-agents',
+  keywords: [
+    'youth agent tender briefing',
+    'compulsory briefing attendance',
+    'tender briefing jobs South Africa',
+  ],
+})
 
 const benefits = [
   {
