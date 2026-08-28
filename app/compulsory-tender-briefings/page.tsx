@@ -14,5 +14,5 @@ export const metadata = buildPageMetadata({
 })
 
 export default function Page() {
-  return <SeoLandingPage config={config} />
+  return <SeoLandingPage config={config} showCompulsoryHubNav />
 }

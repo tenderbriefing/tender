@@ -16,11 +16,18 @@ import {
 } from '@/lib/seo/structuredData'
 import { getSeoLandingServerData } from '@/lib/seo/landingServerData'
 import { SA_PROVINCES } from '@/lib/procurement/provinces'
+import CompulsoryBriefingHubNav from '@/components/seo/CompulsoryBriefingHubNav'
 import { CheckCircle2, Sparkles } from 'lucide-react'
 
 export type { SeoLandingConfig }
 
-export default async function SeoLandingPage({ config }: { config: SeoLandingConfig }) {
+export default async function SeoLandingPage({
+  config,
+  showCompulsoryHubNav = false,
+}: {
+  config: SeoLandingConfig
+  showCompulsoryHubNav?: boolean
+}) {
   const { initialStats, initialTenders, initialLastUpdated } = await getSeoLandingServerData(
     config.slug
   )
@@ -82,6 +89,8 @@ export default async function SeoLandingPage({ config }: { config: SeoLandingCon
             initialTenders={initialTenders}
             initialLastUpdated={initialLastUpdated}
           />
+
+          {showCompulsoryHubNav ? <CompulsoryBriefingHubNav /> : null}
 
           {config.sections.map((section) => (
             <section key={section.heading} className="mt-14">

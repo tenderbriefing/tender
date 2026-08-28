@@ -15,6 +15,8 @@ export interface PageSeoInput {
   keywords?: string[]
   ogImage?: string
   noIndex?: boolean
+  /** When noIndex is true, allow crawlers to follow links (default false for legacy pages). */
+  noIndexFollow?: boolean
   type?: 'website' | 'article'
 }
 
@@ -47,7 +49,14 @@ export function buildPageMetadata(input: PageSeoInput): Metadata {
       images: [ogImage],
     },
     robots: input.noIndex
-      ? { index: false, follow: false, googleBot: { index: false, follow: false } }
+      ? {
+          index: false,
+          follow: input.noIndexFollow === true,
+          googleBot: {
+            index: false,
+            follow: input.noIndexFollow === true,
+          },
+        }
       : { index: true, follow: true },
   }
 }

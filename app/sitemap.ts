@@ -1,6 +1,11 @@
 import type { MetadataRoute } from 'next'
 import { SEO_LANDING_PATHS } from '@/lib/seo/landingPages'
 import { PROGRAMMATIC_SLUGS } from '@/lib/seo/programmaticPages'
+import {
+  listIndexablePeriodHubSlugs,
+  listIndexableProvinceHubSlugs,
+} from '@/lib/seo/compulsoryBriefingHubServer'
+import { periodHubPath, provinceHubPath } from '@/lib/seo/compulsoryBriefingHubs'
 import { getIndexableTenders } from '@/lib/seo/publicTenders'
 import { SITEMAP_TENDER_URL_CAP } from '@/lib/seo/sitemapPolicy'
 import { RESOURCE_ARTICLES } from '@/lib/seo/resources'
@@ -48,6 +53,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }))
 
+  let provinceHubEntries: MetadataRoute.Sitemap = []
+  let periodHubEntries: MetadataRoute.Sitemap = []
+  try {
+    const [provinceSlugs, periodSlugs] = await Promise.all([
+      listIndexableProvinceHubSlugs(),
+      listIndexablePeriodHubSlugs(),
+    ])
+    provinceHubEntries = provinceSlugs.map((slug) => ({
+      url: `${SITE_URL}${provinceHubPath(slug)}`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.82,
+    }))
+    periodHubEntries = periodSlugs.map((period) => ({
+      url: `${SITE_URL}${periodHubPath(period)}`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.84,
+    }))
+  } catch {
+    provinceHubEntries = []
+    periodHubEntries = []
+  }
+
   const resourceEntries: MetadataRoute.Sitemap = RESOURCE_ARTICLES.map((article) => ({
     url: `${SITE_URL}/resources/${article.slug}`,
     lastModified: new Date(article.publishedAt),
@@ -72,6 +101,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticEntries,
     ...landingEntries,
     ...programmaticEntries,
+    ...provinceHubEntries,
+    ...periodHubEntries,
     ...resourceEntries,
     ...tenderEntries,
   ]
