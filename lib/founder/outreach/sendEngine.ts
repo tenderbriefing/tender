@@ -122,6 +122,7 @@ export async function processCampaignSends(params: {
 
     const headers: Record<string, string> = {
       'X-Entity-Ref-ID': `${campaignId}:${delivery.normalisedEmail}`,
+      'List-ID': '<sme-invitation.tenderbriefing.co.za>',
     }
     if (rendered.unsubscribeUrl) {
       headers['List-Unsubscribe'] = `<${rendered.unsubscribeUrl}>`

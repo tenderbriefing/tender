@@ -140,6 +140,7 @@ describe('sme-invitation-v1 template', () => {
     expect(rendered.html).toContain('/tenders')
     expect(rendered.html).toContain('Hi Thabo')
     expect(rendered.html).toContain('Unsubscribe')
+    expect(rendered.html).not.toContain('transactional message')
     expect(rendered.html).not.toContain('<script')
     expect(rendered.text).toContain('VIEW TENDER BRIEFINGS')
     expect(rendered.text).toContain('Unsubscribe from outreach emails')

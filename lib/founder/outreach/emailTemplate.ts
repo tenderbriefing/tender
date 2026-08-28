@@ -92,6 +92,7 @@ export function renderSmeInvitationV1(
     preheader: 'Book a Youth Agent for compulsory tender briefings anywhere in South Africa.',
     bodyHtml: bodyHtml + footerExtra,
     env,
+    includeSecurityNotice: false,
   })
 
   const text = [
