@@ -252,9 +252,19 @@ class JsonStorageAdapter {
   async getBriefingReports(filters = {}) {
     let items = readCollection(JSON_FILES.BRIEFING_REPORTS, [])
     if (filters.requestId) items = items.filter((r) => r.requestId === filters.requestId)
+    if (Array.isArray(filters.requestIds) && filters.requestIds.length) {
+      const allowed = new Set(filters.requestIds.filter(Boolean).slice(0, 30))
+      items = items.filter((r) => allowed.has(r.requestId))
+    }
     if (filters.agentId) items = items.filter((r) => r.agentId === filters.agentId)
     if (filters.tenderId) items = items.filter((r) => r.tenderId === filters.tenderId)
-    return items
+    const cap = Number(filters.limit)
+    if (Number.isFinite(cap) && cap > 0) {
+      items = items.slice(0, Math.min(cap, 2000))
+    }
+    return items.sort(
+      (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+    )
   }
 
   async saveBriefingReport(report) {

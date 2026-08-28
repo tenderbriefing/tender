@@ -76,6 +76,16 @@ describe('hot-path Firestore safeguards', () => {
     expect(body).toMatch(/readCatalogueSummary/)
   })
 
+  it('dashboard activities uses role-scoped bounded attendance/report reads', () => {
+    const s = src('backend/services/dashboardActivitiesService.js')
+    expect(s).not.toMatch(/getAttendanceRequests\(\s*\)/)
+    expect(s).not.toMatch(/getBriefingReports\(\s*\)/)
+    expect(s).toMatch(/getAttendanceRequests\(\{\s*smeId:\s*uid,\s*limit:/)
+    expect(s).toMatch(/getAttendanceRequests\(\{\s*agentId:\s*uid,\s*limit:/)
+    expect(s).toMatch(/getBriefingReports\(\{\s*agentId:\s*uid,\s*limit:/)
+    expect(s).toMatch(/requestIds:/)
+  })
+
   it('catalogue SSR uses a single bounded paginated read', () => {
     const s = src('lib/seo/catalogueServerData.ts')
     expect(s).toMatch(/listTenderBriefingsPage\(/)

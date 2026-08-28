@@ -242,6 +242,22 @@ async function getBriefingReports(filters = {}) {
     query = query.where('tenderId', '==', filters.tenderId)
   }
 
+  if (filters.agentId) {
+    query = query.where('agentId', '==', filters.agentId)
+  }
+
+  const requestIds = Array.isArray(filters.requestIds)
+    ? [...new Set(filters.requestIds.filter(Boolean))].slice(0, 30)
+    : null
+
+  if (filters.requestId) {
+    query = query.where('requestId', '==', filters.requestId)
+  } else if (requestIds && requestIds.length === 1) {
+    query = query.where('requestId', '==', requestIds[0])
+  } else if (requestIds && requestIds.length > 1) {
+    query = query.where('requestId', 'in', requestIds)
+  }
+
   const cap = Number(filters.limit)
   if (Number.isFinite(cap) && cap > 0) {
     query = query.limit(Math.min(cap, ATTENDANCE_BOUNDED_HARD_CAP))
@@ -250,8 +266,17 @@ async function getBriefingReports(filters = {}) {
   const snapshot = await query.get()
   let items = snapshot.docs.map((doc) => docToObject(doc))
 
-  if (filters.requestId) items = items.filter((r) => r.requestId === filters.requestId)
-  if (filters.agentId) items = items.filter((r) => r.agentId === filters.agentId)
+  // Defensive post-filters when callers pass ids without relying on query alone
+  if (filters.requestId) {
+    items = items.filter((r) => r.requestId === filters.requestId)
+  }
+  if (requestIds && requestIds.length) {
+    const allowed = new Set(requestIds)
+    items = items.filter((r) => allowed.has(r.requestId))
+  }
+  if (filters.agentId) {
+    items = items.filter((r) => r.agentId === filters.agentId)
+  }
 
   return items.sort(
     (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
