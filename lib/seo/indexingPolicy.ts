@@ -51,7 +51,6 @@ export const NOINDEX_ROUTE_CLASSES = {
       '/sme/rfq-inbox',
       '/sme/onboarding',
       '/sme/book-agent',
-      '/sme/verify',
     ],
     reason: 'SME authenticated workspace and transactional flows',
   },
