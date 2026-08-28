@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { hasUpcomingBriefing } from '@/lib/procurement/dates'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import {
@@ -69,31 +70,34 @@ function splitHubLists(items: TenderBriefing[]) {
   return { upcoming, historical, counts }
 }
 
-export async function loadOrganisationHubData(
-  slug: string
-): Promise<OrganisationHubData | null> {
-  const entry = getOrganisationBySlug(slug)
-  if (!entry) return null
+export const loadOrganisationHubData = cache(
+  async (slug: string): Promise<OrganisationHubData | null> => {
+    const entry = getOrganisationBySlug(slug)
+    if (!entry) return null
 
-  const { items, scanned } = await getSharedCompulsoryScan()
-  const matched = items.filter((t) => organisationMatchesEntry(t, entry))
-  const { upcoming, historical, counts } = splitHubLists(matched)
-
-  return { entry, upcoming, historical, counts, scanned }
-}
-
-export async function listIndexableOrganisationEntries(): Promise<OrganisationSeoEntry[]> {
-  const { items } = await getSharedCompulsoryScan()
-  const indexable: OrganisationSeoEntry[] = []
-
-  for (const entry of ORGANISATION_SEO_REGISTRY) {
+    const { items, scanned } = await getSharedCompulsoryScan()
     const matched = items.filter((t) => organisationMatchesEntry(t, entry))
-    const { counts } = splitHubLists(matched)
-    if (isOrganisationHubIndexable(counts)) indexable.push(entry)
-  }
+    const { upcoming, historical, counts } = splitHubLists(matched)
 
-  return indexable
-}
+    return { entry, upcoming, historical, counts, scanned }
+  }
+)
+
+/** Request-scoped cache so metadata + page agree on the same indexable set. */
+export const listIndexableOrganisationEntries = cache(
+  async (): Promise<OrganisationSeoEntry[]> => {
+    const { items } = await getSharedCompulsoryScan()
+    const indexable: OrganisationSeoEntry[] = []
+
+    for (const entry of ORGANISATION_SEO_REGISTRY) {
+      const matched = items.filter((t) => organisationMatchesEntry(t, entry))
+      const { counts } = splitHubLists(matched)
+      if (isOrganisationHubIndexable(counts)) indexable.push(entry)
+    }
+
+    return indexable
+  }
+)
 
 export async function listIndexableOrganisationHubSlugs(): Promise<string[]> {
   const entries = await listIndexableOrganisationEntries()
