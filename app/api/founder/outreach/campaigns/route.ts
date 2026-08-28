@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
     data: {
       campaigns: mine.map((c) => ({
         id: c.id,
+        type: c.type,
+        templateVersion: c.templateVersion,
         originalFileName: c.originalFileName,
         createdAt: c.createdAt,
         status: c.status,

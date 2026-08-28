@@ -31,3 +31,14 @@ export const OUTREACH_SUBJECT = 'Compulsory briefings, without the travel' as co
 export const OUTREACH_CTA_LABEL = 'VIEW TENDER BRIEFINGS' as const
 
 export const OUTREACH_CTA_PATH = '/tenders' as const
+
+/** Youth Agent invitation — youth-agent-invitation-v1 */
+export const YOUTH_AGENT_OUTREACH_TEMPLATE_VERSION = 'youth-agent-invitation-v1' as const
+
+export const YOUTH_AGENT_OUTREACH_SUBJECT =
+  'Earn R200 attending tender briefings near you' as const
+
+export const YOUTH_AGENT_OUTREACH_CTA_LABEL = 'JOIN AS A YOUTH AGENT' as const
+
+/** Canonical Youth Agent registration route (see docs/GOOGLE_SIGNIN.md). */
+export const YOUTH_AGENT_OUTREACH_CTA_PATH = '/auth/signup?type=youth-agent' as const

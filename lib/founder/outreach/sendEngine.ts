@@ -1,11 +1,16 @@
 import type { Firestore } from 'firebase-admin/firestore'
-import { OUTREACH_SEND_CONCURRENCY, OUTREACH_TEMPLATE_VERSION } from './featureFlag'
+import { OUTREACH_SEND_CONCURRENCY } from './featureFlag'
 import { OUTREACH_CAMPAIGNS, type OutreachCampaign, type OutreachDelivery } from './types'
-import { renderSmeInvitationV1 } from './emailTemplate'
+import { listIdForCampaignType, renderOutreachEmail } from './templateRegistry'
+import { templateVersionForCampaignType, type OutreachCampaignType } from './campaignTypes'
 import {
   sendFounderOutreachEmail,
   isRetryableOutreachError,
 } from '@/lib/services/founderOutreachEmail'
+
+function resolveCampaignType(campaign: OutreachCampaign): OutreachCampaignType {
+  return campaign.type === 'youth_agent_invitation' ? 'youth_agent_invitation' : 'sme_invitation'
+}
 
 function nowIso() {
   return new Date().toISOString()
@@ -114,7 +119,8 @@ export async function processCampaignSends(params: {
     })
     if (!claimed) return
 
-    const rendered = renderSmeInvitationV1({
+    const campaignType = resolveCampaignType(campaign)
+    const rendered = renderOutreachEmail(campaignType, {
       name: delivery.name,
       companyName: delivery.companyName,
       email: delivery.normalisedEmail,
@@ -122,7 +128,7 @@ export async function processCampaignSends(params: {
 
     const headers: Record<string, string> = {
       'X-Entity-Ref-ID': `${campaignId}:${delivery.normalisedEmail}`,
-      'List-ID': '<sme-invitation.tenderbriefing.co.za>',
+      'List-ID': listIdForCampaignType(campaignType),
     }
     if (rendered.unsubscribeUrl) {
       headers['List-Unsubscribe'] = `<${rendered.unsubscribeUrl}>`
@@ -156,7 +162,7 @@ export async function processCampaignSends(params: {
           errorMessageSafe: null,
           sentAt: nowIso(),
           updatedAt: nowIso(),
-          templateVersion: OUTREACH_TEMPLATE_VERSION,
+          templateVersion: templateVersionForCampaignType(campaignType),
         },
         { merge: true }
       )
