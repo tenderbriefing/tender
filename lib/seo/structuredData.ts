@@ -68,3 +68,34 @@ export function faqPageJsonLd(faqs: Array<{ question: string; answer: string }>)
     })),
   }
 }
+
+export function articleJsonLd(input: {
+  title: string
+  description: string
+  path: string
+  publishedAt: string
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: input.title,
+    description: input.description,
+    datePublished: input.publishedAt,
+    author: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: {
+        '@type': 'ImageObject',
+        url: absoluteUrl('/brand/logo.png'),
+      },
+    },
+    mainEntityOfPage: absoluteUrl(input.path),
+    inLanguage: 'en-ZA',
+  }
+}

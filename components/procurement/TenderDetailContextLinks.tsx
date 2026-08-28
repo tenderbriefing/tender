@@ -6,8 +6,6 @@ export default function TenderDetailContextLinks({ tender }: { tender: TenderBri
   const provinceHref = provinceBrowsePath(tender.province)
   const categoryHref = categoryBrowsePath(tender)
 
-  if (!provinceHref && !categoryHref) return null
-
   return (
     <nav
       aria-label="Browse related tender categories"
@@ -15,6 +13,22 @@ export default function TenderDetailContextLinks({ tender }: { tender: TenderBri
     >
       <p className="text-sm font-semibold text-brand-900">Explore similar opportunities</p>
       <ul className="mt-3 flex flex-wrap gap-3">
+        <li>
+          <Link
+            href="/compulsory-tender-briefings"
+            className="inline-flex min-h-[44px] items-center rounded-xl border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-800 hover:bg-brand-100"
+          >
+            Compulsory tender briefings
+          </Link>
+        </li>
+        <li>
+          <Link
+            href="/tender-briefing-agent"
+            className="inline-flex min-h-[44px] items-center rounded-xl border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-800 hover:bg-brand-100"
+          >
+            Tender briefing agent
+          </Link>
+        </li>
         {provinceHref ? (
           <li>
             <Link

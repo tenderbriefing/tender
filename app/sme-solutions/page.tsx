@@ -2,13 +2,20 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import MarketingPageLayout from '@/components/marketing/MarketingPageLayout'
 import AnimateIn from '@/components/ui/AnimateIn'
+import { buildPageMetadata } from '@/lib/seo/metadata'
 import { ArrowRight, Bell, FileText, LayoutDashboard, Users } from 'lucide-react'
 
-export const metadata: Metadata = {
-  title: 'SME Solutions',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'SME Solutions for Compulsory Tender Briefings',
   description:
-    'TenderBriefing helps South African SMEs discover compulsory tender briefings and coordinate Youth Agent attendance nationwide.',
-}
+    'TenderBriefing helps South African SMEs discover compulsory tender briefings, track opportunities, and request Youth Agent attendance when physical briefing attendance is required.',
+  path: '/sme-solutions',
+  keywords: [
+    'SME tender briefing South Africa',
+    'compulsory tender briefings',
+    'youth agent attendance',
+  ],
+})
 
 const solutions = [
   {

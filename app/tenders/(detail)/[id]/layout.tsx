@@ -7,6 +7,7 @@ import {
   buildTenderBreadcrumbJsonLd,
   buildTenderBriefingEventJsonLd,
   buildTenderMetadata,
+  buildTenderWebPageJsonLd,
   tenderHasUsefulHistoricalContent,
 } from '@/lib/seo/tenderSeo'
 
@@ -42,6 +43,7 @@ export default async function TenderDetailLayout({
   return (
     <>
       <JsonLd data={buildTenderBreadcrumbJsonLd(tender)} />
+      <JsonLd data={buildTenderWebPageJsonLd(tender)} />
       {briefingEvent ? <JsonLd data={briefingEvent} /> : null}
       {children}
     </>

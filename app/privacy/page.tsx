@@ -1,10 +1,13 @@
 import type { Metadata } from 'next'
 import MarketingPageLayout from '@/components/marketing/MarketingPageLayout'
+import { buildPageMetadata } from '@/lib/seo/metadata'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: 'Privacy Policy',
-  description: 'POPIA-aligned privacy policy for TenderBriefing.',
-}
+  description:
+    'POPIA-aligned privacy policy explaining how TenderBriefing collects, uses, and protects personal information for SMEs and Youth Agents.',
+  path: '/privacy',
+})
 
 export default function PrivacyPage() {
   return (

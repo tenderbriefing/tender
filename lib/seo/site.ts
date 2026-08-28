@@ -13,7 +13,7 @@ export const SITE_NAME = 'TenderBriefing'
 export const DEFAULT_OG_IMAGE = '/brand/og-logo.png'
 
 export const ORG_DESCRIPTION =
-  'TenderBriefing helps South African SMEs discover tender opportunities and request verified Youth Agents to attend compulsory briefing sessions on their behalf.'
+  'TenderBriefing helps South African SMEs discover compulsory tender briefings and request verified Youth Agents to attend physical briefing sessions on their behalf.'
 
 export const DEFAULT_KEYWORDS = [
   'tender briefing',

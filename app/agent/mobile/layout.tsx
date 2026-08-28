@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from 'next'
 import { AGENT_FIELD_MANIFEST } from '@/lib/mobile/constants'
+import { PRIVATE_ROUTE_ROBOTS } from '@/lib/seo/metadata'
 import MobileFieldBootstrap from './MobileFieldBootstrap'
 
 export const metadata: Metadata = {
+  ...PRIVATE_ROUTE_ROBOTS,
   title: 'Field App',
   description: 'TenderBriefing youth agent field operations',
   manifest: AGENT_FIELD_MANIFEST,
