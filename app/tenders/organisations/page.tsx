@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import JsonLd from '@/components/seo/JsonLd'
@@ -21,7 +20,12 @@ import {
   itemListJsonLd,
 } from '@/lib/seo/structuredData'
 
-export const revalidate = 600
+/**
+ * Force-dynamic keeps directory HTTP status/metadata aligned with the live
+ * indexability scan (and sitemap). Avoid ISR soft-404 caching when the
+ * directory falls below the indexable-hub minimum.
+ */
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata(): Promise<Metadata> {
   const show = await shouldShowOrganisationDirectory()
@@ -41,9 +45,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function OrganisationDirectoryPage() {
   const show = await shouldShowOrganisationDirectory()
-  if (!show) notFound()
-
-  const entries = await listIndexableOrganisationEntries()
+  const entries = show ? await listIndexableOrganisationEntries() : []
   const path = organisationDirectoryPath()
   const title = organisationDirectoryTitle()
   const intro = organisationDirectoryDescription()
@@ -58,12 +60,15 @@ export default async function OrganisationDirectoryPage() {
     description: intro,
     path,
   })
-  const items = itemListJsonLd(
-    entries.map((entry) => ({
-      name: organisationHubTitleSafe(entry.shortName),
-      path: organisationHubPath(entry.slug),
-    }))
-  )
+  const items =
+    entries.length > 0
+      ? itemListJsonLd(
+          entries.map((entry) => ({
+            name: organisationHubTitleSafe(entry.shortName),
+            path: organisationHubPath(entry.slug),
+          }))
+        )
+      : null
 
   return (
     <>
@@ -100,22 +105,45 @@ export default async function OrganisationDirectoryPage() {
             {title}
           </h1>
           <p className="mt-4 max-w-3xl text-lg leading-relaxed text-slate-700">{intro}</p>
-          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {entries.map((entry) => (
-              <li key={entry.slug}>
-                <Link
-                  href={organisationHubPath(entry.slug)}
-                  className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:bg-brand-50/40"
-                >
-                  <span className="text-base font-semibold text-brand-900">{entry.shortName}</span>
-                  <span className="mt-1 block text-sm text-slate-600">{entry.displayName}</span>
-                  <span className="mt-3 block text-sm font-semibold text-brand-800">
-                    Compulsory briefings →
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {show && entries.length > 0 ? (
+            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {entries.map((entry) => (
+                <li key={entry.slug}>
+                  <Link
+                    href={organisationHubPath(entry.slug)}
+                    className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:bg-brand-50/40"
+                  >
+                    <span className="text-base font-semibold text-brand-900">
+                      {entry.shortName}
+                    </span>
+                    <span className="mt-1 block text-sm text-slate-600">
+                      {entry.displayName}
+                    </span>
+                    <span className="mt-3 block text-sm font-semibold text-brand-800">
+                      Compulsory briefings →
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-10 max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 text-base leading-relaxed text-slate-700">
+              Organisation hubs appear here once enough organisations currently meet
+              TenderBriefing&apos;s compulsory-briefing indexability threshold. Browse
+              province and period hubs from the{' '}
+              <Link
+                href="/compulsory-tender-briefings"
+                className="font-semibold text-brand-800 hover:underline"
+              >
+                compulsory tender briefings
+              </Link>{' '}
+              landing page, or view{' '}
+              <Link href="/tenders" className="font-semibold text-brand-800 hover:underline">
+                all live tenders
+              </Link>
+              .
+            </p>
+          )}
         </main>
         <Footer />
       </div>

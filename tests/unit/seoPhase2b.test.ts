@@ -118,10 +118,11 @@ describe('SEO Phase 2B — route and sitemap wiring', () => {
     expect(page).toMatch(/generateStaticParams/)
   })
 
-  it('registers organisation directory with threshold gate', () => {
+  it('registers organisation directory with threshold gate (no sticky notFound)', () => {
     const page = src('app/tenders/organisations/page.tsx')
     expect(page).toMatch(/shouldShowOrganisationDirectory/)
-    expect(page).toMatch(/notFound/)
+    expect(page).toMatch(/force-dynamic/)
+    expect(page).not.toMatch(/notFound/)
     expect(page).toMatch(/listIndexableOrganisationEntries/)
   })
 
