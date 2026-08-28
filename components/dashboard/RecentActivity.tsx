@@ -12,6 +12,10 @@ import { useAuth } from '@/components/providers/AuthProvider'
 
 interface RecentActivityProps {
   userType?: 'sme' | 'youth-agent' | 'admin'
+  /** Preloaded from SME dashboard bootstrap — skips initial fetch when set. */
+  initialActivities?: ActivityItem[]
+  skipFetch?: boolean
+  externalLoading?: boolean
 }
 
 interface ActivityItem {
@@ -61,12 +65,39 @@ function iconForType(type: string) {
   }
 }
 
-const RecentActivity = ({ userType }: RecentActivityProps) => {
+const RecentActivity = ({
+  userType,
+  initialActivities,
+  skipFetch = false,
+  externalLoading = false,
+}: RecentActivityProps) => {
   const { user } = useAuth()
-  const [activities, setActivities] = useState<ActivityDisplay[]>([])
-  const [loading, setLoading] = useState(true)
+  const [activities, setActivities] = useState<ActivityDisplay[]>(() =>
+    initialActivities
+      ? initialActivities.map((row) => ({
+          ...row,
+          time: formatActivityTime(row.createdAt),
+          icon: iconForType(row.type),
+        }))
+      : []
+  )
+  const [loading, setLoading] = useState(() => (skipFetch ? externalLoading : true))
 
   useEffect(() => {
+    if (skipFetch) {
+      if (initialActivities) {
+        setActivities(
+          initialActivities.map((row) => ({
+            ...row,
+            time: formatActivityTime(row.createdAt),
+            icon: iconForType(row.type),
+          }))
+        )
+      }
+      setLoading(externalLoading)
+      return
+    }
+
     if (!user) {
       setLoading(true)
       return
@@ -119,7 +150,7 @@ const RecentActivity = ({ userType }: RecentActivityProps) => {
     return () => {
       cancelled = true
     }
-  }, [userType, user])
+  }, [userType, user, skipFetch, initialActivities, externalLoading])
 
   const getStatusColor = (status: string) => {
     switch (status) {
