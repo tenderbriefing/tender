@@ -8,7 +8,9 @@ describe('homepageMetadata', () => {
 
   it('exports the preferred homepage SEO description with R349', () => {
     expect(HOMEPAGE_SEO_DESCRIPTION).toBe(
-      'TenderBriefing helps South African SMEs discover compulsory tender briefings from official eTenders data. Free to browse — book a Youth Agent to attend your briefing for R349.'
+      'TenderBriefing helps South African SMEs discover compulsory tender briefings from official eTenders data. Free to browse — book a Youth Agent for R349.'
     )
+    expect(HOMEPAGE_SEO_DESCRIPTION.length).toBeLessThanOrEqual(160)
+    expect(HOMEPAGE_SEO_DESCRIPTION).toMatch(/R349/)
   })
 })

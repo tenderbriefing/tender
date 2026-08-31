@@ -184,7 +184,7 @@ describe('Homepage SEO metadata — R349 public pricing', () => {
 
   it('uses the canonical R349 homepage description for metadata and JSON-LD', () => {
     const homepageMeta = src('lib/seo/homepageMetadata.ts')
-    expect(homepageMeta).toMatch(/book a Youth Agent to attend your briefing/)
+    expect(homepageMeta).toMatch(/book a Youth Agent for/)
     expect(homepageMeta).toMatch(/BRIEFING_PRICE_SHORT_LABEL/)
 
     expect(src('app/page.tsx')).toMatch(/HOMEPAGE_SEO_DESCRIPTION/)
