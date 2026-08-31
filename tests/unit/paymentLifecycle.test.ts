@@ -30,7 +30,7 @@ describe('paymentLifecycle', () => {
 
   it('validates ITN amounts against expected cents', () => {
     expect(amountsMatchCents(34900, 349)).toBe(true)
-    expect(amountsMatchCents(24900, 249)).toBe(true)
+    expect(amountsMatchCents(27500, 275)).toBe(true)
     expect(amountsMatchCents(34900, 348.99)).toBe(true)
     expect(amountsMatchCents(34900, 1)).toBe(false)
   })

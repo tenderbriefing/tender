@@ -85,7 +85,6 @@ Idempotent keys under `notifications` (`briefing-life-idem-*` / `tx-email-idem-*
 - SME booking: **34900** cents  
 - YA liability: **20000** cents  
 - Gross: **14900** cents  
-- Historical R249 untouched  
 - PayFast / banking / monthly EFT unchanged  
 
 ---

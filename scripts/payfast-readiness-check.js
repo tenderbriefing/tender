@@ -299,12 +299,12 @@ async function main() {
 
   // Snapshot / path regressions — no private-tender-specific payment module
   const {
-    LEGACY_BRIEFING_PRICE_CENTS,
+    BRIEFING_PRICE_CENTS,
   } = require('../backend/constants/briefingPricing')
   check(
-    'Legacy R249 snapshot constant retained',
-    LEGACY_BRIEFING_PRICE_CENTS === 24900,
-    String(LEGACY_BRIEFING_PRICE_CENTS)
+    'Canonical briefing price is R349 (34900 cents)',
+    BRIEFING_PRICE_CENTS === 34900,
+    String(BRIEFING_PRICE_CENTS)
   )
   const fs = require('fs')
   const path = require('path')

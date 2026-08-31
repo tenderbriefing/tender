@@ -117,7 +117,6 @@ TS: `lib/privateTenders/briefingOpsFlags.ts`
 | SME booking | R349.00 / **34900** cents |
 | Youth Agent payout | R200.00 / **20000** cents |
 | Gross contribution (before other costs) | R149.00 |
-| Historical R249 bookings | Remain historically correct |
 | Pricing versions | Immutable on stamped requests |
 | PayFast / YA banking / monthly manual EFT | **Unchanged** — no redesign |
 

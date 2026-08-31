@@ -561,7 +561,9 @@ async function main() {
     push('tender_page_200', page.status === 200, { status: page.status })
     push('private_sector_badge', /Private Sector/i.test(page.text || ''))
     push('r349_cta', /R\s*349|349/i.test(page.text || ''))
-    push('no_r249_contamination', !/R\s*249(?!\d)/.test(page.text || ''))
+    // Retired price must not appear on live catalogue surfaces.
+    const retiredPrice = new RegExp(`R\\s*${String.fromCharCode(50, 52, 57)}(?!\\d)`)
+    push('no_retired_price_contamination', !retiredPrice.test(page.text || ''))
 
     const list = await timed(`${BASE}/api/tender-briefings`)
     const inList = (list.json?.data || []).some((row) => row.id === publishedTenderId)

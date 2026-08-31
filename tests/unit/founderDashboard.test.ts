@@ -19,7 +19,7 @@ function paidRequest(overrides: Record<string, unknown> = {}) {
     tenderTitle: 'Road maintenance',
     tenderNumber: 'T-100',
     paymentStatus: 'paid',
-    paymentAmount: 24900,
+    paymentAmount: 34900,
     status: 'pending',
     briefingDate: '2026-09-01',
     paidAt: '2026-08-10T08:00:00.000Z',
@@ -97,13 +97,13 @@ describe('founder dashboard metrics', () => {
         paidRequest({
           id: 'req-2',
           paymentStatus: 'pending',
-          paymentAmount: 24900,
+          paymentAmount: 34900,
           status: 'pending',
         }),
         paidRequest({
           id: 'req-3',
           paymentStatus: 'paid',
-          paymentAmount: 24900,
+          paymentAmount: 34900,
           status: 'completed',
           briefingDate: '2026-07-01',
         }),
@@ -117,23 +117,23 @@ describe('founder dashboard metrics', () => {
     expect(metrics.paidInPeriodCount).toBe(2)
   })
 
-  it('sums stored payment amounts and does not invent bookings × R249', () => {
+  it('sums stored payment amounts and does not invent bookings × current price', () => {
     const metrics = svc.computeOverviewMetrics({
       smeTotal: 1,
       agentTotal: 1,
       paidTotal: 2,
       completedTotal: 0,
       requests: [
-        paidRequest({ id: 'a', paymentAmount: 24900 }),
-        paidRequest({ id: 'b', paymentAmount: 24900, quotedFee: 24900 }),
-        paidRequest({ id: 'c', paymentStatus: 'pending', paymentAmount: 24900 }),
+        paidRequest({ id: 'a', paymentAmount: 34900 }),
+        paidRequest({ id: 'b', paymentAmount: 27500, quotedFee: 27500 }),
+        paidRequest({ id: 'c', paymentStatus: 'pending', paymentAmount: 34900 }),
       ],
       period: '30',
       nowMs: NOW,
     })
     expect(metrics.paidBookings).toBe(2)
-    expect(metrics.revenueCents).toBe(49800)
-    expect(metrics.revenueCents).not.toBe(3 * 24900)
+    expect(metrics.revenueCents).toBe(62400)
+    expect(metrics.revenueCents).not.toBe(3 * 34900)
   })
 
   it('omits paid rows with no stored amount from revenue', () => {
@@ -211,7 +211,7 @@ describe('founder dashboard metrics', () => {
       nowMs: NOW,
     })
     expect(metrics.paidBookings).toBe(1)
-    expect(metrics.revenueCents).toBe(24900)
+    expect(metrics.revenueCents).toBe(34900)
   })
 })
 
@@ -304,7 +304,7 @@ describe('directories and lifecycle', () => {
     expect(rows[0].contact).toBe('Thandi')
     expect(rows[0].province).toBe('Gauteng')
     expect(rows[0].bookings).toBe(1)
-    expect(rows[0].totalSpentCents).toBe(24900)
+    expect(rows[0].totalSpentCents).toBe(34900)
     expect(rows[0].lastActive).toContain('2026-08-18')
   })
 
@@ -324,7 +324,7 @@ describe('directories and lifecycle', () => {
           id: 'r1',
           assignedAgentId: 'ya-1',
           status: 'completed',
-          paymentAmount: 24900,
+          paymentAmount: 34900,
         }),
         paidRequest({
           id: 'r2',

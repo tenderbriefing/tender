@@ -82,7 +82,7 @@ describe('youthAgentPayoutService', () => {
     expect(result.updated).toBe(true)
   })
 
-  it('preserves historical gross contribution for R249 revenue', async () => {
+  it('preserves gross contribution from stored briefing revenue', async () => {
     mockTransaction.get.mockResolvedValue({ exists: false })
     const result: any = await svc.ensurePayoutOnEvidenceSubmitted({
       requestId: 'req-legacy',
@@ -90,10 +90,10 @@ describe('youthAgentPayoutService', () => {
       youthAgentUid: 'agent-1',
       attendanceVerified: true,
       evidenceSubmitted: true,
-      briefingRevenueCents: 24900,
+      briefingRevenueCents: 27500,
     })
-    expect(result.payout.briefingRevenueCents).toBe(24900)
-    expect(result.payout.grossContributionCents).toBe(4900)
+    expect(result.payout.briefingRevenueCents).toBe(27500)
+    expect(result.payout.grossContributionCents).toBe(7500)
   })
 
   it('enforces payout state machine', () => {

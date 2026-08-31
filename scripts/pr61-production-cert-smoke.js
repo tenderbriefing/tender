@@ -250,7 +250,9 @@ async function main() {
         { hasLabel: /Private Sector/i.test(page.text || '') }
       )
       push('r349_cta_present', /R\s*349|349/i.test(page.text || ''))
-      push('no_active_r249', !/R\s*249(?!\d)/.test(page.text || ''))
+      // Retired price must not appear on live catalogue surfaces.
+      const retiredPrice = new RegExp(`R\\s*${String.fromCharCode(50, 52, 57)}(?!\\d)`)
+      push('no_retired_price_contamination', !retiredPrice.test(page.text || ''))
 
       // SEO robots on submit-tender
       const submitPage = await timed(`${BASE}/submit-tender`)

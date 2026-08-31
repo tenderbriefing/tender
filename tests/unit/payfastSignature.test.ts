@@ -69,9 +69,9 @@ describe('PayFast ITN signature helper', () => {
       payment_status: 'COMPLETE',
       item_name: 'Compulsory briefing attendance support',
       item_description: '',
-      amount_gross: '249.00',
-      amount_fee: '-11.46',
-      amount_net: '237.54',
+      amount_gross: '349.00',
+      amount_fee: '-16.05',
+      amount_net: '332.95',
       custom_str1: 'req-abc',
       custom_str2: '',
       custom_str3: '',
@@ -97,7 +97,7 @@ describe('PayFast ITN signature helper', () => {
     const posted: Record<string, string> = {
       merchant_id: '10000100',
       payment_status: 'COMPLETE',
-      amount_gross: '249.00',
+      amount_gross: '349.00',
       m_payment_id: 'TB-REQ-abc',
     }
     const pairs: string[] = []
@@ -123,7 +123,7 @@ describe('PayFast ITN signature helper', () => {
     const passphrase = 'test-pass'
     const posted: Record<string, string> = {
       merchant_id: '10000100',
-      amount_gross: '249.00',
+      amount_gross: '349.00',
       payment_status: 'COMPLETE',
     }
     posted.signature = signItnIncludingEmpty(posted, passphrase)

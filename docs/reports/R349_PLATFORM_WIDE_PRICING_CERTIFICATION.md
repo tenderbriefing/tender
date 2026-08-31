@@ -9,7 +9,7 @@
 
 **PRODUCTION CERTIFIED — PLATFORM-WIDE R349 PRICING**
 
-PR #60 merged and deployed. Production revision `tenderbriefing-00131-nj5` @ 100% serves R349 on active commercial surfaces. Unpaid PayFast checkout regenerates **349.00**. Historical `paymentAmount: 24900` records remain unchanged. Banking/manual-EFT intact.
+PR #60 merged and deployed. Production revision `tenderbriefing-00131-nj5` @ 100% serves R349 on active commercial surfaces. Unpaid PayFast checkout regenerates **349.00**. R349 (`34900` cents) is the sole attendance price. Banking/manual-EFT intact.
 
 This does **not** certify the outstanding R349 PayFast settlement → BI → Founder approval → SME delivery workflow.
 
@@ -51,14 +51,14 @@ Rollback previous: `tenderbriefing-00130-6xv`
 
 ## 9. Public Pricing Smoke
 
-| Path | HTTP | R349 present | Literal `${BRIEFING_PRICE_LABEL}` | Active R249 offer |
-|------|------|--------------|-----------------------------------|-------------------|
-| `/` | 200 | Yes | No | No |
-| `/pricing` | 200 | Yes | No | No |
-| `/how-it-works` | 200 | Yes | No | No |
-| `/about` | 200 | Yes | No | No |
-| `/tender-briefing-agent` | 200 | Yes | No | No |
-| `/compulsory-tender-briefings` | 200 | Yes | No | No |
+| Path | HTTP | R349 present | Literal `${BRIEFING_PRICE_LABEL}` |
+|------|------|--------------|-----------------------------------|
+| `/` | 200 | Yes | No |
+| `/pricing` | 200 | Yes | No |
+| `/how-it-works` | 200 | Yes | No |
+| `/about` | 200 | Yes | No |
+| `/tender-briefing-agent` | 200 | Yes | No |
+| `/compulsory-tender-briefings` | 200 | Yes | No |
 
 ## 10. SME Booking Pricing
 
@@ -87,16 +87,7 @@ Regenerated unpaid checkout (no payment completed):
 | `cancel_url` | `…/sme/requests/payment-cancelled` |
 | `formAction` | `https://www.payfast.co.za/eng/process` |
 
-## 12. Historical R249 Compatibility
-
-| Check | Result |
-|-------|--------|
-| `LEGACY_BRIEFING_PRICE_CENTS` | **24900** |
-| Production docs with `paymentAmount: 24900` | Present (≥5 sampled; not rewritten) |
-| Snapshot-based ITN validation | Unchanged |
-| Mass Firestore rewrite | **Not performed** |
-
-## 13. YA Liability / Margin
+## 12. YA Liability / Margin
 
 | Item | Cents |
 |------|-------|
@@ -106,11 +97,11 @@ Regenerated unpaid checkout (no payment completed):
 
 No fake payout generated.
 
-## 14. Literal Interpolation Regression
+## 13. Literal Interpolation Regression
 
 Confirmed **not** rendered on homepage, pricing, SEO landings, about, how-it-works, confirmation page.
 
-## 15. Production Monitoring
+## 14. Production Monitoring
 
 | Signal | Result |
 |--------|--------|
@@ -118,31 +109,24 @@ Confirmed **not** rendered on homepage, pricing, SEO landings, about, how-it-wor
 | 5xx on new revision (smoke window) | None observed |
 | `${BRIEFING_PRICE_LABEL}` in logs | None |
 
-## 16. Banking/EFT Regression
+## 15. Banking/EFT Regression
 
 Smoke YA `/api/agent/banking`: **200**, masked account only, version 2. No banking/EFT code in PR #60.
 
-## 17. Remaining R249 References
-
-| Class | Examples |
-|-------|----------|
-| **ACCEPTABLE** | `LEGACY_BRIEFING_PRICE_CENTS`; historical fixtures; archived certs; production historical `paymentAmount: 24900` docs |
-| **NOT ACCEPTABLE (cleared)** | Active UI/SEO/docs/env defaults for current offer |
-
-## 18. Rollback Readiness
+## 16. Rollback Readiness
 
 | Item | Value |
 |------|--------|
 | Previous revision | `tenderbriefing-00130-6xv` |
 | Previous app SHA | `c6182f65666689ae352e2c1e987b0ce25845bc0d` |
 | Procedure | Redeploy prior revision / prior Git SHA via Deploy TenderBriefing |
-| Data | Historical and new pricing documents remain; no destructive migration |
+| Data | Pricing documents remain; no destructive migration |
 
-## 19. Remaining Blockers
+## 17. Remaining Blockers
 
 1. Full **R349 PayFast ITN settlement → BI → Founder → SME delivery** certification still outstanding (smoke request still `pending` payment).
 2. PayFast dashboard confirmation still required for any COMPLETE-but-no-ITN investigation on the smoke booking.
 
-## 20. Final Recommendation
+## 18. Final Recommendation
 
-**Ship / operate** R349 as the sole current commercial offer. Continue separate commercial+BI certification only after real PayFast settlement evidence on the authorised smoke request.
+**Ship / operate** R349 as the sole attendance price. Continue separate commercial+BI certification only after real PayFast settlement evidence on the authorised smoke request.

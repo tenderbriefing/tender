@@ -57,7 +57,6 @@ export function isAgentDispatchablePayment(status?: string | null): boolean {
 
 export {
   BRIEFING_PRICE_CENTS as CANONICAL_ATTENDANCE_FEE_CENTS,
-  LEGACY_BRIEFING_PRICE_CENTS,
   resolveBriefingPriceCents as resolveAttendanceFeeCents,
 } from '@/lib/domain/briefingPricing'
 

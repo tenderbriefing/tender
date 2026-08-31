@@ -5,7 +5,6 @@ These guides are **obsolete** relative to the live TenderBriefing product path
 
 | File | Why archived |
 |------|----------------|
-| `YOCO_PAYMENTS_SETUP.md` | Yoco retired; PayFast is sole provider |
 | `SETUP_TENDERCONNECT.md` | Pre-rebrand TenderConnect / Stripe setup |
 | Other `*_SETUP.md` moved here | Superseded by `README.md` + `docs/operations/` + `docs/runbooks/` |
 

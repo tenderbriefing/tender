@@ -104,7 +104,7 @@ describe('report SLA helpers', () => {
 
   it('formats ZAR cents for receipts', () => {
     expect(formatMoneyCents(34900, 'ZAR')).toBe('R349.00')
-    expect(formatMoneyCents(24900, 'ZAR')).toBe('R249.00') // historical snapshot formatting
+    expect(formatMoneyCents(12345, 'ZAR')).toBe('R123.45')
   })
 })
 
@@ -144,7 +144,7 @@ describe('transactionalEmailService send idempotency', () => {
         smeEmail: 'sme@example.com',
         smeId: 'sme-1',
         tenderTitle: 'T',
-        paymentAmount: 24900,
+        paymentAmount: 34900,
       },
       {
         env: { RESEND_API_KEY: 're_test' },
@@ -177,7 +177,7 @@ describe('transactionalEmailService send idempotency', () => {
         smeId: 'sme-1',
         tenderTitle: 'ICT Equipment',
         tenderNumber: 'RFQ-1',
-        paymentAmount: 24900,
+        paymentAmount: 34900,
         paymentStatus: 'paid',
       },
       {

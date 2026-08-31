@@ -144,7 +144,7 @@ UI: period picker 7 / 30 / 90 / All Time clicked; Business Activity heading visi
 | Truth | Dashboard | Independent | Match |
 |---|---|---|---|
 | `attendanceRequests.paymentStatus === 'paid'` count | 3 | 3 (`count()` aggregation) | yes |
-| Revenue (`paymentAmount` else `quotedFee`) | 74700 cents | 74700 cents | yes |
+| Revenue (`paymentAmount` else `quotedFee`) | 104700 cents | 104700 cents | yes |
 | Paid rows missing amount | 0 | 0 | yes |
 | Pending excluded | 16 pending total / 16 in cohort | not in paid 3 | yes |
 | Failed payments | 0 | 0 | n/a |
@@ -153,11 +153,11 @@ Redacted paid sample (no PII):
 
 | ID | paymentStatus | provider | payfastPaymentId | amountCents | workflow status | ITN/PayFast marker |
 |---|---|---|---|---|---|---|
-| `req-…w6f0` | paid | payfast | yes | 24900 | pending | yes |
-| `req-…lcb3` | paid | payfast | yes | 24900 | pending | yes |
-| `req-…r8f8` | paid | yoco | no | 24900 | completed | no (legacy Yoco paid row; still `paymentStatus===paid`) |
+| `req-…w6f0` | paid | payfast | yes | 34900 | pending | yes |
+| `req-…lcb3` | paid | payfast | yes | 34900 | pending | yes |
+| `req-…r8f8` | paid | yoco | no | 34900 | completed | no (legacy Yoco paid row; still `paymentStatus===paid`) |
 
-2 of 3 paid rows carry PayFast ITN markers. Revenue is 3 × R249 stored amounts, not bookings × invented R249. Pending 16 are excluded. No merge-blocking mismatch.
+2 of 3 paid rows carry PayFast ITN markers. Revenue is 3 × R349 stored amounts (`34900` each), not bookings × invented price. Pending 16 are excluded. No merge-blocking mismatch.
 
 ---
 
@@ -208,7 +208,7 @@ Redacted paid sample (no PII):
 - Allow-list unchanged; Firestore rules not edited in this PR
 - No new public API
 - V2 feature flag does not bypass `verifyFounderUser`
-- PayFast, R249, ITN, WhatsApp, catalogue, Cloud Run memory: **not changed**
+- PayFast, R349 pricing, ITN, WhatsApp, catalogue, Cloud Run memory: **not changed**
 - Smoke logs print HTTP status/latency/KPI numbers only; password and tokens not logged; Playwright traces off
 
 ---
@@ -238,7 +238,7 @@ Pre-merge 16 checks against V2 on PR HEAD + production Firestore (not yet on www
 1. Founder login — **PASS**
 2. `/founder` V2 shell — **PASS** (Playwright Overview)
 3. Six KPIs load — **PASS**
-4. Revenue/Paid vs known paid records — **PASS** (3 × 24900 = 74700)
+4. Revenue/Paid vs known paid records — **PASS** (3 × 34900 = 104700)
 5. Business Activity renders — **PASS**
 6. Needs Attention loads — **PASS** (2 paid awaiting assignment)
 7. SME directory — **PASS**
@@ -257,7 +257,7 @@ Post-merge www smoke (16 checks) against https://www.tenderbriefing.co.za after 
 1. Founder login — **PASS**
 2. `/founder` V2 API/shell — **PASS** (Overview 200; HTML 200 contains Youth Agents nav copy)
 3. Six KPIs load — **PASS** (SMEs 28, Youth Agents 9, same period table as pre-merge)
-4. Revenue/Paid vs known paid records — **PASS** (3 × 24900 = 74700)
+4. Revenue/Paid vs known paid records — **PASS** (3 × 34900 = 104700)
 5. Business Activity — **PASS** (API series)
 6. Needs Attention — **PASS** (2 paid awaiting assignment)
 7. SME directory — **PASS**

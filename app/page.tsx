@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 import { Suspense } from 'react'
 import Hero from '@/components/home/Hero'
 import HowItWorks from '@/components/home/HowItWorks'
@@ -9,12 +8,12 @@ import HomeSeoLinks from '@/components/seo/HomeSeoLinks'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { HOMEPAGE_SEO_DESCRIPTION, HOMEPAGE_SEO_TITLE } from '@/lib/seo/homepageMetadata'
 import { buildPageMetadata } from '@/lib/seo/metadata'
 
 export const metadata: Metadata = buildPageMetadata({
-  title: 'Tender Briefing South Africa | Compulsory Government Tender Briefings',
-  description:
-    `TenderBriefing helps South African SMEs discover compulsory tender briefings from official eTenders data. Free to browse — ${BRIEFING_PRICE_LABEL} only when you request a Youth Agent for briefing attendance.`,
+  title: HOMEPAGE_SEO_TITLE,
+  description: HOMEPAGE_SEO_DESCRIPTION,
   path: '/',
   keywords: [
     'Tender Briefing',

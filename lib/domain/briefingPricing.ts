@@ -12,9 +12,6 @@ export const YOUTH_AGENT_PAYOUT_CENTS = 20000
 /** Platform gross contribution before other costs — R149.00 */
 export const GROSS_CONTRIBUTION_CENTS = BRIEFING_PRICE_CENTS - YOUTH_AGENT_PAYOUT_CENTS
 
-/** Legacy SME price retained for historical records — R249.00 */
-export const LEGACY_BRIEFING_PRICE_CENTS = 24900
-
 export const BRIEFING_PRICE_CURRENCY = 'ZAR'
 
 /** Bump when commercial pricing changes; stored on new bookings/payouts. */
@@ -34,6 +31,9 @@ export function formatYouthAgentPayoutZar(cents = YOUTH_AGENT_PAYOUT_CENTS): str
 }
 
 export const BRIEFING_PRICE_LABEL = formatBriefingPriceZar()
+
+/** Whole-rand label for SEO/marketing copy — derived from canonical cents. */
+export const BRIEFING_PRICE_SHORT_LABEL = `R${Math.round(BRIEFING_PRICE_CENTS / 100)}`
 
 export function resolveBriefingPriceCents(): number {
   const server = process.env.ATTENDANCE_FEE_CENTS

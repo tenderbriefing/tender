@@ -174,7 +174,7 @@ Browser confirmation / payment-success polling does **not** mark paid (by design
 
 ## 12. Amount Validation
 
-Checkout amount `349.00` ↔ request snapshot `34900` cents. ITN uses `amount_gross`/`amount` × 100 vs `resolveRequestChargeCents(request)` (±1¢). Legacy R249 path separate. No pricing change.
+Checkout amount `349.00` ↔ request snapshot `34900` cents. ITN uses `amount_gross`/`amount` × 100 vs `resolveRequestChargeCents(request)` (±1¢). No pricing change.
 
 ---
 

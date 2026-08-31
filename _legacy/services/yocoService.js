@@ -29,7 +29,7 @@ function getStatus() {
 /**
  * Create a Yoco hosted checkout session.
  * @param {object} params
- * @param {number} params.amount - Amount in cents (e.g. 24900 = R249.00)
+ * @param {number} params.amount - Amount in cents (e.g. 34900 = R349.00)
  * @param {string} [params.currency]
  * @param {string} params.successUrl
  * @param {string} params.cancelUrl

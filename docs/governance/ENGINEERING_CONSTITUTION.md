@@ -47,7 +47,7 @@ This constitution is the authoritative engineering contract for Tender Briefing.
 ## Payment standards
 
 - Sole provider: **PayFast**.
-- Fee: **R349.00** (`34900` cents). Historical bookings may retain R249 snapshots.
+- Fee: **R349.00** (`34900` cents).
 - Amount calculated server-side only.
 - Client return/cancel URLs are UX only — never mark paid from redirects alone.
 

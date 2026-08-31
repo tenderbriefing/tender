@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   BRIEFING_PRICE_CENTS,
+  BRIEFING_PRICE_SHORT_LABEL,
   YOUTH_AGENT_PAYOUT_CENTS,
   GROSS_CONTRIBUTION_CENTS,
-  LEGACY_BRIEFING_PRICE_CENTS,
   grossContributionForRevenueCents,
   briefingPriceSnapshotFields,
   formatBriefingPriceZar,
@@ -17,13 +17,10 @@ describe('briefingPricing', () => {
     expect(GROSS_CONTRIBUTION_CENTS).toBe(BRIEFING_PRICE_CENTS - YOUTH_AGENT_PAYOUT_CENTS)
   })
 
-  it('retains legacy price for historical records', () => {
-    expect(LEGACY_BRIEFING_PRICE_CENTS).toBe(24900)
-  })
-
-  it('computes gross contribution from actual revenue', () => {
+  it('computes gross contribution from actual stored revenue', () => {
     expect(grossContributionForRevenueCents(34900)).toBe(14900)
-    expect(grossContributionForRevenueCents(24900)).toBe(4900)
+    // Generic non-current snapshot — contribution uses stored revenue, not a fixed legacy price.
+    expect(grossContributionForRevenueCents(27500)).toBe(7500)
   })
 
   it('snapshot fields include pricing version', () => {
@@ -36,5 +33,6 @@ describe('briefingPricing', () => {
 
   it('formats ZAR without floating point storage', () => {
     expect(formatBriefingPriceZar()).toBe('R349.00')
+    expect(BRIEFING_PRICE_SHORT_LABEL).toBe('R349')
   })
 })
