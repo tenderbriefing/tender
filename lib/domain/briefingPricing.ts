@@ -35,6 +35,9 @@ export function formatYouthAgentPayoutZar(cents = YOUTH_AGENT_PAYOUT_CENTS): str
 
 export const BRIEFING_PRICE_LABEL = formatBriefingPriceZar()
 
+/** Whole-rand label for SEO/marketing copy — derived from canonical cents. */
+export const BRIEFING_PRICE_SHORT_LABEL = `R${Math.round(BRIEFING_PRICE_CENTS / 100)}`
+
 export function resolveBriefingPriceCents(): number {
   const server = process.env.ATTENDANCE_FEE_CENTS
   if (server != null && server !== '') {

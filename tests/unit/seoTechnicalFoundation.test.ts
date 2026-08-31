@@ -201,6 +201,34 @@ describe('SEO Phase 1 — public R249 guard', () => {
   })
 })
 
+describe('Homepage SEO metadata — R349 public pricing', () => {
+  it('uses the Compulsory Tender Briefings title without Government', () => {
+    const page = src('app/page.tsx')
+    expect(page).toMatch(/HOMEPAGE_SEO_TITLE/)
+    expect(src('lib/seo/homepageMetadata.ts')).toMatch(
+      /Tender Briefing South Africa \| Compulsory Tender Briefings/
+    )
+    expect(src('lib/seo/homepageMetadata.ts')).not.toMatch(/Compulsory Government Tender Briefings/)
+  })
+
+  it('uses the canonical R349 homepage description for metadata and JSON-LD', () => {
+    const homepageMeta = src('lib/seo/homepageMetadata.ts')
+    expect(homepageMeta).toMatch(/book a Youth Agent to attend your briefing/)
+    expect(homepageMeta).toMatch(/BRIEFING_PRICE_SHORT_LABEL/)
+    expect(homepageMeta).not.toMatch(/\bR249\b/)
+
+    expect(src('app/page.tsx')).toMatch(/HOMEPAGE_SEO_DESCRIPTION/)
+    expect(src('lib/seo/site.ts')).toMatch(/HOMEPAGE_SEO_DESCRIPTION/)
+  })
+
+  it('aligns visible homepage pricing copy with metadata', () => {
+    const teaser = src('components/home/PricingTeaser.tsx')
+    expect(teaser).toMatch(/BRIEFING_PRICE_SHORT_LABEL/)
+    expect(teaser).toMatch(/book a Youth Agent to attend your briefing/)
+    expect(teaser).not.toMatch(/\bR249\b/)
+  })
+})
+
 describe('SEO Phase 1 — visible tender breadcrumbs and internal links', () => {
   it('renders crawlable breadcrumb links on tender detail pages', () => {
     const page = src('app/tenders/(detail)/[id]/page.tsx')

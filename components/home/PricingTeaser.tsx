@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
-import { ATTENDANCE_FEE_LABEL } from '@/lib/payments/attendanceFee'
+import { BRIEFING_PRICE_SHORT_LABEL } from '@/lib/domain/briefingPricing'
 
 export default function PricingTeaser() {
   return (
@@ -26,9 +26,8 @@ export default function PricingTeaser() {
             Free to discover. Pay only when you attend.
           </h2>
           <p className="mt-4 text-base leading-relaxed text-slate-600 sm:text-lg">
-            Browse compulsory briefings at no cost. Request a Youth Agent for{' '}
-            <span className="font-semibold text-brand-900">{ATTENDANCE_FEE_LABEL}</span> when
-            you need someone on site.
+            Free to browse — book a Youth Agent to attend your briefing for{' '}
+            <span className="font-semibold text-brand-900">{BRIEFING_PRICE_SHORT_LABEL}</span>.
           </p>
           <Link
             href="/pricing"

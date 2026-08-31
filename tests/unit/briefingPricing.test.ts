@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   BRIEFING_PRICE_CENTS,
+  BRIEFING_PRICE_SHORT_LABEL,
   YOUTH_AGENT_PAYOUT_CENTS,
   GROSS_CONTRIBUTION_CENTS,
   LEGACY_BRIEFING_PRICE_CENTS,
@@ -36,5 +37,6 @@ describe('briefingPricing', () => {
 
   it('formats ZAR without floating point storage', () => {
     expect(formatBriefingPriceZar()).toBe('R349.00')
+    expect(BRIEFING_PRICE_SHORT_LABEL).toBe('R349')
   })
 })

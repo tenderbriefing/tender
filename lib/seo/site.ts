@@ -1,3 +1,5 @@
+import { HOMEPAGE_SEO_DESCRIPTION } from './homepageMetadata'
+
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://www.tenderbriefing.co.za'
 
@@ -12,8 +14,7 @@ export const SITE_NAME = 'TenderBriefing'
 
 export const DEFAULT_OG_IMAGE = '/brand/og-logo.png'
 
-export const ORG_DESCRIPTION =
-  'TenderBriefing helps South African SMEs discover compulsory tender briefings and request verified Youth Agents to attend physical briefing sessions on their behalf.'
+export const ORG_DESCRIPTION = HOMEPAGE_SEO_DESCRIPTION
 
 export const DEFAULT_KEYWORDS = [
   'tender briefing',
