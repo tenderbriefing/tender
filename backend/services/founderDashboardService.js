@@ -9,6 +9,11 @@
 
 const { getFirestore } = require('../config/firebaseAdmin')
 const { getStorage } = require('./storageAdapter')
+const {
+  isEffectiveTestAccount,
+  resolveAccountScope,
+  filterByAccountScope,
+} = require('../../lib/domain/testAccount')
 
 const REQUEST_COHORT_LIMIT = 500
 const PROFILE_COHORT_LIMIT = 800
@@ -347,6 +352,7 @@ function buildSmeRows({ users, roleDocs, requests, summaries }) {
     const joined = toIso(u.createdAt) || toIso(role.createdAt) || toIso(u.onboardingCompletedAt)
     const lastActive =
       toIso(summary.lastMeaningfulAt) || toIso(summary.lastSeenAt) || toIso(u.updatedAt)
+    const testAccount = isEffectiveTestAccount({ ...role, ...u })
     const paidBookings = bookingsBySme.get(u.id) || 0
     const spent = spentBySme.has(u.id) ? spentBySme.get(u.id) : paidBookings === 0 ? 0 : null
     return {
@@ -358,6 +364,7 @@ function buildSmeRows({ users, roleDocs, requests, summaries }) {
       bookings: paidBookings,
       totalSpentCents: spent,
       lastActive,
+      isTestAccount: testAccount,
     }
   })
 }
@@ -494,6 +501,31 @@ async function countEq(col, field, value) {
   }
 }
 
+/** Count users of a type that are classified as test accounts (flag or smoke evidence). */
+async function countTestAccountsByType(userType) {
+  const db = getFirestore()
+  let flagged = 0
+  try {
+    const snap = await db.collection('users').where('isTestAccount', '==', true).limit(500).get()
+    flagged = snap.docs.filter((d) => d.data()?.userType === userType).length
+  } catch {
+    flagged = 0
+  }
+  // Also catch untagged smoke emails still missing the flag (pre-migration).
+  let heuristic = 0
+  try {
+    const snap = await db.collection('users').where('userType', '==', userType).limit(PROFILE_COHORT_LIMIT).get()
+    heuristic = snap.docs.filter((d) => {
+      const data = { id: d.id, ...d.data() }
+      if (data.isTestAccount === true) return false
+      return isEffectiveTestAccount(data)
+    }).length
+  } catch {
+    heuristic = 0
+  }
+  return flagged + heuristic
+}
+
 async function loadUsersByType(userType, limit) {
   const db = getFirestore()
   const snap = await db.collection('users').where('userType', '==', userType).limit(limit).get()
@@ -506,9 +538,21 @@ async function loadCollectionMap(name, limit) {
   return new Map(snap.docs.map((d) => [d.id, d.data()]))
 }
 
-async function loadOverview(period, nowMs) {
+function commercialRequests(requests, usersById, accountScope) {
+  const scope = resolveAccountScope(accountScope)
+  if (scope === 'all') return requests
+  return requests.filter((r) => {
+    if (r.isTestData === true) return scope === 'test'
+    const sme = usersById.get(r.smeId)
+    const isTest = sme ? isEffectiveTestAccount(sme) : false
+    return scope === 'test' ? isTest : !isTest
+  })
+}
+
+async function loadOverview(period, nowMs, accountScope = 'real') {
+  const scope = resolveAccountScope(accountScope)
   const storage = getStorage()
-  const [smeTotal, agentTotal, paidTotal, completedTotal, requests, smeUsers, yaUsers, reports] =
+  const [smeTotalRaw, agentTotalRaw, , , requests, smeUsersRaw, yaUsersRaw, reports] =
     await Promise.all([
       countEq('users', 'userType', 'sme'),
       countEq('users', 'userType', 'youth-agent'),
@@ -520,15 +564,41 @@ async function loadOverview(period, nowMs) {
       storage.getBriefingReports({ limit: REPORT_COHORT_LIMIT }),
     ])
 
+  const [testSmeCount, testAgentCount] = await Promise.all([
+    countTestAccountsByType('sme'),
+    countTestAccountsByType('youth-agent'),
+  ])
+
+  const smeUsers = filterByAccountScope(smeUsersRaw, scope)
+  const yaUsers = filterByAccountScope(yaUsersRaw, scope)
+  const usersById = new Map(smeUsersRaw.map((u) => [u.id, u]))
+  const scopedRequests = commercialRequests(requests, usersById, scope)
+
+  let smeTotal = smeTotalRaw
+  let agentTotal = agentTotalRaw
+  if (scope === 'real') {
+    smeTotal = Math.max(0, smeTotalRaw - testSmeCount)
+    agentTotal = Math.max(0, agentTotalRaw - testAgentCount)
+  } else if (scope === 'test') {
+    smeTotal = testSmeCount
+    agentTotal = testAgentCount
+  }
+
   const kpis = computeOverviewMetrics({
     smeTotal,
     agentTotal,
-    paidTotal,
-    completedTotal,
-    requests,
+    paidTotal: scopedRequests.filter(isPaidBooking).length,
+    completedTotal: scopedRequests.filter(isCompletedWorkflow).length,
+    requests: scopedRequests,
     period,
     nowMs,
   })
+  // Prefer scoped cohort totals for All Time when excluding test accounts
+  // (global count aggregations still include smoke bookings).
+  if (scope !== 'all' && period === 'all') {
+    kpis.paidBookings = scopedRequests.filter(isPaidBooking).length
+    kpis.completedBriefings = scopedRequests.filter(isCompletedWorkflow).length
+  }
 
   const startMs = periodStartMs(period, nowMs)
   const smeRegs = smeUsers
@@ -537,7 +607,7 @@ async function loadOverview(period, nowMs) {
   const yaRegs = yaUsers
     .map((u) => toIso(u.createdAt) || toIso(u.onboardingCompletedAt))
     .filter((iso) => iso && inPeriod(iso, startMs))
-  const paidAtList = requests
+  const paidAtList = scopedRequests
     .filter((r) => isPaidBooking(r) && inPeriod(r.paidAt || r.createdAt, startMs))
     .map((r) => r.paidAt || r.createdAt)
 
@@ -547,18 +617,24 @@ async function loadOverview(period, nowMs) {
   }
 
   const dataNotes = [
-    'SMEs and Youth Agents are lifetime registered-account counts (Firestore count aggregations).',
-    'Paid Bookings (All Time) counts attendanceRequests.paymentStatus == paid. Period views count paidAt within a bounded recent request cohort (≤500).',
+    scope === 'real'
+      ? 'SMEs and Youth Agents are lifetime registered-account counts excluding test/smoke accounts (isTestAccount).'
+      : scope === 'test'
+        ? 'Showing test/smoke accounts only (isTestAccount or certified smoke evidence).'
+        : 'Showing all accounts including test/smoke.',
+    'Paid Bookings and revenue exclude bookings owned by test SMEs when scope is Real SMEs.',
+    'Paid Bookings (All Time) counts attendanceRequests.paymentStatus == paid within the commercial scope. Period views count paidAt within a bounded recent request cohort (≤500).',
     kpis.revenueCohortIncomplete
       ? 'All Time revenue is summed from the bounded paid cohort (≤500), which is smaller than the paid count aggregation — the rand total is a conservative recent-cohort figure, not a silent full-history total.'
       : 'Revenue sums paymentAmount (else quotedFee) on those paid records. Rows without a stored amount are omitted from the sum — not estimated as bookings × current list price.',
     'Upcoming Briefings are currently future paid/valid briefings (briefingDate after now, not cancelled) in the same cohort.',
-    'Completed Briefings follow production workflow status == completed (executive analytics). All Time uses count(); period views filter the cohort.',
+    'Completed Briefings follow production workflow status == completed (executive analytics).',
     'Business Activity uses bounded recent profiles (≤400 SME, ≤400 Youth Agent) plus the request cohort — not a full historical scan.',
   ]
 
   return {
     period,
+    accountScope: scope,
     kpis: {
       smes: kpis.smes,
       youthAgents: kpis.youthAgents,
@@ -566,58 +642,71 @@ async function loadOverview(period, nowMs) {
       revenueCents: kpis.revenueCents,
       upcomingBriefings: kpis.upcomingBriefings,
       completedBriefings: kpis.completedBriefings,
-      // Phase 3B/ops — pipeline visibility (additive)
-      ...buildBriefingPipelineKpis(requests, reportsByRequestId, nowMs),
+      ...buildBriefingPipelineKpis(scopedRequests, reportsByRequestId, nowMs),
     },
     activity: buildActivitySeries({ smeRegs, yaRegs, paidAtList, period, nowMs }),
-    needsAttention: buildNeedsAttention(requests, reportsByRequestId),
+    needsAttention: buildNeedsAttention(scopedRequests, reportsByRequestId),
     generatedAt: new Date(nowMs).toISOString(),
     dataNotes,
     cohortCapped:
       requests.length >= REQUEST_COHORT_LIMIT ||
-      smeUsers.length >= 400 ||
-      yaUsers.length >= 400,
+      smeUsersRaw.length >= 400 ||
+      yaUsersRaw.length >= 400,
+    testAccountCounts: { smes: testSmeCount, youthAgents: testAgentCount },
   }
 }
 
-async function loadSmes({ page, pageSize, q, province }) {
+async function loadSmes({ page, pageSize, q, province, accountScope = 'real' }) {
+  const scope = resolveAccountScope(accountScope)
   const storage = getStorage()
-  const [users, roleDocs, requests, summaries] = await Promise.all([
+  const [usersRaw, roleDocs, requests, summaries] = await Promise.all([
     loadUsersByType('sme', PROFILE_COHORT_LIMIT),
     loadCollectionMap('smes', PROFILE_COHORT_LIMIT),
     storage.getAttendanceRequests({ limit: REQUEST_COHORT_LIMIT }),
     loadCollectionMap('userActivitySummaries', PROFILE_COHORT_LIMIT),
   ])
+  const users = filterByAccountScope(usersRaw, scope)
   let rows = buildSmeRows({ users, roleDocs, requests, summaries })
   if (province) rows = rows.filter((r) => r.province === province)
   rows = rows.filter((r) => matchesQuery(r, q))
   rows.sort((a, b) => new Date(b.joined || 0) - new Date(a.joined || 0))
-  return paginate(rows, page, pageSize)
+  const pageResult = paginate(rows, page, pageSize)
+  return { ...pageResult, accountScope: scope }
 }
 
-async function loadAgents({ page, pageSize, q, province }) {
+async function loadAgents({ page, pageSize, q, province, accountScope = 'real' }) {
+  const scope = resolveAccountScope(accountScope)
   const storage = getStorage()
-  const [users, roleDocs, requests, reports, payoutsByAgent] = await Promise.all([
+  const [usersRaw, roleDocs, requests, reports, payoutsByAgent] = await Promise.all([
     loadUsersByType('youth-agent', PROFILE_COHORT_LIMIT),
     loadCollectionMap('agents', PROFILE_COHORT_LIMIT),
     storage.getAttendanceRequests({ limit: REQUEST_COHORT_LIMIT }),
     storage.getBriefingReports({ limit: REPORT_COHORT_LIMIT }),
     loadPayoutEarningsByAgent(),
   ])
+  const users = filterByAccountScope(usersRaw, scope)
   let rows = buildAgentRows({ users, roleDocs, requests, reports, payoutsByAgent })
   if (province) rows = rows.filter((r) => r.province === province)
   rows = rows.filter((r) => matchesQuery(r, q))
   rows.sort((a, b) => new Date(b.joined || 0) - new Date(a.joined || 0))
-  return paginate(rows, page, pageSize)
+  const pageResult = paginate(rows, page, pageSize)
+  return { ...pageResult, accountScope: scope }
 }
 
-async function loadBriefings({ page, pageSize, q }) {
+async function loadBriefings({ page, pageSize, q, accountScope = 'real' }) {
+  const scope = resolveAccountScope(accountScope)
   const storage = getStorage()
-  const requests = await storage.getAttendanceRequests({ limit: REQUEST_COHORT_LIMIT })
-  let rows = buildBriefingRows(requests)
+  const [requests, smeUsersRaw] = await Promise.all([
+    storage.getAttendanceRequests({ limit: REQUEST_COHORT_LIMIT }),
+    loadUsersByType('sme', PROFILE_COHORT_LIMIT),
+  ])
+  const usersById = new Map(smeUsersRaw.map((u) => [u.id, u]))
+  const scoped = commercialRequests(requests, usersById, scope)
+  let rows = buildBriefingRows(scoped)
   rows = rows.filter((r) => matchesQuery(r, q))
   rows.sort((a, b) => new Date(b.briefingDate || 0) - new Date(a.briefingDate || 0))
-  return paginate(rows, page, pageSize)
+  const pageResult = paginate(rows, page, pageSize)
+  return { ...pageResult, accountScope: scope }
 }
 
 async function loadDetail(kind, id) {
@@ -682,7 +771,8 @@ async function getFounderDashboard(opts = {}) {
   const province = String(opts.province || '')
   const kind = String(opts.kind || '')
   const id = String(opts.id || '')
-  const key = JSON.stringify({ view, period, page, pageSize, q, province, kind, id })
+  const accountScope = resolveAccountScope(opts.accountScope)
+  const key = JSON.stringify({ view, period, page, pageSize, q, province, kind, id, accountScope })
   if (cacheEntry && cacheEntry.key === key && Date.now() - cacheAt < CACHE_TTL_MS) {
     return cacheEntry.value
   }
@@ -692,18 +782,34 @@ async function getFounderDashboard(opts = {}) {
     const nowMs = Date.now()
     const generatedAt = new Date(nowMs).toISOString()
     if (view === 'smes') {
-      return { view, smes: await loadSmes({ page, pageSize, q, province }), generatedAt }
+      return {
+        view,
+        smes: await loadSmes({ page, pageSize, q, province, accountScope }),
+        generatedAt,
+      }
     }
     if (view === 'agents') {
-      return { view, agents: await loadAgents({ page, pageSize, q, province }), generatedAt }
+      return {
+        view,
+        agents: await loadAgents({ page, pageSize, q, province, accountScope }),
+        generatedAt,
+      }
     }
     if (view === 'briefings') {
-      return { view, briefings: await loadBriefings({ page, pageSize, q }), generatedAt }
+      return {
+        view,
+        briefings: await loadBriefings({ page, pageSize, q, accountScope }),
+        generatedAt,
+      }
     }
     if (view === 'detail') {
       return { view, detail: await loadDetail(kind, id), generatedAt }
     }
-    return { view: 'overview', overview: await loadOverview(period, nowMs), generatedAt }
+    return {
+      view: 'overview',
+      overview: await loadOverview(period, nowMs, accountScope),
+      generatedAt,
+    }
   })()
     .then((value) => {
       cacheEntry = { key, value }
@@ -747,4 +853,7 @@ module.exports = {
   buildActivitySeries,
   getFounderDashboard,
   resetFounderDashboardCacheForTests,
+  countTestAccountsByType,
+  commercialRequests,
+  filterByAccountScope,
 }

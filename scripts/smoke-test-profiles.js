@@ -2,35 +2,40 @@
  * Shared smoke-test user profile shapes (aligned with client registration schema).
  */
 const { sanitizeFirestoreData } = require('../backend/utils/sanitizeFirestoreData')
+const { testAccountWriteFields } = require('../lib/domain/testAccount')
 
 function nowIso() {
   return new Date().toISOString()
 }
 
 function buildSmokeUserDoc({ uid, email, displayName, userType, timestamp, extra = {} }) {
+  const testFields = testAccountWriteFields(
+    extra.testAccountKind || (userType === 'youth-agent' ? 'ops-smoke-agent' : 'ops-smoke')
+  )
+  const { testAccountKind: _kindIgnored, ...safeExtra } = extra
   return sanitizeFirestoreData({
     uid,
     email,
     displayName,
     role: userType,
     userType,
-    phoneNumber: extra.phoneNumber || '+27000000000',
-    location: extra.province || extra.location || 'Gauteng',
-    province: extra.province || 'Gauteng',
-    companyName: userType === 'sme' ? extra.companyName || 'Smoke Test SME (Pty) Ltd' : '',
-    contactPerson: userType === 'sme' ? extra.contactPerson || displayName : undefined,
-    categories: userType === 'sme' ? extra.categories || ['information-technology'] : [],
-    sectors: userType === 'sme' ? extra.categories || ['information-technology'] : [],
-    provincesOfInterest: userType === 'sme' ? [extra.province || 'Gauteng'] : [],
-    city: userType === 'youth-agent' ? extra.city || 'Johannesburg' : undefined,
-    ...(userType === 'youth-agent' && extra.availabilityRadiusKm != null
-      ? { availabilityRadiusKm: extra.availabilityRadiusKm }
+    phoneNumber: safeExtra.phoneNumber || '+27000000000',
+    location: safeExtra.province || safeExtra.location || 'Gauteng',
+    province: safeExtra.province || 'Gauteng',
+    companyName: userType === 'sme' ? safeExtra.companyName || 'Smoke Test SME (Pty) Ltd' : '',
+    contactPerson: userType === 'sme' ? safeExtra.contactPerson || displayName : undefined,
+    categories: userType === 'sme' ? safeExtra.categories || ['information-technology'] : [],
+    sectors: userType === 'sme' ? safeExtra.categories || ['information-technology'] : [],
+    provincesOfInterest: userType === 'sme' ? [safeExtra.province || 'Gauteng'] : [],
+    city: userType === 'youth-agent' ? safeExtra.city || 'Johannesburg' : undefined,
+    ...(userType === 'youth-agent' && safeExtra.availabilityRadiusKm != null
+      ? { availabilityRadiusKm: safeExtra.availabilityRadiusKm }
       : {}),
-    ...(userType === 'youth-agent' && typeof extra.transportAvailable === 'boolean'
-      ? { transportAvailable: extra.transportAvailable }
+    ...(userType === 'youth-agent' && typeof safeExtra.transportAvailable === 'boolean'
+      ? { transportAvailable: safeExtra.transportAvailable }
       : {}),
     preferredServiceAreas:
-      userType === 'youth-agent' ? extra.preferredServiceAreas || ['Gauteng'] : undefined,
+      userType === 'youth-agent' ? safeExtra.preferredServiceAreas || ['Gauteng'] : undefined,
     verificationStatus: userType === 'youth-agent' ? 'verified' : undefined,
     reliabilityScore: userType === 'youth-agent' ? 100 : undefined,
     missedBriefingCount: userType === 'youth-agent' ? 0 : undefined,
@@ -41,7 +46,8 @@ function buildSmokeUserDoc({ uid, email, displayName, userType, timestamp, extra
     verified: userType === 'youth-agent' ? true : undefined,
     createdAt: timestamp,
     updatedAt: timestamp,
-    ...extra,
+    ...safeExtra,
+    ...testFields,
   })
 }
 
@@ -49,6 +55,7 @@ function buildSmokeSmeDoc({ uid, email, displayName, timestamp, extra = {} }) {
   const companyName = extra.companyName || 'Smoke Test SME (Pty) Ltd'
   const province = extra.province || 'Gauteng'
   const categories = extra.categories || ['information-technology']
+  const testFields = testAccountWriteFields(extra.testAccountKind || 'ops-smoke')
   return sanitizeFirestoreData({
     id: uid,
     uid,
@@ -68,12 +75,14 @@ function buildSmokeSmeDoc({ uid, email, displayName, timestamp, extra = {} }) {
     csdNumber: extra.csdNumber || '',
     createdAt: timestamp,
     updatedAt: timestamp,
+    ...testFields,
   })
 }
 
 function buildSmokeAgentDoc({ uid, email, displayName, timestamp, extra = {} }) {
   const province = extra.province || 'Gauteng'
   const city = extra.city || 'Johannesburg'
+  const testFields = testAccountWriteFields(extra.testAccountKind || 'ops-smoke-agent')
   return sanitizeFirestoreData({
     id: uid,
     uid,
@@ -112,6 +121,7 @@ function buildSmokeAgentDoc({ uid, email, displayName, timestamp, extra = {} }) 
     availability: 'available',
     createdAt: timestamp,
     updatedAt: timestamp,
+    ...testFields,
   })
 }
 

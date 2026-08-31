@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       province: searchParams.get('province') || '',
       kind: searchParams.get('kind') || '',
       id: searchParams.get('id') || '',
+      accountScope: searchParams.get('accountScope') || 'real',
     })
 
     const { logHotPath } = require('../../../../backend/services/hotPathLog')

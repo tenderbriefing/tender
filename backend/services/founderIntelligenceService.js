@@ -1,4 +1,5 @@
 const { getFirestore } = require('../config/firebaseAdmin')
+const { isEffectiveTestAccount } = require('../../lib/domain/testAccount')
 
 // Engagement classification (keep in sync with lib/founder/engagement.ts)
 function daysBetweenJs(fromIso, to = new Date()) {
@@ -63,7 +64,7 @@ async function buildFounderIntelligence({ page = 1, pageSize = 25, role = 'all',
     }
   }
 
-  const [smeTotal, agentTotal, usersSnap, smesSnap, agentsSnap, requestsSnap, summariesSnap, workspaceSnap] =
+  const [smeTotalRaw, agentTotalRaw, usersSnap, smesSnap, agentsSnap, requestsSnap, summariesSnap, workspaceSnap] =
     await Promise.all([
       countEq('users', 'userType', 'sme'),
       countEq('users', 'userType', 'youth-agent'),
@@ -74,6 +75,9 @@ async function buildFounderIntelligence({ page = 1, pageSize = 25, role = 'all',
       db.collection('userActivitySummaries').limit(800).get(),
       db.collection('smeWorkspace').limit(800).get(),
     ])
+  // smeTotalRaw / agentTotalRaw retained for diagnostics; listed totals use filtered cohorts below.
+  void smeTotalRaw
+  void agentTotalRaw
 
   const smeById = new Map(smesSnap.docs.map((d) => [d.id, d.data()]))
   const agentById = new Map(agentsSnap.docs.map((d) => [d.id, d.data()]))
@@ -117,6 +121,7 @@ async function buildFounderIntelligence({ page = 1, pageSize = 25, role = 'all',
       })
       const assigned = Array.from(smeAgents.get(doc.id) || [])
       seenSme.add(doc.id)
+      if (isEffectiveTestAccount(merged)) continue
       smes.push({
         id: doc.id,
         role: 'sme',
@@ -166,6 +171,7 @@ async function buildFounderIntelligence({ page = 1, pageSize = 25, role = 'all',
       })
       const portfolio = Array.from(agentAssignments.get(doc.id) || [])
       seenAgent.add(doc.id)
+      if (isEffectiveTestAccount(merged)) continue
       agents.push({
         id: doc.id,
         role: 'youth-agent',
@@ -290,9 +296,9 @@ async function buildFounderIntelligence({ page = 1, pageSize = 25, role = 'all',
 
   return {
     overview: {
-      totalRegistered: smeTotal + agentTotal,
-      totalSmes: smeTotal,
-      totalYouthAgents: agentTotal,
+      totalRegistered: smes.length + agents.length,
+      totalSmes: smes.length,
+      totalYouthAgents: agents.length,
       newSmesToday,
       newYouthAgentsToday: newAgentsToday,
       activeSmesToday,
@@ -313,7 +319,7 @@ async function buildFounderIntelligence({ page = 1, pageSize = 25, role = 'all',
         ),
       },
       comparisons: {
-        note: 'Day/7d/30d deltas require productEvents history; Phase 1 shows absolute counts.',
+        note: 'Day/7d/30d deltas require productEvents history; Phase 1 shows absolute counts. Totals exclude test/smoke accounts (isTestAccount).',
       },
       engagementDistribution: {
         smes: countEngagement(smes),
@@ -344,7 +350,7 @@ async function buildFounderIntelligence({ page = 1, pageSize = 25, role = 'all',
       'Agent–SME links derived from attendanceRequests (not permanent portfolios).',
       'Engagement uses userActivitySummaries + profile timestamps until productEvents mature.',
       'Average session duration unavailable until session telemetry accumulates.',
-      'Lifetime SME/Youth Agent totals use Firestore count aggregations. Engagement mix, geography, and action samples use a bounded recent cohort (≤800 profiles, ≤1500 attendance requests) — not a silent cap presented as a complete mix.',
+      'SME/Youth Agent totals exclude test/smoke accounts (isTestAccount). Engagement mix, geography, and action samples use a bounded recent cohort (≤800 profiles, ≤1500 attendance requests) — not a silent cap presented as a complete mix.',
     ],
   }
 }
