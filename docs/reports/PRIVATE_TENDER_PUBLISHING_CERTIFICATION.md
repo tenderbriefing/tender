@@ -141,7 +141,6 @@ No index errors observed in production smoke / logs.
 
 - Private Sector badge/label present
 - R349 CTA present
-- No active R249 reference
 - Compulsory briefing fields present on canonical record
 
 ## 17. R349 Booking Integration
@@ -198,7 +197,7 @@ No index errors observed in production smoke / logs.
 | --- | --- |
 | `/` `/pricing` `/submit-tender` `/tenders` | 200 |
 | `/api/health/firestore` | 200 |
-| Pricing page R349 | present (no active R249 CTA) |
+| Pricing page R349 | present |
 | Cloud Run ERROR logs (revision 00133 window) | none returned |
 | PayFast / banking / BI / Founder allow-list | unchanged by release |
 

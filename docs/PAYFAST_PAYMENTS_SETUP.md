@@ -1,6 +1,6 @@
 # PayFast payments — attendance support fee
 
-TenderBriefing charges SMEs **R349.00** (`34900` cents / `349.00` ZAR) via **PayFast** when they request Youth Agent attendance at a compulsory tender briefing. Youth Agents only see requests after payment is confirmed (`paymentStatus: paid`). Legacy requests may use `not_required`. Historical bookings may still show R249 snapshots.
+TenderBriefing charges SMEs **R349.00** (`34900` cents / `349.00` ZAR) via **PayFast** when they request Youth Agent attendance at a compulsory tender briefing. Youth Agents only see requests after payment is confirmed (`paymentStatus: paid`). Legacy requests may use `not_required`.
 
 Yoco has been retired; use PayFast only.
 

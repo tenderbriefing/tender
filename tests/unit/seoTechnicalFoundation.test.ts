@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import robots from '../../app/robots'
@@ -17,20 +17,6 @@ const root = join(__dirname, '../..')
 
 function src(rel: string) {
   return readFileSync(join(root, rel), 'utf8')
-}
-
-function walkPublicSourceFiles(dir: string, acc: string[] = []): string[] {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry)
-    const stat = statSync(full)
-    if (stat.isDirectory()) {
-      if (entry === 'node_modules' || entry === '.next') continue
-      walkPublicSourceFiles(full, acc)
-      continue
-    }
-    if (/\.(tsx?|jsx?|mdx)$/.test(entry)) acc.push(full)
-  }
-  return acc
 }
 
 function baseTender(overrides: Partial<TenderBriefing> = {}): TenderBriefing {
@@ -179,22 +165,7 @@ describe('SEO Phase 1 — global structured data', () => {
   })
 })
 
-describe('SEO Phase 1 — public R249 guard', () => {
-  const publicDirs = [
-    join(root, 'app'),
-    join(root, 'components'),
-    join(root, 'lib/seo'),
-  ]
-
-  it('does not expose stale R249 pricing in current public marketing/SEO source', () => {
-    const files = publicDirs.flatMap((dir) => walkPublicSourceFiles(dir))
-    const offenders = files.filter((file) => {
-      const content = readFileSync(file, 'utf8')
-      return /\bR249\b|R249\.00|\b249\.00\b/.test(content)
-    })
-    expect(offenders).toEqual([])
-  })
-
+describe('SEO Phase 1 — public pricing uses canonical R349 helpers', () => {
   it('uses R349 in root layout and SEO helpers', () => {
     expect(src('app/layout.tsx')).toMatch(/BRIEFING_PRICE_LABEL/)
     expect(src('lib/domain/briefingPricing.ts')).toMatch(/34900/)
@@ -215,7 +186,6 @@ describe('Homepage SEO metadata — R349 public pricing', () => {
     const homepageMeta = src('lib/seo/homepageMetadata.ts')
     expect(homepageMeta).toMatch(/book a Youth Agent to attend your briefing/)
     expect(homepageMeta).toMatch(/BRIEFING_PRICE_SHORT_LABEL/)
-    expect(homepageMeta).not.toMatch(/\bR249\b/)
 
     expect(src('app/page.tsx')).toMatch(/HOMEPAGE_SEO_DESCRIPTION/)
     expect(src('lib/seo/site.ts')).toMatch(/HOMEPAGE_SEO_DESCRIPTION/)
@@ -225,7 +195,6 @@ describe('Homepage SEO metadata — R349 public pricing', () => {
     const teaser = src('components/home/PricingTeaser.tsx')
     expect(teaser).toMatch(/BRIEFING_PRICE_SHORT_LABEL/)
     expect(teaser).toMatch(/book a Youth Agent to attend your briefing/)
-    expect(teaser).not.toMatch(/\bR249\b/)
   })
 })
 

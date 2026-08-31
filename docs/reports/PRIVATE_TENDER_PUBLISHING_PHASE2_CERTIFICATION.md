@@ -124,7 +124,7 @@ Flag-off is **not** used as access control; membership + Founder gates remain au
 
 ## 28. Tender detail
 
-**PASS** — `/tenders/{id}` 200 with R349 CTA; no R249 contamination
+**PASS** — `/tenders/{id}` 200 with R349 CTA
 
 ## 29. Duplicate workflow
 

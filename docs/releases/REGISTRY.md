@@ -28,7 +28,7 @@
 | Deploy workflow | [31645545065](https://github.com/tenderbriefing/tender/actions/runs/31645545065) |
 | Merge | PR [#33](https://github.com/tenderbriefing/tender/pull/33) → tip `79eb174` |
 | Pre-deploy CI | [31644789744](https://github.com/tenderbriefing/tender/actions/runs/31644789744) green |
-| Certification | `docs/reports/PAYFAST_ITN_SIGNATURE_INCIDENT_2026-08-12.md` |
+| Certification | `docs/reports/PAYFAST_ITN_PRODUCTION_INCIDENT.md` |
 | YAW flag | `youth_agent_workspace_v1` — env **absent** (fail-closed) |
 | PI flags | `PROCUREMENT_INTELLIGENCE_ENABLED` / `NEXT_PUBLIC_…` both **false** |
 | Google Auth | `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=false` |

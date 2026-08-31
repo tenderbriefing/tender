@@ -108,26 +108,28 @@ describe('SME → Pay → Agent → Complete workflow', () => {
     expect(row.status).toBe('completed')
   })
 
-  it('preserves historical R249 snapshot on mark paid', async () => {
+  it('preserves persisted price snapshot on mark paid', async () => {
     const storage = require('../../backend/services/storageAdapter').getStorage()
     const legacyId = `legacy-${Date.now()}`
+    // Generic historical snapshot (not current catalogue price) — must not be overwritten.
+    const storedCents = 27500
     await storage.saveAttendanceRequest({
       id: legacyId,
       tenderId: 't-legacy',
       smeId: 'sme-a',
       status: 'pending',
       paymentStatus: 'pending',
-      paymentAmount: 24900,
-      quotedFee: 24900,
-      briefingPriceCents: 24900,
-      pricingVersion: '2024-v249',
+      paymentAmount: storedCents,
+      quotedFee: storedCents,
+      briefingPriceCents: storedCents,
+      pricingVersion: 'historical-snapshot',
       currency: 'ZAR',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })
     const paid = await paymentService.markRequestPaid(legacyId, { pfPaymentId: 'PF-legacy' })
-    expect(paid.request.paymentAmount).toBe(24900)
-    expect(paid.request.briefingPriceCents).toBe(24900)
+    expect(paid.request.paymentAmount).toBe(storedCents)
+    expect(paid.request.briefingPriceCents).toBe(storedCents)
   })
 
   it('rejects payment downgrade after paid', async () => {

@@ -126,8 +126,6 @@ Expected (constants + request snapshot):
 | YA liability | R200.00 (**20000**) — *created on evidence submit, not on paid* |
 | Gross commercial margin | R149.00 (**14900**) |
 
-Legacy: `LEGACY_BRIEFING_PRICE_CENTS = 24900` unchanged; no historical backfill observed.
-
 **Actual reconciliation:** incomplete — customer settlement has not occurred.
 
 ---

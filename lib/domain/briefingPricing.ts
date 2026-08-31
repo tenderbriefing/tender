@@ -12,9 +12,6 @@ export const YOUTH_AGENT_PAYOUT_CENTS = 20000
 /** Platform gross contribution before other costs — R149.00 */
 export const GROSS_CONTRIBUTION_CENTS = BRIEFING_PRICE_CENTS - YOUTH_AGENT_PAYOUT_CENTS
 
-/** Legacy SME price retained for historical records — R249.00 */
-export const LEGACY_BRIEFING_PRICE_CENTS = 24900
-
 export const BRIEFING_PRICE_CURRENCY = 'ZAR'
 
 /** Bump when commercial pricing changes; stored on new bookings/payouts. */

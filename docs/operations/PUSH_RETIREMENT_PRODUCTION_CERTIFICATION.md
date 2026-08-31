@@ -118,7 +118,6 @@ Deploy workflow **Verify domains & health** job: PASS.
 | Invariant | Result |
 |-----------|--------|
 | R349.00 / 34900 cents | Unchanged — `briefingPricing.test.ts` pass |
-| Historical R249 preservation | Unchanged — attendance workflow tests pass |
 | PayFast state machine | Unchanged — no PayFast files in PR |
 | R200 YA liability / 20000 cents | Unchanged — payout tests pass |
 | Monthly payout batching | Unchanged — `youthAgentPayoutBatch.test.ts` pass |

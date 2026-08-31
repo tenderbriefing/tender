@@ -59,7 +59,7 @@ describe('founderOpsNotificationService helpers', () => {
 
   it('formats ZAR fees and role labels', () => {
     expect(notifyService.formatFee(34900, 'ZAR')).toBe('R349.00')
-    expect(notifyService.formatFee(24900, 'ZAR')).toBe('R249.00') // historical amount formatting
+    expect(notifyService.formatFee(12345, 'ZAR')).toBe('R123.45')
     expect(notifyService.roleLabel('sme')).toBe('SME')
     expect(notifyService.roleLabel('youth-agent')).toBe('Youth agent')
   })

@@ -102,7 +102,7 @@ curl -sS http://localhost:3000/api/integrations/health | jq '.summary,.integrati
 
 ## 5. PayFast Payments
 
-**Purpose:** R349.00 ZAR attendance support fee when an SME requests Youth Agent attendance at a compulsory briefing. Requests stay hidden from agents until `paymentStatus` is `paid`. Historical bookings may still show R249.
+**Purpose:** R349.00 ZAR attendance support fee when an SME requests Youth Agent attendance at a compulsory briefing. Requests stay hidden from agents until `paymentStatus` is `paid`.
 
 | Item | Value |
 |------|--------|
