@@ -47,9 +47,13 @@ This constitution is the authoritative engineering contract for Tender Briefing.
 ## Payment standards
 
 - Sole provider: **PayFast**.
-- Fee: **R349.00** (`34900` cents).
+- Canonical commercial model (see `docs/governance/COMMERCIAL_PRICING.md` and `lib/domain/briefingPricing.ts`):
+  - Attendance fee: **R349.00** (`34900` cents)
+  - Youth Agent payout: **R200.00** (`20000` cents)
+  - Gross contribution before other costs: **R149.00** (`14900` cents) = fee − payout
 - Amount calculated server-side only.
 - Client return/cancel URLs are UX only — never mark paid from redirects alone.
+- Historical bookings retain their persisted charge snapshots; do not rewrite them.
 
 ## Testing requirements
 

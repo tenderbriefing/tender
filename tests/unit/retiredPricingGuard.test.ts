@@ -149,9 +149,29 @@ describe('Complete retirement of prior attendance price', () => {
     const legacyConst = ['LEGACY', 'BRIEFING', 'PRICE', 'CENTS'].join('_')
     const pricing = readFileSync(join(root, 'lib/domain/briefingPricing.ts'), 'utf8')
     expect(pricing).toMatch(/BRIEFING_PRICE_CENTS\s*=\s*34900/)
+    expect(pricing).toMatch(/YOUTH_AGENT_PAYOUT_CENTS\s*=\s*20000/)
+    expect(pricing).toMatch(
+      /GROSS_CONTRIBUTION_CENTS\s*=\s*BRIEFING_PRICE_CENTS\s*-\s*YOUTH_AGENT_PAYOUT_CENTS/
+    )
     expect(pricing).not.toContain(legacyConst)
+    expect(pricing).not.toMatch(/GROSS_CONTRIBUTION_CENTS\s*=\s*14900/)
     const backend = readFileSync(join(root, 'backend/constants/briefingPricing.js'), 'utf8')
     expect(backend).toMatch(/BRIEFING_PRICE_CENTS\s*=\s*34900/)
+    expect(backend).toMatch(/YOUTH_AGENT_PAYOUT_CENTS\s*=\s*20000/)
+    expect(backend).toMatch(
+      /GROSS_CONTRIBUTION_CENTS\s*=\s*BRIEFING_PRICE_CENTS\s*-\s*YOUTH_AGENT_PAYOUT_CENTS/
+    )
     expect(backend).not.toContain(legacyConst)
+    expect(backend).not.toMatch(/GROSS_CONTRIBUTION_CENTS\s*=\s*14900/)
+  })
+
+  it('locks the authoritative commercial pricing reference document', () => {
+    const doc = readFileSync(join(root, 'docs/governance/COMMERCIAL_PRICING.md'), 'utf8')
+    expect(doc).toMatch(/R349/)
+    expect(doc).toMatch(/R200/)
+    expect(doc).toMatch(/R149/)
+    expect(doc).toMatch(/lib\/domain\/briefingPricing\.ts/)
+    expect(doc).toMatch(/GROSS_CONTRIBUTION_CENTS/)
+    expect(doc).toMatch(/persisted/)
   })
 })

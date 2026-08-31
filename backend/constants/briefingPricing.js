@@ -32,6 +32,17 @@ function formatBriefingPriceZar(cents = BRIEFING_PRICE_CENTS) {
   return `R${(cents / 100).toFixed(2)}`
 }
 
+function formatYouthAgentPayoutZar(cents = YOUTH_AGENT_PAYOUT_CENTS) {
+  return `R${(cents / 100).toFixed(2)}`
+}
+
+const BRIEFING_PRICE_LABEL = formatBriefingPriceZar()
+const BRIEFING_PRICE_SHORT_LABEL = `R${Math.round(BRIEFING_PRICE_CENTS / 100)}`
+const YOUTH_AGENT_PAYOUT_LABEL = formatYouthAgentPayoutZar()
+const YOUTH_AGENT_PAYOUT_SHORT_LABEL = `R${Math.round(YOUTH_AGENT_PAYOUT_CENTS / 100)}`
+const GROSS_CONTRIBUTION_LABEL = formatBriefingPriceZar(GROSS_CONTRIBUTION_CENTS)
+const GROSS_CONTRIBUTION_SHORT_LABEL = `R${Math.round(GROSS_CONTRIBUTION_CENTS / 100)}`
+
 function grossContributionForRevenueCents(briefingRevenueCents) {
   const revenue = Math.round(Number(briefingRevenueCents) || 0)
   const payout = resolveYouthAgentPayoutCents()
@@ -68,9 +79,16 @@ module.exports = {
   BRIEFING_PRICE_CURRENCY,
   PRICING_VERSION,
   PAYOUT_VERSION,
+  BRIEFING_PRICE_LABEL,
+  BRIEFING_PRICE_SHORT_LABEL,
+  YOUTH_AGENT_PAYOUT_LABEL,
+  YOUTH_AGENT_PAYOUT_SHORT_LABEL,
+  GROSS_CONTRIBUTION_LABEL,
+  GROSS_CONTRIBUTION_SHORT_LABEL,
   resolveBriefingPriceCents,
   resolveYouthAgentPayoutCents,
   formatBriefingPriceZar,
+  formatYouthAgentPayoutZar,
   grossContributionForRevenueCents,
   briefingPriceSnapshotFields,
   resolveRequestChargeCents,
