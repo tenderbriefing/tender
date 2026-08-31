@@ -21,6 +21,11 @@ import GoogleContinueButton, {
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import SmeCategoryCommoditySelector from '@/components/sme/SmeCategoryCommoditySelector'
 import { buildMatchingKeywords } from '@/lib/data/csdProcurementCatalog'
+import {
+  normalizeSaCellphone,
+  SA_CELLPHONE_EXAMPLE,
+  SA_CELLPHONE_INVALID_MESSAGE,
+} from '@/lib/auth/saCellphone'
 
 const googleAuthEnabled = isGoogleAuthEnabled()
 
@@ -102,7 +107,11 @@ function SignUpForm() {
       newErrors.companyName = 'Company name is required'
     if (formData.userType === 'sme' && formData.categories.length === 0)
       newErrors.categories = 'Select at least one business category'
-    if (!formData.phoneNumber) newErrors.phoneNumber = 'Phone is required'
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = 'Cellphone number is required'
+    } else if (!normalizeSaCellphone(formData.phoneNumber)) {
+      newErrors.phoneNumber = SA_CELLPHONE_INVALID_MESSAGE
+    }
     if (!formData.province) newErrors.province = 'Province is required'
     if (formData.userType === 'youth-agent' && !formData.city)
       newErrors.city = 'City/town is required'
@@ -119,11 +128,17 @@ function SignUpForm() {
     setLoading(true)
     try {
       const isSme = formData.userType === 'sme'
+      const cellphone = normalizeSaCellphone(formData.phoneNumber)
+      if (!cellphone) {
+        setErrors((e) => ({ ...e, phoneNumber: SA_CELLPHONE_INVALID_MESSAGE }))
+        return
+      }
       const additionalData = isSme
         ? {
             companyName: formData.companyName,
             contactPerson: formData.displayName,
-            phoneNumber: formData.phoneNumber,
+            phoneNumber: cellphone,
+            whatsAppNumber: cellphone,
             province: formData.province,
             location: `${formData.city || ''} ${formData.province}`.trim(),
             categories: formData.categories,
@@ -138,7 +153,8 @@ function SignUpForm() {
             onboardingCompleted: true,
           }
         : {
-            phoneNumber: formData.phoneNumber,
+            phoneNumber: cellphone,
+            whatsAppNumber: cellphone,
             province: formData.province,
             city: formData.city,
             location: `${formData.city}, ${formData.province}`,
@@ -302,15 +318,21 @@ function SignUpForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-slate-700">Phone</label>
+          <label className="block text-sm font-semibold text-slate-700">
+            Cellphone number <span className="text-red-600">*</span>
+          </label>
           <input
             type="tel"
             name="phoneNumber"
             autoComplete="tel"
+            inputMode="tel"
             value={formData.phoneNumber}
             onChange={(e) => setFormData((p) => ({ ...p, phoneNumber: e.target.value }))}
+            placeholder={SA_CELLPHONE_EXAMPLE}
             className={`mt-1 ${inputClass}`}
+            required
           />
+          <p className="mt-1 text-xs text-slate-500">Example: {SA_CELLPHONE_EXAMPLE}</p>
           {errors.phoneNumber && (
             <p className="mt-1 text-sm text-red-600">{errors.phoneNumber}</p>
           )}
