@@ -161,6 +161,8 @@ async function main() {
     categories: ['information-technology'],
     sectors: ['information-technology'],
     csdNumber: '',
+    isTestAccount: true,
+    testAccountKind: 'ops-smoke',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   })
@@ -177,6 +179,8 @@ async function main() {
     location: 'Johannesburg, Gauteng',
     preferredServiceAreas: ['Gauteng'],
     verificationStatus: 'verified',
+    isTestAccount: true,
+    testAccountKind: 'ops-smoke-agent',
     reliabilityScore: 100,
     completedBriefingCount: 0,
     acceptedBriefingCount: 0,

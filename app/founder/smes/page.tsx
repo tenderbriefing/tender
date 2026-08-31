@@ -12,17 +12,19 @@ import {
   Money,
   SearchPager,
 } from '@/components/founder/v2/ui'
-import { formatJoined } from '@/lib/founder/dashboard'
+import { ACCOUNT_SCOPE_OPTIONS, formatJoined, type AccountScope } from '@/lib/founder/dashboard'
 
 export default function FounderSmesPage() {
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
+  const [accountScope, setAccountScope] = useState<AccountScope>('real')
   const debouncedQ = useDebouncedValue(q)
   const { loading, error, data, reload } = useFounderDashboard({
     view: 'smes',
     page,
     pageSize: 25,
     q: debouncedQ,
+    accountScope,
   })
   const table = data?.smes
 
@@ -35,6 +37,28 @@ export default function FounderSmesPage() {
           <ErrorState message={error} onRetry={reload} />
         ) : (
           <div className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <span className="font-medium text-slate-700">Accounts</span>
+                <select
+                  value={accountScope}
+                  onChange={(e) => {
+                    setPage(1)
+                    setAccountScope(e.target.value as AccountScope)
+                  }}
+                  className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-brand-900 shadow-sm"
+                >
+                  {ACCOUNT_SCOPE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="text-xs text-slate-500">
+                Default excludes production smoke/certification accounts.
+              </p>
+            </div>
             <SearchPager
               q={q}
               onQuery={(v) => {
@@ -70,6 +94,11 @@ export default function FounderSmesPage() {
                             <Link href={`/founder/smes/${row.id}`} className="hover:underline">
                               {row.company}
                             </Link>
+                            {row.isTestAccount ? (
+                              <span className="ml-2 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                                Test
+                              </span>
+                            ) : null}
                             <p className="mt-0.5 text-xs text-slate-500 md:hidden">{row.province || '—'}</p>
                           </td>
                           <td className="px-4 py-3 text-slate-600">{row.contact}</td>

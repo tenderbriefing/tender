@@ -16,6 +16,14 @@ export type PresentationalLifecycle = (typeof PRESENTATIONAL_LIFECYCLE)[number] 
 
 export type FounderDashboardView = 'overview' | 'smes' | 'agents' | 'briefings' | 'detail'
 
+export type AccountScope = 'real' | 'test' | 'all'
+
+export const ACCOUNT_SCOPE_OPTIONS: Array<{ value: AccountScope; label: string }> = [
+  { value: 'real', label: 'Real SMEs' },
+  { value: 'test', label: 'Test/system accounts' },
+  { value: 'all', label: 'All' },
+]
+
 export interface FounderKpis {
   smes: number
   youthAgents: number
@@ -54,6 +62,7 @@ export interface SmeDirectoryRow {
   bookings: number
   totalSpentCents: number | null
   lastActive: string | null
+  isTestAccount?: boolean
 }
 
 export interface AgentDirectoryRow {
@@ -89,12 +98,14 @@ export interface Paginated<T> {
 
 export interface FounderOverviewPayload {
   period: FounderDashboardPeriod
+  accountScope?: AccountScope
   kpis: FounderKpis
   activity: ActivityPoint[]
   needsAttention: NeedsAttentionItem[]
   generatedAt: string
   dataNotes: string[]
   cohortCapped: boolean
+  testAccountCounts?: { smes: number; youthAgents: number }
 }
 
 export interface FounderDashboardPayload {

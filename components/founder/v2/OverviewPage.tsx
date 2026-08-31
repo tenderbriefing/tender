@@ -12,16 +12,20 @@ import {
   PeriodPicker,
 } from '@/components/founder/v2/ui'
 import {
+  ACCOUNT_SCOPE_OPTIONS,
   formatZarFromCents,
   periodLabel,
+  type AccountScope,
   type FounderDashboardPeriod,
 } from '@/lib/founder/dashboard'
 
 export default function FounderOverviewPage() {
   const [period, setPeriod] = useState<FounderDashboardPeriod>('30')
+  const [accountScope, setAccountScope] = useState<AccountScope>('real')
   const { loading, error, data, reload } = useFounderDashboard({
     view: 'overview',
     period,
+    accountScope,
   })
   const overview = data?.overview
 
@@ -51,6 +55,21 @@ export default function FounderOverviewPage() {
       subtitle={`How the business stands · ${periodLabel(period)}`}
       actions={
         <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <span className="sr-only">Accounts</span>
+            <select
+              value={accountScope}
+              onChange={(e) => setAccountScope(e.target.value as AccountScope)}
+              className="min-h-[36px] rounded-md border border-slate-200 bg-white px-2.5 text-sm text-brand-900"
+              aria-label="Account scope"
+            >
+              {ACCOUNT_SCOPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <PeriodPicker value={period} onChange={(v) => setPeriod(v as FounderDashboardPeriod)} />
           <button
             type="button"

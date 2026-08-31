@@ -166,21 +166,33 @@ async function independentPaidCohort() {
   process.env.STORAGE_ADAPTER = process.env.STORAGE_ADAPTER || 'firestore'
   process.env.FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'tenderbriefing-34679'
   const { getFirebaseAdmin, getFirestore } = require('../backend/config/firebaseAdmin')
+  const { isEffectiveTestAccount } = require('../lib/domain/testAccount')
   getFirebaseAdmin()
   const db = getFirestore()
   const storage = require('../backend/services/storageAdapter').getStorage()
 
-  const [paidAgg, pendingAgg, failedAgg, requests] = await Promise.all([
+  const [paidAgg, pendingAgg, failedAgg, requests, smeSnap] = await Promise.all([
     db.collection('attendanceRequests').where('paymentStatus', '==', 'paid').count().get(),
     db.collection('attendanceRequests').where('paymentStatus', '==', 'pending').count().get(),
     db.collection('attendanceRequests').where('paymentStatus', '==', 'failed').count().get(),
     storage.getAttendanceRequests({ limit: 500 }),
+    db.collection('users').where('userType', '==', 'sme').limit(800).get(),
   ])
 
-  const paidTotal = paidAgg.data().count
+  const usersById = new Map(smeSnap.docs.map((d) => [d.id, { id: d.id, ...d.data() }]))
+  const isCommercial = (r) => {
+    if (r?.isTestData === true) return false
+    const sme = r?.smeId ? usersById.get(r.smeId) : null
+    if (sme && isEffectiveTestAccount(sme)) return false
+    return true
+  }
+
+  const commercialPaid = requests.filter((r) => r.paymentStatus === 'paid' && isCommercial(r))
+  // Dashboard Real scope uses commercial paid; raw aggregation still includes smoke bookings.
+  const paidTotal = commercialPaid.length
   const pendingTotal = pendingAgg.data().count
   const failedTotal = failedAgg.data().count
-  const paidCohort = requests.filter((r) => r.paymentStatus === 'paid')
+  const paidCohort = commercialPaid
   const pendingInCohort = requests.filter((r) => r.paymentStatus === 'pending').length
   const failedInCohort = requests.filter((r) => r.paymentStatus === 'failed').length
 
@@ -212,6 +224,8 @@ async function independentPaidCohort() {
     paidTotal,
     pendingTotal,
     failedTotal,
+    rawPaidAggregation: paidAgg.data().count,
+    commercialPaidExcluded: Math.max(0, paidAgg.data().count - paidTotal),
     cohortSize: requests.length,
     paidInCohort: paidCohort.length,
     pendingInCohort,

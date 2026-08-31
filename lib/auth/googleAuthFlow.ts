@@ -117,6 +117,8 @@ export const PRIVILEGED_USER_FIELDS = [
   'acceptedBriefingCount',
   'rating',
   'totalJobs',
+  'isTestAccount',
+  'testAccountKind',
 ] as const
 
 export function stripPrivilegedFields<T extends Record<string, unknown>>(data: T): Partial<T> {
