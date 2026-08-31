@@ -387,7 +387,36 @@ async function main() {
     count: smes.json?.data?.smes?.items?.length,
     total: smes.json?.data?.smes?.total,
   })
-  const smeId = smeOk ? smes.json.data.smes.items[0]?.id : null
+  const smeItems = smeOk ? smes.json.data.smes.items : []
+  const smokeInRealList = smeItems.some(
+    (row) => /smoke/i.test(String(row.company || '')) || row.isTestAccount === true
+  )
+  push('sme_directory_excludes_test_by_default', smeOk && !smokeInRealList, {
+    defaultScope: smes.json?.data?.smes?.accountScope || 'real',
+    smokeVisibleInDefault: smokeInRealList,
+  })
+
+  const smesAll = await timed(
+    `${BASE}/api/founder/dashboard?view=smes&page=1&pageSize=25&accountScope=all`,
+    { headers: founderHeaders }
+  )
+  const allTotal = smesAll.json?.data?.smes?.total
+  const realTotal = smes.json?.data?.smes?.total
+  const realKpiSmes = periodKpis.all?.smes
+  push('smoke_cannot_inflate_real_sme_kpi', typeof realKpiSmes === 'number' && realKpiSmes === realTotal, {
+    realKpiSmes,
+    realDirectoryTotal: realTotal,
+    allDirectoryTotal: allTotal,
+  })
+  if (typeof allTotal === 'number' && typeof realTotal === 'number') {
+    push('test_accounts_exist_but_excluded', allTotal >= realTotal, {
+      allTotal,
+      realTotal,
+      excluded: allTotal - realTotal,
+    })
+  }
+
+  const smeId = smeOk ? smeItems[0]?.id : null
   if (smeId) {
     const detail = await timed(
       `${BASE}/api/founder/dashboard?view=detail&kind=sme&id=${encodeURIComponent(smeId)}`,
