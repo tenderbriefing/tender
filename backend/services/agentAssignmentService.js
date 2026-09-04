@@ -149,8 +149,10 @@ function findNearbyAgents(agents, request) {
 
 async function getRequestById(requestId) {
   const storage = getStorage()
-  const requests = await storage.getAttendanceRequests()
-  const request = requests.find((r) => r.id === requestId)
+  const request =
+    typeof storage.getAttendanceRequestById === 'function'
+      ? await storage.getAttendanceRequestById(requestId)
+      : null
   if (!request) return null
   return { ...request, status: normalizeStatus(request.status) }
 }

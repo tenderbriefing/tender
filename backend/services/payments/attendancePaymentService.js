@@ -57,8 +57,10 @@ function isPaidForAgents(paymentStatus) {
 
 async function getRequestById(requestId) {
   const storage = getStorage()
-  const requests = await storage.getAttendanceRequests()
-  return requests.find((r) => r.id === requestId) || null
+  if (typeof storage.getAttendanceRequestById === 'function') {
+    return storage.getAttendanceRequestById(requestId)
+  }
+  return null
 }
 
 async function saveRequest(patch) {
