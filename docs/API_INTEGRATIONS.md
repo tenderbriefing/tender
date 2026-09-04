@@ -175,7 +175,7 @@ If `RESEND_API_KEY` is missing, welcome send is skipped with a warning — regis
 
 ## 7. Google Search Console
 
-**Purpose:** Site ownership verification and search performance.
+**Purpose:** Site ownership verification and search performance (HTML meta tag only — no Indexing API credentials in this repository).
 
 | Item | Value |
 |------|--------|
@@ -183,6 +183,8 @@ If `RESEND_API_KEY` is missing, welcome send is skipped with a warning — regis
 | **App** | `app/layout.tsx` → `metadata.verification.google` |
 
 **Setup:** [Search Console](https://search.google.com/search-console) → Add property → HTML tag method → copy content value into env → redeploy.
+
+**Re-index / sitemap:** There is **no** authorised Google Indexing API or Search Console API client in this repo. After SEO-affecting deploys, request indexing and (re)submit `https://www.tenderbriefing.co.za/sitemap.xml` manually in Search Console.
 
 ---
 

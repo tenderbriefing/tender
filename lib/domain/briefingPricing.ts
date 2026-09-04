@@ -35,6 +35,15 @@ export const BRIEFING_PRICE_LABEL = formatBriefingPriceZar()
 /** Whole-rand label for SEO/marketing copy — derived from canonical cents. */
 export const BRIEFING_PRICE_SHORT_LABEL = `R${Math.round(BRIEFING_PRICE_CENTS / 100)}`
 
+export const YOUTH_AGENT_PAYOUT_LABEL = formatYouthAgentPayoutZar()
+
+export const YOUTH_AGENT_PAYOUT_SHORT_LABEL = `R${Math.round(YOUTH_AGENT_PAYOUT_CENTS / 100)}`
+
+/** Gross contribution label — always derived from fee − payout. */
+export const GROSS_CONTRIBUTION_LABEL = formatBriefingPriceZar(GROSS_CONTRIBUTION_CENTS)
+
+export const GROSS_CONTRIBUTION_SHORT_LABEL = `R${Math.round(GROSS_CONTRIBUTION_CENTS / 100)}`
+
 export function resolveBriefingPriceCents(): number {
   const server = process.env.ATTENDANCE_FEE_CENTS
   if (server != null && server !== '') {
