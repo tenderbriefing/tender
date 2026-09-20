@@ -1,16 +1,26 @@
 import type { Metadata } from 'next'
 import {
+  formatEventStartDate,
   formatProcurementDateTime,
   isBriefingPast,
   parseProcurementDate,
-  resolveBriefingDateTime,
-  toSastIsoString,
 } from '@/lib/procurement/dates'
 import { getOfficialEtendersScope } from '@/lib/procurement/tenderDescription'
 import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import { buildPageMetadata } from './metadata'
-import { SITE_NAME, absoluteUrl, truncateMeta } from './site'
+import { DEFAULT_OG_IMAGE, SITE_NAME, absoluteUrl, truncateMeta } from './site'
+
+/**
+ * Intentional Google Event recommended-field omissions (accuracy > zero warnings):
+ * - endDate: eTenders has no briefing end — never invent start+N hours
+ * - organizer.url: no verified official org homepage on tender records
+ * - performer: compulsory briefings have no performers
+ * - offers: R349 is TenderBriefing Youth Agent attendance fee, NOT event admission
+ *
+ * image: reusable crawlable TenderBriefing brand OG (logo-class asset Google permits)
+ * when no tender-specific briefing photo exists in the feed.
+ */
 
 function procuringEntity(tender: TenderBriefing): string {
   return tender.department || tender.buyer || ''
@@ -131,32 +141,70 @@ export function buildTenderMetadata(tender: TenderBriefing): Metadata {
   })
 }
 
+function buildEventLocation(tender: TenderBriefing): Record<string, unknown> | null {
+  const meetingLink = tender.meetingLink?.trim()
+  if (meetingLink) {
+    return {
+      '@type': 'VirtualLocation',
+      url: meetingLink,
+    }
+  }
+
+  const venue = tender.briefingVenue?.trim()
+  const province = tender.province?.trim()
+  if (!venue && !province) return null
+
+  const address: Record<string, string> = {
+    '@type': 'PostalAddress',
+    addressCountry: 'ZA',
+  }
+  if (province) address.addressRegion = province
+  // Venue strings from eTenders are rarely clean street lines — keep as Place.name only.
+
+  return {
+    '@type': 'Place',
+    name: venue || province || 'South Africa',
+    address,
+  }
+}
+
+function buildEventOrganizer(tender: TenderBriefing): Record<string, unknown> | null {
+  const name = procuringEntity(tender).trim()
+  if (!name) return null
+  // organizer.url omitted: tender.detailUrl is the opportunity page (often eTenders),
+  // not a verified official organisation homepage.
+  return {
+    '@type': 'Organization',
+    name,
+  }
+}
+
+function buildEventImage(): string[] {
+  // Crawlable, public, absolute HTTPS brand asset (1200×630) — no tender photo in feed.
+  return [absoluteUrl(DEFAULT_OG_IMAGE)]
+}
+
 /**
- * Event JSON-LD for the compulsory tender briefing / site meeting only — not the
- * procurement opportunity, publication date, or closing date.
- * Returns null when required briefing fields are insufficient.
+ * Canonical Event JSON-LD for the compulsory tender briefing / site meeting only —
+ * not the procurement opportunity, publication date, closing date, or R349 service fee.
+ * Returns null when required briefing fields are insufficient for Google Event markup.
  */
 export function buildTenderBriefingEventJsonLd(tender: TenderBriefing): Record<string, unknown> | null {
   if (!tender.briefingCompulsory) return null
   if (!tender.briefingDate?.trim()) return null
 
-  const startDate = toSastIsoString(
-    resolveBriefingDateTime(tender.briefingDate, tender.briefingTime)
-  )
+  const startDate = formatEventStartDate(tender.briefingDate, tender.briefingTime)
   if (!startDate) return null
 
-  const hasLocation = Boolean(
-    tender.meetingLink?.trim() ||
-      tender.briefingVenue?.trim() ||
-      tender.province?.trim()
-  )
-  if (!hasLocation) return null
+  const location = buildEventLocation(tender)
+  if (!location) return null
 
   const scope = getOfficialEtendersScope(tender)
   const isClosed = getTenderDisplayStatus(tender) === 'closed'
   const briefingPast = isBriefingPast(tender.briefingDate, tender.briefingTime)
+  const organizer = buildEventOrganizer(tender)
 
-  return {
+  const event: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Event',
     name: `Compulsory tender briefing — ${scope || tender.title || tender.tenderNumber || 'Site meeting'}`,
@@ -166,6 +214,7 @@ export function buildTenderBriefingEventJsonLd(tender: TenderBriefing): Record<s
       tender.description ||
       'Compulsory tender briefing session',
     startDate,
+    // endDate intentionally omitted — no reliable briefing end in source data
     eventAttendanceMode: tender.meetingLink?.trim()
       ? 'https://schema.org/OnlineEventAttendanceMode'
       : 'https://schema.org/OfflineEventAttendanceMode',
@@ -173,22 +222,16 @@ export function buildTenderBriefingEventJsonLd(tender: TenderBriefing): Record<s
       isClosed || briefingPast
         ? 'https://schema.org/EventPast'
         : 'https://schema.org/EventScheduled',
-    location: tender.meetingLink?.trim()
-      ? {
-          '@type': 'VirtualLocation',
-          url: tender.meetingLink,
-        }
-      : {
-          '@type': 'Place',
-          name: tender.briefingVenue?.trim() || tender.province || 'South Africa',
-          address: tender.briefingVenue?.trim() || tender.province || 'South Africa',
-        },
-    organizer: {
-      '@type': 'Organization',
-      name: procuringEntity(tender) || 'Government procuring entity',
-    },
+    location,
+    image: buildEventImage(),
     url: absoluteUrl(`/tenders/${tender.id}`),
   }
+
+  if (organizer) event.organizer = organizer
+
+  // performer / offers intentionally omitted — see module header.
+
+  return event
 }
 
 /** @deprecated Use buildTenderBriefingEventJsonLd — kept for transitional imports. */

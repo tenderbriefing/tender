@@ -113,6 +113,45 @@ export function toSastIsoString(instant?: Date | null): string | null {
 }
 
 /**
+ * Calendar date (YYYY-MM-DD) in Africa/Johannesburg for schema.org date-only values.
+ * Does not invent a wall-clock time.
+ */
+export function toSastDateOnly(briefingDate?: string | null): string | null {
+  if (!briefingDate?.trim()) return null
+  const raw = briefingDate.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
+
+  if (carriesSaWallClock(raw)) {
+    const part = isoDatePart(raw)
+    if (part) return part
+  }
+
+  const parsed = parseProcurementDate(raw)
+  if (!parsed) return null
+  return sastCalendarDate(parsed)
+}
+
+/**
+ * Event `startDate` for schema.org / Google Event markup.
+ * - When a real briefing time is known → ISO-8601 with +02:00
+ * - When only a date is known → date-only YYYY-MM-DD (never midnight / end-of-day)
+ * Never invents a duration or end time.
+ */
+export function formatEventStartDate(
+  briefingDate?: string | null,
+  briefingTime?: string | null
+): string | null {
+  if (!briefingDate?.trim()) return null
+
+  const timeLabel = formatBriefingTime(briefingDate, briefingTime)
+  if (!timeLabel) {
+    return toSastDateOnly(briefingDate)
+  }
+
+  return toSastIsoString(resolveBriefingDateTime(briefingDate, briefingTime))
+}
+
+/**
  * True when the briefing datetime is strictly before `now`.
  * Unparseable / missing briefing dates are treated as past for public listing.
  */
