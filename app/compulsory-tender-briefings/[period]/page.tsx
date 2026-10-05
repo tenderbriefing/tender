@@ -6,7 +6,6 @@ import { loadPeriodHubData } from '@/lib/seo/compulsoryBriefingHubServer'
 import { listIndexableOrganisationHubSlugs } from '@/lib/seo/organisationHubServer'
 import {
   isBriefingPeriodSlug,
-  type BriefingPeriodSlug,
 } from '@/lib/seo/compulsoryBriefingPeriods'
 import {
   isPeriodHubIndexable,
@@ -16,13 +15,7 @@ import {
   periodHubTitle,
 } from '@/lib/seo/compulsoryBriefingHubs'
 
-export const revalidate = 600
-
-const PERIOD_PARAMS: BriefingPeriodSlug[] = ['today', 'this-week', 'next-week', 'this-month']
-
-export function generateStaticParams() {
-  return PERIOD_PARAMS.map((period) => ({ period }))
-}
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({
   params,

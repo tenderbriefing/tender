@@ -13,7 +13,7 @@ import {
   resolveProvinceSlug,
 } from '@/lib/seo/compulsoryBriefingHubs'
 
-export const PROVINCE_HUB_REVALIDATE = 600
+export const PROVINCE_HUB_DYNAMIC = 'force-dynamic' as const
 
 export function createProvinceCompulsoryBriefingsPage(slug: string) {
   async function generateMetadata(): Promise<Metadata> {
@@ -67,5 +67,5 @@ export function createProvinceCompulsoryBriefingsPage(slug: string) {
     )
   }
 
-  return { generateMetadata, default: Page, revalidate: PROVINCE_HUB_REVALIDATE }
+  return { generateMetadata, default: Page, dynamic: PROVINCE_HUB_DYNAMIC }
 }

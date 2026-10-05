@@ -41,7 +41,7 @@ STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_key_here
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_here
 
 # Admin Configuration
-ADMIN_EMAIL=support@tenderconnect.com
+ADMIN_EMAIL=support@tenderbriefing.co.za
 `;
 
 const envPath = path.join(process.cwd(), '.env.local');

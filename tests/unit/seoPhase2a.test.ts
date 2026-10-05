@@ -214,9 +214,10 @@ describe('SEO Phase 2A — route and sitemap wiring', () => {
     )
   })
 
-  it('registers period hub routes with static params', () => {
+  it('registers period hub routes as force-dynamic (avoids build-time Firestore timeouts)', () => {
     const page = src('app/compulsory-tender-briefings/[period]/page.tsx')
-    expect(page).toMatch(/generateStaticParams/)
+    expect(page).toMatch(/force-dynamic/)
+    expect(page).not.toMatch(/generateStaticParams/)
     expect(page).toMatch(/isBriefingPeriodSlug/)
     expect(isBriefingPeriodSlug('this-week')).toBe(true)
     expect(isBriefingPeriodSlug('invalid')).toBe(false)

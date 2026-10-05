@@ -14,15 +14,10 @@ import {
   organisationHubTitle,
 } from '@/lib/seo/organisationHubs'
 import {
-  allOrganisationSlugs,
   getOrganisationBySlug,
 } from '@/lib/seo/organisationRegistry'
 
-export const revalidate = 600
-
-export function generateStaticParams() {
-  return allOrganisationSlugs().map((organisation) => ({ organisation }))
-}
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({
   params,

@@ -323,7 +323,7 @@ export async function POST(request: NextRequest) {
   // Youth Agent payout liability — independent of Whisper/AI/Founder approval.
   let payoutResult: { ok?: boolean; created?: boolean; payout?: unknown } | null = null
   try {
-    const payoutSvc = require('../../../../../backend/services/finance/youthAgentPayoutService')
+    const payoutSvc = require('../../../../backend/services/finance/youthAgentPayoutService')
     const briefingRevenueCents = payoutSvc.briefingRevenueFromRequest(req)
     payoutResult = await payoutSvc.ensurePayoutOnEvidenceSubmitted({
       requestId,
@@ -362,7 +362,7 @@ export async function POST(request: NextRequest) {
   })
 
   try {
-    const lifeNotify = require('../../../../../backend/services/briefingLifecycleNotificationService')
+    const lifeNotify = require('../../../../backend/services/briefingLifecycleNotificationService')
     await lifeNotify.notifyEvidenceSubmittedSafe({
       reportId,
       requestId,

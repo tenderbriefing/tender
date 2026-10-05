@@ -247,10 +247,10 @@ class NotificationService {
           
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 14px; margin: 0;">
-              This is an automated message from TenderConnect. Please do not reply to this email.
+              This is an automated message from TenderBriefing. Please do not reply to this email.
             </p>
             <p style="color: #6b7280; font-size: 14px; margin: 5px 0 0 0;">
-              If you have any questions, contact us at support@tenderconnect.com
+              If you have any questions, contact us at support@tenderbriefing.co.za
             </p>
           </div>
         </div>
@@ -264,7 +264,7 @@ class NotificationService {
    * Get action button for email based on notification type
    */
   private getEmailActionButton(notification: Notification): string {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tenderconnect.com'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.tenderbriefing.co.za'
     
     switch (notification.type) {
       case 'job_opportunity':

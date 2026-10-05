@@ -464,6 +464,9 @@ async function processPayfastItn(posted) {
 
   const expectedMerchantId = String(process.env.PAYFAST_MERCHANT_ID || '').trim()
   const postedMerchantId = String(posted.merchant_id || '').trim()
+  if (process.env.NODE_ENV === 'production' && !expectedMerchantId) {
+    return { ok: false, handled: false, reason: 'PAYFAST_MERCHANT_ID not configured' }
+  }
   if (expectedMerchantId && postedMerchantId && postedMerchantId !== expectedMerchantId) {
     return { ok: false, handled: false, reason: 'Merchant ID mismatch' }
   }
@@ -483,7 +486,8 @@ async function processPayfastItn(posted) {
   }
 
   if (!request) {
-    return { ok: true, handled: false, reason: 'No matching attendance request' }
+    // Non-2xx so PayFast retries; avoid silently acknowledging orphans.
+    return { ok: false, handled: false, reason: 'No matching attendance request' }
   }
 
   const status = String(posted.payment_status || '').toUpperCase()
@@ -508,9 +512,14 @@ async function processPayfastItn(posted) {
     }
 
     const expectedCents = resolveRequestChargeCents(request)
-    const paidZar = Number(posted.amount_gross || posted.amount || 0)
-    const paidCents = Math.round(paidZar * 100)
-    if (paidCents > 0 && Math.abs(paidCents - expectedCents) > 1) {
+    const paidZarRaw = posted.amount_gross ?? posted.amount
+    const paidZar = Number(paidZarRaw)
+    const paidCents = Number.isFinite(paidZar) ? Math.round(paidZar * 100) : 0
+    if (!Number.isFinite(paidZar) || paidCents <= 0) {
+      await markRequestFailed(request.id, 'Missing or zero amount_gross on COMPLETE ITN')
+      return { ok: false, handled: true, requestId: request.id, paymentStatus: 'failed' }
+    }
+    if (Math.abs(paidCents - expectedCents) > 1) {
       await markRequestFailed(
         request.id,
         `Amount mismatch: expected ${expectedCents} cents, got ${paidCents}`

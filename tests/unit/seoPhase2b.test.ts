@@ -111,14 +111,15 @@ describe('SEO Phase 2B — indexing threshold', () => {
 })
 
 describe('SEO Phase 2B — route and sitemap wiring', () => {
-  it('registers organisation hub routes', () => {
+  it('registers organisation hub routes as force-dynamic (avoids build-time Firestore timeouts)', () => {
     const page = src(
       'app/tenders/organisations/[organisation]/compulsory-briefings/page.tsx'
     )
     expect(page).toMatch(/getOrganisationBySlug/)
     expect(page).toMatch(/notFound/)
     expect(page).toMatch(/isOrganisationHubIndexable/)
-    expect(page).toMatch(/generateStaticParams/)
+    expect(page).toMatch(/force-dynamic/)
+    expect(page).not.toMatch(/generateStaticParams/)
   })
 
   it('registers organisation directory with threshold gate (no sticky notFound)', () => {

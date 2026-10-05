@@ -116,7 +116,7 @@ const sampleTenders = [
 
 const sampleUsers = [
   {
-    email: 'admin@tenderconnect.com',
+    email: 'admin@tenderbriefing.co.za',
     displayName: 'Admin User',
     userType: 'admin',
     companyName: 'TenderConnect',

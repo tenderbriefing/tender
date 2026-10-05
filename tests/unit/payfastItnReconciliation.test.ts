@@ -164,8 +164,19 @@ describe('PayFast ITN → paid → once dispatch', () => {
         custom_str1: 'missing',
       })
     )
+    expect(result.ok).toBe(false)
     expect(result.handled).toBe(false)
     expect(result.reason).toMatch(/No matching/i)
+  })
+
+  it('rejects COMPLETE ITN with missing or zero amount', async () => {
+    const result = await paymentService.processPayfastItn(
+      completeItn({ amount_gross: '0.00' })
+    )
+    expect(result.ok).toBe(false)
+    expect(result.paymentStatus).toBe('failed')
+    const stored = JSON.parse(fs.readFileSync(requestsFile, 'utf8'))
+    expect(stored[0].paymentStatus).toBe('failed')
   })
 
   it('rejects wrong merchant', async () => {
