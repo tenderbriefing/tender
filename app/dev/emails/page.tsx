@@ -7,11 +7,12 @@ export const dynamic = 'force-dynamic'
  * Development email gallery — fixture previews only.
  * Disabled in production unless ALLOW_DEV_EMAIL_PREVIEW=true.
  */
-export default function DevEmailsPage({
-  searchParams,
-}: {
-  searchParams?: { id?: string; width?: string }
-}) {
+export default async function DevEmailsPage(
+  props: {
+    searchParams?: Promise<{ id?: string; width?: string }>
+  }
+) {
+  const searchParams = await props.searchParams;
   if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEV_EMAIL_PREVIEW !== 'true') {
     notFound()
   }

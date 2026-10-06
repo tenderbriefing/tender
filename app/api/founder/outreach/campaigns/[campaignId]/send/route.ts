@@ -9,7 +9,7 @@ import { checkRateLimit } from '@/lib/security/rateLimit'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-type Ctx = { params: { campaignId: string } }
+type Ctx = { params: Promise<{ campaignId: string }> }
 
 export async function POST(request: NextRequest, context: Ctx) {
   if (!isFounderSmeOutreachEnabled()) {
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest, context: Ctx) {
   const auth = await verifyFounderUser(request.headers.get('authorization'))
   if ('error' in auth) return auth.error
 
-  const campaignId = String(context.params?.campaignId || '')
+  const campaignId = String((await context.params)?.campaignId || '')
   if (!campaignId) {
     return NextResponse.json({ success: false, error: 'campaignId required' }, { status: 400 })
   }

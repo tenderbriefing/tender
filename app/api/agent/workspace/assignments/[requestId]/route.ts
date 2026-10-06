@@ -7,9 +7,10 @@ import { assertYouthAgentWorkspaceAccess } from '@/lib/agent/workspace/apiGuard'
 
 export const dynamic = 'force-dynamic'
 
-type Ctx = { params: { requestId: string } }
+type Ctx = { params: Promise<{ requestId: string }> }
 
-export async function GET(request: NextRequest, { params }: Ctx) {
+export async function GET(request: NextRequest, props: Ctx) {
+  const params = await props.params;
   const result = await verifyApiUserDetailed(request.headers.get('authorization'), [
     'youth-agent',
     'admin',
@@ -40,7 +41,8 @@ export async function GET(request: NextRequest, { params }: Ctx) {
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: Ctx) {
+export async function PATCH(request: NextRequest, props: Ctx) {
+  const params = await props.params;
   const result = await verifyApiUserDetailed(request.headers.get('authorization'), [
     'youth-agent',
     'admin',

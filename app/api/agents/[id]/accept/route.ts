@@ -4,10 +4,8 @@ import { ensureRouteAccess, isAccessDenied } from '@/lib/auth/ensureRouteAccess'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const access = await ensureRouteAccess(request, {
     allowedTypes: ['youth-agent', 'admin'],
     matchAgentIdParam: params.id,

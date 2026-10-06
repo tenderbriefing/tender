@@ -72,9 +72,10 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
 
-  experimental: {
+  // Next 15: renamed from experimental.serverComponentsExternalPackages
+  serverExternalPackages: ['firebase-admin'],
 
-    serverComponentsExternalPackages: ['firebase-admin'],
+  experimental: {
 
     outputFileTracingIncludes: {
 

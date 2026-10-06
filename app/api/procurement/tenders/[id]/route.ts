@@ -14,10 +14,8 @@ async function loadOwnedSubmission(id: string, organisationId: string) {
   return tender
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const gated = await requireProcurementAccess(request, 'view_tenders')
     if ('response' in gated) return gated.response
@@ -29,10 +27,8 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const gated = await requireProcurementAccess(request, 'edit_tender')
     if ('response' in gated) return gated.response

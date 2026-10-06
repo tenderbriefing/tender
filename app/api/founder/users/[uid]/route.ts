@@ -5,13 +5,13 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
   request: NextRequest,
-  context: { params: { uid: string } }
+  context: { params: Promise<{ uid: string }> }
 ) {
   try {
     const access = await verifyFounderUser(request.headers.get('authorization'))
     if ('error' in access) return access.error
 
-    const uid = context.params.uid
+    const uid = (await context.params).uid
     const svc = require('../../../../../backend/services/founderIntelligenceService.js')
 
     const data = await svc.getUserDetail(uid)

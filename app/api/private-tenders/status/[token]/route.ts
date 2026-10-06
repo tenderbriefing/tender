@@ -3,10 +3,8 @@ import { checkRateLimit, clientIpFromRequest } from '@/lib/security/rateLimit'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { token: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   try {
     const ip = clientIpFromRequest(request)
     const limited = checkRateLimit(`private-tender-status:${ip}`, 30, 60_000)

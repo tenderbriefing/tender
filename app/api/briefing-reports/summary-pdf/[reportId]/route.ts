@@ -12,10 +12,8 @@ import { logEvent, newRequestId } from '@/lib/observability/logger'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: { reportId: string } }
-) {
+export async function GET(_request: NextRequest, props: { params: Promise<{ reportId: string }> }) {
+  const params = await props.params;
   const requestId = newRequestId()
   const user = await verifyApiUser(_request.headers.get('authorization'))
   if (!user) return unauthorizedResponse('Sign-in required')

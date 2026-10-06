@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, use } from 'react';
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FounderShell } from '@/components/founder/FounderShell'
@@ -44,11 +44,12 @@ type Submission = {
   audit?: Array<{ at: string; action: string; note?: string | null }>
 }
 
-export default function FounderPrivateTenderDetailPage({
-  params,
-}: {
-  params: { id: string }
-}) {
+export default function FounderPrivateTenderDetailPage(
+  props: {
+    params: Promise<{ id: string }>
+  }
+) {
+  const params = use(props.params);
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -309,5 +310,5 @@ export default function FounderPrivateTenderDetailPage({
         ) : null}
       </FounderShell>
     </FounderV2Gate>
-  )
+  );
 }

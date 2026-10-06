@@ -1,15 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, use } from 'react';
 import Link from 'next/link'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 
-export default function PrivateTenderStatusPage({
-  params,
-}: {
-  params: { token: string }
-}) {
+export default function PrivateTenderStatusPage(
+  props: {
+    params: Promise<{ token: string }>
+  }
+) {
+  const params = use(props.params);
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<{
@@ -92,5 +93,5 @@ export default function PrivateTenderStatusPage({
       </main>
       <Footer />
     </div>
-  )
+  );
 }

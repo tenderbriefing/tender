@@ -8,10 +8,8 @@ export const dynamic = 'force-dynamic'
  * Phase 3H — Founder requests evidence correction from Youth Agent.
  * Does not delete prior evidence; stamps correctionRequired for re-upload.
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { reportId: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ reportId: string }> }) {
+  const params = await props.params;
   try {
     const access = await verifyFounderUser(request.headers.get('authorization'))
     if ('error' in access) return access.error

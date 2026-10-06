@@ -5,10 +5,8 @@ export const dynamic = 'force-dynamic'
 
 type PayoutAction = 'hold' | 'release' | 'mark_paid'
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { payoutId: string } }
-) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ payoutId: string }> }) {
+  const params = await props.params;
   try {
     const access = await verifyFounderUser(request.headers.get('authorization'))
     if ('error' in access) return access.error
@@ -62,10 +60,8 @@ export async function PATCH(
   }
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { payoutId: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ payoutId: string }> }) {
+  const params = await props.params;
   try {
     const access = await verifyFounderUser(request.headers.get('authorization'))
     if ('error' in access) return access.error

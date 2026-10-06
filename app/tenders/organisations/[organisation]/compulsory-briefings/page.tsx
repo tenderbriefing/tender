@@ -19,11 +19,12 @@ import {
 
 export const dynamic = 'force-dynamic'
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { organisation: string }
-}): Promise<Metadata> {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ organisation: string }>
+  }
+): Promise<Metadata> {
+  const params = await props.params;
   const entry = getOrganisationBySlug(params.organisation)
   if (!entry) {
     return buildPageMetadata({
@@ -52,11 +53,12 @@ export async function generateMetadata({
   })
 }
 
-export default async function OrganisationCompulsoryBriefingsPage({
-  params,
-}: {
-  params: { organisation: string }
-}) {
+export default async function OrganisationCompulsoryBriefingsPage(
+  props: {
+    params: Promise<{ organisation: string }>
+  }
+) {
+  const params = await props.params;
   const data = await loadOrganisationHubData(params.organisation)
   if (!data) notFound()
 

@@ -10,10 +10,8 @@ function nowIso() {
   return new Date().toISOString()
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { reportId: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ reportId: string }> }) {
+  const params = await props.params;
   const user = await verifyApiUser(request.headers.get('authorization'), ['youth-agent'])
   if (!user) return unauthorizedResponse('Youth Agent sign-in required')
 

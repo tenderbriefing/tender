@@ -6,7 +6,7 @@ import { getCampaign, listDeliveries } from '@/lib/founder/outreach/campaignStor
 
 export const dynamic = 'force-dynamic'
 
-type Ctx = { params: { campaignId: string } }
+type Ctx = { params: Promise<{ campaignId: string }> }
 
 export async function GET(request: NextRequest, context: Ctx) {
   if (!isFounderSmeOutreachEnabled()) {
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest, context: Ctx) {
   const auth = await verifyFounderUser(request.headers.get('authorization'))
   if ('error' in auth) return auth.error
 
-  const campaignId = String(context.params?.campaignId || '')
+  const campaignId = String((await context.params)?.campaignId || '')
   const db = getFirebaseAdmin().firestore()
   const campaign = await getCampaign(db, campaignId)
   if (!campaign || campaign.createdByUid !== auth.user.uid) {

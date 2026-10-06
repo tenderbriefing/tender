@@ -8,10 +8,8 @@ export const dynamic = 'force-dynamic'
  * Phase 3C — explainable Youth Agent recommendations for a briefing request.
  * Founder retains final assignment control.
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     if (!isPrivateTenderBriefingBookingEnabled()) {
       return NextResponse.json(

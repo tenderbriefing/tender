@@ -17,11 +17,12 @@ import {
 
 export const dynamic = 'force-dynamic'
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { period: string }
-}): Promise<Metadata> {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ period: string }>
+  }
+): Promise<Metadata> {
+  const params = await props.params;
   if (!isBriefingPeriodSlug(params.period)) {
     return buildPageMetadata({
       title: 'Briefing period not found',
@@ -46,14 +47,15 @@ export async function generateMetadata({
       'tender briefing dates South Africa',
       params.period.replace(/-/g, ' '),
     ],
-  })
+  });
 }
 
-export default async function PeriodCompulsoryBriefingsPage({
-  params,
-}: {
-  params: { period: string }
-}) {
+export default async function PeriodCompulsoryBriefingsPage(
+  props: {
+    params: Promise<{ period: string }>
+  }
+) {
+  const params = await props.params;
   if (!isBriefingPeriodSlug(params.period)) notFound()
 
   const [data, indexableOrganisationSlugs] = await Promise.all([

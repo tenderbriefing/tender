@@ -5,10 +5,11 @@ import { legacyBriefingUploadRedirect } from '@/lib/agent/workspace/paths'
  * Legacy structured notes upload form retired.
  * Permanent redirect to Briefing Intelligence submit-evidence (audio + attendance proof).
  */
-export default function BriefingReportUploadPage({
-  searchParams,
-}: {
-  searchParams?: { requestId?: string; tenderId?: string }
-}) {
+export default async function BriefingReportUploadPage(
+  props: {
+    searchParams?: Promise<{ requestId?: string; tenderId?: string }>
+  }
+) {
+  const searchParams = await props.searchParams;
   redirect(legacyBriefingUploadRedirect(searchParams?.requestId))
 }

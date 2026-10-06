@@ -11,11 +11,12 @@ import {
   tenderHasUsefulHistoricalContent,
 } from '@/lib/seo/tenderSeo'
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { id: string }
-}): Promise<Metadata> {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ id: string }>
+  }
+): Promise<Metadata> {
+  const params = await props.params;
   const tender = await getIndexableTenderById(params.id)
   if (!tender || !tenderHasUsefulHistoricalContent(tender)) {
     return buildPageMetadata({
@@ -28,13 +29,18 @@ export async function generateMetadata({
   return buildTenderMetadata(tender)
 }
 
-export default async function TenderDetailLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode
-  params: { id: string }
-}) {
+export default async function TenderDetailLayout(
+  props: {
+    children: React.ReactNode
+    params: Promise<{ id: string }>
+  }
+) {
+  const params = await props.params;
+
+  const {
+    children
+  } = props;
+
   const tender = await getIndexableTenderById(params.id)
   if (!tender || !tenderHasUsefulHistoricalContent(tender)) notFound()
 
