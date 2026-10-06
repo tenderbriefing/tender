@@ -53,7 +53,7 @@ export function uniqueCheckoutRequestIds(events: CheckoutStartedLike[]): {
     ids.add(id)
   }
   return {
-    uniqueRequestIds: [...ids],
+    uniqueRequestIds: Array.from(ids),
     uniqueBookingCount: ids.size,
     attemptCount: attempts,
     missingRequestIdCount: missing,
