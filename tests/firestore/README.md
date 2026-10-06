@@ -30,6 +30,9 @@ attack path: client create with `not_required` / fee snapshots, unpaid→paid
 updates, PayFast field injection, and Youth Agent payment tampering. Client
 `attendanceRequests` create is denied entirely; money fields are locked on update.
 
+Engineering freeze / change-control: [`docs/security/revenue-boundary.md`](../../docs/security/revenue-boundary.md)
+(certified SHA `dc2771db7088bf7d48299b05157d78565a6dcea7`). Do not weaken these tests.
+
 ## Prerequisites
 
 1. **Java 11+** on `PATH` — the Firestore emulator (a JVM process) requires

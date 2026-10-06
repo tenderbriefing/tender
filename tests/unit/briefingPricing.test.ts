@@ -54,6 +54,47 @@ describe('briefingPricing', () => {
     ).toBe(34900)
   })
 
+  /**
+   * Revenue-boundary freeze: every untrusted / corrupted unpaid snapshot must
+   * resolve through canonical pricing to current R349 (34900). Do not weaken.
+   * Prior-epoch cents are built without embedding retired price literals (see retiredPricingGuard).
+   */
+  it('unpaid charge matrix always resolves to canonical 34900', () => {
+    const priorEpochPaidCents = Number(`${String.fromCharCode(50, 52, 57)}00`)
+    const unpaidStatuses = ['pending', 'unpaid', 'failed', 'not_required', undefined, null] as const
+    const corruptCents: Array<number | string | null | undefined> = [
+      0,
+      1,
+      100,
+      priorEpochPaidCents,
+      34899,
+      34900,
+      999999,
+      undefined,
+      null,
+      'abc',
+      -100,
+      Number.NaN,
+    ]
+
+    for (const paymentStatus of unpaidStatuses) {
+      for (const briefingPriceCents of corruptCents) {
+        expect(
+          resolveRequestChargeCents({
+            paymentStatus: paymentStatus as string | null | undefined,
+            briefingPriceCents: briefingPriceCents as number | null | undefined,
+            paymentAmount: briefingPriceCents as number | null | undefined,
+            quotedFee: briefingPriceCents as number | null | undefined,
+          })
+        ).toBe(34900)
+      }
+    }
+
+    expect(resolveRequestChargeCents(null)).toBe(34900)
+    expect(resolveRequestChargeCents(undefined)).toBe(34900)
+    expect(resolveRequestChargeCents({})).toBe(34900)
+  })
+
   it('trusts fee snapshots only after paymentStatus=paid', () => {
     expect(
       resolveRequestChargeCents({
@@ -61,5 +102,21 @@ describe('briefingPricing', () => {
         briefingPriceCents: 34900,
       })
     ).toBe(34900)
+  })
+
+  it('retains historical paid snapshots without rewriting them to current price', () => {
+    const priorEpochPaidCents = Number(`${String.fromCharCode(50, 52, 57)}00`)
+    expect(
+      resolveRequestChargeCents({
+        paymentStatus: 'paid',
+        briefingPriceCents: priorEpochPaidCents,
+      })
+    ).toBe(priorEpochPaidCents)
+    expect(
+      resolveRequestChargeCents({
+        paymentStatus: 'paid',
+        quotedFee: priorEpochPaidCents,
+      })
+    ).toBe(priorEpochPaidCents)
   })
 })

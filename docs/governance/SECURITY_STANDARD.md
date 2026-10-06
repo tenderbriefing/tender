@@ -33,6 +33,7 @@
 
 - Validate params/bodies; reject malformed payloads.
 - Never accept client payment amounts for attendance fee.
+- **Revenue boundary (frozen):** `docs/security/revenue-boundary.md` — client `attendanceRequests` create denied; unpaid checkout always R349 / 34900 cents; historical paid records not rewritten.
 
 ## Rate limiting
 

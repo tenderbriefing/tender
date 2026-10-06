@@ -15,6 +15,7 @@ A commit is **release-candidate** only when all applicable gates pass.
 | Dependency audit | `npm audit --omit=dev` (review highs/criticals) | Conditional* |
 | Secret scan | No `.env`, keys, or smoke passwords in git | Yes |
 | Payment integrity | PayFast unit tests + readiness script when secrets present | Yes for payment changes |
+| Revenue boundary | See `docs/security/revenue-boundary.md` — payment-authority + briefingPricing matrix + `qa:firestore-rules` | Yes for booking/payment/rules/pricing/PayFast/ITN/exemption/payout-auth changes |
 | Config validation | Runtime config module / env docs | Yes |
 | Rollback readiness | Documented last-good SHA + process | Yes |
 | Performance | No unexplained major bundle regression | Review |
