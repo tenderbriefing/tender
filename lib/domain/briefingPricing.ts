@@ -69,3 +69,29 @@ export function briefingPriceSnapshotFields() {
     pricingVersion: PRICING_VERSION,
   }
 }
+
+/**
+ * Resolve PayFast charge / ITN expected amount.
+ * Unpaid documents never influence the payable amount — only paid (verified)
+ * snapshots are trusted for historical accounting.
+ */
+export function resolveRequestChargeCents(
+  request?: {
+    paymentStatus?: string | null
+    briefingPriceCents?: number | null
+    quotedFee?: number | null
+    paymentAmount?: number | null
+  } | null
+): number {
+  const canonical = resolveBriefingPriceCents()
+  if (!request) return canonical
+  if (request.paymentStatus === 'paid') {
+    const snap = Number(request.briefingPriceCents)
+    if (Number.isFinite(snap) && snap > 0) return Math.round(snap)
+    const quoted = Number(request.quotedFee)
+    if (Number.isFinite(quoted) && quoted > 0) return Math.round(quoted)
+    const amount = Number(request.paymentAmount)
+    if (Number.isFinite(amount) && amount > 0) return Math.round(amount)
+  }
+  return canonical
+}

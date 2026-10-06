@@ -129,6 +129,21 @@ assert.match(
 )
 assert.match(
   body,
+  /attendancePrivilegedKeysUnchanged[\s\S]*?briefingPriceCents/,
+  'attendance privileged denylist must include briefingPriceCents'
+)
+assert.match(
+  body,
+  /match\s+\/attendanceRequests\/\{requestId\}[\s\S]*?allow\s+create:\s*if\s+false/,
+  'attendanceRequests client create must be denied (Admin SDK / API only)'
+)
+assert.doesNotMatch(
+  body,
+  /match\s+\/attendanceRequests\/\{requestId\}[\s\S]*?allow\s+create:\s*if\s+isSme\(\)/,
+  'attendanceRequests must not allow SME client create (paymentStatus/fee forge path)'
+)
+assert.match(
+  body,
   /match\s+\/attendanceRequests\/\{requestId\}[\s\S]*?attendancePrivilegedKeysUnchanged\s*\(\s*\)/,
   'attendanceRequests updates must require attendancePrivilegedKeysUnchanged()'
 )

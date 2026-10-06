@@ -31,55 +31,89 @@ function normalizeStatus(status) {
   return status
 }
 
-function createAttendanceRequest(payload) {
+function createAttendanceRequest(payload, options = {}) {
   const id = `req-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+  // Strip money / assignment / entitlement fields — never trust caller payload.
+  const {
+    paymentStatus: requestedPaymentStatus,
+    paymentProvider: _paymentProvider,
+    paymentAmount: _paymentAmount,
+    quotedFee: _quotedFee,
+    briefingPriceCents: _briefingPriceCents,
+    pricingVersion: _pricingVersion,
+    currency: _currency,
+    paymentReference: _paymentReference,
+    payfastPaymentId: _payfastPaymentId,
+    payfastRedirectUrl: _payfastRedirectUrl,
+    yocoCheckoutId: _yocoCheckoutId,
+    yocoRedirectUrl: _yocoRedirectUrl,
+    paidAt: _paidAt,
+    paymentFailureReason: _paymentFailureReason,
+    paymentExemptionAuthorized: _paymentExemptionAuthorized,
+    assignedByAdmin: _assignedByAdmin,
+    agentId: _agentId,
+    assignedAgentId: _assignedAgentId,
+    agentName: _agentName,
+    status: _status,
+    acceptedAt: _acceptedAt,
+    notifiedAgents: _notifiedAgents,
+    declines: _declines,
+    ...safePayload
+  } = payload || {}
+
+  // paymentStatus=not_required is Admin SDK / trusted-server only.
+  // Must pass options.allowPaymentExemption — payload flags are stripped and ignored.
+  const allowExemption = options.allowPaymentExemption === true
   const paymentDefaults =
-    payload.paymentStatus === 'not_required'
+    allowExemption && requestedPaymentStatus === 'not_required'
       ? {
           paymentStatus: 'not_required',
-          paymentProvider: payload.paymentProvider || 'none',
-          paymentAmount: payload.paymentAmount ?? null,
-          quotedFee: payload.quotedFee ?? null,
-          currency: payload.currency || 'ZAR',
-          paymentReference: payload.paymentReference || null,
+          paymentProvider: 'none',
+          paymentAmount: null,
+          quotedFee: null,
+          briefingPriceCents: null,
+          currency: 'ZAR',
+          pricingVersion: null,
+          paymentReference: null,
           yocoCheckoutId: null,
           yocoRedirectUrl: null,
           payfastPaymentId: null,
           payfastRedirectUrl: null,
           paidAt: null,
           paymentFailureReason: null,
+          paymentExemptionAuthorized: true,
         }
       : defaultPaymentFields(id)
 
   return {
+    tenderId: safePayload.tenderId,
+    tenderNumber: safePayload.tenderNumber || '',
+    tenderTitle: safePayload.tenderTitle || '',
+    smeId: safePayload.smeId,
+    smeName: safePayload.smeName || '',
+    smeCompany: safePayload.smeCompany || '',
+    smeEmail: safePayload.smeEmail || '',
+    smePhone: safePayload.smePhone || '',
+    province: safePayload.province || '',
+    department: safePayload.department || '',
+    briefingVenue: safePayload.briefingVenue || '',
+    briefingDate: safePayload.briefingDate || '',
+    briefingTime: safePayload.briefingTime || '',
+    ...safePayload,
+    ...paymentDefaults,
     id,
-    tenderId: payload.tenderId,
-    tenderNumber: payload.tenderNumber || '',
-    tenderTitle: payload.tenderTitle || '',
-    smeId: payload.smeId,
-    smeName: payload.smeName || '',
-    smeCompany: payload.smeCompany || '',
-    smeEmail: payload.smeEmail || '',
-    smePhone: payload.smePhone || '',
-    province: payload.province || '',
-    department: payload.department || '',
-    briefingVenue: payload.briefingVenue || '',
-    briefingDate: payload.briefingDate || '',
-    briefingTime: payload.briefingTime || '',
     status: 'pending',
     agentId: null,
     assignedAgentId: null,
     agentName: null,
     acceptedAt: null,
-    ...paymentDefaults,
-    ...payload,
-    id,
     agentReliabilityScore: null,
-    radiusKm: payload.radiusKm || DEFAULT_RADIUS_KM,
+    radiusKm: safePayload.radiusKm || DEFAULT_RADIUS_KM,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    notes: payload.notes || '',
-    responsibilityAcknowledged: payload.responsibilityAcknowledged === true,
+    notes: safePayload.notes || '',
+    responsibilityAcknowledged: safePayload.responsibilityAcknowledged === true,
     notifiedAgents: [],
     declines: [],
   }

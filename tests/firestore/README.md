@@ -25,6 +25,11 @@ fixture documents via `testEnv.withSecurityRulesDisabled(...)`, and
 `afterEach` calls `testEnv.clearFirestore()`, so tests are isolated and can
 be re-run/reordered safely.
 
+`tests/firestore/rules.payment-authority.test.ts` covers the P0 revenue
+attack path: client create with `not_required` / fee snapshots, unpaid→paid
+updates, PayFast field injection, and Youth Agent payment tampering. Client
+`attendanceRequests` create is denied entirely; money fields are locked on update.
+
 ## Prerequisites
 
 1. **Java 11+** on `PATH` — the Firestore emulator (a JVM process) requires
