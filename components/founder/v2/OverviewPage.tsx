@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { FounderShell } from '@/components/founder/FounderShell'
 import { useFounderDashboard } from '@/components/founder/v2/useFounderDashboard'
+import { RevenueIntelligencePanel } from '@/components/founder/v2/RevenueIntelligence'
 import {
   ActivityChart,
   ErrorState,
@@ -88,9 +89,29 @@ export default function FounderOverviewPage() {
         <ErrorState message={error} onRetry={reload} />
       ) : overview ? (
         <div className="space-y-8">
+          {overview.revenueIntelligence ? (
+            <RevenueIntelligencePanel data={overview.revenueIntelligence} />
+          ) : (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              Revenue Intelligence unavailable for this load. Core overview KPIs below remain
+              authoritative for paid bookings and stored revenue.
+            </div>
+          )}
           <KpiStrip items={kpis} />
           <ActivityChart points={overview.activity} />
           <NeedsAttention items={overview.needsAttention} />
+          {overview.dataNotes?.length ? (
+            <details className="rounded-md border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
+              <summary className="cursor-pointer font-semibold text-brand-900">
+                Metric notes
+              </summary>
+              <ul className="mt-2 list-disc space-y-1 pl-4">
+                {overview.dataNotes.map((n) => (
+                  <li key={n}>{n}</li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
         </div>
       ) : (
         <ErrorState message="Overview data unavailable" onRetry={reload} />

@@ -102,10 +102,92 @@ export interface FounderOverviewPayload {
   kpis: FounderKpis
   activity: ActivityPoint[]
   needsAttention: NeedsAttentionItem[]
+  revenueIntelligence?: FounderRevenueIntelligence | null
   generatedAt: string
   dataNotes: string[]
   cohortCapped: boolean
   testAccountCounts?: { smes: number; youthAgents: number }
+}
+
+export type MetricAvailability =
+  | 'measured'
+  | 'unavailable'
+  | 'prospective_partial'
+  | 'partial'
+
+export interface FunnelStageMetric {
+  id: string
+  label: string
+  volume: number | null
+  displayVolume: string
+  availability: MetricAvailability
+  availabilityLabel: string
+  note?: string | null
+  quality: 'authoritative' | 'prospective' | 'partial'
+}
+
+export interface LeakageRow {
+  from: string
+  to: string
+  label: string
+  fromVolume: number | null
+  toVolume: number | null
+  rate: number | null
+  pctLabel: string
+  absoluteDrop: number | null
+  reason: string
+  kind: 'measured_drop' | 'measurement_limitation'
+}
+
+export interface TenderIntelRow {
+  tenderId: string
+  title?: string | null
+  detailViews: number
+  bookingIntent: number
+  checkoutUnique: number
+  paidBookings: number
+  revenueCents: number
+  amountUnresolved: number
+  paidAwaitingReport: number
+}
+
+export interface FounderRevenueIntelligence {
+  instrumentationVersion: string
+  instrumentationBoundarySast: string
+  period: string
+  generatedAt: string
+  scorecard: {
+    revenueCollectedCents: number
+    paidBookings: number
+    averageResolvedRevenueCents: number | null
+    paidAmountUnresolved: number
+    checkoutAttempts: number
+    uniqueBookingsReachingCheckout: number
+    paymentConversionPctLabel: string
+    paymentConversionReason: string
+    reportDelivered: number
+    reportDeliveredQuality: string
+    paidAwaitingReport: number
+    reportDeliveredLegacyProxyCount: number
+  }
+  funnel: {
+    stages: FunnelStageMetric[]
+    checkoutAttempts: number
+    uniqueBookingsReachingCheckout: number
+  }
+  leakage: {
+    largest: LeakageRow | null
+    stages: LeakageRow[]
+  }
+  tenders: {
+    topByPaid: TenderIntelRow[]
+    topByRevenue: TenderIntelRow[]
+    highViewLowIntent: TenderIntelRow[]
+    highIntentLowCheckout: TenderIntelRow[]
+    checkoutLowPayment?: TenderIntelRow[]
+    paidAwaitingReport?: TenderIntelRow[]
+  }
+  trustNotes: string[]
 }
 
 export interface FounderDashboardPayload {
