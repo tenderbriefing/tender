@@ -1,10 +1,10 @@
 # TenderBriefing Revenue Funnel — Measurement Specification
 
 **Status:** Phase B engineering contract (Phase C instrumentation implements this document)  
-**Base / P0 certified SHA:** `dc2771db7088bf7d48299b05157d78565a6dcea7`  
+**P0 certified SHA:** `dc2771db7088bf7d48299b05157d78565a6dcea7`  
+**P0 freeze docs merge (PR #107):** `113693fbe1f002ca9f7839298c17e26881d97b41`  
 **Instrumentation version:** `2026-10-p1-funnel-v1`  
 **Instrumentation effective (SAST):** `2026-10-06` (Africa/Johannesburg)  
-**PR #107 (P0 freeze docs):** open at authoring time — not required for this measurement layer  
 
 This document is the **only** authoritative definition of Founder commercial funnel metrics.  
 Dashboards must cite these stage IDs. If a metric cannot be defended, label the limitation — do not invent precision.
@@ -42,7 +42,17 @@ Dashboards must cite these stage IDs. If a metric cannot be defended, label the 
 **UNIQUE TENDER VIEW** = one counted `tender_opened` per (`sessionId` + `tenderId`) within a browser session (client sessionStorage dedupe).  
 **UNIQUE BOOKING INTENT** = one counted `booking_intent` per (`sessionId` + `tenderId`) within a browser session.
 
-Server events (`booking_created`, `checkout_started`) dedupe by (`eventName` + `requestId`) within a short server window via fail-soft idempotency key in metadata / query before write when practical; at minimum, emit once per successful create/checkout call (retries may create multiple checkout_started — document as known limitation; Phase D must prefer unique `requestId` counts).
+Server events (`booking_created`, `checkout_started`) are emitted on each successful API completion.  
+PayFast checkout **retries** may create multiple `checkout_started` rows for one `requestId`.
+
+| KPI intent | Aggregation |
+|------------|-------------|
+| **CHECKOUT ATTEMPTS** | Raw count of `checkout_started` events (behavioural) |
+| **UNIQUE BOOKINGS REACHING CHECKOUT** | `COUNT DISTINCT metadata.requestId` (fallback `targetEntityId`) |
+
+Phase D **must** use unique `requestId` for funnel conversion denominators that mean “bookings reaching checkout”.  
+Implementation helper: `lib/analytics/checkoutFunnelAggregation.ts`.  
+Do **not** let retries inflate conversion rates.
 
 ---
 
@@ -66,14 +76,30 @@ For a paid row, trusted amount = first positive finite of:
 2. `briefingPriceCents`
 3. `quotedFee`
 
-If none → **PAID + MISSING TRUSTED AMOUNT** (count the booking; **add R0 to revenue**; surface data-quality exception).
+If none → **PAID — AMOUNT UNRESOLVED** (count the booking; **add R0 to revenue**; surface data-quality exception).  
+Do **not** substitute current R349 / prior list prices.
+
+### 2.2.1 Revenue-field trust audit (measurement certification)
+
+| Field | Who writes (current) | When written | Client influence (current) | Snapshot? | Post-pay mutate (current) | Weaker historical epochs |
+|-------|----------------------|--------------|----------------------------|-----------|---------------------------|---------------------------|
+| `paymentAmount` | Admin SDK only (`markRequestPaid`, create/checkout snapshots via `briefingPriceSnapshotFields`) | Create defaults; re-stamp on checkout; **restamped to charged cents on ITN paid** | **Blocked** — `create: if false`; privileged keys denylist on client update | Intended transaction stamp; on paid = ITN-path charge | Client cannot; Admin SDK could | Pre-`create: if false` / weaker rules: clients could forge create amounts. Prefer this field when present on **paid** rows because ITN `markRequestPaid` overwrites with `resolveRequestChargeCents` result. |
+| `briefingPriceCents` | Same Admin SDK paths | Same | **Blocked** currently | Quote/snapshot at create/checkout; restamped on paid | Client cannot currently | Same historical forge risk if never restamped by ITN |
+| `quotedFee` | Same Admin SDK paths | Same | **Blocked** currently | Legacy/display alias; restamped on paid | Client cannot currently | Same historical forge risk |
+
+**Safe reporting posture:**
+
+- **Current-epoch paid** (ITN/`markRequestPaid` after P0): all three fields are typically equal to charged cents → high confidence.
+- **Historical paid with any positive amount in the precedence chain:** use stored amount for revenue (do not rewrite). Residual risk remains if a pre-P0 paid row never received ITN restamp and retained a client-era forged fee — treat as **best-effort historical snapshot**, not invent R349.
+- **Historical paid with no positive amount:** **PAID — AMOUNT UNRESOLVED** — count booking, revenue += 0.
+- Never use `commissionService` list-price fallback for Founder revenue.
 
 ### 2.3 Classes
 
 | Class | Rule |
 |-------|------|
-| PAID + TRUSTED AMOUNT | `paymentStatus === paid` and trusted amount resolved |
-| PAID + MISSING TRUSTED AMOUNT | `paymentStatus === paid` and amount unresolved |
+| PAID + TRUSTED AMOUNT | `paymentStatus === paid` and amount resolved via §2.2 |
+| PAID — AMOUNT UNRESOLVED | `paymentStatus === paid` and amount unresolved |
 | UNPAID | any other paymentStatus (`pending`, `failed`, `cancelled`, `not_required`, …) |
 
 ### 2.4 Current list price
@@ -84,6 +110,19 @@ Used only for new quotes / display — **never** to rewrite or impute historical
 ### 2.5 Test scope
 
 Commercial Founder KPIs default to **Real SMEs** (`accountScope=real`): exclude `isTestData` / effective test accounts. Same as Founder V2 / Finance.
+
+### 2.6 Prospective pre-booking metrics (Phase D UI contract)
+
+For DISCOVERY / TENDER_DETAIL / BOOKING_INTENT:
+
+- Label as **prospective since `2026-10-p1-funnel-v1` (SAST 2026-10-06)**.
+- Periods entirely before that boundary: show **Unavailable / not instrumented** — **not** zero.
+- Zero after the boundary means observed zero events, not missing instrumentation.
+- Do not chart pre-instrumentation days as 0 demand.
+
+### 2.7 REPORT_DELIVERED
+
+Remains **PARTIALLY RECONSTRUCTIBLE**. Do not collapse legacy + BI into false precision in Phase D.
 
 ---
 
