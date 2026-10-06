@@ -271,3 +271,145 @@ describe('founder authorization remains independent of revenue intel', () => {
     ).toBe(true)
   })
 })
+
+describe('founder revenue intelligence — query failure ≠ zero', () => {
+  it('marks discovery Unavailable when productEvents query fails (not 0)', () => {
+    const result = intel.computeRevenueIntelligence({
+      period: '7',
+      nowMs: NOW,
+      discoveryLoad: { ok: false, error: 'FAILED_PRECONDITION: index' },
+      detailLoad: { ok: true, events: [] },
+      intentLoad: { ok: true, events: [] },
+      checkoutLoad: { ok: true, events: [] },
+      requests: [paid()],
+    })
+    const discovery = result.funnel.stages.find((s: { id: string }) => s.id === 'discovery')
+    expect(discovery.displayVolume).toBe('Unavailable')
+    expect(discovery.volume).toBeNull()
+    expect(discovery.availabilityLabel).toBe('Measurement unavailable')
+    expect(result.dataQuality.failedQueries).toContain('tender_listing_viewed')
+    expect(result.dataQuality.zeroMeansMeasured).toBe(false)
+    expect(result.measurementStatus).toBe('degraded')
+    // Paid from attendanceRequests still measured — analytics is not payment authority
+    expect(result.scorecard.paidBookings).toBe(1)
+    expect(result.scorecard.revenueCollectedCents).toBe(34900)
+  })
+
+  it('does not treat checkout query failure as zero attempts or conversion', () => {
+    const result = intel.computeRevenueIntelligence({
+      period: '7',
+      nowMs: NOW,
+      discoveryLoad: { ok: true, events: [] },
+      detailLoad: { ok: true, events: [] },
+      intentLoad: { ok: true, events: [] },
+      checkoutLoad: { ok: false, error: 'permission-denied' },
+      requests: [paid()],
+    })
+    expect(result.scorecard.checkoutAttempts).toBeNull()
+    expect(result.scorecard.uniqueBookingsReachingCheckout).toBeNull()
+    expect(result.scorecard.checkoutAttemptsDisplay).toBe('Unavailable')
+    expect(result.scorecard.paymentConversionPctLabel).toBe('Unavailable')
+    const checkout = result.funnel.stages.find((s: { id: string }) => s.id === 'checkout')
+    expect(checkout.displayVolume).toBe('Unavailable')
+    expect(result.leakage.stages.find((l: { from: string }) => l.from === 'checkout').kind).toBe(
+      'measurement_limitation'
+    )
+  })
+
+  it('loadProductEventsByName returns ok:false on thrown query (not empty success)', async () => {
+    const db = {
+      collection: () => ({
+        where: () => ({
+          where: () => ({
+            orderBy: () => ({
+              limit: () => ({
+                get: async () => {
+                  throw new Error('requires an index')
+                },
+              }),
+            }),
+          }),
+        }),
+      }),
+    }
+    const load = await intel.loadProductEventsByName(db, 'tender_opened', AFTER)
+    expect(load.ok).toBe(false)
+    expect(load.events).toEqual([])
+    expect(load.error).toMatch(/index/i)
+  })
+})
+
+describe('founder revenue intelligence — cohort truncation', () => {
+  it('labels event stages Partial with ≥ volume when event cap is hit', () => {
+    const events = Array.from({ length: intel.EVENT_LIMIT }, () =>
+      evt('tender_listing_viewed')
+    )
+    const result = intel.computeRevenueIntelligence({
+      period: '7',
+      nowMs: NOW,
+      discoveryLoad: { ok: true, events, truncated: true },
+      detailLoad: { ok: true, events: [] },
+      intentLoad: { ok: true, events: [] },
+      checkoutLoad: { ok: true, events: [] },
+      requests: [],
+    })
+    const discovery = result.funnel.stages.find((s: { id: string }) => s.id === 'discovery')
+    expect(discovery.availability).toBe('partial')
+    expect(discovery.displayVolume).toBe(`≥${intel.EVENT_LIMIT}`)
+    expect(result.dataQuality.truncatedSources).toContain('tender_listing_viewed')
+    expect(result.measurementStatus).toBe('degraded')
+  })
+
+  it('labels paid Partial when request cohort is truncated', () => {
+    const result = intel.computeRevenueIntelligence({
+      period: '7',
+      nowMs: NOW,
+      requests: [paid()],
+      requestsCohortTruncated: true,
+      discoveryEvents: [],
+      detailEvents: [],
+      intentEvents: [],
+      checkoutEvents: [],
+    })
+    const paidStage = result.funnel.stages.find((s: { id: string }) => s.id === 'paid')
+    expect(paidStage.availability).toBe('partial')
+    expect(paidStage.availabilityLabel).toMatch(/truncated/i)
+    expect(result.scorecard.paidBookingsComplete).toBe(false)
+    expect(result.dataQuality.requestsCohortTruncated).toBe(true)
+  })
+})
+
+describe('founder revenue intelligence — Firestore index contract', () => {
+  it('requires productEvents eventName+timestamp composite in firestore.indexes.json', () => {
+    const { readFileSync } = require('node:fs')
+    const { join } = require('node:path')
+    const indexes = JSON.parse(
+      readFileSync(join(process.cwd(), 'firestore.indexes.json'), 'utf8')
+    )
+    expect(intel.assertRequiredProductEventsIndex(indexes)).toBe(true)
+    expect(intel.REQUIRED_PRODUCT_EVENTS_INDEX.fields).toEqual([
+      { fieldPath: 'eventName', order: 'ASCENDING' },
+      { fieldPath: 'timestamp', order: 'DESCENDING' },
+    ])
+  })
+})
+
+describe('founder revenue intelligence — zero measured activity is distinct', () => {
+  it('shows 0 when queries succeed and there truly are no events', () => {
+    const result = intel.computeRevenueIntelligence({
+      period: '7',
+      nowMs: NOW,
+      discoveryLoad: { ok: true, events: [] },
+      detailLoad: { ok: true, events: [] },
+      intentLoad: { ok: true, events: [] },
+      checkoutLoad: { ok: true, events: [] },
+      requests: [],
+    })
+    const discovery = result.funnel.stages.find((s: { id: string }) => s.id === 'discovery')
+    expect(discovery.displayVolume).toBe('0')
+    expect(discovery.volume).toBe(0)
+    expect(discovery.availabilityLabel).not.toBe('Measurement unavailable')
+    expect(result.dataQuality.zeroMeansMeasured).toBe(true)
+    expect(result.measurementStatus).toBe('ok')
+  })
+})

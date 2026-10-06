@@ -151,18 +151,33 @@ export interface TenderIntelRow {
   paidAwaitingReport: number
 }
 
+export interface FounderRevenueDataQuality {
+  failedQueries: string[]
+  truncatedSources: string[]
+  requestsCohortTruncated: boolean
+  biReportsFailed: boolean
+  biReportsTruncated: boolean
+  eventQueryFailed: boolean
+  zeroMeansMeasured: boolean
+}
+
 export interface FounderRevenueIntelligence {
   instrumentationVersion: string
   instrumentationBoundarySast: string
   period: string
   generatedAt: string
+  measurementStatus?: 'ok' | 'degraded' | 'boundary_unavailable'
+  dataQuality?: FounderRevenueDataQuality
   scorecard: {
     revenueCollectedCents: number
     paidBookings: number
+    paidBookingsComplete?: boolean
     averageResolvedRevenueCents: number | null
     paidAmountUnresolved: number
-    checkoutAttempts: number
-    uniqueBookingsReachingCheckout: number
+    checkoutAttempts: number | null
+    uniqueBookingsReachingCheckout: number | null
+    checkoutAttemptsDisplay?: string
+    uniqueCheckoutDisplay?: string
     paymentConversionPctLabel: string
     paymentConversionReason: string
     reportDelivered: number
@@ -172,8 +187,8 @@ export interface FounderRevenueIntelligence {
   }
   funnel: {
     stages: FunnelStageMetric[]
-    checkoutAttempts: number
-    uniqueBookingsReachingCheckout: number
+    checkoutAttempts: number | null
+    uniqueBookingsReachingCheckout: number | null
   }
   leakage: {
     largest: LeakageRow | null
@@ -186,6 +201,7 @@ export interface FounderRevenueIntelligence {
     highIntentLowCheckout: TenderIntelRow[]
     checkoutLowPayment?: TenderIntelRow[]
     paidAwaitingReport?: TenderIntelRow[]
+    eventDerivedListsAvailable?: boolean
   }
   trustNotes: string[]
 }

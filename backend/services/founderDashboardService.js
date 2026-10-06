@@ -625,12 +625,14 @@ async function loadOverview(period, nowMs, accountScope = 'real') {
       nowMs,
       requests: scopedRequests,
       storage,
+      requestsCohortTruncated: requests.length >= REQUEST_COHORT_LIMIT,
     })
   } catch (err) {
     console.error(
       '[founderDashboard] revenue intelligence failed:',
       err instanceof Error ? err.message.slice(0, 160) : 'unknown'
     )
+    revenueIntelligence = null
   }
 
   const dataNotes = [

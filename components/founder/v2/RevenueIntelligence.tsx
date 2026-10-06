@@ -16,7 +16,7 @@ function AvailabilityBadge({
   availability: FunnelStageMetric['availability'] | string
 }) {
   const tone =
-    availability === 'unavailable'
+    availability === 'unavailable' || label === 'Measurement unavailable'
       ? 'border-amber-200 bg-amber-50 text-amber-900'
       : availability === 'prospective_partial' || availability === 'partial'
         ? 'border-sky-200 bg-sky-50 text-sky-900'
@@ -149,8 +149,18 @@ function TenderTable({
 
 export function RevenueIntelligencePanel({ data }: { data: FounderRevenueIntelligence }) {
   const sc = data.scorecard
+  const dq = data.dataQuality
   const leakageByFrom = Object.fromEntries(data.leakage.stages.map((l) => [l.from, l]))
   const largest = data.leakage.largest
+  const checkoutAttemptsValue =
+    sc.checkoutAttemptsDisplay ??
+    (sc.checkoutAttempts == null ? 'Unavailable' : sc.checkoutAttempts.toLocaleString('en-ZA'))
+  const uniqueCheckoutValue =
+    sc.uniqueCheckoutDisplay ??
+    data.funnel.stages.find((s) => s.id === 'checkout')?.displayVolume ??
+    (sc.uniqueBookingsReachingCheckout == null
+      ? 'Unavailable'
+      : sc.uniqueBookingsReachingCheckout.toLocaleString('en-ZA'))
 
   return (
     <section className="space-y-6" aria-labelledby="revenue-intelligence-heading">
@@ -166,6 +176,34 @@ export function RevenueIntelligencePanel({ data }: { data: FounderRevenueIntelli
         </div>
       </div>
 
+      {data.measurementStatus === 'degraded' || data.measurementStatus === 'boundary_unavailable' ? (
+        <div
+          className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          role="status"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em]">
+            {dq?.eventQueryFailed
+              ? 'Measurement retrieval issue'
+              : data.measurementStatus === 'boundary_unavailable'
+                ? 'Pre-instrumentation window'
+                : 'Partial / truncated measurement'}
+          </p>
+          <p className="mt-1">
+            {dq?.eventQueryFailed
+              ? 'One or more productEvents queries failed. Affected stages show Unavailable — not zero activity.'
+              : data.measurementStatus === 'boundary_unavailable'
+                ? 'Early funnel stages are Unavailable for this period (before 2026-10-06 SAST instrumentation).'
+                : 'One or more cohorts hit a read cap. Shown volumes are lower bounds, not complete totals.'}
+          </p>
+          {dq?.failedQueries?.length ? (
+            <p className="mt-1 text-xs">Failed: {dq.failedQueries.join(', ')}</p>
+          ) : null}
+          {dq?.truncatedSources?.length ? (
+            <p className="mt-1 text-xs">Truncated: {dq.truncatedSources.join(', ')}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       <dl className="grid grid-cols-2 overflow-hidden rounded-md border border-slate-200 bg-white lg:grid-cols-4">
         <ScorecardMetric
           label="Revenue collected"
@@ -175,6 +213,12 @@ export function RevenueIntelligencePanel({ data }: { data: FounderRevenueIntelli
         <ScorecardMetric
           label="Paid bookings"
           value={sc.paidBookings.toLocaleString('en-ZA')}
+          hint={
+            sc.paidBookingsComplete === false
+              ? 'Lower bound — request cohort truncated (≤500)'
+              : undefined
+          }
+          warn={sc.paidBookingsComplete === false}
         />
         <ScorecardMetric
           label="Avg resolved / paid"
@@ -193,16 +237,15 @@ export function RevenueIntelligencePanel({ data }: { data: FounderRevenueIntelli
         />
         <ScorecardMetric
           label="Unique checkout bookings"
-          value={
-            data.funnel.stages.find((s) => s.id === 'checkout')?.displayVolume ??
-            String(sc.uniqueBookingsReachingCheckout)
-          }
+          value={uniqueCheckoutValue}
           hint="Distinct requestId"
+          warn={uniqueCheckoutValue === 'Unavailable'}
         />
         <ScorecardMetric
           label="Checkout attempts"
-          value={sc.checkoutAttempts.toLocaleString('en-ZA')}
+          value={checkoutAttemptsValue}
           hint="Raw checkout_started events"
+          warn={checkoutAttemptsValue === 'Unavailable'}
         />
         <ScorecardMetric
           label="Payment conversion"
@@ -212,8 +255,9 @@ export function RevenueIntelligencePanel({ data }: { data: FounderRevenueIntelli
               ? 'Unique checkout → paid'
               : sc.paymentConversionReason === 'zero_denominator'
                 ? 'Insufficient data'
-                : 'Unavailable until checkout is measured'
+                : 'Unavailable — measurement limitation'
           }
+          warn={sc.paymentConversionPctLabel === 'Unavailable'}
         />
         <ScorecardMetric
           label="Report delivery"
