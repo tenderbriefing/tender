@@ -15,10 +15,8 @@ import type { SmeProfileInput } from '@/lib/procurement/intelligence/types'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { tenderId: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ tenderId: string }> }) {
+  const params = await props.params;
   const requestId = newRequestId()
 
   const user = await verifyApiUser(request.headers.get('authorization'), [

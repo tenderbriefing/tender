@@ -3,10 +3,8 @@ import { verifyFounderUser } from '@/lib/founder/verifyFounder'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const access = await verifyFounderUser(request.headers.get('authorization'))
     if ('error' in access) return access.error

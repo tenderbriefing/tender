@@ -9,10 +9,8 @@ import { validatePrivateTenderSubmission } from '@/lib/privateTenders/validation
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const gated = await requireProcurementAccess(request, 'submit_tender')
     if ('response' in gated) return gated.response

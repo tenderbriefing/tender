@@ -6,10 +6,8 @@ export const maxDuration = 60
 
 const ACTIONS = new Set(['approve', 'reject', 'request_changes', 'under_review'])
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const access = await verifyFounderUser(request.headers.get('authorization'))
     if ('error' in access) return access.error

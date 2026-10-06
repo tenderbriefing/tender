@@ -5,10 +5,8 @@ import type { BriefingIntelligenceReport, BriefingReport } from '@/lib/briefing-
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { reportId: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ reportId: string }> }) {
+  const params = await props.params;
   const user = await verifyApiUser(request.headers.get('authorization'), ['admin', 'youth-agent', 'sme'])
   if (!user) return unauthorizedResponse('Sign-in required')
 

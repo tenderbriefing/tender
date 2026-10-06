@@ -173,7 +173,9 @@ describe('Briefing Intelligence permissions (IDOR)', () => {
   })
 
   it('SME can only see own reports by smeId', async () => {
-    const resOwn = await reportGet(makeGetRequest('sme-a') as any, { params: { reportId } })
+    const resOwn = await reportGet(makeGetRequest('sme-a') as any, {
+      params: Promise.resolve({ reportId }),
+    })
     expect(resOwn.status).toBe(200)
     const jsonOwn = await resOwn.json()
     expect(jsonOwn.success).toBe(true)
@@ -181,12 +183,16 @@ describe('Briefing Intelligence permissions (IDOR)', () => {
     expect(jsonOwn.data.attendanceEvidenceRefs).toEqual([])
     expect(jsonOwn.data.transcription.rawTranscriptRef).toBeNull()
 
-    const resOther = await reportGet(makeGetRequest('sme-b') as any, { params: { reportId } })
+    const resOther = await reportGet(makeGetRequest('sme-b') as any, {
+      params: Promise.resolve({ reportId }),
+    })
     expect(resOther.status).toBe(403)
   })
 
   it('YA can only see own reports by agentId', async () => {
-    const resOwn = await reportGet(makeGetRequest('ya-a') as any, { params: { reportId } })
+    const resOwn = await reportGet(makeGetRequest('ya-a') as any, {
+      params: Promise.resolve({ reportId }),
+    })
     expect(resOwn.status).toBe(200)
     const jsonOwn = await resOwn.json()
     expect(jsonOwn.success).toBe(true)
@@ -194,12 +200,16 @@ describe('Briefing Intelligence permissions (IDOR)', () => {
     expect(jsonOwn.data.attendanceEvidenceRefs).toEqual([])
     expect(jsonOwn.data.transcription.rawTranscriptRef).toBeNull()
 
-    const resOther = await reportGet(makeGetRequest('ya-b') as any, { params: { reportId } })
+    const resOther = await reportGet(makeGetRequest('ya-b') as any, {
+      params: Promise.resolve({ reportId }),
+    })
     expect(resOther.status).toBe(403)
   })
 
   it('Admin sees all reports', async () => {
-    const res = await reportGet(makeGetRequest('admin-a') as any, { params: { reportId } })
+    const res = await reportGet(makeGetRequest('admin-a') as any, {
+      params: Promise.resolve({ reportId }),
+    })
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.success).toBe(true)

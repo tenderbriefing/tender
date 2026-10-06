@@ -5,10 +5,8 @@ export const dynamic = 'force-dynamic'
 
 type BatchAction = 'mark_paid'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { batchId: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ batchId: string }> }) {
+  const params = await props.params;
   try {
     const access = await verifyFounderUser(request.headers.get('authorization'))
     if ('error' in access) return access.error
@@ -30,10 +28,8 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { batchId: string } }
-) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ batchId: string }> }) {
+  const params = await props.params;
   try {
     const access = await verifyFounderUser(request.headers.get('authorization'))
     if ('error' in access) return access.error

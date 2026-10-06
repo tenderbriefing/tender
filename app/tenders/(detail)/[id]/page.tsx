@@ -18,11 +18,12 @@ import {
 } from '@/lib/seo/publicTenders'
 import { tenderHasUsefulHistoricalContent } from '@/lib/seo/tenderSeo'
 
-export default async function TenderDetailsPage({
-  params,
-}: {
-  params: { id: string }
-}) {
+export default async function TenderDetailsPage(
+  props: {
+    params: Promise<{ id: string }>
+  }
+) {
+  const params = await props.params;
   const tender = await getIndexableTenderById(params.id)
   if (!tender || !tenderHasUsefulHistoricalContent(tender)) notFound()
 

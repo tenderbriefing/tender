@@ -7,10 +7,8 @@ import {
 
 export const dynamic = 'force-dynamic'
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { membershipId: string } }
-) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ membershipId: string }> }) {
+  const params = await props.params;
   try {
     const gated = await requireProcurementAccess(request, 'manage_members')
     if ('response' in gated) return gated.response

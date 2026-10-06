@@ -8,11 +8,12 @@ export function generateStaticParams() {
   return Object.keys(RESOURCE_ARTICLE_MAP).map((slug) => ({ slug }))
 }
 
-export function generateMetadata({
-  params,
-}: {
-  params: { slug: string }
-}): Metadata {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ slug: string }>
+  }
+): Promise<Metadata> {
+  const params = await props.params;
   const article = RESOURCE_ARTICLE_MAP[params.slug]
   if (!article) {
     return buildPageMetadata({
@@ -36,11 +37,12 @@ export function generateMetadata({
   })
 }
 
-export default function ResourceArticleRoute({
-  params,
-}: {
-  params: { slug: string }
-}) {
+export default async function ResourceArticleRoute(
+  props: {
+    params: Promise<{ slug: string }>
+  }
+) {
+  const params = await props.params;
   const article = RESOURCE_ARTICLE_MAP[params.slug]
   if (!article) notFound()
   return <ResourceArticlePage article={article} />

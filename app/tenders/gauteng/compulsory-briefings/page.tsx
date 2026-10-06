@@ -2,5 +2,5 @@ import { createProvinceCompulsoryBriefingsPage } from '@/lib/seo/provinceHubRout
 
 const route = createProvinceCompulsoryBriefingsPage('gauteng')
 export const generateMetadata = route.generateMetadata
-export const dynamic = route.dynamic
+export const dynamic = 'force-dynamic'
 export default route.default

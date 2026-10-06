@@ -6,10 +6,8 @@ import {
 
 export const dynamic = 'force-dynamic'
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await verifyApiUser(request.headers.get('authorization'), ['admin'])
   if (!user) return unauthorizedResponse('Admin sign-in required')
 

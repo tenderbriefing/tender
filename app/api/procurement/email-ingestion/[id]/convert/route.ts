@@ -4,10 +4,8 @@ import { verifyApiUser, unauthorizedResponse, forbiddenResponse } from '@/lib/au
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await verifyApiUser(request.headers.get('authorization'), ['sme', 'admin'])
   if (!user) return unauthorizedResponse()
 

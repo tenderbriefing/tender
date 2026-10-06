@@ -2,5 +2,5 @@ import { createProvinceCompulsoryBriefingsPage } from '@/lib/seo/provinceHubRout
 
 const route = createProvinceCompulsoryBriefingsPage('western-cape')
 export const generateMetadata = route.generateMetadata
-export const dynamic = route.dynamic
+export const dynamic = 'force-dynamic'
 export default route.default

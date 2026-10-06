@@ -8,8 +8,9 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string; docId: string } }
+  props: { params: Promise<{ id: string; docId: string }> }
 ) {
+  const params = await props.params;
   try {
     const backend = require('../../../../../backend/services/storageAdapter')
     const storage = backend.getStorage()
