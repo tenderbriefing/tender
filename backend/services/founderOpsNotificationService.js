@@ -1,18 +1,19 @@
 /**
- * Immediate founder/ops Resend alerts for:
- * - New SME / youth-agent registration
- * - Attendance request created (Book an agent)
- * - Attendance request paid (PayFast ITN success)
+ * Founder operational email notifications (Resend).
  *
- * Primary channel: Resend to FOUNDER_EMAIL_ALLOWLIST.
+ * Canonical events:
+ *   SME_REGISTERED | YOUTH_AGENT_REGISTERED | PAYMENT_CONFIRMED | BRIEFING_CONFIRMED
+ *
+ * Primary channel: Resend → info@tenderbriefing.co.za (FOUNDER_EMAIL_ALLOWLIST).
  * Secondary: admin in-app inbox when storage helpers are available.
- * WhatsApp intentionally not enabled (fail-closed / no new WA traffic).
  *
  * Fail-soft: callers must use *Safe wrappers; business flows must succeed if notify fails.
- * Idempotent keys:
+ * Idempotent keys (notifications ledger):
  *   sme-register:{uid} | agent-register:{uid}
- *   attendance-request:{requestId}:created
- *   attendance-request:{requestId}:paid
+ *   attendance-request:{requestId}:created  (BRIEFING_CONFIRMED)
+ *   attendance-request:{requestId}:paid     (PAYMENT_CONFIRMED)
+ *
+ * Observational only — never mutates payment/booking/registration state.
  */
 
 const { Resend } = require('resend')
@@ -24,6 +25,13 @@ const SUPPORT_EMAIL = 'support@tenderbriefing.co.za'
 const SITE_URL_DEFAULT = 'https://www.tenderbriefing.co.za'
 const IDEMPOTENCY_COLLECTION = 'notifications'
 const LOG_PREFIX = '[founderOpsNotify]'
+
+const EVENT_TYPES = Object.freeze({
+  SME_REGISTERED: 'SME_REGISTERED',
+  YOUTH_AGENT_REGISTERED: 'YOUTH_AGENT_REGISTERED',
+  PAYMENT_CONFIRMED: 'PAYMENT_CONFIRMED',
+  BRIEFING_CONFIRMED: 'BRIEFING_CONFIRMED',
+})
 
 function escapeHtml(value) {
   return String(value || '')
@@ -77,9 +85,13 @@ function roleLabel(userType) {
   return t || 'user'
 }
 
-function buildRegistrationIdempotencyKey(uid, userType) {
+function isYouthAgentType(userType) {
   const t = String(userType || '').toLowerCase()
-  const prefix = t === 'youth-agent' || t === 'agent' ? 'agent-register' : 'sme-register'
+  return t === 'youth-agent' || t === 'agent'
+}
+
+function buildRegistrationIdempotencyKey(uid, userType) {
+  const prefix = isYouthAgentType(userType) ? 'agent-register' : 'sme-register'
   return `${prefix}:${String(uid || '').trim()}`
 }
 
@@ -98,18 +110,44 @@ function sliceStr(value, max = 200) {
   return String(value || '').trim().slice(0, max)
 }
 
+function optionalLine(label, value) {
+  const v = sliceStr(value)
+  return v ? `${label}: ${v}` : null
+}
+
+function optionalHtml(label, value) {
+  const v = sliceStr(value)
+  if (!v) return ''
+  return `<p style="margin:0 0 10px;"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(v)}</p>`
+}
+
+function resolveRegistrationEventType(userType) {
+  return isYouthAgentType(userType)
+    ? EVENT_TYPES.YOUTH_AGENT_REGISTERED
+    : EVENT_TYPES.SME_REGISTERED
+}
+
 function buildRegistrationSummary(profile = {}) {
   const uid = sliceStr(profile.uid, 128)
   const userType = profile.userType || 'sme'
+  const eventType = resolveRegistrationEventType(userType)
+  const founderPath = isYouthAgentType(userType)
+    ? `/founder/agents/${encodeURIComponent(uid)}`
+    : `/founder/smes/${encodeURIComponent(uid)}`
   const adminPath = '/admin/registrations'
-  const founderPath = '/founder'
   const timestamp = profile.createdAt || profile.updatedAt || new Date().toISOString()
   return {
     kind: 'registration',
+    eventType,
     uid,
     email: sliceStr(profile.email),
-    displayName: sliceStr(profile.displayName || 'Unknown'),
+    displayName: sliceStr(profile.displayName || profile.name || 'Unknown'),
     companyName: sliceStr(profile.companyName || ''),
+    phoneNumber: sliceStr(
+      profile.phoneNumber || profile.whatsAppNumber || profile.phone || ''
+    ),
+    province: sliceStr(profile.province || ''),
+    location: sliceStr(profile.location || profile.city || ''),
     userType,
     roleLabel: roleLabel(userType),
     timestamp,
@@ -121,16 +159,40 @@ function buildRegistrationSummary(profile = {}) {
   }
 }
 
+function resolveFeeCents(request = {}) {
+  const amount = Number(request.paymentAmount)
+  if (Number.isFinite(amount) && amount > 0) return Math.round(amount)
+  const snap = Number(request.briefingPriceCents)
+  if (Number.isFinite(snap) && snap > 0) return Math.round(snap)
+  const quoted = Number(request.quotedFee)
+  if (Number.isFinite(quoted) && quoted > 0) return Math.round(quoted)
+  return null
+}
+
 function buildAttendanceSummary(request = {}, phase = 'created') {
   const requestId = sliceStr(request.id || request.requestId, 128)
-  const feeCents = request.quotedFee ?? request.paymentAmount ?? null
+  const feeCents = resolveFeeCents(request)
+  const founderPath = `/founder/briefings/${encodeURIComponent(requestId)}`
   const adminPath = '/admin/operations'
   const timestamp =
     phase === 'paid'
       ? request.paidAt || request.updatedAt || new Date().toISOString()
       : request.createdAt || request.updatedAt || new Date().toISOString()
+  const eventType =
+    phase === 'paid' ? EVENT_TYPES.PAYMENT_CONFIRMED : EVENT_TYPES.BRIEFING_CONFIRMED
+  const assignedAgentName = sliceStr(
+    request.assignedAgentName ||
+      request.agentName ||
+      request.youthAgentName ||
+      ''
+  )
+  const assignedAgentId = sliceStr(
+    request.assignedAgentId || request.agentId || '',
+    128
+  )
   return {
     kind: 'attendance',
+    eventType,
     phase,
     requestId,
     smeName: sliceStr(request.smeName || request.smeCompany || 'SME'),
@@ -140,70 +202,133 @@ function buildAttendanceSummary(request = {}, phase = 'created') {
     tenderNumber: sliceStr(request.tenderNumber || ''),
     briefingDate: sliceStr(request.briefingDate || ''),
     briefingTime: sliceStr(request.briefingTime || ''),
-    briefingVenue: sliceStr(request.briefingVenue || ''),
+    briefingVenue: sliceStr(request.briefingVenue || request.briefingLocation || ''),
     province: sliceStr(request.province || ''),
-    paymentStatus: sliceStr(request.paymentStatus || (phase === 'paid' ? 'paid' : 'pending'), 64),
+    paymentStatus: sliceStr(
+      request.paymentStatus || (phase === 'paid' ? 'paid' : 'pending'),
+      64
+    ),
+    paymentReference: sliceStr(
+      request.paymentReference || request.payfastPaymentId || request.pfPaymentId || '',
+      128
+    ),
+    feeCents,
     feeLabel: formatFee(feeCents, request.currency || 'ZAR'),
+    assignedAgentName,
+    assignedAgentId,
     timestamp,
     adminPath,
     adminUrl: `${baseUrl()}${adminPath}`,
+    founderPath,
+    founderUrl: `${baseUrl()}${founderPath}`,
     idempotencyKey: buildAttendanceIdempotencyKey(requestId, phase),
   }
 }
 
 function buildEmailTemplate(summary) {
   if (summary.kind === 'registration') {
-    const subject = `[Signup] New ${summary.roleLabel} — ${summary.displayName}`.slice(0, 180)
-    const companyLine = summary.companyName
-      ? `<p style="margin:0 0 10px;"><strong>Company:</strong> ${escapeHtml(summary.companyName)}</p>`
-      : ''
+    const isAgent = isYouthAgentType(summary.userType)
+    const subject = isAgent
+      ? 'New Youth Agent Registered — TenderBriefing'
+      : 'New SME Registered — TenderBriefing'
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;">
         <div style="background:#0F1E3D;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0;">
-          <h1 style="margin:0;font-size:18px;">New ${escapeHtml(summary.roleLabel)} registration</h1>
+          <h1 style="margin:0;font-size:18px;">${escapeHtml(subject.replace(' — TenderBriefing', ''))}</h1>
         </div>
         <div style="border:1px solid #e2e8f0;border-top:none;padding:20px;border-radius:0 0 8px 8px;color:#334155;">
           <p style="margin:0 0 10px;"><strong>Name:</strong> ${escapeHtml(summary.displayName)}</p>
-          ${companyLine}
+          ${optionalHtml('Company', summary.companyName)}
           <p style="margin:0 0 10px;"><strong>Email:</strong> ${escapeHtml(summary.email)}</p>
+          ${optionalHtml('Phone', summary.phoneNumber)}
+          ${optionalHtml('Province', summary.province)}
+          ${optionalHtml('Location', summary.location)}
           <p style="margin:0 0 10px;"><strong>Role:</strong> ${escapeHtml(summary.roleLabel)}</p>
           <p style="margin:0 0 10px;"><strong>When:</strong> ${escapeHtml(summary.timestamp)}</p>
           <p style="margin:0 0 10px;"><strong>UID:</strong> ${escapeHtml(summary.uid)}</p>
           <p style="margin:16px 0 10px;">
-            <a href="${escapeHtml(summary.adminUrl)}" style="display:inline-block;background:#0F1E3D;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:600;">
-              Open registrations
+            <a href="${escapeHtml(summary.founderUrl)}" style="display:inline-block;background:#0F1E3D;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:600;">
+              Open Founder record
             </a>
           </p>
           <p style="margin:0;font-size:13px;color:#64748b;">
-            Founder intel: <a href="${escapeHtml(summary.founderUrl)}">${escapeHtml(summary.founderUrl)}</a>
+            Admin: <a href="${escapeHtml(summary.adminUrl)}">${escapeHtml(summary.adminUrl)}</a>
           </p>
         </div>
       </div>
     `.trim()
     const text = [
-      `New ${summary.roleLabel} registration`,
+      subject,
       '',
       `Name: ${summary.displayName}`,
-      summary.companyName ? `Company: ${summary.companyName}` : null,
+      optionalLine('Company', summary.companyName),
       `Email: ${summary.email}`,
+      optionalLine('Phone', summary.phoneNumber),
+      optionalLine('Province', summary.province),
+      optionalLine('Location', summary.location),
       `Role: ${summary.roleLabel}`,
       `When: ${summary.timestamp}`,
       `UID: ${summary.uid}`,
-      `Registrations: ${summary.adminUrl}`,
-      `Founder intel: ${summary.founderUrl}`,
+      `Founder: ${summary.founderUrl}`,
+      `Admin: ${summary.adminUrl}`,
     ]
       .filter(Boolean)
       .join('\n')
     return { subject, html, text }
   }
 
-  const isPaid = summary.phase === 'paid'
-  const headline = isPaid
-    ? 'Attendance request paid'
-    : 'New attendance request'
-  const subject = isPaid
-    ? `[Paid] Agent booking — ${summary.tenderTitle}`.slice(0, 180)
-    : `[Request] Agent booking — ${summary.tenderTitle}`.slice(0, 180)
+  if (summary.phase === 'paid') {
+    const amountPart =
+      summary.feeLabel && summary.feeLabel !== 'n/a' ? summary.feeLabel : 'amount unresolved'
+    const subject = `Payment Received — ${amountPart} — TenderBriefing`.slice(0, 180)
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;">
+        <div style="background:#0F1E3D;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0;">
+          <h1 style="margin:0;font-size:18px;">Payment received</h1>
+        </div>
+        <div style="border:1px solid #e2e8f0;border-top:none;padding:20px;border-radius:0 0 8px 8px;color:#334155;">
+          <p style="margin:0 0 10px;"><strong>SME:</strong> ${escapeHtml(summary.smeName)}${
+            summary.smeCompany && summary.smeCompany !== summary.smeName
+              ? ` (${escapeHtml(summary.smeCompany)})`
+              : ''
+          }</p>
+          ${optionalHtml('SME email', summary.smeEmail)}
+          <p style="margin:0 0 10px;"><strong>Tender:</strong> ${escapeHtml(summary.tenderTitle)}</p>
+          ${optionalHtml('Ref', summary.tenderNumber)}
+          <p style="margin:0 0 10px;"><strong>Amount:</strong> ${escapeHtml(summary.feeLabel)}</p>
+          <p style="margin:0 0 10px;"><strong>Payment status:</strong> ${escapeHtml(summary.paymentStatus)}</p>
+          ${optionalHtml('Payment / reference ID', summary.paymentReference)}
+          <p style="margin:0 0 10px;"><strong>Booking ID:</strong> ${escapeHtml(summary.requestId)}</p>
+          <p style="margin:0 0 10px;"><strong>When:</strong> ${escapeHtml(summary.timestamp)}</p>
+          <p style="margin:16px 0 10px;">
+            <a href="${escapeHtml(summary.founderUrl)}" style="display:inline-block;background:#0F1E3D;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:600;">
+              Open briefing
+            </a>
+          </p>
+        </div>
+      </div>
+    `.trim()
+    const text = [
+      subject,
+      '',
+      `SME: ${summary.smeName}${summary.smeCompany ? ` (${summary.smeCompany})` : ''}`,
+      optionalLine('SME email', summary.smeEmail),
+      `Tender: ${summary.tenderTitle}`,
+      optionalLine('Ref', summary.tenderNumber),
+      `Amount: ${summary.feeLabel}`,
+      `Payment status: ${summary.paymentStatus}`,
+      optionalLine('Payment / reference ID', summary.paymentReference),
+      `Booking ID: ${summary.requestId}`,
+      `When: ${summary.timestamp}`,
+      `Founder: ${summary.founderUrl}`,
+    ]
+      .filter(Boolean)
+      .join('\n')
+    return { subject, html, text }
+  }
+
+  // BRIEFING_CONFIRMED (attendance request created / booking confirmed)
+  const subject = 'Briefing Confirmed — TenderBriefing'
   const briefingBits = [
     summary.briefingDate,
     summary.briefingTime,
@@ -215,7 +340,7 @@ function buildEmailTemplate(summary) {
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;">
       <div style="background:#0F1E3D;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0;">
-        <h1 style="margin:0;font-size:18px;">${escapeHtml(headline)}</h1>
+        <h1 style="margin:0;font-size:18px;">Briefing confirmed</h1>
       </div>
       <div style="border:1px solid #e2e8f0;border-top:none;padding:20px;border-radius:0 0 8px 8px;color:#334155;">
         <p style="margin:0 0 10px;"><strong>SME:</strong> ${escapeHtml(summary.smeName)}${
@@ -223,43 +348,41 @@ function buildEmailTemplate(summary) {
             ? ` (${escapeHtml(summary.smeCompany)})`
             : ''
         }</p>
-        <p style="margin:0 0 10px;"><strong>SME email:</strong> ${escapeHtml(summary.smeEmail || 'n/a')}</p>
+        ${optionalHtml('SME email', summary.smeEmail)}
         <p style="margin:0 0 10px;"><strong>Tender:</strong> ${escapeHtml(summary.tenderTitle)}</p>
-        ${
-          summary.tenderNumber
-            ? `<p style="margin:0 0 10px;"><strong>Ref:</strong> ${escapeHtml(summary.tenderNumber)}</p>`
-            : ''
-        }
+        ${optionalHtml('Ref', summary.tenderNumber)}
         ${
           briefingBits
             ? `<p style="margin:0 0 10px;"><strong>Briefing:</strong> ${escapeHtml(briefingBits)}</p>`
             : ''
         }
-        <p style="margin:0 0 10px;"><strong>Fee:</strong> ${escapeHtml(summary.feeLabel)}</p>
+        ${optionalHtml('Assigned Youth Agent', summary.assignedAgentName)}
+        ${optionalHtml('Agent ID', summary.assignedAgentId)}
+        <p style="margin:0 0 10px;"><strong>Booking ID:</strong> ${escapeHtml(summary.requestId)}</p>
         <p style="margin:0 0 10px;"><strong>Payment:</strong> ${escapeHtml(summary.paymentStatus)}</p>
-        <p style="margin:0 0 10px;"><strong>Request ID:</strong> ${escapeHtml(summary.requestId)}</p>
         <p style="margin:0 0 10px;"><strong>When:</strong> ${escapeHtml(summary.timestamp)}</p>
         <p style="margin:16px 0 10px;">
-          <a href="${escapeHtml(summary.adminUrl)}" style="display:inline-block;background:#0F1E3D;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:600;">
-            Open operations
+          <a href="${escapeHtml(summary.founderUrl)}" style="display:inline-block;background:#0F1E3D;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:600;">
+            Open briefing
           </a>
         </p>
       </div>
     </div>
   `.trim()
   const text = [
-    headline,
+    subject,
     '',
     `SME: ${summary.smeName}${summary.smeCompany ? ` (${summary.smeCompany})` : ''}`,
-    `SME email: ${summary.smeEmail || 'n/a'}`,
+    optionalLine('SME email', summary.smeEmail),
     `Tender: ${summary.tenderTitle}`,
-    summary.tenderNumber ? `Ref: ${summary.tenderNumber}` : null,
+    optionalLine('Ref', summary.tenderNumber),
     briefingBits ? `Briefing: ${briefingBits}` : null,
-    `Fee: ${summary.feeLabel}`,
+    optionalLine('Assigned Youth Agent', summary.assignedAgentName),
+    optionalLine('Agent ID', summary.assignedAgentId),
+    `Booking ID: ${summary.requestId}`,
     `Payment: ${summary.paymentStatus}`,
-    `Request ID: ${summary.requestId}`,
     `When: ${summary.timestamp}`,
-    `Operations: ${summary.adminUrl}`,
+    `Founder: ${summary.founderUrl}`,
   ]
     .filter(Boolean)
     .join('\n')
@@ -309,6 +432,16 @@ async function markIdempotency(ref, status, extra = {}) {
   )
 }
 
+function assertNoSecrets(summary) {
+  const blob = JSON.stringify(summary || {}).toLowerCase()
+  const forbidden = ['password', 'idtoken', 'refresh_token', 'private_key', 'api_key', 'secret']
+  for (const key of forbidden) {
+    if (blob.includes(`"${key}"`) || blob.includes(`:${key}`)) {
+      throw new Error(`forbidden_field_in_founder_payload:${key}`)
+    }
+  }
+}
+
 async function sendResendEmail(summary, { env = process.env, resendClient = null } = {}) {
   const recipients = founderEmailAllowlist(env)
   if (!recipients.length) {
@@ -324,6 +457,7 @@ async function sendResendEmail(summary, { env = process.env, resendClient = null
     return { sent: false, skipped: true, error: 'RESEND_API_KEY not configured' }
   }
 
+  assertNoSecrets(summary)
   const template = buildEmailTemplate(summary)
   const { data, error } = await client.emails.send({
     from: fromAddress(env),
@@ -363,28 +497,47 @@ async function saveAdminInboxNotifications(summary, { getAdminUserIds, saveNotif
 
   if (summary.kind === 'registration') {
     eventType = 'user_registered'
-    title = `New ${summary.roleLabel} registration`
+    title =
+      summary.eventType === EVENT_TYPES.YOUTH_AGENT_REGISTERED
+        ? 'New Youth Agent Registered'
+        : 'New SME Registered'
     message = `${summary.displayName} · ${summary.email}`.slice(0, 400)
     inboxIdPrefix = `reg-inbox-${summary.uid}`
     data = {
       uid: summary.uid,
       userType: summary.userType,
+      eventType: summary.eventType,
+      founderPath: summary.founderPath,
       adminPath: summary.adminPath,
     }
-  } else {
-    eventType =
-      summary.phase === 'paid' ? 'attendance_request_paid' : 'attendance_request_created'
-    title =
-      summary.phase === 'paid' ? 'Attendance request paid' : 'New attendance request'
+  } else if (summary.phase === 'paid') {
+    eventType = 'attendance_request_paid'
+    title = 'Payment Received'
     message =
-      `${summary.smeName} · ${summary.tenderTitle} · ${summary.paymentStatus} · ${summary.feeLabel}`.slice(
+      `${summary.smeName} · ${summary.tenderTitle} · ${summary.feeLabel} · ${summary.paymentStatus}`.slice(
         0,
         400
       )
-    inboxIdPrefix = `att-${summary.phase}-${summary.requestId}`
+    inboxIdPrefix = `att-paid-${summary.requestId}`
     data = {
       requestId: summary.requestId,
       paymentStatus: summary.paymentStatus,
+      eventType: summary.eventType,
+      founderPath: summary.founderPath,
+      adminPath: summary.adminPath,
+      phase: summary.phase,
+    }
+  } else {
+    eventType = 'attendance_request_created'
+    title = 'Briefing Confirmed'
+    message =
+      `${summary.smeName} · ${summary.tenderTitle} · ${summary.paymentStatus}`.slice(0, 400)
+    inboxIdPrefix = `att-created-${summary.requestId}`
+    data = {
+      requestId: summary.requestId,
+      paymentStatus: summary.paymentStatus,
+      eventType: summary.eventType,
+      founderPath: summary.founderPath,
       adminPath: summary.adminPath,
       phase: summary.phase,
     }
@@ -435,6 +588,7 @@ async function notifyWithSummary(summary, channel, deps = {}) {
     email: null,
     inboxCount: 0,
     error: null,
+    eventType: summary?.eventType || null,
   }
 
   try {
@@ -500,10 +654,12 @@ async function notifyWithSummary(summary, channel, deps = {}) {
         await markIdempotency(claim.ref, 'sent', {
           emailSent: Boolean(email.sent),
           inboxCount: result.inboxCount,
+          eventType: summary.eventType || null,
         })
       } else {
         await markIdempotency(claim.ref, 'failed', {
           error: (email.error || 'notify_incomplete').slice(0, 200),
+          eventType: summary.eventType || null,
         })
       }
     }
@@ -536,6 +692,48 @@ async function notifyAttendanceRequestPaid(request, deps = {}) {
   return notifyWithSummary(summary, 'founder_ops_attendance_paid', deps)
 }
 
+/**
+ * Unified Founder operational notification entrypoint.
+ * @param {{ eventType: string, entityId?: string, data?: object }} input
+ */
+async function sendFounderOperationalNotification(input = {}, deps = {}) {
+  const eventType = String(input.eventType || '').trim()
+  const data = input.data && typeof input.data === 'object' ? input.data : {}
+  const entityId = sliceStr(input.entityId || data.uid || data.id || data.requestId, 128)
+
+  switch (eventType) {
+    case EVENT_TYPES.SME_REGISTERED:
+      return notifyUserRegistered(
+        { ...data, uid: data.uid || entityId, userType: 'sme' },
+        deps
+      )
+    case EVENT_TYPES.YOUTH_AGENT_REGISTERED:
+      return notifyUserRegistered(
+        { ...data, uid: data.uid || entityId, userType: 'youth-agent' },
+        deps
+      )
+    case EVENT_TYPES.PAYMENT_CONFIRMED:
+      return notifyAttendanceRequestPaid(
+        { ...data, id: data.id || data.requestId || entityId },
+        deps
+      )
+    case EVENT_TYPES.BRIEFING_CONFIRMED:
+      return notifyAttendanceRequestCreated(
+        { ...data, id: data.id || data.requestId || entityId },
+        deps
+      )
+    default:
+      return {
+        notified: false,
+        duplicate: false,
+        email: null,
+        inboxCount: 0,
+        error: `unsupported_event_type:${eventType || 'missing'}`,
+        eventType: eventType || null,
+      }
+  }
+}
+
 async function notifyUserRegisteredSafe(profile, deps = {}) {
   try {
     return await notifyUserRegistered(profile, deps)
@@ -566,7 +764,25 @@ async function notifyAttendanceRequestPaidSafe(request, deps = {}) {
   }
 }
 
+async function sendFounderOperationalNotificationSafe(input, deps = {}) {
+  try {
+    return await sendFounderOperationalNotification(input, deps)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'notify failed'
+    console.error(`${LOG_PREFIX} Safe operational send caught:`, message.slice(0, 200))
+    return {
+      notified: false,
+      duplicate: false,
+      email: null,
+      inboxCount: 0,
+      error: message.slice(0, 200),
+      eventType: input?.eventType || null,
+    }
+  }
+}
+
 module.exports = {
+  EVENT_TYPES,
   founderEmailAllowlist,
   formatFee,
   roleLabel,
@@ -576,6 +792,8 @@ module.exports = {
   buildRegistrationSummary,
   buildAttendanceSummary,
   buildEmailTemplate,
+  sendFounderOperationalNotification,
+  sendFounderOperationalNotificationSafe,
   notifyUserRegistered,
   notifyUserRegisteredSafe,
   notifyAttendanceRequestCreated,
