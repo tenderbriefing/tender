@@ -10,6 +10,7 @@ import SmeProcurementIntelligencePanel from '@/components/procurement/SmeProcure
 import TenderActionPanel from '@/components/procurement/TenderActionPanel'
 import TenderHero from '@/components/procurement/TenderHero'
 import TenderIntelligence from '@/components/procurement/TenderIntelligence'
+import TenderDetailFunnelBeacon from '@/components/analytics/TenderDetailFunnelBeacon'
 import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
 import { isPrivateSectorTender } from '@/lib/privateTenders/publishMapper'
 import { getCatalogueInitialPage } from '@/lib/seo/catalogueServerData'
@@ -33,6 +34,7 @@ export default async function TenderDetailsPage(
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/20 pb-24 lg:pb-12">
+      <TenderDetailFunnelBeacon tenderId={tender.id} province={tender.province} />
       <Header />
       <TenderBreadcrumbs tender={tender} />
       <ClosedTenderBanner tender={tender} />

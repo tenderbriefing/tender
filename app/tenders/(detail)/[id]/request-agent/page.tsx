@@ -77,6 +77,20 @@ function RequestYouthAgentContent() {
   useEffect(() => {
     if (!id || authLoading || !user) return
     if (userProfile && userProfile.userType !== 'sme') return
+    void import('@/lib/founder/trackProductEvent').then(({ trackProductEvent }) =>
+      trackProductEvent('booking_intent', {
+        feature: 'revenue_funnel',
+        targetEntityType: 'tender',
+        targetEntityId: id,
+        dedupeEntityKey: id,
+        metadata: { tenderId: id },
+      })
+    )
+  }, [id, user, userProfile, authLoading])
+
+  useEffect(() => {
+    if (!id || authLoading || !user) return
+    if (userProfile && userProfile.userType !== 'sme') return
     setTenderLoading(true)
     const qs = inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : ''
     authFetch(`/api/tender-briefings/${id}${qs}`, {

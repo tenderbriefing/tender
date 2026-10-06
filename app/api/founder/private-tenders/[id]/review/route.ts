@@ -69,24 +69,48 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
     try {
       const events = require('../../../../../../backend/services/productEventService.js')
-      const eventName =
-        action === 'approve'
-          ? 'private_tender_published'
-          : action === 'reject'
-            ? 'private_tender_rejected'
-            : 'private_tender_changes_requested'
-      if (typeof events.recordEvent === 'function') {
-        void events.recordEvent({
-          name: action === 'approve' ? 'private_tender_approved' : eventName,
-          metadata: { submissionId: params.id, tenderId: result.publishedTenderId },
-          uid: access.user.uid,
-        })
+      const actor = {
+        uid: access.user.uid,
+        userType: access.user.userType || 'admin',
       }
-      if (action === 'approve' && result.created && typeof events.recordEvent === 'function') {
-        void events.recordEvent({
-          name: 'private_tender_published',
-          metadata: { submissionId: params.id, tenderId: result.publishedTenderId },
-          uid: access.user.uid,
+      if (action === 'approve') {
+        await events.emitFunnelEventSafe(actor, {
+          eventName: 'private_tender_approved',
+          feature: 'private_tenders',
+          targetEntityType: 'privateTenderSubmission',
+          targetEntityId: params.id,
+          metadata: {
+            submissionId: params.id,
+            tenderId: result.publishedTenderId || '',
+          },
+        })
+        if (result.created) {
+          await events.emitFunnelEventSafe(actor, {
+            eventName: 'private_tender_published',
+            feature: 'private_tenders',
+            targetEntityType: 'tender',
+            targetEntityId: result.publishedTenderId || params.id,
+            metadata: {
+              submissionId: params.id,
+              tenderId: result.publishedTenderId || '',
+            },
+          })
+        }
+      } else if (action === 'reject') {
+        await events.emitFunnelEventSafe(actor, {
+          eventName: 'private_tender_rejected',
+          feature: 'private_tenders',
+          targetEntityType: 'privateTenderSubmission',
+          targetEntityId: params.id,
+          metadata: { submissionId: params.id },
+        })
+      } else if (action === 'request_changes') {
+        await events.emitFunnelEventSafe(actor, {
+          eventName: 'private_tender_changes_requested',
+          feature: 'private_tenders',
+          targetEntityType: 'privateTenderSubmission',
+          targetEntityId: params.id,
+          metadata: { submissionId: params.id },
         })
       }
     } catch {

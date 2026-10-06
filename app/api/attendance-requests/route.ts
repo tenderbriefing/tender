@@ -191,19 +191,36 @@ export async function POST(request: NextRequest) {
 
     // Durable product + private audit events (fail-soft)
     try {
-      if (bookingSnapshot.source === 'private_tender' && isPrivateTenderBriefingBookingEnabled()) {
-        const events = require('../../../backend/services/productEventService.js')
-        if (typeof events.ingestProductEvent === 'function') {
-          await events.ingestProductEvent({
-            name: 'private_tender_briefing_booked',
-            uid: user.uid,
-            metadata: {
-              attendanceRequestId: result.request.id,
-              privateTenderId: bookingSnapshot.privateTenderId,
-              privateSubmissionId: bookingSnapshot.privateSubmissionId,
-            },
-          })
+      const events = require('../../../backend/services/productEventService.js')
+      await events.emitFunnelEventSafe(
+        { uid: user.uid, userType: user.userType || 'sme', province: user.province },
+        {
+          eventName: 'booking_created',
+          feature: 'revenue_funnel',
+          targetEntityType: 'attendanceRequest',
+          targetEntityId: result.request.id,
+          metadata: {
+            requestId: result.request.id,
+            tenderId: body.tenderId || result.request.tenderId || '',
+          },
         }
+      )
+      if (bookingSnapshot.source === 'private_tender' && isPrivateTenderBriefingBookingEnabled()) {
+        await events.emitFunnelEventSafe(
+          { uid: user.uid, userType: user.userType || 'sme', province: user.province },
+          {
+            eventName: 'private_tender_briefing_booked',
+            feature: 'revenue_funnel',
+            targetEntityType: 'attendanceRequest',
+            targetEntityId: result.request.id,
+            metadata: {
+              requestId: result.request.id,
+              tenderId: body.tenderId || result.request.tenderId || '',
+              privateTenderId: bookingSnapshot.privateTenderId || '',
+              submissionId: bookingSnapshot.privateSubmissionId || '',
+            },
+          }
+        )
         const { writeAuditEvent } = require('../../../backend/services/privateTenderAuditService.js')
         await writeAuditEvent({
           submissionId: bookingSnapshot.privateSubmissionId || bookingSnapshot.privateTenderId,
@@ -291,6 +308,15 @@ export async function POST(request: NextRequest) {
       attendanceRequestId: checkout.request.id,
       tenderId: body.tenderId || undefined,
       outcome: 'success',
+    })
+
+    const { emitCheckoutStartedSafe } = await import('@/lib/analytics/emitCheckoutStartedSafe')
+    await emitCheckoutStartedSafe({
+      smeId: user.uid,
+      requestId: checkout.request.id,
+      tenderId: body.tenderId || checkout.request.tenderId,
+      checkoutId: checkout.checkoutId,
+      province: user.province,
     })
 
     return NextResponse.json({

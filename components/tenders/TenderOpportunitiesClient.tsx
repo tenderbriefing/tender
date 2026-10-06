@@ -26,6 +26,7 @@ import type { CataloguePageResult } from '@/lib/seo/catalogueServerData'
 import { ArrowPathIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import { ClipboardList, Filter } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import CatalogueDiscoveryBeacon from '@/components/analytics/CatalogueDiscoveryBeacon'
 
 const SKELETON_ROWS = 12
 const COMPULSORY_ONLY = false
@@ -158,6 +159,10 @@ export default function TenderOpportunitiesClient({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/30">
+      <CatalogueDiscoveryBeacon
+        resultCount={tenders.length}
+        province={filters.province || null}
+      />
       <Header />
 
       <div className="border-b border-slate-200/80 bg-white/90 backdrop-blur-sm">

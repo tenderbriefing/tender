@@ -14,6 +14,7 @@ const {
   resolveAccountScope,
   filterByAccountScope,
 } = require('../../lib/domain/testAccount')
+const { sastDayKeyFromIso, sastDayKeyFromMs } = require('../utils/sastDay')
 
 const REQUEST_COHORT_LIMIT = 500
 const PROFILE_COHORT_LIMIT = 800
@@ -75,6 +76,8 @@ function isPaidBooking(request) {
 function paidAmountCents(request) {
   const amount = Number(request.paymentAmount)
   if (Number.isFinite(amount) && amount > 0) return Math.round(amount)
+  const snap = Number(request.briefingPriceCents)
+  if (Number.isFinite(snap) && snap > 0) return Math.round(snap)
   const quoted = Number(request.quotedFee)
   if (Number.isFinite(quoted) && quoted > 0) return Math.round(quoted)
   return null
@@ -158,29 +161,27 @@ function matchesQuery(row, q) {
 }
 
 function dayKey(iso) {
-  const d = parseDate(iso)
-  if (!d) return null
-  return d.toISOString().slice(0, 10)
+  return sastDayKeyFromIso(iso)
 }
 
-function utcDayKeyFromMs(ms) {
-  return new Date(ms).toISOString().slice(0, 10)
+function sastDayKeyFromMsLocal(ms) {
+  return sastDayKeyFromMs(ms)
 }
 
 function buildActivitySeries({ smeRegs, yaRegs, paidAtList, period, nowMs }) {
   const startMs = periodStartMs(period, nowMs)
-  const endKey = utcDayKeyFromMs(nowMs)
+  const endKey = sastDayKeyFromMsLocal(nowMs)
   const startKey =
     startMs == null
-      ? utcDayKeyFromMs(earliestDay(smeRegs, yaRegs, paidAtList, nowMs).getTime())
-      : utcDayKeyFromMs(startMs)
+      ? sastDayKeyFromMsLocal(earliestDay(smeRegs, yaRegs, paidAtList, nowMs).getTime())
+      : sastDayKeyFromMsLocal(startMs)
 
   const days = []
-  let cursor = new Date(`${startKey}T00:00:00.000Z`)
-  const end = new Date(`${endKey}T00:00:00.000Z`)
+  let cursor = new Date(`${startKey}T00:00:00.000+02:00`)
+  const end = new Date(`${endKey}T00:00:00.000+02:00`)
   let guard = 0
   while (cursor.getTime() <= end.getTime() && guard < 90) {
-    days.push(cursor.toISOString().slice(0, 10))
+    days.push(sastDayKeyFromMsLocal(cursor.getTime()))
     cursor = new Date(cursor.getTime() + 86400000)
     guard += 1
   }
@@ -626,9 +627,10 @@ async function loadOverview(period, nowMs, accountScope = 'real') {
     'Paid Bookings (All Time) counts attendanceRequests.paymentStatus == paid within the commercial scope. Period views count paidAt within a bounded recent request cohort (≤500).',
     kpis.revenueCohortIncomplete
       ? 'All Time revenue is summed from the bounded paid cohort (≤500), which is smaller than the paid count aggregation — the rand total is a conservative recent-cohort figure, not a silent full-history total.'
-      : 'Revenue sums paymentAmount (else quotedFee) on those paid records. Rows without a stored amount are omitted from the sum — not estimated as bookings × current list price.',
+      : 'Revenue sums paymentAmount (else briefingPriceCents, else quotedFee) on those paid records. Rows without a stored amount are omitted from the sum — not estimated as bookings × current list price.',
     'Upcoming Briefings are currently future paid/valid briefings (briefingDate after now, not cancelled) in the same cohort.',
     'Completed Briefings follow production workflow status == completed (executive analytics).',
+    'Business Activity daily buckets use Africa/Johannesburg (SAST) calendar days — not UTC midnight.',
     'Business Activity uses bounded recent profiles (≤400 SME, ≤400 Youth Agent) plus the request cohort — not a full historical scan.',
   ]
 

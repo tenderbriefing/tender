@@ -35,6 +35,10 @@ export const PRODUCT_EVENT_NAMES = [
   'profile_updated',
   'assistance_requested',
   'youth_agent_contacted',
+  // P1 commercial funnel (behavioural — not payment authority)
+  'booking_intent',
+  'booking_created',
+  'checkout_started',
   // Youth Agent
   'assigned_sme_opened',
   'sme_contacted',
@@ -56,6 +60,8 @@ export const PRODUCT_EVENT_NAMES = [
   'private_tender_published',
   'private_tender_viewed',
   'private_tender_briefing_booked',
+  'private_tender_rejected',
+  'private_tender_changes_requested',
 ] as const
 
 export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number]
@@ -74,6 +80,9 @@ export const MEANINGFUL_EVENTS = new Set<ProductEventName>([
   'tender_document_downloaded',
   'assistance_requested',
   'youth_agent_contacted',
+  'booking_intent',
+  'booking_created',
+  'checkout_started',
   'assigned_sme_opened',
   'sme_contacted',
   'follow_up_completed',
@@ -97,6 +106,8 @@ export const METADATA_ALLOWLIST = new Set([
   'tenderId',
   'tenderNumber',
   'requestId',
+  'submissionId',
+  'privateTenderId',
   'queryLength',
   'resultCount',
   'province',
@@ -114,6 +125,8 @@ export const METADATA_ALLOWLIST = new Set([
   'registrationJourney',
   'errorCode',
   'pagePath',
+  'instrumentationVersion',
+  'checkoutId',
 ])
 
 export const FORBIDDEN_METADATA_KEYS = [

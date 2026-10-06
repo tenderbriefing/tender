@@ -2,8 +2,20 @@
 
 import { authFetch } from '@/lib/api/authenticatedFetch'
 import type { ProductEventName } from '@/lib/founder/eventSchema'
+import {
+  claimSessionDedupe,
+  FUNNEL_INSTRUMENTATION_VERSION,
+} from '@/lib/analytics/funnelInstrumentation'
 
 const SESSION_KEY = 'tb_product_session_id'
+
+const FUNNEL_EVENTS = new Set<ProductEventName>([
+  'tender_listing_viewed',
+  'tender_opened',
+  'booking_intent',
+  'booking_created',
+  'checkout_started',
+])
 
 function getSessionId(): string {
   if (typeof window === 'undefined') return 'server'
@@ -37,8 +49,19 @@ export async function trackProductEvent(
     targetEntityId?: string
     targetUserId?: string
     metadata?: Record<string, unknown>
+    /** When set, skip repeat emissions in this browser session for the same key. */
+    dedupeEntityKey?: string
   } = {}
 ): Promise<void> {
+  if (opts.dedupeEntityKey && !claimSessionDedupe(eventName, opts.dedupeEntityKey)) {
+    return
+  }
+
+  const metadata = { ...(opts.metadata || {}) }
+  if (FUNNEL_EVENTS.has(eventName) && metadata.instrumentationVersion == null) {
+    metadata.instrumentationVersion = FUNNEL_INSTRUMENTATION_VERSION
+  }
+
   try {
     await authFetch('/api/product-events', {
       method: 'POST',
@@ -52,7 +75,7 @@ export async function trackProductEvent(
         targetEntityId: opts.targetEntityId,
         targetUserId: opts.targetUserId,
         deviceCategory: deviceCategory(),
-        metadata: opts.metadata,
+        metadata,
       }),
     })
   } catch {

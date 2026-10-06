@@ -3,6 +3,7 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import JsonLd from '@/components/seo/JsonLd'
 import CompulsoryBriefingTenderList from '@/components/seo/CompulsoryBriefingTenderList'
+import CatalogueDiscoveryBeacon from '@/components/analytics/CatalogueDiscoveryBeacon'
 import {
   breadcrumbJsonLd,
   collectionPageJsonLd,
@@ -94,6 +95,10 @@ export default function CompulsoryBriefingHubPage(props: CompulsoryBriefingHubPa
       <JsonLd data={collection} />
       {items ? <JsonLd data={items} /> : null}
       <div className="min-h-screen bg-slate-50">
+        <CatalogueDiscoveryBeacon
+          resultCount={tendersForList.length}
+          province={props.kind === 'province' ? props.data.province : null}
+        />
         <Header />
         <nav
           aria-label="Breadcrumb"
