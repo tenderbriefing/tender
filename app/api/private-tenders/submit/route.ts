@@ -75,13 +75,20 @@ export async function POST(request: NextRequest) {
 
     // Lightweight analytics — fail-soft (no authenticated actor on guest submit)
     try {
-      const { getFirestore } = require('../../../../backend/config/firebaseAdmin')
-      await getFirestore().collection('productEvents').add({
-        eventName: 'private_tender_submitted',
-        timestamp: new Date().toISOString(),
-        metadata: { submissionId: submission.id, province: submission.province },
-        meaningful: true,
-      })
+      const events = require('../../../../backend/services/productEventService.js')
+      await events.emitFunnelEventSafe(
+        { uid: 'anonymous_private_submit', userType: null },
+        {
+          eventName: 'private_tender_submitted',
+          feature: 'private_tenders',
+          targetEntityType: 'privateTenderSubmission',
+          targetEntityId: submission.id,
+          metadata: {
+            submissionId: submission.id,
+            province: submission.province || '',
+          },
+        }
+      )
     } catch {
       /* fail-soft */
     }

@@ -8,6 +8,7 @@ import { getOfficialEtendersScope } from '@/lib/procurement/tenderDescription'
 import { getLandingTenderFilter } from '@/lib/seo/landingFilters'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import CatalogueDiscoveryBeacon from '@/components/analytics/CatalogueDiscoveryBeacon'
 
 interface SeoLandingTenderListProps {
   slug: string
@@ -42,6 +43,7 @@ export default function SeoLandingTenderList({
 
   return (
     <section className="mt-14 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <CatalogueDiscoveryBeacon resultCount={filtered.length} />
       <h2 className="font-display text-2xl font-bold text-brand-900">{title}</h2>
       <p className="mt-2 text-slate-600">{intro}</p>
       {syncedAt && (

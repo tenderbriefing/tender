@@ -1,6 +1,11 @@
+/**
+ * First-party product events — allow-listed catalogue (sync with lib/founder/eventSchema.ts).
+ */
 const { getFirestore } = require('../config/firebaseAdmin')
+const { formatSastYmd } = require('../utils/sastDay')
 
-// Allow-listed first-party product events (keep in sync with lib/founder/eventSchema.ts)
+const FUNNEL_INSTRUMENTATION_VERSION = '2026-10-p1-funnel-v1'
+
 const EVENT_NAMES = new Set([
   'user_logged_in',
   'google_sign_in_started',
@@ -30,6 +35,9 @@ const EVENT_NAMES = new Set([
   'profile_updated',
   'assistance_requested',
   'youth_agent_contacted',
+  'booking_intent',
+  'booking_created',
+  'checkout_started',
   'assigned_sme_opened',
   'sme_contacted',
   'contact_attempt_recorded',
@@ -50,6 +58,8 @@ const EVENT_NAMES = new Set([
   'private_tender_published',
   'private_tender_viewed',
   'private_tender_briefing_booked',
+  'private_tender_rejected',
+  'private_tender_changes_requested',
 ])
 
 const METADATA_ALLOWLIST = new Set([
@@ -57,6 +67,7 @@ const METADATA_ALLOWLIST = new Set([
   'tenderNumber',
   'requestId',
   'submissionId',
+  'privateTenderId',
   'queryLength',
   'resultCount',
   'province',
@@ -74,9 +85,25 @@ const METADATA_ALLOWLIST = new Set([
   'registrationJourney',
   'errorCode',
   'pagePath',
+  'instrumentationVersion',
+  'checkoutId',
 ])
 
-const FORBIDDEN = ['password', 'token', 'idtoken', 'authorization', 'secret', 'bank', 'card', 'cvv', 'idnumber', 'said', 'rawtext', 'formvalue', 'keystroke']
+const FORBIDDEN = [
+  'password',
+  'token',
+  'idtoken',
+  'authorization',
+  'secret',
+  'bank',
+  'card',
+  'cvv',
+  'idnumber',
+  'said',
+  'rawtext',
+  'formvalue',
+  'keystroke',
+]
 
 const MEANINGFUL = new Set([
   'user_logged_in',
@@ -91,6 +118,9 @@ const MEANINGFUL = new Set([
   'tender_document_downloaded',
   'assistance_requested',
   'youth_agent_contacted',
+  'booking_intent',
+  'booking_created',
+  'checkout_started',
   'assigned_sme_opened',
   'sme_contacted',
   'follow_up_completed',
@@ -99,6 +129,15 @@ const MEANINGFUL = new Set([
   'briefing_report_submitted',
   'profile_updated',
   'training_completed',
+])
+
+const FUNNEL_EVENTS = new Set([
+  'tender_listing_viewed',
+  'tender_opened',
+  'booking_intent',
+  'booking_created',
+  'checkout_started',
+  'private_tender_briefing_booked',
 ])
 
 function cleanMetadata(metadata) {
@@ -120,78 +159,119 @@ function cleanMetadata(metadata) {
   return { ok: true, metadata: out }
 }
 
+/**
+ * @param {{ uid: string, userType?: string, province?: string }} actor
+ * @param {object} input
+ */
 async function ingestProductEvent(actor, input) {
+  if (!actor || !actor.uid) {
+    return { ok: false, error: 'Actor required' }
+  }
+  if (!input || typeof input !== 'object' || !input.eventName) {
+    return { ok: false, error: 'eventName required' }
+  }
   if (!EVENT_NAMES.has(input.eventName)) {
     return { ok: false, error: `Unknown event: ${input.eventName}` }
   }
   const meta = cleanMetadata(input.metadata)
   if (!meta.ok) return meta
 
+  if (FUNNEL_EVENTS.has(input.eventName) && meta.metadata.instrumentationVersion == null) {
+    meta.metadata.instrumentationVersion = FUNNEL_INSTRUMENTATION_VERSION
+  }
+
   const db = getFirestore()
-  const now = new Date().toISOString()
-  const day = now.slice(0, 10)
+  const now = new Date()
+  const nowIso = now.toISOString()
+  const day = formatSastYmd(now)
   const doc = {
     eventId: `pe_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
     eventName: input.eventName,
     actorUserId: actor.uid,
-    actorRole: actor.userType,
+    actorRole: actor.userType || null,
     targetUserId: input.targetUserId || null,
     targetEntityType: input.targetEntityType || null,
     targetEntityId: input.targetEntityId || null,
     sessionId: input.sessionId || null,
     pagePath: input.pagePath || null,
     feature: input.feature || null,
-    timestamp: now,
+    timestamp: nowIso,
     day,
     province: input.province || actor.province || null,
     municipality: null,
     deviceCategory: input.deviceCategory || null,
     referralSource: input.referralSource || null,
     meaningful: MEANINGFUL.has(input.eventName),
+    instrumentationVersion: FUNNEL_EVENTS.has(input.eventName)
+      ? FUNNEL_INSTRUMENTATION_VERSION
+      : null,
     metadata: meta.metadata,
   }
 
   await db.collection('productEvents').doc(doc.eventId).set(doc)
 
-  // Lightweight user activity rollup (bounded write)
-  const summaryRef = db.collection('userActivitySummaries').doc(actor.uid)
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(summaryRef)
-    const prev = snap.exists ? snap.data() : {}
-    const meaningfulCount = Number(prev.meaningfulEventCount || 0) + (doc.meaningful ? 1 : 0)
-    const sessionIds = new Set(prev.recentSessionIds || [])
-    if (doc.sessionId) {
-      sessionIds.add(doc.sessionId)
-      while (sessionIds.size > 20) {
-        const first = sessionIds.values().next().value
-        sessionIds.delete(first)
+  // Lightweight user activity rollup (bounded write) — skip anonymous actors
+  if (!String(actor.uid).startsWith('anonymous_')) {
+    const summaryRef = db.collection('userActivitySummaries').doc(actor.uid)
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(summaryRef)
+      const prev = snap.exists ? snap.data() : {}
+      const meaningfulCount = Number(prev.meaningfulEventCount || 0) + (doc.meaningful ? 1 : 0)
+      const sessionIds = new Set(prev.recentSessionIds || [])
+      if (doc.sessionId) {
+        sessionIds.add(doc.sessionId)
+        while (sessionIds.size > 20) {
+          const first = sessionIds.values().next().value
+          sessionIds.delete(first)
+        }
       }
-    }
-    tx.set(
-      summaryRef,
-      {
-        uid: actor.uid,
-        actorRole: actor.userType,
-        lastSeenAt: now,
-        lastLoginAt: doc.eventName === 'user_logged_in' || doc.eventName === 'google_sign_in_succeeded' ? now : prev.lastLoginAt || null,
-        authenticationProvider:
-          (meta.metadata && meta.metadata.authenticationProvider) || prev.authenticationProvider || null,
-        firstSeenAt: prev.firstSeenAt || now,
-        registrationDate: prev.registrationDate || prev.firstSeenAt || now,
-        lastMeaningfulAt: doc.meaningful ? now : prev.lastMeaningfulAt || null,
-        meaningfulEventCount: meaningfulCount,
-        eventCount: Number(prev.eventCount || 0) + 1,
-        sessionCount: Math.max(Number(prev.sessionCount || 0), sessionIds.size),
-        recentSessionIds: Array.from(sessionIds),
-        lastEventName: doc.eventName,
-        lastPagePath: doc.pagePath,
-        updatedAt: now,
-      },
-      { merge: true }
-    )
-  })
+      tx.set(
+        summaryRef,
+        {
+          uid: actor.uid,
+          actorRole: actor.userType,
+          lastSeenAt: nowIso,
+          lastLoginAt:
+            doc.eventName === 'user_logged_in' || doc.eventName === 'google_sign_in_succeeded'
+              ? nowIso
+              : prev.lastLoginAt || null,
+          authenticationProvider:
+            (meta.metadata && meta.metadata.authenticationProvider) ||
+            prev.authenticationProvider ||
+            null,
+          firstSeenAt: prev.firstSeenAt || nowIso,
+          registrationDate: prev.registrationDate || prev.firstSeenAt || nowIso,
+          lastMeaningfulAt: doc.meaningful ? nowIso : prev.lastMeaningfulAt || null,
+          meaningfulEventCount: meaningfulCount,
+          eventCount: Number(prev.eventCount || 0) + 1,
+          sessionCount: Math.max(Number(prev.sessionCount || 0), sessionIds.size),
+          recentSessionIds: Array.from(sessionIds),
+          lastEventName: doc.eventName,
+          lastPagePath: doc.pagePath,
+          updatedAt: nowIso,
+        },
+        { merge: true }
+      )
+    })
+  }
 
   return { ok: true, data: { eventId: doc.eventId } }
+}
+
+/**
+ * Fail-soft commercial funnel helper for trusted server paths.
+ * Never throws to callers — checkout/payment must not depend on analytics.
+ */
+async function emitFunnelEventSafe(actor, input) {
+  try {
+    return await ingestProductEvent(actor, input)
+  } catch (err) {
+    console.error(
+      '[productEvents] funnel emit failed:',
+      err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+    )
+    return { ok: false, error: 'emit_failed' }
+  }
 }
 
 async function listEventsForUser(uid, { limit = 50 } = {}) {
@@ -208,7 +288,10 @@ async function listEventsForUser(uid, { limit = 50 } = {}) {
 
 module.exports = {
   ingestProductEvent,
+  emitFunnelEventSafe,
   listEventsForUser,
   EVENT_NAMES,
   MEANINGFUL,
+  METADATA_ALLOWLIST,
+  FUNNEL_INSTRUMENTATION_VERSION,
 }

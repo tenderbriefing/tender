@@ -72,6 +72,15 @@ export async function POST(request: NextRequest) {
       outcome: 'success',
     })
 
+    const { emitCheckoutStartedSafe } = await import('@/lib/analytics/emitCheckoutStartedSafe')
+    await emitCheckoutStartedSafe({
+      smeId: user.uid,
+      requestId: attendanceRequestId,
+      tenderId: result.request?.tenderId,
+      checkoutId: result.checkoutId,
+      province: user.province,
+    })
+
     return NextResponse.json({
       success: true,
       data: {
