@@ -617,6 +617,24 @@ async function loadOverview(period, nowMs, accountScope = 'real') {
     if (rep.requestId) reportsByRequestId.set(rep.requestId, rep)
   }
 
+  const revenueIntel = require('./founderRevenueIntelligence')
+  let revenueIntelligence = null
+  try {
+    revenueIntelligence = await revenueIntel.buildRevenueIntelligenceForOverview({
+      period,
+      nowMs,
+      requests: scopedRequests,
+      storage,
+      requestsCohortTruncated: requests.length >= REQUEST_COHORT_LIMIT,
+    })
+  } catch (err) {
+    console.error(
+      '[founderDashboard] revenue intelligence failed:',
+      err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+    )
+    revenueIntelligence = null
+  }
+
   const dataNotes = [
     scope === 'real'
       ? 'SMEs and Youth Agents are lifetime registered-account counts excluding test/smoke accounts (isTestAccount).'
@@ -632,6 +650,7 @@ async function loadOverview(period, nowMs, accountScope = 'real') {
     'Completed Briefings follow production workflow status == completed (executive analytics).',
     'Business Activity daily buckets use Africa/Johannesburg (SAST) calendar days — not UTC midnight.',
     'Business Activity uses bounded recent profiles (≤400 SME, ≤400 Youth Agent) plus the request cohort — not a full historical scan.',
+    'Revenue Intelligence funnel (Discovery → Report) follows docs/analytics/revenue-funnel-specification.md. Pre-booking stages before 2026-10-06 SAST are Unavailable, not zero.',
   ]
 
   return {
@@ -648,6 +667,7 @@ async function loadOverview(period, nowMs, accountScope = 'real') {
     },
     activity: buildActivitySeries({ smeRegs, yaRegs, paidAtList, period, nowMs }),
     needsAttention: buildNeedsAttention(scopedRequests, reportsByRequestId),
+    revenueIntelligence,
     generatedAt: new Date(nowMs).toISOString(),
     dataNotes,
     cohortCapped:
