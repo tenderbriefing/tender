@@ -169,6 +169,7 @@ service cloud.firestore {
     }
 
     // Privileged payment / assignment / lifecycle fields — Admin SDK only.
+    // Money-authoritative keys must never be client-writable (create or update).
     function attendancePrivilegedKeysUnchanged() {
       return !request.resource.data.diff(resource.data).affectedKeys()
         .hasAny([
@@ -176,6 +177,17 @@ service cloud.firestore {
           'paymentProvider',
           'paymentAmount',
           'quotedFee',
+          'briefingPriceCents',
+          'pricingVersion',
+          'amount',
+          'amountCents',
+          'fee',
+          'feeCents',
+          'price',
+          'priceCents',
+          'briefingFee',
+          'briefingFeeCents',
+          'feeSnapshot',
           'currency',
           'paymentReference',
           'payfastPaymentId',
@@ -184,6 +196,8 @@ service cloud.firestore {
           'yocoRedirectUrl',
           'paidAt',
           'paymentFailureReason',
+          'paymentExemptionAuthorized',
+          'assignedByAdmin',
           'agentId',
           'assignedAgentId',
           'agentName',
@@ -196,13 +210,10 @@ service cloud.firestore {
     }
 
     match /attendanceRequests/{requestId} {
-      allow create: if isSme()
-        && request.resource.data.smeId == request.auth.uid
-        && request.resource.data.get('paymentStatus', 'pending') in ['pending', 'not_required']
-        && request.resource.data.get('status', 'pending') == 'pending'
-        && !('agentId' in request.resource.data
-          && request.resource.data.agentId != null
-          && request.resource.data.agentId != '');
+      // All attendance request creation is Admin SDK / authenticated API only.
+      // Client SDK create previously allowed paymentStatus=not_required and
+      // attacker-controlled fee snapshots — that path is closed.
+      allow create: if false;
       allow read: if isAdmin()
         || (isSme() && resource.data.smeId == request.auth.uid)
         || (isYouthAgent() && (

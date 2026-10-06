@@ -7,6 +7,7 @@ import {
   grossContributionForRevenueCents,
   briefingPriceSnapshotFields,
   formatBriefingPriceZar,
+  resolveRequestChargeCents,
 } from '@/lib/domain/briefingPricing'
 
 describe('briefingPricing', () => {
@@ -34,5 +35,31 @@ describe('briefingPricing', () => {
   it('formats ZAR without floating point storage', () => {
     expect(formatBriefingPriceZar()).toBe('R349.00')
     expect(BRIEFING_PRICE_SHORT_LABEL).toBe('R349')
+  })
+
+  it('ignores attacker fee snapshots on unpaid requests', () => {
+    expect(
+      resolveRequestChargeCents({
+        paymentStatus: 'pending',
+        briefingPriceCents: 100,
+        paymentAmount: 100,
+        quotedFee: 100,
+      })
+    ).toBe(34900)
+    expect(
+      resolveRequestChargeCents({
+        paymentStatus: 'not_required',
+        briefingPriceCents: 0,
+      })
+    ).toBe(34900)
+  })
+
+  it('trusts fee snapshots only after paymentStatus=paid', () => {
+    expect(
+      resolveRequestChargeCents({
+        paymentStatus: 'paid',
+        briefingPriceCents: 34900,
+      })
+    ).toBe(34900)
   })
 })

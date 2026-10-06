@@ -108,28 +108,28 @@ describe('SME → Pay → Agent → Complete workflow', () => {
     expect(row.status).toBe('completed')
   })
 
-  it('preserves persisted price snapshot on mark paid', async () => {
+  it('stamps canonical price on mark paid — unpaid snapshots are not trusted', async () => {
     const storage = require('../../backend/services/storageAdapter').getStorage()
     const legacyId = `legacy-${Date.now()}`
-    // Generic historical snapshot (not current catalogue price) — must not be overwritten.
-    const storedCents = 27500
+    // Corrupted / non-canonical unpaid snapshot must NOT become the paid amount.
     await storage.saveAttendanceRequest({
       id: legacyId,
       tenderId: 't-legacy',
       smeId: 'sme-a',
       status: 'pending',
       paymentStatus: 'pending',
-      paymentAmount: storedCents,
-      quotedFee: storedCents,
-      briefingPriceCents: storedCents,
+      paymentAmount: 27500,
+      quotedFee: 27500,
+      briefingPriceCents: 27500,
       pricingVersion: 'historical-snapshot',
       currency: 'ZAR',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })
     const paid = await paymentService.markRequestPaid(legacyId, { pfPaymentId: 'PF-legacy' })
-    expect(paid.request.paymentAmount).toBe(storedCents)
-    expect(paid.request.briefingPriceCents).toBe(storedCents)
+    expect(paid.request.paymentAmount).toBe(34900)
+    expect(paid.request.briefingPriceCents).toBe(34900)
+    expect(paid.request.quotedFee).toBe(34900)
   })
 
   it('rejects payment downgrade after paid', async () => {

@@ -49,16 +49,28 @@ function briefingPriceSnapshotFields() {
   }
 }
 
-/** Resolve charge amount from an attendance request — preserves historical snapshots. */
+/**
+ * Resolve the amount PayFast must charge / ITN must verify.
+ *
+ * Unpaid (or unknown) documents MUST NOT influence the payable amount —
+ * fee snapshot fields on the doc are informational until payment is verified.
+ * Already-paid records may retain their verified snapshot for accounting.
+ */
 function resolveRequestChargeCents(request) {
-  if (!request) return resolveBriefingPriceCents()
-  const snap = Number(request.briefingPriceCents)
-  if (Number.isFinite(snap) && snap > 0) return Math.round(snap)
-  const quoted = Number(request.quotedFee)
-  if (Number.isFinite(quoted) && quoted > 0) return Math.round(quoted)
-  const amount = Number(request.paymentAmount)
-  if (Number.isFinite(amount) && amount > 0) return Math.round(amount)
-  return resolveBriefingPriceCents()
+  const canonical = resolveBriefingPriceCents()
+  if (!request) return canonical
+
+  // Only trust stored fee snapshots after ITN/reconcile marked the booking paid.
+  if (request.paymentStatus === 'paid') {
+    const snap = Number(request.briefingPriceCents)
+    if (Number.isFinite(snap) && snap > 0) return Math.round(snap)
+    const quoted = Number(request.quotedFee)
+    if (Number.isFinite(quoted) && quoted > 0) return Math.round(quoted)
+    const amount = Number(request.paymentAmount)
+    if (Number.isFinite(amount) && amount > 0) return Math.round(amount)
+  }
+
+  return canonical
 }
 
 module.exports = {

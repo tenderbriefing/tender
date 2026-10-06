@@ -296,9 +296,12 @@ async function createCheckoutForExistingRequest(requestId, smeId, baseUrl) {
 
   // Re-checkout after failed/expired must go through payment lifecycle (e.g. failed→pending).
   assertPaymentTransition(request.paymentStatus, 'pending')
+  // Re-stamp canonical fee snapshot on every checkout — never leave a corrupted
+  // client-era amount in place for ITN reconciliation or display.
   const patched = applyPaymentTransition(request, 'pending', {
     actorId: smeId,
     extra: {
+      ...briefingPriceSnapshotFields(),
       paymentProvider: 'payfast',
       paymentReference: paymentReferenceForRequest(requestId),
       payfastRedirectUrl: checkout.formAction,
