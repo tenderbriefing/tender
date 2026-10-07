@@ -80,7 +80,7 @@ function acknowledgementHtml(ticket: SupportTicketEmailPayload) {
         <p>If you need to add more detail, reply to this email or write to
         <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a>.</p>
         <p style="margin-top:24px;color:#64748b;font-size:13px;">
-          TenderBriefing · Midrand, Gauteng, South Africa
+          TenderBriefing · Byls Bridge Office Park, Centurion, 0157, South Africa
         </p>
       </div>
     </div>

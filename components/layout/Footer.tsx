@@ -1,8 +1,15 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { Mail, MapPin } from 'lucide-react'
+import { Mail, MapPin, Phone } from 'lucide-react'
 import WhatsAppIcon from '@/components/ui/WhatsAppIcon'
-import { publicWhatsAppLink, SUPPORT_EMAIL } from '@/lib/contact'
+import {
+  OFFICE_ADDRESS_LINES,
+  OFFICE_EMAIL,
+  OFFICE_EMAIL_HREF,
+  OFFICE_PHONE_DISPLAY,
+  OFFICE_PHONE_HREF,
+  publicWhatsAppLink,
+} from '@/lib/contact'
 
 const PLATFORM_LINKS = [
   { href: '/tenders', label: 'Tender Opportunities' },
@@ -31,7 +38,10 @@ const Footer = () => {
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           {/* Brand */}
           <div className="max-w-sm">
-            <Link href="/" className="inline-flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400">
+            <Link
+              href="/"
+              className="inline-flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+            >
               <Image
                 src="/brand/logo.png"
                 alt="TenderBriefing"
@@ -78,33 +88,48 @@ const Footer = () => {
           {/* Contact */}
           <div>
             <h3 className={headingClass}>Contact</h3>
-            <ul className="mt-3 space-y-2.5 text-[14px]">
-              <li>
-                <a
-                  href={`mailto:${SUPPORT_EMAIL}`}
-                  className={`inline-flex items-center gap-2 ${linkClass}`}
-                >
-                  <Mail className="h-4 w-4 shrink-0 text-brand-500" aria-hidden />
-                  <span>{SUPPORT_EMAIL}</span>
-                </a>
-              </li>
-              <li>
-                <a
-                  href={publicWhatsAppLink()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`inline-flex items-center gap-2 ${linkClass}`}
-                  aria-label="Chat on WhatsApp"
-                >
-                  <WhatsAppIcon className="h-4 w-4 shrink-0 text-[#25D366]" />
-                  <span>WhatsApp</span>
-                </a>
-              </li>
-              <li className="inline-flex items-start gap-2 text-slate-300">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" aria-hidden />
-                <span>Midrand, Gauteng</span>
-              </li>
-            </ul>
+            <div className="mt-3 space-y-3.5 text-[14px]">
+              <div className="flex items-start gap-2.5">
+                <MapPin
+                  className="mt-0.5 h-4 w-4 shrink-0 text-accent-400"
+                  aria-hidden
+                />
+                <address className="not-italic leading-snug text-slate-300">
+                  {OFFICE_ADDRESS_LINES.map((line) => (
+                    <span key={line} className="block">
+                      {line}
+                    </span>
+                  ))}
+                </address>
+              </div>
+
+              <a
+                href={OFFICE_PHONE_HREF}
+                className={`inline-flex min-h-[44px] items-center gap-2.5 sm:min-h-0 ${linkClass}`}
+              >
+                <Phone className="h-4 w-4 shrink-0 text-accent-400" aria-hidden />
+                <span>{OFFICE_PHONE_DISPLAY}</span>
+              </a>
+
+              <a
+                href={OFFICE_EMAIL_HREF}
+                className={`inline-flex min-h-[44px] items-center gap-2.5 break-all sm:min-h-0 ${linkClass}`}
+              >
+                <Mail className="h-4 w-4 shrink-0 text-accent-400" aria-hidden />
+                <span>{OFFICE_EMAIL}</span>
+              </a>
+
+              <a
+                href={publicWhatsAppLink()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`inline-flex min-h-[44px] items-center gap-2.5 sm:min-h-0 ${linkClass}`}
+                aria-label="Chat on WhatsApp"
+              >
+                <WhatsAppIcon className="h-4 w-4 shrink-0 text-[#25D366]" />
+                <span>WhatsApp</span>
+              </a>
+            </div>
           </div>
         </div>
 

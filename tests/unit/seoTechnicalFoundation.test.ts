@@ -152,12 +152,23 @@ describe('SEO Phase 1 — tender metadata patterns', () => {
 })
 
 describe('SEO Phase 1 — global structured data', () => {
-  it('includes Organization and WebSite schemas without invented contact details', () => {
+  it('includes Organization and WebSite schemas with official office contact', () => {
     const org = organizationJsonLd()
     expect(org['@type']).toBe('Organization')
     expect(org.name).toBe('TenderBriefing')
-    expect(org).not.toHaveProperty('telephone')
+    expect(org.telephone).toBe('+27 12 004 8728')
+    expect(org.email).toBe('info@tenderbriefing.co.za')
+    expect(org.address).toMatchObject({
+      '@type': 'PostalAddress',
+      streetAddress:
+        'Byls Bridge Office Park, First Floor, Block B, Olievenhoutbosch Road',
+      addressLocality: 'Centurion',
+      addressRegion: 'Gauteng',
+      postalCode: '0157',
+      addressCountry: 'ZA',
+    })
     expect(org).not.toHaveProperty('aggregateRating')
+    expect(org).not.toHaveProperty('geo')
 
     const site = websiteJsonLd()
     expect(site['@type']).toBe('WebSite')

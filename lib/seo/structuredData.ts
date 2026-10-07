@@ -1,3 +1,10 @@
+import {
+  OFFICE_ADDRESS,
+  OFFICE_EMAIL,
+  OFFICE_PHONE_DISPLAY,
+  OFFICE_STREET_ADDRESS,
+  SUPPORT_EMAIL,
+} from '@/lib/contact'
 import { ORG_DESCRIPTION, SITE_NAME, SITE_URL, absoluteUrl } from './site'
 
 export function organizationJsonLd() {
@@ -8,6 +15,16 @@ export function organizationJsonLd() {
     url: SITE_URL,
     logo: absoluteUrl('/brand/logo.png'),
     description: ORG_DESCRIPTION,
+    email: OFFICE_EMAIL,
+    telephone: OFFICE_PHONE_DISPLAY,
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: OFFICE_STREET_ADDRESS,
+      addressLocality: OFFICE_ADDRESS.city,
+      addressRegion: OFFICE_ADDRESS.region,
+      postalCode: OFFICE_ADDRESS.postalCode,
+      addressCountry: OFFICE_ADDRESS.countryCode,
+    },
     areaServed: {
       '@type': 'Country',
       name: 'South Africa',
@@ -15,7 +32,8 @@ export function organizationJsonLd() {
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer support',
-      email: 'support@tenderbriefing.co.za',
+      email: SUPPORT_EMAIL,
+      telephone: OFFICE_PHONE_DISPLAY,
       areaServed: 'ZA',
       availableLanguage: 'English',
     },
