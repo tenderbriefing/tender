@@ -15,6 +15,21 @@ export interface AttendanceLike {
   agentId?: string | null
   assignedAgentId?: string | null
   notifiedAgents?: string[] | null
+  /** Required for marketplace (notifiedAgents) visibility — mirrors Firestore rules. */
+  paymentStatus?: string | null
+}
+
+/** Youth Agents may see marketplace candidates only after authoritative payment. */
+export function isPaidForAgentVisibility(request: AttendanceLike): boolean {
+  const status = String(request.paymentStatus || '')
+  return status === 'paid' || status === 'not_required'
+}
+
+function agentNotifiedAfterPaid(request: AttendanceLike, uid: string): boolean {
+  return (
+    isPaidForAgentVisibility(request) &&
+    Boolean(request.notifiedAgents?.includes(uid))
+  )
 }
 
 export interface BriefingLike {
@@ -33,7 +48,7 @@ export function canReadAttendance(actor: Actor, request: AttendanceLike): boolea
     return (
       request.agentId === actor.uid ||
       request.assignedAgentId === actor.uid ||
-      Boolean(request.notifiedAgents?.includes(actor.uid))
+      agentNotifiedAfterPaid(request, actor.uid)
     )
   }
   return false
@@ -51,7 +66,7 @@ export function canAgentActOnAttendance(actor: Actor, request: AttendanceLike): 
   return (
     request.agentId === actor.uid ||
     request.assignedAgentId === actor.uid ||
-    Boolean(request.notifiedAgents?.includes(actor.uid))
+    agentNotifiedAfterPaid(request, actor.uid)
   )
 }
 

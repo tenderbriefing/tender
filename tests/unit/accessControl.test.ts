@@ -17,6 +17,7 @@ describe('accessControl', () => {
     smeId: 'sme-a',
     agentId: 'agent-a',
     notifiedAgents: ['agent-a'],
+    paymentStatus: 'paid',
   }
 
   it('allows owner SME and denies other SME', () => {
@@ -28,6 +29,20 @@ describe('accessControl', () => {
   it('allows assigned/notified agent and denies other agent', () => {
     expect(canAgentActOnAttendance(agentA, request)).toBe(true)
     expect(canAgentActOnAttendance(agentB, request)).toBe(false)
+  })
+
+  it('denies unpaid notifiedAgents soft IDOR (mirrors Firestore)', () => {
+    const unpaidNotified = {
+      smeId: 'sme-a',
+      notifiedAgents: ['agent-b'],
+      paymentStatus: 'pending',
+    }
+    expect(canReadAttendance(agentB, unpaidNotified)).toBe(false)
+    expect(canAgentActOnAttendance(agentB, unpaidNotified)).toBe(false)
+
+    const paidNotified = { ...unpaidNotified, paymentStatus: 'paid' }
+    expect(canReadAttendance(agentB, paidNotified)).toBe(true)
+    expect(canAgentActOnAttendance(agentB, paidNotified)).toBe(true)
   })
 
   it('allows admin everywhere', () => {

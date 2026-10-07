@@ -14,12 +14,18 @@ export async function GET(request: NextRequest, props: { params: Promise<{ reque
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
     }
     const r = data.request
+    const paymentStatus = String(r.paymentStatus || '')
+    const paidForMarketplace =
+      paymentStatus === 'paid' || paymentStatus === 'not_required'
+    const notified =
+      paidForMarketplace &&
+      Array.isArray(r.notifiedAgents) &&
+      r.notifiedAgents.includes(user.uid)
     const allowed =
       user.userType === 'admin' ||
       r.agentId === user.uid ||
       r.assignedAgentId === user.uid ||
-      (Array.isArray(r.notifiedAgents) && r.notifiedAgents.includes(user.uid)) ||
-      r.status === 'pending'
+      notified
     if (!allowed) return forbiddenResponse()
     return NextResponse.json({ success: true, data })
   } catch (error) {

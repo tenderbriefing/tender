@@ -13,6 +13,7 @@ import { AttendanceRequestStatusBadge } from '@/components/procurement/StatusBad
 import { TrustStrip } from '@/components/procurement/TrustDisclaimer'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { authFetch } from '@/lib/api/authenticatedFetch'
+import { signInWithReturnHref } from '@/lib/auth/safeReturnPath'
 import type { EnrichedAttendanceRequest } from '@/lib/tenderBriefing/enrichment'
 import { ClipboardList } from 'lucide-react'
 
@@ -24,7 +25,7 @@ export default function SmeRequestsPage() {
 
   useEffect(() => {
     if (!authLoading) {
-      if (!user) router.push('/auth/signin')
+      if (!user) router.push(signInWithReturnHref('/sme/requests'))
       else if (userProfile?.userType !== 'sme') router.push('/dashboard')
     }
   }, [authLoading, user, userProfile, router])
