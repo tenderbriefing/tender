@@ -112,6 +112,7 @@ const POLICIES = {
   'pdf-download': { limit: 30, windowMs: 60_000 },
   'webhook-whatsapp': { limit: 120, windowMs: 60_000 },
   'webhook-payfast': { limit: 600, windowMs: 60_000 },
+  'webhook-resend': { limit: 600, windowMs: 60_000 },
   'admin-mutate': { limit: 60, windowMs: 60_000 },
   'auth-sensitive': { limit: 30, windowMs: 60_000 },
 }
