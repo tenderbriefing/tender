@@ -636,7 +636,7 @@ TenderConnect Team
         <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <p style="margin: 5px 0;"><strong>Contact Information:</strong></p>
           <p style="margin: 5px 0;">📱 WhatsApp: <a href="${PUBLIC_WHATSAPP_URL}">Chat on WhatsApp</a></p>
-          <p style="margin: 5px 0;">📍 Address: Maxwell Office Park, Magwa Crescent, Midrand, Gauteng</p>
+          <p style="margin: 5px 0;">📍 Address: Byls Bridge Office Park, Centurion, 0157</p>
         </div>
         <p>Best regards,<br>TenderConnect Team</p>
       </div>
@@ -661,7 +661,7 @@ Your connector will be assigned and will attend the briefing on your behalf. You
 
 Contact Information:
 📱 WhatsApp: ${PUBLIC_WHATSAPP_URL}
-📍 Address: Maxwell Office Park, Magwa Crescent, Midrand, Gauteng
+📍 Address: Byls Bridge Office Park, Centurion, 0157
 
 Best regards,
 TenderConnect Team
