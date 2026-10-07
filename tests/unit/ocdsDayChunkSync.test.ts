@@ -37,7 +37,9 @@ describe('OCDS day-chunk sync', () => {
 
   it('skips unhealthy days and returns releases from healthy days', async () => {
     const pages: string[] = []
-    vi.spyOn(sync, 'fetchOcdsPage').mockImplementation(async (from: string, to: string) => {
+    vi.spyOn(sync, 'fetchOcdsPage').mockImplementation(async (...args: unknown[]) => {
+      const from = String(args[0] ?? '')
+      const to = String(args[1] ?? '')
       pages.push(`${from}:${to}`)
       if (from === '2026-10-01' || from === '2026-10-04') {
         throw new Error('OCDS API error 500')
