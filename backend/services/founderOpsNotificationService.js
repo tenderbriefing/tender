@@ -476,10 +476,15 @@ async function sendResendEmail(summary, { env = process.env, resendClient = null
       typeof error === 'object' && error && 'message' in error
         ? String(error.message)
         : 'Resend send failed'
-    return { sent: false, error: message.slice(0, 200) }
+    return { sent: false, error: message.slice(0, 200), subject: template.subject }
   }
 
-  return { sent: true, id: data?.id || null, recipients }
+  return {
+    sent: true,
+    id: data?.id || null,
+    recipients,
+    subject: template.subject,
+  }
 }
 
 async function saveAdminInboxNotifications(summary, { getAdminUserIds, saveNotification } = {}) {
@@ -651,16 +656,62 @@ async function notifyWithSummary(summary, channel, deps = {}) {
 
     if (claim.ref) {
       if (email.sent || result.inboxCount > 0) {
-        await markIdempotency(claim.ref, 'sent', {
-          emailSent: Boolean(email.sent),
-          inboxCount: result.inboxCount,
-          eventType: summary.eventType || null,
-        })
+        try {
+          await markIdempotency(claim.ref, 'sent', {
+            emailSent: Boolean(email.sent),
+            inboxCount: result.inboxCount,
+            eventType: summary.eventType || null,
+          })
+        } catch (err) {
+          console.error(
+            `${LOG_PREFIX} ledger mark sent failed:`,
+            err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+          )
+        }
+
+        // Delivery observability: persist Resend message id (fail-soft).
+        if (email.sent && email.id) {
+          try {
+            const delivery = require('./founderOpsEmailDeliveryService')
+            const recorded = await delivery.recordResendAcceptance(
+              claim.ref,
+              {
+                providerMessageId: email.id,
+                recipients: email.recipients || founderEmailAllowlist(deps.env || process.env),
+                subject: email.subject || null,
+                eventType: summary.eventType || null,
+                idempotencyKey: summary.idempotencyKey,
+              },
+              { getFirestore: getDb }
+            )
+            if (recorded?.ok) {
+              result.email = {
+                ...(result.email || {}),
+                sent: true,
+                id: email.id,
+                providerMessageId: email.id,
+                deliveryStatus: 'accepted',
+              }
+            }
+          } catch (err) {
+            console.error(
+              `${LOG_PREFIX} delivery observability persist failed:`,
+              err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+            )
+          }
+        }
       } else {
-        await markIdempotency(claim.ref, 'failed', {
-          error: (email.error || 'notify_incomplete').slice(0, 200),
-          eventType: summary.eventType || null,
-        })
+        try {
+          await markIdempotency(claim.ref, 'failed', {
+            error: (email.error || 'notify_incomplete').slice(0, 200),
+            eventType: summary.eventType || null,
+          })
+        } catch (err) {
+          console.error(
+            `${LOG_PREFIX} ledger mark failed status failed:`,
+            err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+          )
+        }
       }
     }
 

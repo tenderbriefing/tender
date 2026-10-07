@@ -342,6 +342,19 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Founder ops Resend delivery correlation — Admin SDK only
+    match /founderOpsEmailByProviderId/{messageId} {
+      allow read, write: if false;
+    }
+
+    match /resendWebhookEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /resendWebhookPending/{messageId} {
+      allow read, write: if false;
+    }
+
     match /syncStatus/{docId} {
       allow read: if isAdmin();
       allow write: if false;

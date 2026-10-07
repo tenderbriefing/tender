@@ -290,6 +290,22 @@
         { "fieldPath": "smeId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "founderOpsDelivery", "order": "ASCENDING" },
+        { "fieldPath": "emailAcceptedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "providerMessageId", "order": "ASCENDING" },
+        { "fieldPath": "founderOpsDelivery", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

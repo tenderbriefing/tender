@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { FounderShell } from '@/components/founder/FounderShell'
 import { useFounderDashboard } from '@/components/founder/v2/useFounderDashboard'
 import { RevenueIntelligencePanel } from '@/components/founder/v2/RevenueIntelligence'
+import { EmailDeliveryPanel } from '@/components/founder/v2/EmailDeliveryPanel'
 import {
   ActivityChart,
   ErrorState,
@@ -98,6 +99,7 @@ export default function FounderOverviewPage() {
             </div>
           )}
           <KpiStrip items={kpis} />
+          <EmailDeliveryPanel />
           <ActivityChart points={overview.activity} />
           <NeedsAttention items={overview.needsAttention} />
           {overview.dataNotes?.length ? (
