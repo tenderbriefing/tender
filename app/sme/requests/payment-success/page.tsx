@@ -8,6 +8,7 @@ import Footer from '@/components/layout/Footer'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { authFetch } from '@/lib/api/authenticatedFetch'
+import { signInWithReturnHref } from '@/lib/auth/safeReturnPath'
 import type { EnrichedAttendanceRequest } from '@/lib/tenderBriefing/enrichment'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
 
@@ -23,10 +24,16 @@ function PaymentSuccessContent() {
 
   useEffect(() => {
     if (!authLoading) {
-      if (!user) router.push('/auth/signin')
-      else if (userProfile?.userType !== 'sme') router.push('/dashboard')
+      if (!user) {
+        const returnPath = requestId
+          ? `/sme/requests/payment-success?requestId=${encodeURIComponent(requestId)}`
+          : '/sme/requests/payment-success'
+        router.push(signInWithReturnHref(returnPath))
+      } else if (userProfile?.userType !== 'sme') {
+        router.push('/dashboard')
+      }
     }
-  }, [authLoading, user, userProfile, router])
+  }, [authLoading, user, userProfile, router, requestId])
 
   useEffect(() => {
     if (!requestId || !user) return

@@ -8,6 +8,10 @@ import { getAuthErrorMessage, normalizeAuthEmail } from '@/lib/auth/errors'
 import { homePathForProfile } from '@/lib/auth/redirects'
 import { resolvePostAuthDestination } from '@/lib/auth/googleAuthFlow'
 import {
+  isSafeReturnPath,
+  withReturnRedirect,
+} from '@/lib/auth/safeReturnPath'
+import {
   continueWithGoogle,
   finishGoogleRedirect,
 } from '@/lib/auth/continueWithGoogle'
@@ -56,7 +60,11 @@ function SignInForm() {
         return
       }
       toast.success('Signed in with Google')
-      router.replace(redirectTo || result.redirectPath || '/sme/dashboard')
+      router.replace(
+        isSafeReturnPath(redirectTo)
+          ? redirectTo
+          : result.redirectPath || '/sme/dashboard'
+      )
     })()
     return () => {
       cancelled = true
@@ -87,7 +95,9 @@ function SignInForm() {
       const profile = userProfile || (await getUserProfile(user.uid))
       if (!profile?.userType) {
         toast.success('Almost there — choose SME or Youth Agent to finish setup')
-        router.replace('/auth/role-selection?recover=1')
+        router.replace(
+          withReturnRedirect('/auth/role-selection?recover=1', redirectTo)
+        )
         return
       }
       const dest = resolvePostAuthDestination(profile)
@@ -106,7 +116,7 @@ function SignInForm() {
       } catch {
         /* non-blocking */
       }
-      if (redirectTo) router.push(redirectTo)
+      if (isSafeReturnPath(redirectTo)) router.push(redirectTo)
       else router.push(dest.path || homePathForProfile(profile))
     } catch (error: unknown) {
       toast.error(getAuthErrorMessage(error, 'Unable to sign in right now. Please try again.'))
@@ -135,7 +145,11 @@ function SignInForm() {
         return
       }
       toast.success('Signed in with Google')
-      router.replace(redirectTo || result.redirectPath || '/sme/dashboard')
+      router.replace(
+        isSafeReturnPath(redirectTo)
+          ? redirectTo
+          : result.redirectPath || '/sme/dashboard'
+      )
     } catch (error: unknown) {
       toast.error(getAuthErrorMessage(error, 'Google sign-in failed.'))
     } finally {

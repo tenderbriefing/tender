@@ -10,6 +10,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { bootstrapGoogleProfile } from '@/lib/auth/continueWithGoogle'
 import { onboardingPathForRole } from '@/lib/auth/googleAuthFlow'
 import { dashboardPathForRole } from '@/lib/auth/redirects'
+import { isSafeReturnPath } from '@/lib/auth/safeReturnPath'
 import { toast } from 'react-hot-toast'
 
 function RoleSelectionContent() {
@@ -17,6 +18,7 @@ function RoleSelectionContent() {
   const searchParams = useSearchParams()
   const finishPending =
     searchParams?.get('google') === '1' || searchParams?.get('recover') === '1'
+  const returnTo = searchParams?.get('redirect') || ''
   const { user, userProfile, loading } = useAuth()
   const [busy, setBusy] = useState<'sme' | 'youth-agent' | null>(null)
 
@@ -24,9 +26,10 @@ function RoleSelectionContent() {
     if (!loading && finishPending && userProfile?.userType) {
       if (userProfile.userType === 'youth-agent') router.replace('/agent/dashboard')
       else if (userProfile.userType === 'admin') router.replace('/admin/dashboard')
+      else if (isSafeReturnPath(returnTo)) router.replace(returnTo)
       else router.replace('/sme/dashboard')
     }
-  }, [loading, finishPending, userProfile, router])
+  }, [loading, finishPending, userProfile, router, returnTo])
 
   const completeRole = async (role: 'sme' | 'youth-agent') => {
     if (!user) {
@@ -69,11 +72,16 @@ function RoleSelectionContent() {
         /* non-blocking */
       }
       // Missing-profile / Google recovery — never show "account created" welcome.
+      // Preserve purchase return path when onboarding is not required.
       const continuePath =
-        boot.data?.continuePath ||
-        (boot.data?.onboardingRequired
-          ? onboardingPathForRole(role)
-          : dashboardPathForRole(role))
+        !boot.data?.onboardingRequired &&
+        role === 'sme' &&
+        isSafeReturnPath(returnTo)
+          ? returnTo
+          : boot.data?.continuePath ||
+            (boot.data?.onboardingRequired
+              ? onboardingPathForRole(role)
+              : dashboardPathForRole(role))
       toast.success(
         boot.data?.onboardingRequired
           ? 'Continue onboarding to finish your profile'

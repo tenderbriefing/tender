@@ -69,15 +69,24 @@ async function listAssignments(agentId) {
   }
 }
 
+function agentMayAccessRequest(req, agentId) {
+  if (!req) return false
+  if (req.agentId === agentId || req.assignedAgentId === agentId) return true
+  const paymentStatus = String(req.paymentStatus || '')
+  const paidForMarketplace =
+    paymentStatus === 'paid' || paymentStatus === 'not_required'
+  return (
+    paidForMarketplace &&
+    Array.isArray(req.notifiedAgents) &&
+    req.notifiedAgents.includes(agentId)
+  )
+}
+
 async function getAssignmentDetail(requestId, agentId) {
   const detail = await mobileField.getBriefingDetail(requestId, agentId)
   if (!detail?.request) return null
   const req = detail.request
-  const assigned =
-    req.agentId === agentId ||
-    req.assignedAgentId === agentId ||
-    (Array.isArray(req.notifiedAgents) && req.notifiedAgents.includes(agentId))
-  if (!assigned) return null
+  if (!agentMayAccessRequest(req, agentId)) return null
 
   const db = getFirestore()
   const [draftSnap, msgSnap, auditSnap] = await Promise.all([
@@ -146,11 +155,9 @@ async function transitionAssignment(requestId, agentId, toStatus, meta = {}) {
   const snap = await ref.get()
   if (!snap.exists) throw new Error('Assignment not found')
   const data = snap.data()
-  const isAssignee =
-    data.agentId === agentId ||
-    data.assignedAgentId === agentId ||
-    (Array.isArray(data.notifiedAgents) && data.notifiedAgents.includes(agentId))
-  if (!isAssignee) throw new Error('Not assigned to this request')
+  if (!agentMayAccessRequest(data, agentId)) {
+    throw new Error('Not assigned to this request')
+  }
 
   lifecycle.assertWorkflowTransition(data.status, toStatus, 'youth-agent')
 

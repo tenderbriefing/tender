@@ -55,7 +55,9 @@ export default function TenderActionPanel({
 
   const handleRequestAttendance = () => {
     if (!user) {
-      router.push(`/auth/signin?redirect=/tenders/${tender.id}/request-agent`)
+      router.push(
+        `/auth/signin?redirect=${encodeURIComponent(`/tenders/${tender.id}/request-agent`)}`
+      )
       return
     }
     if (userProfile?.userType && userProfile.userType !== 'sme') {

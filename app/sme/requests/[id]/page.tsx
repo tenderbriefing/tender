@@ -28,6 +28,7 @@ import {
 import type { EnrichedAttendanceRequest } from '@/lib/tenderBriefing/enrichment'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { authFetch } from '@/lib/api/authenticatedFetch'
+import { signInWithReturnHref } from '@/lib/auth/safeReturnPath'
 import type { BriefingReport } from '@/lib/tenderBriefing/types'
 import AttendancePaymentSummary from '@/components/payments/AttendancePaymentSummary'
 
@@ -44,10 +45,14 @@ export default function SmeRequestDetailPage() {
 
   useEffect(() => {
     if (!authLoading) {
-      if (!user) router.push('/auth/signin')
-      else if (userProfile?.userType !== 'sme') router.push('/dashboard')
+      if (!user) {
+        const returnPath = id ? `/sme/requests/${id}` : '/sme/requests'
+        router.push(signInWithReturnHref(returnPath))
+      } else if (userProfile?.userType !== 'sme') {
+        router.push('/dashboard')
+      }
     }
-  }, [authLoading, user, userProfile, router])
+  }, [authLoading, user, userProfile, router, id])
 
   useEffect(() => {
     if (!id || !user) return

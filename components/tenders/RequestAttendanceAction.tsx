@@ -6,7 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { getTenderDisplayStatus } from '@/lib/procurement/tenderStatus'
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import {
-  BOOK_AGENT_CTA,
+  BOOK_AGENT_CTA_WITH_FEE,
   BOOK_AGENT_SIGN_IN_CTA,
   APPOINT_YOUTH_AGENT_CTA,
 } from '@/lib/booking/labels'
@@ -37,7 +37,7 @@ export default function RequestAttendanceAction({
     isPrivateTenderBriefingBookingUiEnabled() &&
     (tender.sourceType === 'private' || Boolean((tender as { privateSubmissionId?: string }).privateSubmissionId)) &&
     isPhysicalBriefingBookable(tender as unknown as Record<string, unknown>)
-  const smeCtaLabel = useAppointCta ? APPOINT_YOUTH_AGENT_CTA : BOOK_AGENT_CTA
+  const smeCtaLabel = useAppointCta ? APPOINT_YOUTH_AGENT_CTA : BOOK_AGENT_CTA_WITH_FEE
 
   const compact =
     size === 'compact'
