@@ -1,5 +1,6 @@
 import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 import { isBriefingThisWeek, isClosingSoon } from './dates'
+import { tenderMatchesSearchQuery } from './tenderSearch'
 
 export interface ProcurementFilterState {
   search: string
@@ -81,11 +82,8 @@ export function filterTenders(
       if (!num.includes(filters.tenderNumber.toLowerCase())) return false
     }
 
-    if (filters.search) {
-      const q = filters.search.toLowerCase()
-      const hay =
-        `${t.title} ${t.description} ${t.summary} ${t.department} ${t.buyer} ${t.tenderNumber} ${t.province} ${t.category}`.toLowerCase()
-      if (!hay.includes(q)) return false
+    if (filters.search && !tenderMatchesSearchQuery(t, filters.search)) {
+      return false
     }
 
     if (filters.closingFrom) {

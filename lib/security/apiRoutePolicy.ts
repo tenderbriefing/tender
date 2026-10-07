@@ -18,6 +18,7 @@ export function isPublicApiRoute(pathname: string, method: string): boolean {
   const m = method.toUpperCase()
 
   if (pathname === '/api/tender-briefings' && m === 'GET') return true
+  if (pathname === '/api/tender-briefings/search' && m === 'GET') return true
   if (/^\/api\/tender-briefings\/[^/]+$/.test(pathname) && m === 'GET') return true
   if (pathname === '/api/tender-briefings/stats/summary' && m === 'GET') return true
   if (pathname === '/api/health/firestore' && m === 'GET') return true
@@ -28,6 +29,7 @@ export function isPublicApiRoute(pathname: string, method: string): boolean {
   if (pathname === '/api/webhooks/yoco' && m === 'POST') return true
   if (pathname === '/api/support/tickets' && m === 'POST') return true
   if (pathname === '/api/product-events/auth-funnel' && m === 'POST') return true
+  if (pathname === '/api/product-events/funnel' && m === 'POST') return true
   if (pathname === '/api/private-tenders/submit' && m === 'POST') return true
   if (pathname === '/api/private-tenders/upload' && m === 'POST') return true
   if (/^\/api\/private-tenders\/status\/[^/]+$/.test(pathname) && m === 'GET') return true

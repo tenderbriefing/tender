@@ -55,9 +55,11 @@ export default function TenderFiltersBar({
             type="search"
             value={filters.search}
             onChange={(e) => onChange({ ...filters, search: e.target.value })}
-            placeholder="Search by title, company, reference, or province…"
+            placeholder="Search by keyword, tender number or organisation"
             className="w-full rounded-xl border border-slate-200 bg-slate-50/80 py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600/20"
-            aria-label="Search compulsory briefings"
+            aria-label="Search tenders"
+            enterKeyHint="search"
+            maxLength={120}
           />
         </div>
 

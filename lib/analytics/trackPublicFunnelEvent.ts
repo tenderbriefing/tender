@@ -32,21 +32,35 @@ function getPublicSessionId(): string {
  * Public / unauthenticated funnel events (discovery + tender detail).
  * Fire-and-forget; session-deduped; never blocks UX.
  */
+export type PublicFunnelEventName =
+  | 'tender_listing_viewed'
+  | 'tender_opened'
+  | 'search_performed'
+  | 'search_no_results'
+
 export async function trackPublicFunnelEvent(
-  eventName: 'tender_listing_viewed' | 'tender_opened',
+  eventName: PublicFunnelEventName,
   opts: {
     pagePath?: string
     tenderId?: string
     province?: string
     resultCount?: number
+    queryLength?: number
   } = {}
 ): Promise<void> {
   const entityKey =
     eventName === 'tender_opened'
       ? String(opts.tenderId || '')
-      : String(opts.pagePath || (typeof window !== 'undefined' ? window.location.pathname : ''))
+      : eventName === 'search_performed' || eventName === 'search_no_results'
+        ? `${eventName}:${opts.queryLength ?? 0}:${opts.resultCount ?? 0}:${opts.province || ''}`
+        : String(opts.pagePath || (typeof window !== 'undefined' ? window.location.pathname : ''))
   if (!entityKey) return
-  if (!claimSessionDedupe(eventName, entityKey)) return
+  // Search events may fire multiple times per session with different queries
+  if (eventName !== 'search_performed' && eventName !== 'search_no_results') {
+    if (!claimSessionDedupe(eventName, entityKey)) return
+  } else if (!claimSessionDedupe(eventName, entityKey)) {
+    return
+  }
 
   try {
     await fetch('/api/product-events/funnel', {
@@ -60,6 +74,7 @@ export async function trackPublicFunnelEvent(
         tenderId: opts.tenderId,
         province: opts.province,
         resultCount: opts.resultCount,
+        queryLength: opts.queryLength,
         instrumentationVersion: FUNNEL_INSTRUMENTATION_VERSION,
       }),
       keepalive: true,

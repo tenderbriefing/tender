@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
+import TenderSearchForm from '@/components/tenders/TenderSearchForm'
 
 export default function Hero() {
   const { user, userProfile } = useAuth()
@@ -88,8 +89,24 @@ export default function Hero() {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.34, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-10 flex w-full max-w-md flex-col items-stretch gap-3 sm:max-w-none sm:flex-row sm:items-center sm:justify-center"
+          transition={{ duration: 0.55, delay: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-8 w-full max-w-2xl"
+        >
+          <p className="mb-2 text-left text-sm font-semibold text-accent-300 sm:text-center">
+            Search tenders
+          </p>
+          <TenderSearchForm variant="hero" />
+          <p className="mt-2 text-left text-xs text-brand-200/70 sm:text-center">
+            Find by keyword, tender number, or organisation — then appoint a Youth Agent for
+            R349 when attendance is required.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.38, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-8 flex w-full max-w-md flex-col items-stretch gap-3 sm:max-w-none sm:flex-row sm:items-center sm:justify-center"
         >
           {user ? (
             <>
