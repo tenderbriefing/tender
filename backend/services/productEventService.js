@@ -134,6 +134,8 @@ const MEANINGFUL = new Set([
 const FUNNEL_EVENTS = new Set([
   'tender_listing_viewed',
   'tender_opened',
+  'search_performed',
+  'search_no_results',
   'booking_intent',
   'booking_created',
   'checkout_started',

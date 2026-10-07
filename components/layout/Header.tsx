@@ -8,7 +8,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import { signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { toast } from 'react-hot-toast'
-import { Menu, X } from 'lucide-react'
+import { Menu, Search, X } from 'lucide-react'
 import NotificationCenter from '@/components/notifications/NotificationCenter'
 import {
   AGENT_NAV,
@@ -147,6 +147,18 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
           </nav>
 
           <div className="flex items-center gap-2">
+            <Link
+              href="/tenders"
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold transition ${
+                overDarkHero
+                  ? 'text-white hover:bg-white/10'
+                  : 'text-brand-800 hover:bg-brand-50'
+              }`}
+              aria-label="Search tenders"
+            >
+              <Search className="h-4 w-4" aria-hidden />
+              <span className="hidden sm:inline">Search tenders</span>
+            </Link>
             {showAccountChrome && <NotificationCenter />}
             {showAccountChrome ? (
               <div className="relative hidden sm:block">
@@ -236,6 +248,14 @@ const Header = ({ transparentOnHome = false }: { transparentOnHome?: boolean }) 
         {isMenuOpen && (
           <nav className="border-t border-slate-100 bg-white py-4 lg:hidden" aria-label="Mobile">
             <div className="flex flex-col gap-1">
+              <Link
+                href="/tenders"
+                className="mb-1 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2.5 text-base font-semibold text-brand-800"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Search className="h-5 w-5" aria-hidden />
+                Search tenders
+              </Link>
               {navItems.map((item) => (
                 <Link
                   key={item.name}

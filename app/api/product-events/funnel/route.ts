@@ -3,7 +3,12 @@ import { checkRateLimit, clientIpFromRequest } from '@/lib/security/rateLimit'
 
 export const dynamic = 'force-dynamic'
 
-const ALLOWED = new Set(['tender_listing_viewed', 'tender_opened'])
+const ALLOWED = new Set([
+  'tender_listing_viewed',
+  'tender_opened',
+  'search_performed',
+  'search_no_results',
+])
 
 /**
  * Unauthenticated commercial funnel events (discovery / tender detail).
@@ -24,6 +29,7 @@ export async function POST(request: NextRequest) {
     tenderId?: string
     province?: string
     resultCount?: number
+    queryLength?: number
     instrumentationVersion?: string
   } = {}
   try {
@@ -43,6 +49,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  if (body.eventName === 'search_performed' || body.eventName === 'search_no_results') {
+    if (!Number.isFinite(body.queryLength) || Number(body.queryLength) < 1) {
+      return NextResponse.json({ success: false, error: 'queryLength required' }, { status: 400 })
+    }
+  }
+
   try {
     const productEvents = require('../../../../backend/services/productEventService.js')
     const metadata: Record<string, unknown> = {}
@@ -55,11 +67,17 @@ export async function POST(request: NextRequest) {
     if (Number.isFinite(body.resultCount)) {
       metadata.resultCount = Math.max(0, Math.min(100000, Math.round(Number(body.resultCount))))
     }
+    if (Number.isFinite(body.queryLength)) {
+      metadata.queryLength = Math.max(0, Math.min(200, Math.round(Number(body.queryLength))))
+      metadata.hasResults = Number(body.resultCount || 0) > 0
+    }
     metadata.instrumentationVersion =
       typeof body.instrumentationVersion === 'string' && body.instrumentationVersion.length < 40
         ? body.instrumentationVersion
         : productEvents.FUNNEL_INSTRUMENTATION_VERSION
 
+    const isSearch =
+      body.eventName === 'search_performed' || body.eventName === 'search_no_results'
     const result = await productEvents.ingestProductEvent(
       { uid: 'anonymous_funnel', userType: null },
       {
@@ -67,7 +85,7 @@ export async function POST(request: NextRequest) {
         sessionId:
           typeof body.sessionId === 'string' ? body.sessionId.slice(0, 80) : null,
         pagePath: typeof body.pagePath === 'string' ? body.pagePath.slice(0, 200) : null,
-        feature: 'revenue_funnel',
+        feature: isSearch ? 'tender_search' : 'revenue_funnel',
         deviceCategory:
           typeof body.deviceCategory === 'string' ? body.deviceCategory.slice(0, 40) : null,
         targetEntityType: body.eventName === 'tender_opened' ? 'tender' : 'catalogue',

@@ -1,21 +1,8 @@
-import type { Metadata } from 'next'
-import { buildPageMetadata } from '@/lib/seo/metadata'
-
-export const metadata: Metadata = buildPageMetadata({
-  title: 'Tender Briefings South Africa | Compulsory Government Tenders',
-  description:
-    'Browse compulsory government tender briefings across South Africa. Official eTenders data, briefing dates, documents and free SME discovery on TenderBriefing.',
-  path: '/tenders',
-  // Catalogue filters are client-local (not URL query params) — canonical stays /tenders.
-  keywords: [
-    'tender briefing South Africa',
-    'compulsory tender briefings',
-    'government tenders',
-    'eTenders opportunities',
-    'SME tenders',
-  ],
-})
-
+/**
+ * Catalogue layout — page-level generateMetadata owns title/robots.
+ * Canonical for all /tenders variants remains /tenders (see page.tsx).
+ * Search query params (?q=, ?province=) are noindex to avoid SEO bloat.
+ */
 export default function TendersLayout({ children }: { children: React.ReactNode }) {
   return children
 }
