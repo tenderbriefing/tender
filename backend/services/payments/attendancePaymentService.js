@@ -144,6 +144,16 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
         err instanceof Error ? err.message.slice(0, 160) : 'unknown'
       )
     }
+    // Founder payment alert is also idempotent — retries a prior Resend failure only
+    try {
+      const founderOps = require('../founderOpsNotificationService')
+      await founderOps.notifyAttendanceRequestPaidSafe(request)
+    } catch (err) {
+      console.error(
+        '[attendancePayment] already-paid founder ops notify failed:',
+        err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+      )
+    }
     return { request, alreadyPaid: true }
   }
 
