@@ -38,6 +38,8 @@ const EVENT_NAMES = new Set([
   'booking_intent',
   'booking_created',
   'checkout_started',
+  'payment_confirmed',
+  'booking_confirmed',
   'assigned_sme_opened',
   'sme_contacted',
   'contact_attempt_recorded',
@@ -121,6 +123,8 @@ const MEANINGFUL = new Set([
   'booking_intent',
   'booking_created',
   'checkout_started',
+  'payment_confirmed',
+  'booking_confirmed',
   'assigned_sme_opened',
   'sme_contacted',
   'follow_up_completed',
@@ -139,6 +143,8 @@ const FUNNEL_EVENTS = new Set([
   'booking_intent',
   'booking_created',
   'checkout_started',
+  'payment_confirmed',
+  'booking_confirmed',
   'private_tender_briefing_booked',
 ])
 

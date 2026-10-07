@@ -196,6 +196,40 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
     checkoutId: checkoutId || null,
   })
 
+  // Behavioural funnel only — never payment authority
+  {
+    const productEvents = require('../productEventService')
+    const actorUid = String(updated.smeId || 'system')
+    const baseMeta = {
+      requestId: String(requestId).slice(0, 120),
+      tenderId: updated.tenderId ? String(updated.tenderId).slice(0, 120) : undefined,
+      instrumentationVersion: productEvents.FUNNEL_INSTRUMENTATION_VERSION,
+    }
+    await productEvents.emitFunnelEventSafe(
+      { uid: actorUid, userType: 'sme' },
+      {
+        eventName: 'payment_confirmed',
+        feature: 'revenue_funnel',
+        targetEntityType: 'attendance_request',
+        targetEntityId: requestId,
+        metadata: {
+          ...baseMeta,
+          checkoutId: checkoutId ? String(checkoutId).slice(0, 120) : undefined,
+        },
+      }
+    )
+    await productEvents.emitFunnelEventSafe(
+      { uid: actorUid, userType: 'sme' },
+      {
+        eventName: 'booking_confirmed',
+        feature: 'revenue_funnel',
+        targetEntityType: 'attendance_request',
+        targetEntityId: requestId,
+        metadata: baseMeta,
+      }
+    )
+  }
+
   // Founder/ops alert on successful payment — fail-soft; skip if already paid above
   try {
     const founderOps = require('../founderOpsNotificationService')

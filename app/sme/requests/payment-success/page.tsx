@@ -18,7 +18,8 @@ function PaymentSuccessContent() {
   const router = useRouter()
   const [request, setRequest] = useState<EnrichedAttendanceRequest | null>(null)
   const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState('Confirming your payment…')
+  const [message, setMessage] = useState("We're confirming your payment…")
+  const [paidConfirmed, setPaidConfirmed] = useState(false)
 
   useEffect(() => {
     if (!authLoading) {
@@ -30,6 +31,9 @@ function PaymentSuccessContent() {
   useEffect(() => {
     if (!requestId || !user) return
 
+    let cancelled = false
+    let attempts = 0
+
     const confirm = async () => {
       try {
         await authFetch('/api/payments/payfast/confirm', {
@@ -38,30 +42,51 @@ function PaymentSuccessContent() {
         })
         const res = await authFetch(`/api/attendance-requests/${requestId}`)
         const json = await res.json()
+        if (cancelled) return
         if (json.success) {
           setRequest(json.data.request)
           if (json.data.request.paymentStatus === 'paid') {
-            setMessage('Payment received. Nearby Youth Agents can now accept your booking.')
-          } else {
+            setPaidConfirmed(true)
             setMessage(
-              'Payment is processing. Open your booking in a moment if status is still pending.'
+              'Payment received. Your booking is confirmed — nearby Youth Agents can now accept it.'
             )
+            setLoading(false)
+            return
           }
+          setMessage(
+            "We're confirming your payment with the bank. This usually takes a few seconds."
+          )
         }
       } catch {
-        setMessage('We could not verify payment yet. Check My Requests for status.')
-      } finally {
+        if (!cancelled) {
+          setMessage('We could not verify payment yet. Check My Requests for status.')
+        }
+      }
+
+      attempts += 1
+      if (!cancelled && attempts < 8) {
+        window.setTimeout(confirm, 2500)
+      } else if (!cancelled) {
         setLoading(false)
+        setMessage(
+          'Payment is still processing. Open My Requests shortly — confirmation is server-side and does not rely on this page.'
+        )
       }
     }
 
-    confirm()
+    void confirm()
+    return () => {
+      cancelled = true
+    }
   }, [requestId, user])
 
-  if (authLoading || loading) {
+  if (authLoading || (loading && !request)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <LoadingSpinner size="lg" />
+        <div className="text-center px-4">
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-sm font-medium text-slate-700">{message}</p>
+        </div>
       </div>
     )
   }
@@ -71,8 +96,12 @@ function PaymentSuccessContent() {
       <Header />
       <main className="mx-auto max-w-lg px-4 py-12">
         <div className="rounded-2xl border border-accent-200 bg-white p-8 shadow-sm text-center">
-          <CheckCircleIcon className="mx-auto h-12 w-12 text-accent-500" />
-          <h1 className="mt-4 text-2xl font-bold text-slate-900">You&apos;re booked</h1>
+          <CheckCircleIcon
+            className={`mx-auto h-12 w-12 ${paidConfirmed ? 'text-accent-500' : 'text-slate-300'}`}
+          />
+          <h1 className="mt-4 text-2xl font-bold text-slate-900">
+            {paidConfirmed ? 'Booking confirmed' : 'Confirming payment'}
+          </h1>
           <p className="mt-2 text-slate-600">{message}</p>
           {request && (
             <dl className="mt-6 text-left text-sm space-y-2 rounded-lg bg-slate-50 p-4">

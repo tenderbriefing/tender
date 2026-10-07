@@ -226,27 +226,37 @@ describe('attendanceRequests — IDOR matrix', () => {
     )
   })
 
-  it('Agent can read a request only once notified or assigned', async () => {
-    const notifiedRequestId = uid('req')
-    await seed('attendanceRequests', notifiedRequestId, {
+  it('Agent can read via notifiedAgents only after paid (soft IDOR closed)', async () => {
+    const unpaidNotifiedId = uid('req')
+    await seed('attendanceRequests', unpaidNotifiedId, {
       smeId: SME_A,
       status: 'pending',
       paymentStatus: 'pending',
       notifiedAgents: [AGENT_A],
     })
-    await assertSucceeds(getDoc(doc(firestoreAs(AGENT_A), 'attendanceRequests', notifiedRequestId)))
+    // Pre-pay candidate list must not grant client SDK visibility.
+    await assertFails(getDoc(doc(firestoreAs(AGENT_A), 'attendanceRequests', unpaidNotifiedId)))
+
+    const paidNotifiedId = uid('req')
+    await seed('attendanceRequests', paidNotifiedId, {
+      smeId: SME_A,
+      status: 'pending',
+      paymentStatus: 'paid',
+      notifiedAgents: [AGENT_A],
+    })
+    await assertSucceeds(getDoc(doc(firestoreAs(AGENT_A), 'attendanceRequests', paidNotifiedId)))
 
     const assignedRequestId = uid('req')
     await seed('attendanceRequests', assignedRequestId, {
       smeId: SME_A,
       assignedAgentId: AGENT_B,
       status: 'assigned',
-      paymentStatus: 'pending',
+      paymentStatus: 'paid',
     })
     await assertSucceeds(getDoc(doc(firestoreAs(AGENT_B), 'attendanceRequests', assignedRequestId)))
 
-    // Agent B was neither notified nor assigned on the first request.
-    await assertFails(getDoc(doc(firestoreAs(AGENT_B), 'attendanceRequests', notifiedRequestId)))
+    // Agent B was neither notified nor assigned on the paid notified request.
+    await assertFails(getDoc(doc(firestoreAs(AGENT_B), 'attendanceRequests', paidNotifiedId)))
   })
 
   it('unauthenticated clients are denied on attendanceRequests', async () => {

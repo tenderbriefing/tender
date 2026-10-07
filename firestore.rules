@@ -214,13 +214,18 @@ service cloud.firestore {
       // Client SDK create previously allowed paymentStatus=not_required and
       // attacker-controlled fee snapshots — that path is closed.
       allow create: if false;
+      // Youth Agents may read via notifiedAgents only AFTER authoritative payment.
+      // Pre-pay candidate lists must not grant client SDK visibility (soft IDOR).
       allow read: if isAdmin()
         || (isSme() && resource.data.smeId == request.auth.uid)
         || (isYouthAgent() && (
           resource.data.agentId == request.auth.uid
           || resource.data.get('assignedAgentId', '') == request.auth.uid
-          || ('notifiedAgents' in resource.data
-            && request.auth.uid in resource.data.notifiedAgents)
+          || (
+            resource.data.get('paymentStatus', '') in ['paid', 'not_required']
+            && 'notifiedAgents' in resource.data
+            && request.auth.uid in resource.data.notifiedAgents
+          )
         ));
       // Client updates cannot escalate payment, assignment, or workflow status.
       // Lifecycle mutations go through Admin SDK APIs.

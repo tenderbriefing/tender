@@ -39,6 +39,9 @@ export const PRODUCT_EVENT_NAMES = [
   'booking_intent',
   'booking_created',
   'checkout_started',
+  /** Behavioural only — payment authority remains PayFast ITN / Firestore paid. */
+  'payment_confirmed',
+  'booking_confirmed',
   // Youth Agent
   'assigned_sme_opened',
   'sme_contacted',
@@ -83,6 +86,8 @@ export const MEANINGFUL_EVENTS = new Set<ProductEventName>([
   'booking_intent',
   'booking_created',
   'checkout_started',
+  'payment_confirmed',
+  'booking_confirmed',
   'assigned_sme_opened',
   'sme_contacted',
   'follow_up_completed',
