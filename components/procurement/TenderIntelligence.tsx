@@ -233,7 +233,7 @@ export default function TenderIntelligence({ tender }: TenderIntelligenceProps) 
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     Briefing venue
                   </p>
-                  <p className="mt-0.5 text-sm font-semibold leading-relaxed text-brand-900">
+                  <p className="mt-0.5 break-all text-sm font-semibold leading-relaxed text-brand-900">
                     {tender.briefingVenue}
                   </p>
                 </div>
