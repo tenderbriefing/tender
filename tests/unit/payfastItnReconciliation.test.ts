@@ -120,6 +120,9 @@ describe('PayFast ITN → paid → once dispatch', () => {
 
   it('COMPLETE ITN with empty fields marks paid and dispatches exactly once', async () => {
     const workflow = require('../../backend/services/workflowAutomationService')
+    const productEvents = require('../../backend/services/productEventService')
+    productEvents.emitFunnelEventSafe = vi.fn(async () => ({ ok: true }))
+
     const first = await paymentService.processPayfastItn(completeItn())
     expect(first.ok).toBe(true)
     expect(first.paymentStatus).toBe('paid')
@@ -128,10 +131,20 @@ describe('PayFast ITN → paid → once dispatch', () => {
       'request_paid',
       expect.objectContaining({ id: 'req-1786562638424-6nlcb3' })
     )
+    expect(productEvents.emitFunnelEventSafe).toHaveBeenCalledWith(
+      expect.objectContaining({ uid: 'sme-1' }),
+      expect.objectContaining({ eventName: 'payment_confirmed' })
+    )
+    expect(productEvents.emitFunnelEventSafe).toHaveBeenCalledWith(
+      expect.objectContaining({ uid: 'sme-1' }),
+      expect.objectContaining({ eventName: 'booking_confirmed' })
+    )
 
     const second = await paymentService.processPayfastItn(completeItn())
     expect(second.duplicate).toBe(true)
     expect(workflow.dispatchWorkflowEvent).toHaveBeenCalledTimes(1)
+    // Duplicate ITN must not re-emit funnel payment events
+    expect(productEvents.emitFunnelEventSafe).toHaveBeenCalledTimes(2)
   })
 
   it('rejects invalid signature without marking paid', async () => {

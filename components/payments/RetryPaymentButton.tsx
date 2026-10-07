@@ -49,7 +49,7 @@ export default function RetryPaymentButton({
         'inline-flex min-h-[44px] items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50'
       }
     >
-      {loading ? 'Redirecting…' : `Pay ${ATTENDANCE_FEE_LABEL} with PayFast`}
+      {loading ? 'Redirecting…' : `Try Payment Again — ${ATTENDANCE_FEE_LABEL}`}
     </button>
   )
 }

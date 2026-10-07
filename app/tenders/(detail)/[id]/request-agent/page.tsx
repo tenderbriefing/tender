@@ -261,12 +261,13 @@ function RequestYouthAgentContent() {
           </span>
 
           <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-4xl">
-            Book a Youth Agent for{' '}
-            <span className="text-accent-400">{ATTENDANCE_FEE_LABEL}</span>
+            Get a Youth Agent to attend this compulsory tender briefing for you
           </h1>
           <p className="mt-3 max-w-2xl text-brand-100/80">
-            One confirmation. We send a verified Youth Agent to this compulsory briefing and
-            deliver a structured Briefing Report within 24 hours.
+            Fixed fee{' '}
+            <span className="font-semibold text-accent-400">{ATTENDANCE_FEE_LABEL}</span>
+            . Payment confirms your booking; a Youth Agent is assigned only after they accept.
+            Attendance and your Briefing Report follow after the briefing — not at checkout.
           </p>
 
           <div className="mt-6 inline-flex flex-wrap items-center gap-2 rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-inset ring-white/10">
@@ -483,7 +484,7 @@ function RequestYouthAgentContent() {
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent-500 py-4 text-base font-bold text-brand-900 shadow-gold transition hover:bg-accent-400 disabled:opacity-50 sm:text-lg"
             >
               <Sparkles className="h-5 w-5" />
-              {submitting ? 'Booking…' : BOOK_AGENT_PAY_CTA}
+              {submitting ? 'Starting checkout…' : BOOK_AGENT_PAY_CTA}
             </button>
             <ol className="space-y-1.5 px-1 text-xs text-slate-600">
               {ATTENDANCE_NEXT_STEPS.map((step, i) => (
@@ -514,7 +515,8 @@ function RequestYouthAgentContent() {
                   <span className="text-sm text-brand-100/70">/ briefing</span>
                 </div>
                 <p className="mt-2 text-sm leading-relaxed text-brand-100/80">
-                  One-time fee. No subscription. Agents are dispatched after payment.
+                  One-time fee. No subscription. Nearby agents are notified after payment;
+                  assignment is not promised until an agent accepts.
                 </p>
               </div>
 
