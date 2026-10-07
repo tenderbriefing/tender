@@ -19,11 +19,41 @@ const OCDS_API_BASE = DEFAULT_OCDS_API_BASE
 const PAGE_SIZE = 100
 const MAX_PAGES_INCREMENTAL = 20
 const MAX_PAGES_FULL = 200
+/** Cap pages fetched per calendar day (NT API often 500s on multi-day windows). */
+const MAX_PAGES_PER_DAY = 20
 /** Cloud Run sync maxDuration is 300s — treat locks older than this as abandoned. */
 const STALE_LOCK_MS = 20 * 60 * 1000
 
 function formatDate(d) {
   return d.toISOString().slice(0, 10)
+}
+
+/** Inclusive YYYY-MM-DD calendar days between dateFrom and dateTo (UTC date parts). */
+function eachDateInclusive(dateFrom, dateTo) {
+  const start = String(dateFrom || '').slice(0, 10)
+  const end = String(dateTo || '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+    return start && end && start === end ? [start] : []
+  }
+  const days = []
+  const cursor = new Date(`${start}T00:00:00.000Z`)
+  const last = new Date(`${end}T00:00:00.000Z`)
+  if (Number.isNaN(cursor.getTime()) || Number.isNaN(last.getTime()) || cursor > last) {
+    return []
+  }
+  while (cursor <= last) {
+    days.push(cursor.toISOString().slice(0, 10))
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
+  }
+  return days
+}
+
+function isSkippableOcdsDayError(error) {
+  const message = error instanceof Error ? error.message : String(error || '')
+  return (
+    /OCDS API error (500|502|503|504)\b/.test(message) ||
+    /OCDS fetch failed after/.test(message)
+  )
 }
 
 function parseOcdsRelease(release) {
@@ -145,13 +175,16 @@ function shouldIncludeTender(tender) {
   )
 }
 
-async function fetchReleasesInRange(dateFrom, dateTo, maxPages) {
+async function fetchReleasesForDay(day, maxPages) {
   const releases = []
   let page = 1
   let hasMore = true
+  const dayMax = Math.max(1, Math.min(MAX_PAGES_PER_DAY, maxPages || MAX_PAGES_PER_DAY))
+  // Prefer export binding so unit tests can spy on fetchOcdsPage.
+  const fetchPage = module.exports.fetchOcdsPage || fetchOcdsPage
 
-  while (hasMore && page <= maxPages) {
-    const data = await fetchOcdsPage(dateFrom, dateTo, page)
+  while (hasMore && page <= dayMax) {
+    const data = await fetchPage(day, day, page)
     const batch = data.releases || []
     releases.push(...batch)
     hasMore = !!(data.links?.next && batch.length === PAGE_SIZE)
@@ -159,6 +192,70 @@ async function fetchReleasesInRange(dateFrom, dateTo, maxPages) {
   }
 
   return releases
+}
+
+/**
+ * Fetch OCDS releases day-by-day.
+ * National Treasury's API intermittently returns HTTP 500 for some calendar days
+ * and for multi-day windows that include those days. Chunking + skip keeps sync
+ * moving instead of failing the entire lookback range.
+ *
+ * @returns {{ releases: object[], dayErrors: {day:string,error:string}[], daysRequested: number, daysSucceeded: number }}
+ */
+async function fetchReleasesInRange(dateFrom, dateTo, maxPages) {
+  const days = eachDateInclusive(dateFrom, dateTo)
+  if (!days.length) {
+    // Fallback: single window (legacy behaviour) when dates are malformed
+    const releases = []
+    let page = 1
+    let hasMore = true
+    while (hasMore && page <= maxPages) {
+      const data = await fetchOcdsPage(dateFrom, dateTo, page)
+      const batch = data.releases || []
+      releases.push(...batch)
+      hasMore = !!(data.links?.next && batch.length === PAGE_SIZE)
+      page += 1
+    }
+    return { releases, dayErrors: [], daysRequested: 0, daysSucceeded: 0 }
+  }
+
+  const releases = []
+  const dayErrors = []
+  let pagesBudget = Math.max(1, Number(maxPages) || MAX_PAGES_INCREMENTAL)
+  let daysSucceeded = 0
+
+  for (const day of days) {
+    if (pagesBudget <= 0) break
+    const dayMax = Math.min(MAX_PAGES_PER_DAY, pagesBudget)
+    try {
+      const batch = await fetchReleasesForDay(day, dayMax)
+      const pagesUsed = Math.max(1, Math.ceil((batch.length || 1) / PAGE_SIZE))
+      pagesBudget -= pagesUsed
+      releases.push(...batch)
+      daysSucceeded += 1
+    } catch (error) {
+      if (isSkippableOcdsDayError(error)) {
+        const message = error instanceof Error ? error.message : String(error)
+        dayErrors.push({ day, error: message.slice(0, 200) })
+        console.warn(`[ocdsSync] skipping unhealthy day ${day}:`, message.slice(0, 160))
+        continue
+      }
+      throw error
+    }
+  }
+
+  if (!releases.length && dayErrors.length && daysSucceeded === 0) {
+    throw new Error(
+      `OCDS API failed for all ${days.length} day(s) in ${dateFrom}..${dateTo}: ${dayErrors[0].error}`
+    )
+  }
+
+  return {
+    releases,
+    dayErrors,
+    daysRequested: days.length,
+    daysSucceeded,
+  }
 }
 
 function isNightlyReconciliationWindow() {
@@ -269,11 +366,18 @@ async function runSync(options = {}) {
 
   try {
     const maxPages = fullReconciliation ? MAX_PAGES_FULL : MAX_PAGES_INCREMENTAL
-    const releases = await fetchReleasesInRange(dateFrom, dateTo, maxPages)
+    const fetchResult = await fetchReleasesInRange(dateFrom, dateTo, maxPages)
+    const releases = fetchResult.releases || []
+    const dayErrors = fetchResult.dayErrors || []
     const existingTenders = await storage.getTenderBriefings()
     const tendersToUpsert = []
 
-    state.apiHealth = 'healthy'
+    state.apiHealth = dayErrors.length ? 'degraded' : 'healthy'
+    syncLog.daysRequested = fetchResult.daysRequested
+    syncLog.daysSucceeded = fetchResult.daysSucceeded
+    if (dayErrors.length) {
+      syncLog.dayErrors = dayErrors.slice(0, 14)
+    }
 
     for (const release of releases) {
       try {
@@ -341,8 +445,11 @@ async function runSync(options = {}) {
     }
     state.isRunning = false
     state.lockAcquiredAt = null
-    state.lastError = stats.errors[0] || null
-    state.apiHealth = 'healthy'
+    // Day-skip warnings are observational — do not block advancing lastSuccessfulSync.
+    state.lastError = dayErrors.length
+      ? `Partial OCDS sync: skipped ${dayErrors.length} unhealthy day(s)`
+      : stats.errors[0] || null
+    state.apiHealth = dayErrors.length ? 'degraded' : 'healthy'
     state.scraperHealth = 'standby'
     state.tenderCount = existingTenders.length
     state.compulsoryCount = existingTenders.filter((t) => t.briefingCompulsory).length
@@ -365,11 +472,15 @@ async function runSync(options = {}) {
       type: 'api_sync_complete',
       mode: syncLog.mode,
       ...stats,
+      daysRequested: fetchResult.daysRequested,
+      daysSucceeded: fetchResult.daysSucceeded,
+      dayErrorCount: dayErrors.length,
     })
 
     return {
       success: true,
-      stats,
+      partial: dayErrors.length > 0,
+      stats: { ...stats, dayErrors: dayErrors.length },
       syncLog,
       state,
       storageAdapter: storage.adapterType || process.env.STORAGE_ADAPTER || 'json',
@@ -465,10 +576,14 @@ module.exports = {
   REQUEST_TIMEOUT_MS,
   MAX_FETCH_ATTEMPTS: MAX_ATTEMPTS,
   STALE_LOCK_MS,
+  MAX_PAGES_PER_DAY,
   getOcdsApiBase,
   parseOcdsRelease,
   fetchOcdsPage,
+  fetchReleasesForDay,
   fetchReleasesInRange,
+  eachDateInclusive,
+  isSkippableOcdsDayError,
   runSync,
   getSyncStatus,
   shouldIncludeTender,

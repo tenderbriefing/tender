@@ -105,6 +105,30 @@ describe('ocdsHttpClient', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2)
   })
 
+  it('retries intermittent OCDS HTTP 500 then returns success', async () => {
+    expect(client.isRetryableStatus(500)).toBe(true)
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        arrayBuffer: async () => new ArrayBuffer(0),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => new ArrayBuffer(0),
+      })
+
+    const response = await client.fetchWithRetry('https://example.test/ocds', {
+      fetchImpl,
+      sleepFn: async () => {},
+    })
+
+    expect(response.status).toBe(200)
+    expect(fetchImpl).toHaveBeenCalledTimes(2)
+  })
+
   it('stops after bounded attempts on persistent connect timeout', async () => {
     const fetchImpl = vi.fn().mockRejectedValue(
       Object.assign(new Error('fetch failed'), {

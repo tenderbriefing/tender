@@ -21,7 +21,8 @@ const REQUEST_TIMEOUT_MS = 120_000
 const MAX_ATTEMPTS = 3
 const BACKOFF_BASE_MS = 1_000
 const BACKOFF_MAX_MS = 8_000
-const RETRYABLE_STATUS = new Set([429, 502, 503, 504])
+// Include 500: eTenders OCDS intermittently returns empty 500s for some days/windows.
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504])
 
 const RETRYABLE_ERROR_CODES = new Set([
   'UND_ERR_CONNECT_TIMEOUT',
