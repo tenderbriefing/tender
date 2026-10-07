@@ -281,8 +281,8 @@ function RequestYouthAgentContent() {
       </section>
 
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-        <div className="grid gap-8 lg:grid-cols-[1fr,340px]">
-          <form onSubmit={onSubmit} className="space-y-5">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr),340px]">
+          <form onSubmit={onSubmit} className="min-w-0 space-y-5">
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
               <h2 className="text-lg font-bold text-brand-900">Briefing to attend</h2>
               <p className="mt-1 text-sm text-slate-600">
@@ -337,11 +337,11 @@ function RequestYouthAgentContent() {
               {tender.briefingVenue && (
                 <div className="mt-4 flex items-start gap-3 rounded-xl bg-slate-50 px-4 py-3">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-800" />
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                       Briefing venue
                     </p>
-                    <p className="mt-0.5 text-sm font-semibold text-brand-900">
+                    <p className="mt-0.5 break-all text-sm font-semibold text-brand-900">
                       {tender.briefingVenue}
                     </p>
                   </div>
@@ -500,7 +500,7 @@ function RequestYouthAgentContent() {
             </p>
           </form>
 
-          <aside className="space-y-4 lg:sticky lg:top-24">
+          <aside className="min-w-0 space-y-4 lg:sticky lg:top-24">
             <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 p-6 text-white shadow-card">
               <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-accent-500/20 blur-3xl" />
               <div className="relative">

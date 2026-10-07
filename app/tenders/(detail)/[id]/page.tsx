@@ -41,8 +41,8 @@ export default async function TenderDetailsPage(
       <TenderHero tender={tender} />
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-        <div className="grid gap-8 lg:grid-cols-[1fr,360px]">
-          <div className="space-y-8">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr),360px]">
+          <div className="min-w-0 space-y-8">
             <SmeProcurementIntelligencePanel tenderId={tender.id} />
             <TenderIntelligence tender={tender} />
             {isClosed ? (
@@ -53,7 +53,7 @@ export default async function TenderDetailsPage(
             ) : null}
             <TenderDetailContextLinks tender={tender} />
           </div>
-          <TenderActionPanel tender={tender} />
+          <TenderActionPanel className="min-w-0" tender={tender} />
         </div>
 
         <div className="mt-10 rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
