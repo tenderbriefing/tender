@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import TenderTableSkeleton from '@/components/ui/TenderTableSkeleton'
@@ -68,10 +68,6 @@ export default function TenderOpportunitiesClient({
 }: TenderOpportunitiesClientProps) {
   const { user, userProfile } = useAuth()
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const urlQuery = normalizeTenderSearchQuery(searchParams.get('q') || '')
-  const urlProvince = normalizeTenderSearchQuery(searchParams.get('province') || '')
-
   const { filters, setFilters, resetFilters, hydrated: filtersHydrated } =
     useSavedProcurementFilters()
   const { tenders, loading, loadingMore, error, lastUpdated, syncStatus, refresh, loadMore, hasMore } =
@@ -92,7 +88,7 @@ export default function TenderOpportunitiesClient({
   const [searchResults, setSearchResults] = useState<TenderBriefing[] | null>(null)
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
-  const [urlApplied, setUrlApplied] = useState(false)
+  const [urlReady, setUrlReady] = useState(false)
   const lastTrackedSearch = useRef('')
   const skipNextUrlWrite = useRef(false)
 
@@ -102,19 +98,50 @@ export default function TenderOpportunitiesClient({
     if (el) el.setAttribute('hidden', 'hidden')
   }, [ssrFallbackId])
 
-  // Apply shareable URL state once filters hydrate (URL wins over localStorage for q/province)
+  // Apply shareable URL once (client-only) — avoids Suspense/useSearchParams SSR holes for SEO.
   useEffect(() => {
-    if (!filtersHydrated || urlApplied) return
-    if (urlQuery || urlProvince) {
+    if (!filtersHydrated || urlReady) return
+    let q = ''
+    let province = ''
+    try {
+      const params = new URLSearchParams(window.location.search)
+      q = normalizeTenderSearchQuery(params.get('q') || '')
+      province = normalizeTenderSearchQuery(params.get('province') || '')
+    } catch {
+      /* ignore */
+    }
+    if (q || province) {
       skipNextUrlWrite.current = true
       setFilters({
         ...defaultProcurementFilters,
-        search: urlQuery,
-        province: urlProvince,
+        search: q,
+        province,
       })
     }
-    setUrlApplied(true)
-  }, [filtersHydrated, urlApplied, urlQuery, urlProvince, setFilters])
+    setUrlReady(true)
+  }, [filtersHydrated, urlReady, setFilters])
+
+  // Back/forward: re-read q/province from the URL
+  useEffect(() => {
+    if (!urlReady) return
+    const onPop = () => {
+      try {
+        const params = new URLSearchParams(window.location.search)
+        const q = normalizeTenderSearchQuery(params.get('q') || '')
+        const province = normalizeTenderSearchQuery(params.get('province') || '')
+        skipNextUrlWrite.current = true
+        setFilters({
+          ...defaultProcurementFilters,
+          search: q,
+          province,
+        })
+      } catch {
+        /* ignore */
+      }
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [urlReady, setFilters])
 
   const handleFiltersChange = useCallback(
     (next: ProcurementFilterState) => {
@@ -235,7 +262,7 @@ export default function TenderOpportunitiesClient({
   }, [lastUpdated])
 
   const canRunSync = userProfile?.userType === 'admin'
-  const ready = filtersHydrated && urlApplied
+  const ready = filtersHydrated && urlReady
   const hasData = tenders.length > 0 || (isSearchMode && (searchResults?.length ?? 0) > 0)
   const isEmptyCatalog = !loading && tenders.length === 0 && !error && !isSearchMode
   const showSearchEmpty =
@@ -366,7 +393,8 @@ export default function TenderOpportunitiesClient({
       />
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {!isSearchMode && ssrList}
+        {/* Always SSR the catalogue list for crawlability; client hides after hydrate. */}
+        {ssrList}
         {!user && (hasData || isSearchMode) && (
           <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-accent-200 bg-accent-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-brand-900">

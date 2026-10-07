@@ -1,8 +1,6 @@
-import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import TenderCatalogueStaticList from '@/components/tenders/TenderCatalogueStaticList'
 import TenderOpportunitiesClient from '@/components/tenders/TenderOpportunitiesClient'
-import TenderTableSkeleton from '@/components/ui/TenderTableSkeleton'
 import { getCatalogueInitialPage } from '@/lib/seo/catalogueServerData'
 import { normalizeTenderSearchQuery } from '@/lib/procurement/tenderSearch'
 import { buildPageMetadata } from '@/lib/seo/metadata'
@@ -46,17 +44,9 @@ export default async function TenderOpportunitiesPage() {
   const initial = await getCatalogueInitialPage()
 
   return (
-    <Suspense
-      fallback={
-        <div className="mx-auto max-w-7xl px-4 py-10">
-          <TenderTableSkeleton rows={12} />
-        </div>
-      }
-    >
-      <TenderOpportunitiesClient
-        initial={initial}
-        ssrList={<TenderCatalogueStaticList tenders={initial.tenders} />}
-      />
-    </Suspense>
+    <TenderOpportunitiesClient
+      initial={initial}
+      ssrList={<TenderCatalogueStaticList tenders={initial.tenders} />}
+    />
   )
 }
