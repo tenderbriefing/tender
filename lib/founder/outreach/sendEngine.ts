@@ -1,15 +1,58 @@
 import type { Firestore } from 'firebase-admin/firestore'
-import { OUTREACH_SEND_CONCURRENCY } from './featureFlag'
-import { OUTREACH_CAMPAIGNS, type OutreachCampaign, type OutreachDelivery } from './types'
+import { OUTREACH_SEND_CONCURRENCY, OUTREACH_SEND_TICK_SIZE } from './featureFlag'
+import {
+  OUTREACH_CAMPAIGNS,
+  type OutreachCampaign,
+  type OutreachDelivery,
+} from './types'
 import { listIdForCampaignType, renderOutreachEmail } from './templateRegistry'
 import { templateVersionForCampaignType, type OutreachCampaignType } from './campaignTypes'
+import { renderComposerEmail } from './renderComposerEmail'
 import {
   sendFounderOutreachEmail,
   isRetryableOutreachError,
 } from '@/lib/services/founderOutreachEmail'
 
 function resolveCampaignType(campaign: OutreachCampaign): OutreachCampaignType {
-  return campaign.type === 'youth_agent_invitation' ? 'youth_agent_invitation' : 'sme_invitation'
+  if (campaign.type === 'youth_agent_invitation') return 'youth_agent_invitation'
+  if (campaign.type === 'blank_email') return 'blank_email'
+  if (campaign.type === 'composer_custom') return 'composer_custom'
+  return 'sme_invitation'
+}
+
+function renderDeliveryEmail(campaign: OutreachCampaign, delivery: OutreachDelivery) {
+  const campaignType = resolveCampaignType(campaign)
+  const hasComposerBody =
+    campaign.source === 'composer' ||
+    Boolean(campaign.composerHtml && String(campaign.composerHtml).trim())
+
+  if (hasComposerBody) {
+    const rendered = renderComposerEmail({
+      subject: campaign.subject || 'Message from TenderBriefing',
+      bodyHtml: campaign.composerHtml || '',
+      recipientEmail: delivery.normalisedEmail,
+    })
+    return {
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      unsubscribeUrl: rendered.unsubscribeUrl,
+      templateVersion: templateVersionForCampaignType(campaignType),
+    }
+  }
+
+  const rendered = renderOutreachEmail(campaignType, {
+    name: delivery.name,
+    companyName: delivery.companyName,
+    email: delivery.normalisedEmail,
+  })
+  return {
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
+    unsubscribeUrl: rendered.unsubscribeUrl,
+    templateVersion: templateVersionForCampaignType(campaignType),
+  }
 }
 
 function nowIso() {
@@ -33,13 +76,24 @@ async function mapPool<T, R>(items: T[], concurrency: number, fn: (item: T) => P
 /**
  * Process queued deliveries for a campaign. Idempotent — skips already-sent.
  */
+/**
+ * Process a bounded tick of queued deliveries.
+ * Idempotent across worker restarts:
+ * - status === 'sent' is never resent (transaction claim rejects)
+ * - only 'queued' rows are claimed
+ * - stale 'sending' rows (>15m) return to 'queued' for resume
+ * Internal status 'sent' means provider ACCEPTED/SUBMITTED — not mailbox DELIVERED.
+ */
 export async function processCampaignSends(params: {
   db: Firestore
   campaignId: string
   maxToProcess?: number
 }): Promise<{ processed: number; sent: number; failed: number }> {
   const { db, campaignId } = params
-  const maxToProcess = params.maxToProcess ?? 500
+  const maxToProcess = Math.min(
+    Math.max(1, params.maxToProcess ?? OUTREACH_SEND_TICK_SIZE),
+    OUTREACH_SEND_TICK_SIZE
+  )
   const campRef = db.collection(OUTREACH_CAMPAIGNS).doc(campaignId)
   const campSnap = await campRef.get()
   if (!campSnap.exists) throw new Error('Campaign not found')
@@ -102,9 +156,8 @@ export async function processCampaignSends(params: {
       const fresh = await tx.get(ref)
       if (!fresh.exists) return false
       const data = fresh.data() as OutreachDelivery
+      // Never re-send a provider-accepted delivery after worker restart
       if (data.status === 'sent') return false
-      if (data.status !== 'queued' && data.status !== 'failed') return false
-      // Only auto-retry failed if retryable — for v1 worker only picks queued
       if (data.status !== 'queued') return false
       tx.set(
         ref,
@@ -120,15 +173,13 @@ export async function processCampaignSends(params: {
     if (!claimed) return
 
     const campaignType = resolveCampaignType(campaign)
-    const rendered = renderOutreachEmail(campaignType, {
-      name: delivery.name,
-      companyName: delivery.companyName,
-      email: delivery.normalisedEmail,
-    })
+    const rendered = renderDeliveryEmail(campaign, delivery)
 
     const headers: Record<string, string> = {
       'X-Entity-Ref-ID': `${campaignId}:${delivery.normalisedEmail}`,
       'List-ID': listIdForCampaignType(campaignType),
+      // Privacy: never attach other campaign recipients to this message
+      'X-TenderBriefing-Recipient-Field': String(delivery.recipientField || 'to'),
     }
     if (rendered.unsubscribeUrl) {
       headers['List-Unsubscribe'] = `<${rendered.unsubscribeUrl}>`
@@ -140,12 +191,17 @@ export async function processCampaignSends(params: {
     }
     const maxAttempts = 3
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      // One recipient per Resend message — To/Cc/Bcc role is bookkeeping only;
+      // the Resend `to` array always contains exactly this recipient (privacy).
+      // Durable provider idempotency: delivery.id is stable across worker restarts,
+      // so accept-before-persist crashes cannot create a second mailbox delivery.
       lastResult = await sendFounderOutreachEmail({
         to: delivery.normalisedEmail,
         subject: rendered.subject,
         html: rendered.html,
         text: rendered.text,
         headers,
+        idempotencyKey: `outreach-delivery:${delivery.id}`.slice(0, 256),
       })
       if (lastResult.sent) break
       if (!isRetryableOutreachError(lastResult.errorCode)) break
@@ -157,12 +213,14 @@ export async function processCampaignSends(params: {
       await ref.set(
         {
           status: 'sent',
+          /** Resend API acceptance — UI label SUBMITTED; not mailbox DELIVERED */
+          providerAcceptance: 'accepted',
           resendMessageId: lastResult.id || null,
           errorCode: null,
           errorMessageSafe: null,
           sentAt: nowIso(),
           updatedAt: nowIso(),
-          templateVersion: templateVersionForCampaignType(campaignType),
+          templateVersion: rendered.templateVersion,
         },
         { merge: true }
       )

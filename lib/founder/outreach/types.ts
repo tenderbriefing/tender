@@ -35,11 +35,23 @@ export type OutreachDeliveryStatus =
   | 'invalid'
   | 'duplicate'
 
+export type OutreachCampaignSource = 'xlsx' | 'composer'
+
 export type OutreachCampaign = {
   id: string
   type: OutreachCampaignType
   templateVersion: OutreachTemplateVersion
   originalFileName: string
+  /** Ingress source — composer replaces Excel for new campaigns */
+  source?: OutreachCampaignSource
+  subject?: string | null
+  /** Sanitized inner HTML body (composer campaigns) */
+  composerHtml?: string | null
+  fromAddress?: string | null
+  toCount?: number
+  ccCount?: number
+  bccCount?: number
+  templateKey?: string | null
   totalRows: number
   validRows: number
   invalidRows: number
@@ -70,6 +82,8 @@ export type OutreachDelivery = {
   normalisedEmail: string
   status: OutreachDeliveryStatus
   templateVersion: OutreachTemplateVersion
+  /** Composer field role — each recipient is sent individually (privacy) */
+  recipientField?: 'to' | 'cc' | 'bcc' | null
   resendMessageId: string | null
   attemptCount: number
   errorCode: string | null

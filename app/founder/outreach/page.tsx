@@ -1,100 +1,123 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'react-hot-toast'
 import { FounderShell } from '@/components/founder/FounderShell'
+import { RecipientChipInput } from '@/components/founder/outreach/RecipientChipInput'
+import { RichEmailEditor } from '@/components/founder/outreach/RichEmailEditor'
 import { authFetch } from '@/lib/api/authenticatedFetch'
 import { isFounderSmeOutreachEnabledClient } from '@/lib/founder/outreach/clientFlag'
-
-type OutreachCampaignType = 'sme_invitation' | 'youth_agent_invitation'
+import type { ComposerTemplateKey } from '@/lib/founder/outreach/composerTemplates'
+import {
+  OUTREACH_CTA_LABEL,
+  OUTREACH_SEND_CONCURRENCY,
+  OUTREACH_SEND_TICK_SIZE,
+  OUTREACH_SUBJECT,
+  YOUTH_AGENT_OUTREACH_CTA_LABEL,
+  YOUTH_AGENT_OUTREACH_SUBJECT,
+} from '@/lib/founder/outreach/featureFlag'
+import { isValidEmailSyntax, parseRecipientFields } from '@/lib/founder/outreach/parseRecipients'
+import {
+  individualEmailConfirmCopy,
+  labelCampaignStatus,
+  providerAcceptanceDisclaimer,
+} from '@/lib/founder/outreach/statusLabels'
 
 type CampaignSummary = {
   id: string
-  type?: OutreachCampaignType
+  type?: string
+  templateKey?: string | null
   templateVersion?: string
   originalFileName: string
+  source?: string
+  subject?: string | null
   createdAt: string
   status: string
   sendableRows: number
   sentCount: number
   failedCount: number
   suppressedRows: number
+  toCount?: number
+  ccCount?: number
+  bccCount?: number
+  fromAddress?: string | null
 }
 
-type PreviewRow = {
-  name: string
-  companyName: string
-  email: string
+type SendReport = {
+  campaignId: string
   status: string
-  reason?: string | null
-  rowNumber?: number
+  submitted: number
+  failed: number
+  sendableRows: number
+  subject?: string
+  from?: string
+  failures?: Array<{ email: string; errorCode?: string; error?: string }>
 }
 
-type ValidateData = {
-  campaign: {
-    id: string
-    type: OutreachCampaignType
-    originalFileName: string
-    totalRows: number
-    validRows: number
-    invalidRows: number
-    duplicateRows: number
-    suppressedRows: number
-    sendableRows: number
-    status: string
-  }
-  preview: PreviewRow[]
-  emailPreview: {
-    subject: string
-    ctaLabel: string
-    ctaUrl: string
-    templateVersion: string
-    textExcerpt: string
-    campaignType: OutreachCampaignType
-    audienceLabel: string
-  }
-}
-
-const AUDIENCE_OPTIONS: {
-  type: OutreachCampaignType
-  label: string
-  description: string
-  columns: string
-}[] = [
+const TEMPLATES: Array<{ key: ComposerTemplateKey; label: string; subject: string; html: string }> = [
+  { key: 'blank', label: 'Blank Email', subject: '', html: '<p></p>' },
   {
-    type: 'sme_invitation',
+    key: 'sme_invitation',
     label: 'SME Invitation',
-    description: 'Invite businesses to book Youth Agents for compulsory briefings.',
-    columns: 'Name, Company Name, Email',
+    subject: OUTREACH_SUBJECT,
+    html: `
+      <h2>Compulsory briefings, without the travel</h2>
+      <p>Hi there,</p>
+      <p>We’d like to invite you to use TenderBriefing to book a Youth Agent to attend a compulsory tender briefing on behalf of your company — anywhere in South Africa.</p>
+      <p><strong>With TenderBriefing, you can:</strong></p>
+      <ul>
+        <li>View available compulsory tender briefings</li>
+        <li>Book a Youth Agent to attend on your behalf</li>
+        <li>Receive attendance proof</li>
+        <li>Get a structured briefing report</li>
+      </ul>
+      <p><a href="https://www.tenderbriefing.co.za/tenders">${OUTREACH_CTA_LABEL}</a></p>
+      <p>TenderBriefing<br/>You run the business. We attend the briefing.</p>
+    `.trim(),
   },
   {
-    type: 'youth_agent_invitation',
+    key: 'youth_agent_invitation',
     label: 'Youth Agent Invitation',
-    description: 'Recruit prospective Youth Agents to join TenderBriefing.',
-    columns: 'Name, Email (Company Name optional)',
+    subject: YOUTH_AGENT_OUTREACH_SUBJECT,
+    html: `
+      <h2>Invitation to become Youth Agents</h2>
+      <p>Hi there,</p>
+      <p>TenderBriefing is inviting motivated young people to join our Youth Agent network.</p>
+      <p><a href="https://www.tenderbriefing.co.za/auth/signup?type=youth-agent">${YOUTH_AGENT_OUTREACH_CTA_LABEL}</a></p>
+      <p>TenderBriefing<br/>Connecting SMEs with Youth Agents nationwide.</p>
+    `.trim(),
   },
 ]
+const LARGE_CONFIRM = 20
 
-function audienceLabel(type?: OutreachCampaignType): string {
-  if (type === 'youth_agent_invitation') return 'Youth Agent Invitation'
-  return 'SME Invitation'
+function newIdempotencyKey() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+  return `compose-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
 export default function FounderOutreachPage() {
   const flagOn = isFounderSmeOutreachEnabledClient()
-  const [campaignType, setCampaignType] = useState<OutreachCampaignType>('sme_invitation')
-  const [file, setFile] = useState<File | null>(null)
+  const [templateKey, setTemplateKey] = useState<ComposerTemplateKey>('blank')
+  const [fromDisplay, setFromDisplay] = useState('TenderBriefing <hello@tenderbriefing.co.za>')
+  const [senderId, setSenderId] = useState('primary')
+  const [to, setTo] = useState<string[]>([])
+  const [cc, setCc] = useState<string[]>([])
+  const [bcc, setBcc] = useState<string[]>([])
+  const [subject, setSubject] = useState('')
+  const [html, setHtml] = useState('<p></p>')
   const [busy, setBusy] = useState(false)
-  const [sending, setSending] = useState(false)
-  const [validated, setValidated] = useState<ValidateData | null>(null)
-  const [confirmSend, setConfirmSend] = useState(false)
-  const [authorisedList, setAuthorisedList] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [history, setHistory] = useState<CampaignSummary[]>([])
-  const [activeResult, setActiveResult] = useState<any>(null)
+  const [report, setReport] = useState<SendReport | null>(null)
+  const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey)
 
-  const selectedAudience = AUDIENCE_OPTIONS.find((o) => o.type === campaignType)!
-  const isYouth = campaignType === 'youth_agent_invitation'
+  const parsed = useMemo(
+    () => parseRecipientFields({ to, cc, bcc }),
+    [to, cc, bcc]
+  )
+  const invalidEmails = parsed.invalid.filter((r) => r.reason === 'invalid_email')
+  const subjectLen = subject.trim().length
 
   const loadHistory = useCallback(async () => {
     if (!flagOn) return
@@ -111,350 +134,382 @@ export default function FounderOutreachPage() {
     void loadHistory()
   }, [loadHistory])
 
-  function onAudienceChange(type: OutreachCampaignType) {
-    setCampaignType(type)
-    setValidated(null)
-    setActiveResult(null)
-    setConfirmSend(false)
-    setAuthorisedList(false)
-    setFile(null)
+  useEffect(() => {
+    if (!flagOn) return
+    void (async () => {
+      try {
+        const res = await authFetch('/api/founder/outreach/compose')
+        const json = await res.json()
+        if (res.ok && json.success && json.data?.senders?.[0]) {
+          setFromDisplay(json.data.senders[0].display)
+          setSenderId(json.data.senders[0].id)
+        }
+      } catch {
+        /* keep default */
+      }
+    })()
+  }, [flagOn])
+
+  function applyTemplate(key: ComposerTemplateKey) {
+    const tpl = TEMPLATES.find((t) => t.key === key) || TEMPLATES[0]
+    setTemplateKey(tpl.key)
+    setSubject(tpl.subject)
+    setHtml(tpl.html)
+    setReport(null)
+    setConfirmOpen(false)
   }
 
-  if (!flagOn) {
-    return (
-      <FounderShell title="Outreach" subtitle="Invitations">
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          Founder Outreach is disabled in this environment (
-          <code className="font-mono text-xs">FOUNDER_SME_OUTREACH_ENABLED</code>).
-        </div>
-      </FounderShell>
-    )
-  }
-
-  async function onValidate(e: React.FormEvent) {
-    e.preventDefault()
-    if (!file || busy) return
+  async function sendConfirmed() {
+    if (busy) return
     setBusy(true)
-    setValidated(null)
-    setActiveResult(null)
-    setConfirmSend(false)
-    setAuthorisedList(false)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('campaignType', campaignType)
-      const res = await authFetch('/api/founder/outreach/validate', { method: 'POST', body: fd })
+      const res = await authFetch('/api/founder/outreach/compose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to,
+          cc,
+          bcc,
+          subject: subject.trim(),
+          html,
+          templateKey,
+          senderId,
+          confirmSend: true,
+          authorisedList: true,
+          confirmCount: parsed.totalSendable,
+          idempotencyKey,
+        }),
+      })
       const json = await res.json()
-      if (!res.ok || !json.success) throw new Error(json.error || 'Validation failed')
-      setValidated(json.data as ValidateData)
-      toast.success('Workbook validated')
-      await loadHistory()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Validation failed')
+      if (!res.ok || !json.success) {
+        toast.error(json.error || 'Send failed')
+        return
+      }
+      const data = json.data as SendReport & { duplicate?: boolean }
+      setReport(data)
+      setConfirmOpen(false)
+      setIdempotencyKey(newIdempotencyKey())
+      toast.success(
+        data.duplicate
+          ? 'Already submitted (duplicate click protected)'
+          : `SUBMITTED ${data.submitted} · FAILED ${data.failed}`
+      )
+      void loadHistory()
+    } catch {
+      toast.error('Network error while sending')
     } finally {
       setBusy(false)
     }
   }
 
-  async function onSend(e: React.FormEvent) {
-    e.preventDefault()
-    if (!validated || sending || !confirmSend || !authorisedList) return
-    setSending(true)
-    try {
-      const res = await authFetch(`/api/founder/outreach/campaigns/${validated.campaign.id}/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          confirmSend: true,
-          authorisedList: true,
-          confirmCount: validated.campaign.sendableRows,
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok || !json.success) throw new Error(json.error || 'Send failed')
-      toast.success('Campaign send started')
-      await refreshCampaign(validated.campaign.id)
-      await loadHistory()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Send failed')
-    } finally {
-      setSending(false)
+  function onSendClick() {
+    if (busy) return
+    if (!subject.trim()) {
+      toast.error('Subject is required')
+      return
     }
+    if (parsed.totalSendable === 0) {
+      toast.error('Add at least one valid recipient')
+      return
+    }
+    if (invalidEmails.length) {
+      toast.error('Remove invalid email addresses before sending')
+      return
+    }
+    if (parsed.exceedsMax) {
+      toast.error(`Maximum ${parsed.maxRecipients} recipients`)
+      return
+    }
+    const bodyText = html.replace(/<[^>]+>/g, '').trim()
+    if (!bodyText) {
+      toast.error('Email body is required')
+      return
+    }
+    setConfirmOpen(true)
   }
 
-  async function refreshCampaign(id: string) {
-    const res = await authFetch(`/api/founder/outreach/campaigns/${id}?preview=1`)
-    const json = await res.json()
-    if (res.ok && json.success) setActiveResult(json.data)
+  if (!flagOn) {
+    return (
+      <FounderShell title="Outreach" subtitle="Compose and send Founder emails">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
+          Founder Outreach is disabled. Enable{' '}
+          <code className="rounded bg-white px-1">FOUNDER_SME_OUTREACH_ENABLED</code> in the
+          runtime environment.
+        </div>
+      </FounderShell>
+    )
   }
-
-  const c = validated?.campaign
-  const activeType: OutreachCampaignType =
-    validated?.campaign.type || activeResult?.campaign?.type || campaignType
 
   return (
-    <FounderShell
-      title="Outreach"
-      subtitle="Send approved SME or Youth Agent invitation campaigns"
-      actions={
-        <Link href="/founder" className="text-sm font-medium text-slate-600 underline">
-          Overview
-        </Link>
-      }
-    >
-      <div className="space-y-8">
-        <section className="rounded-lg border border-slate-200 bg-white p-5">
-          <h2 className="text-base font-semibold text-slate-900">Create outreach campaign</h2>
-          <p className="mt-1 text-sm text-slate-600">Choose an audience, then upload a cleaned Excel list.</p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {AUDIENCE_OPTIONS.map((opt) => {
-              const selected = campaignType === opt.type
-              return (
+    <FounderShell title="Outreach" subtitle="Compose and send emails to SMEs and Youth Agents">
+      <div className="mx-auto max-w-4xl space-y-6">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-brand-900">Compose Email</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Outlook-style composer. Delivery uses production Resend — not Microsoft 365.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {TEMPLATES.map((tpl) => (
                 <button
-                  key={opt.type}
+                  key={tpl.key}
                   type="button"
-                  onClick={() => onAudienceChange(opt.type)}
-                  className={`rounded-lg border p-4 text-left transition ${
-                    selected
-                      ? 'border-emerald-600 bg-emerald-50 ring-1 ring-emerald-600'
-                      : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                  onClick={() => applyTemplate(tpl.key)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${
+                    templateKey === tpl.key
+                      ? 'bg-brand-900 text-white ring-brand-900'
+                      : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50'
                   }`}
                 >
-                  <div className="font-semibold text-slate-900">{opt.label}</div>
-                  <p className="mt-1 text-sm text-slate-600">{opt.description}</p>
+                  {tpl.label}
                 </button>
-              )
-            })}
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-4">
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                From
+              </label>
+              <select
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-brand-900"
+                value={senderId}
+                onChange={(e) => setSenderId(e.target.value)}
+                disabled
+              >
+                <option value={senderId}>{fromDisplay}</option>
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                Only verified TenderBriefing senders are allowed.
+              </p>
+            </div>
+
+            <RecipientChipInput
+              label="To"
+              values={to}
+              onChange={setTo}
+              reserved={[...cc, ...bcc]}
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <RecipientChipInput
+                label="Cc"
+                values={cc}
+                onChange={setCc}
+                reserved={[...to, ...bcc]}
+              />
+              <RecipientChipInput
+                label="Bcc"
+                values={bcc}
+                onChange={setBcc}
+                reserved={[...to, ...cc]}
+              />
+            </div>
+
+            {invalidEmails.length > 0 && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                Invalid addresses:{' '}
+                {invalidEmails.map((r) => r.email).join(', ')}
+              </div>
+            )}
+
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Subject
+                </label>
+                <span className="text-xs text-slate-400">{subjectLen} characters</span>
+              </div>
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                maxLength={500}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                placeholder="Email subject"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Body
+              </label>
+              <RichEmailEditor value={html} onChange={setHtml} disabled={busy} />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+              <p className="text-sm text-slate-600">
+                Recipients:{' '}
+                <span className="font-semibold text-brand-900">{parsed.totalSendable}</span>
+                <span className="ml-2 text-xs text-slate-500">
+                  To {parsed.toCount} · Cc {parsed.ccCount} · Bcc {parsed.bccCount}
+                </span>
+              </p>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onSendClick}
+                className="inline-flex items-center justify-center rounded-xl bg-accent-500 px-5 py-2.5 text-sm font-bold text-brand-900 shadow-sm hover:bg-accent-400 disabled:opacity-60"
+              >
+                {busy ? 'Sending…' : 'Send Email'}
+              </button>
+            </div>
           </div>
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-5">
-          <h2 className="text-base font-semibold text-slate-900">Upload Excel database</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Campaign: <strong>{selectedAudience.label}</strong>
-          </p>
-          <p className="mt-1 text-sm text-slate-600">
-            Required columns: <strong>{selectedAudience.columns}</strong>. .xlsx only.
-          </p>
-          <form onSubmit={onValidate} className="mt-4 flex flex-wrap items-end gap-3">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                File
-              </label>
-              <input
-                type="file"
-                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="mt-1 block text-sm"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={!file || busy}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              {busy ? 'Validating…' : 'Upload & validate'}
-            </button>
-          </form>
-        </section>
-
-        {validated && c ? (
-          <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
-            <h2 className="text-base font-semibold text-slate-900">Campaign preview</h2>
-            <p className="text-sm text-slate-600">
-              Audience:{' '}
-              <span className="font-medium text-slate-900">
-                {validated.emailPreview.audienceLabel}
-              </span>
-            </p>
-            <p className="text-sm text-slate-600">
-              File: <span className="font-medium text-slate-900">{c.originalFileName}</span>
-            </p>
-            <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6 text-sm">
-              <Stat label="Total rows" value={c.totalRows} />
-              <Stat label="Valid" value={c.validRows} />
-              <Stat label="Invalid" value={c.invalidRows} />
-              <Stat label="Duplicates" value={c.duplicateRows} />
-              <Stat label="Suppressed" value={c.suppressedRows} />
-              <Stat label="Ready to send" value={c.sendableRows} emphasize />
-            </div>
-
-            <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-              {isYouth ? (
-                <>
-                  You are about to send the Youth Agent invitation to{' '}
-                  <strong>{c.sendableRows}</strong> recipients.
-                </>
-              ) : (
-                <>
-                  You are about to send this invitation to <strong>{c.sendableRows}</strong> SMEs.
-                </>
-              )}
-            </p>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-500">
-                    <th className="py-2 pr-3 font-medium">Name</th>
-                    {!isYouth ? (
-                      <th className="py-2 pr-3 font-medium">Company Name</th>
-                    ) : null}
-                    <th className="py-2 pr-3 font-medium">Email</th>
-                    <th className="py-2 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {validated.preview.map((r, i) => (
-                    <tr key={i} className="border-b border-slate-100">
-                      <td className="py-2 pr-3">{r.name}</td>
-                      {!isYouth ? <td className="py-2 pr-3">{r.companyName}</td> : null}
-                      <td className="py-2 pr-3">{r.email}</td>
-                      <td className="py-2 capitalize">{r.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-              <div className="font-semibold text-slate-900">Approved email</div>
-              <div className="mt-1">Template: {validated.emailPreview.templateVersion}</div>
-              <div>Subject: {validated.emailPreview.subject}</div>
+        {report && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="text-base font-bold text-brand-900">Send submission report</h3>
+            <p className="mt-1 text-sm text-slate-600">{providerAcceptanceDisclaimer()}</p>
+            <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
               <div>
-                CTA: {validated.emailPreview.ctaLabel} → {validated.emailPreview.ctaUrl}
+                <dt className="text-slate-500">Campaign</dt>
+                <dd className="font-mono text-xs text-brand-900">{report.campaignId}</dd>
               </div>
-              <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-slate-200 bg-white p-2 text-xs text-slate-600">
-                {validated.emailPreview.textExcerpt}
-              </pre>
-            </div>
-
-            <form onSubmit={onSend} className="space-y-3">
-              <label className="flex items-start gap-2 text-sm text-slate-800">
-                <input
-                  type="checkbox"
-                  checked={authorisedList}
-                  onChange={(e) => setAuthorisedList(e.target.checked)}
-                  className="mt-1"
-                />
-                <span>I confirm this recipient list is authorised for this outreach campaign.</span>
-              </label>
-              <label className="flex items-start gap-2 text-sm text-slate-800">
-                <input
-                  type="checkbox"
-                  checked={confirmSend}
-                  onChange={(e) => setConfirmSend(e.target.checked)}
-                  className="mt-1"
-                />
-                <span>
-                  {isYouth
-                    ? `I confirm I want to send the Youth Agent invitation to ${c.sendableRows} recipients.`
-                    : `I confirm I want to send this invitation to ${c.sendableRows} recipients.`}
-                </span>
-              </label>
-              <button
-                type="submit"
-                disabled={sending || !confirmSend || !authorisedList || c.sendableRows < 1}
-                className="rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                {sending
-                  ? 'Sending…'
-                  : isYouth
-                    ? 'SEND YOUTH AGENT INVITATIONS'
-                    : 'SEND INVITATIONS'}
-              </button>
-            </form>
+              <div>
+                <dt className="text-slate-500">Campaign status</dt>
+                <dd className="font-semibold text-brand-900">
+                  {labelCampaignStatus(report.status)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">SUBMITTED (provider accepted)</dt>
+                <dd className="font-semibold text-emerald-700">{report.submitted}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">FAILED</dt>
+                <dd className="font-semibold text-red-700">{report.failed}</dd>
+              </div>
+            </dl>
+            {!!report.failures?.length && (
+              <ul className="mt-3 space-y-1 text-xs text-red-800">
+                {report.failures.map((f) => (
+                  <li key={f.email}>
+                    {f.email}: {f.error || f.errorCode || 'failed'}
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
-        ) : null}
+        )}
 
-        {activeResult?.campaign ? (
-          <section className="rounded-lg border border-slate-200 bg-white p-5">
-            <h2 className="text-base font-semibold text-slate-900">Campaign results</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Audience:{' '}
-              <strong>{audienceLabel(activeResult.campaign.type as OutreachCampaignType)}</strong>
-            </p>
-            <p className="mt-1 text-sm capitalize text-slate-600">
-              Status: <strong>{activeResult.campaign.status.replace(/_/g, ' ')}</strong>
-            </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-4 text-sm">
-              <Stat label="Sent" value={activeResult.campaign.sentCount} />
-              <Stat label="Failed" value={activeResult.campaign.failedCount} />
-              <Stat label="Suppressed" value={activeResult.campaign.suppressedRows} />
-              <Stat label="Queued" value={activeResult.campaign.queuedCount} />
-            </div>
-            {(activeResult.failed || []).length > 0 ? (
-              <div className="mt-4">
-                <h3 className="text-sm font-semibold text-slate-900">Failed recipients</h3>
-                <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                  {activeResult.failed.map((f: any, i: number) => (
-                    <li key={i}>
-                      {f.name}
-                      {f.companyName ? ` · ${f.companyName}` : ''} · {f.errorCode || 'failed'}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-base font-bold text-brand-900">Outreach history</h3>
             <button
               type="button"
-              className="mt-4 text-sm font-medium underline"
-              onClick={() => void refreshCampaign(activeResult.campaign.id)}
+              onClick={() => void loadHistory()}
+              className="text-xs font-semibold text-brand-800 hover:underline"
             >
-              Refresh status
+              Refresh
             </button>
-          </section>
-        ) : null}
-
-        <section className="rounded-lg border border-slate-200 bg-white p-5">
-          <h2 className="text-base font-semibold text-slate-900">Campaign history</h2>
+          </div>
           {history.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">No campaigns yet.</p>
+            <p className="mt-3 text-sm text-slate-500">No campaigns yet.</p>
           ) : (
-            <ul className="mt-3 divide-y divide-slate-100 text-sm">
-              {history.map((h) => (
-                <li key={h.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                  <div>
-                    <div className="font-medium text-slate-900">{h.originalFileName}</div>
-                    <div className="text-xs text-slate-500">
-                      {audienceLabel(h.type)} · {h.createdAt} · {h.status} · sent {h.sentCount}/
-                      {h.sendableRows}
+            <ul className="mt-4 divide-y divide-slate-100">
+              {history.map((c) => (
+                <li key={c.id} className="py-3 text-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-brand-900">
+                        {c.subject || c.originalFileName || c.id}
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {new Date(c.createdAt).toLocaleString()} · {labelCampaignStatus(c.status)} ·{' '}
+                        {c.source || (c.originalFileName === 'composer' ? 'composer' : 'xlsx')}
+                        {c.templateKey ? ` · ${c.templateKey}` : ''}
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        Recipients {c.sendableRows}
+                        {typeof c.toCount === 'number'
+                          ? ` (To ${c.toCount} · Cc ${c.ccCount || 0} · Bcc ${c.bccCount || 0})`
+                          : ''}{' '}
+                        · SUBMITTED {c.sentCount} · FAILED {c.failedCount}
+                      </p>
                     </div>
+                    <Link
+                      href={`/founder/outreach?campaign=${encodeURIComponent(c.id)}`}
+                      className="text-xs font-semibold text-brand-800 hover:underline"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        toast.success(`Campaign ${c.id}`)
+                      }}
+                    >
+                      {c.id.slice(0, 18)}…
+                    </Link>
                   </div>
-                  <button
-                    type="button"
-                    className="text-xs font-semibold underline"
-                    onClick={() => void refreshCampaign(h.id)}
-                  >
-                    View
-                  </button>
                 </li>
               ))}
             </ul>
           )}
         </section>
       </div>
-    </FounderShell>
-  )
-}
 
-function Stat({
-  label,
-  value,
-  emphasize,
-}: {
-  label: string
-  value: number
-  emphasize?: boolean
-}) {
-  return (
-    <div
-      className={`rounded-md border px-3 py-2 ${
-        emphasize ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'
-      }`}
-    >
-      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="text-lg font-semibold text-slate-900">{value}</div>
-    </div>
+      {confirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-brand-900">Final send confirmation</h3>
+            <p className="mt-2 text-base font-semibold text-brand-900">
+              {individualEmailConfirmCopy(parsed.totalSendable)}
+            </p>
+            {parsed.totalSendable >= LARGE_CONFIRM && (
+              <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                Large send: messages are queued and submitted in controlled batches (concurrency{' '}
+                {OUTREACH_SEND_CONCURRENCY}, tick size {OUTREACH_SEND_TICK_SIZE}) — not blasted
+                simultaneously. OUTREACH_MAX_RECIPIENTS=2000 is a ceiling, not a blast size.
+              </p>
+            )}
+            <dl className="mt-4 space-y-1.5 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">From</dt>
+                <dd className="text-right font-medium text-brand-900">{fromDisplay}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">Individual emails</dt>
+                <dd className="font-semibold">{parsed.totalSendable}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">To / Cc / Bcc</dt>
+                <dd>
+                  {parsed.toCount} / {parsed.ccCount} / {parsed.bccCount}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">Subject</dt>
+                <dd className="max-w-[60%] text-right font-medium text-brand-900">
+                  {subject.trim()}
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-3 text-xs text-slate-500">
+              Privacy: each address receives its own Resend message with only that address in{' '}
+              <code>to</code>. Cc/Bcc labels are bookkeeping — other recipients are never exposed.
+              Provider acceptance is recorded as SUBMITTED, not DELIVERED.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setConfirmOpen(false)}
+                className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void sendConfirmed()}
+                className="rounded-xl bg-accent-500 px-4 py-2 text-sm font-bold text-brand-900 hover:bg-accent-400 disabled:opacity-60"
+              >
+                {busy ? 'Sending…' : 'Confirm & Send'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </FounderShell>
   )
 }

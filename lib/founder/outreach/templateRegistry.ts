@@ -31,13 +31,17 @@ export function renderOutreachEmail(
       env
     )
   }
+  // blank_email / composer_custom fall through to SME chrome only when no composer body
+  // is stored on the campaign — sendEngine prefers composer HTML when present.
   return renderSmeInvitationV1(input, env)
 }
 
 export function listIdForCampaignType(type: OutreachCampaignType): string {
-  return type === 'youth_agent_invitation'
-    ? '<youth-agent-invitation.tenderbriefing.co.za>'
-    : '<sme-invitation.tenderbriefing.co.za>'
+  if (type === 'youth_agent_invitation') return '<youth-agent-invitation.tenderbriefing.co.za>'
+  if (type === 'blank_email' || type === 'composer_custom') {
+    return '<founder-composer.tenderbriefing.co.za>'
+  }
+  return '<sme-invitation.tenderbriefing.co.za>'
 }
 
 export { templateVersionForCampaignType }

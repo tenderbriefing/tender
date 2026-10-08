@@ -150,6 +150,175 @@ export async function createValidatedCampaign(params: {
   }
 }
 
+const OUTREACH_IDEMPOTENCY = 'founderOutreachIdempotency'
+
+function idempotencyDocId(createdByUid: string, key: string): string {
+  const safeUid = String(createdByUid || '')
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .slice(0, 80)
+  const safeKey = String(key || '')
+    .replace(/[^a-zA-Z0-9:_-]/g, '_')
+    .slice(0, 120)
+  return `${safeUid}_${safeKey}`.slice(0, 700)
+}
+
+export async function findCampaignByIdempotencyKey(
+  db: Firestore,
+  createdByUid: string,
+  idempotencyKey: string
+): Promise<OutreachCampaign | null> {
+  const key = String(idempotencyKey || '').trim().slice(0, 200)
+  if (!key || !createdByUid) return null
+  const snap = await db
+    .collection(OUTREACH_IDEMPOTENCY)
+    .doc(idempotencyDocId(createdByUid, key))
+    .get()
+  if (!snap.exists) return null
+  const campaignId = String(snap.data()?.campaignId || '')
+  if (!campaignId) return null
+  return getCampaign(db, campaignId)
+}
+
+export async function createComposerCampaign(params: {
+  db: Firestore
+  createdByUid: string
+  createdByEmail: string
+  campaignType: OutreachCampaignType
+  templateKey: string
+  subject: string
+  composerHtml: string
+  fromAddress: string
+  recipients: Array<{
+    email: string
+    normalisedEmail: string
+    field: 'to' | 'cc' | 'bcc'
+  }>
+  toCount: number
+  ccCount: number
+  bccCount: number
+  idempotencyKey: string
+}): Promise<OutreachCampaign> {
+  const {
+    db,
+    createdByUid,
+    createdByEmail,
+    campaignType,
+    templateKey,
+    subject,
+    composerHtml,
+    fromAddress,
+    recipients,
+    toCount,
+    ccCount,
+    bccCount,
+  } = params
+
+  const readyEmails = recipients.map((r) => r.normalisedEmail)
+  const suppressed = await listSuppressedAmong(db, readyEmails)
+  const sendable = recipients.filter((r) => !suppressed.has(r.normalisedEmail))
+  const suppressedRows = recipients.length - sendable.length
+  if (sendable.length === 0) {
+    throw new Error('No sendable recipients after suppression filtering.')
+  }
+
+  const campaignId = newCampaignId()
+  const idempotencyKey = String(params.idempotencyKey || `outreach:${campaignId}`).slice(0, 200)
+  const createdAt = nowIso()
+  const templateVersion = templateVersionForCampaignType(campaignType)
+
+  const campaign: OutreachCampaign = {
+    id: campaignId,
+    type: campaignType,
+    templateVersion,
+    originalFileName: 'composer',
+    source: 'composer',
+    subject: subject.slice(0, 500),
+    composerHtml,
+    fromAddress: fromAddress.slice(0, 200),
+    toCount,
+    ccCount,
+    bccCount,
+    templateKey: templateKey.slice(0, 80),
+    totalRows: recipients.length,
+    validRows: recipients.length,
+    invalidRows: 0,
+    duplicateRows: 0,
+    suppressedRows,
+    sendableRows: sendable.length,
+    queuedCount: sendable.length,
+    sentCount: 0,
+    failedCount: 0,
+    skippedCount: suppressedRows,
+    status: 'validated',
+    createdByUid,
+    createdByEmail,
+    createdAt,
+    confirmedAt: null,
+    startedAt: null,
+    completedAt: null,
+    lastErrorCode: null,
+    idempotencyKey,
+  }
+
+  await db.collection(OUTREACH_CAMPAIGNS).doc(campaignId).set(campaign)
+  await db
+    .collection(OUTREACH_IDEMPOTENCY)
+    .doc(idempotencyDocId(createdByUid, idempotencyKey))
+    .set({
+      campaignId,
+      createdByUid,
+      idempotencyKey,
+      createdAt,
+    })
+
+  console.info(
+    JSON.stringify({
+      event: 'founder_outreach_composer_campaign_created',
+      campaignId,
+      campaignType,
+      templateKey,
+      sendableRows: campaign.sendableRows,
+      toCount,
+      ccCount,
+      bccCount,
+      suppressedRows,
+    })
+  )
+
+  const deliveries: OutreachDelivery[] = sendable.map((r, idx) => ({
+    id: deliveryIdFor(campaignId, r.normalisedEmail, idx + 1, 'queued'),
+    campaignId,
+    name: '',
+    companyName: '',
+    email: r.email,
+    normalisedEmail: r.normalisedEmail,
+    status: 'queued' as const,
+    templateVersion,
+    recipientField: r.field,
+    resendMessageId: null,
+    attemptCount: 0,
+    errorCode: null,
+    errorMessageSafe: null,
+    createdAt,
+    updatedAt: createdAt,
+    sentAt: null,
+  }))
+
+  for (let i = 0; i < deliveries.length; i += 400) {
+    const chunk = deliveries.slice(i, i + 400)
+    const batch = db.batch()
+    for (const d of chunk) {
+      batch.set(
+        db.collection(OUTREACH_CAMPAIGNS).doc(campaignId).collection('deliveries').doc(d.id),
+        d
+      )
+    }
+    await batch.commit()
+  }
+
+  return campaign
+}
+
 export async function getCampaign(
   db: Firestore,
   campaignId: string

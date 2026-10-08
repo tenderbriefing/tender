@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyFounderUser } from '@/lib/founder/verifyFounder'
-import { isFounderSmeOutreachEnabled } from '@/lib/founder/outreach/featureFlag'
+import {
+  isFounderSmeOutreachEnabled,
+  OUTREACH_SEND_TICK_SIZE,
+} from '@/lib/founder/outreach/featureFlag'
 import { getFirebaseAdmin } from '@/lib/backend/firebaseAdmin'
 import { getCampaign } from '@/lib/founder/outreach/campaignStore'
 import { confirmAndStartCampaign, processCampaignSends } from '@/lib/founder/outreach/sendEngine'
@@ -74,7 +77,11 @@ export async function POST(request: NextRequest, context: Ctx) {
     })
 
     // Process sends on this request (bounded). Idempotent if retried.
-    const result = await processCampaignSends({ db, campaignId, maxToProcess: 400 })
+    const result = await processCampaignSends({
+      db,
+      campaignId,
+      maxToProcess: OUTREACH_SEND_TICK_SIZE,
+    })
 
     // If more queued remain, fire-and-forget continue via worker
     const still = await db

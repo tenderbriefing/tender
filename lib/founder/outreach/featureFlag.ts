@@ -12,7 +12,11 @@ export function isFounderSmeOutreachEnabled(
 
 export const FOUNDER_SME_OUTREACH_FLAG_KEY = 'founder_sme_outreach' as const
 
-/** Max sendable recipients per campaign (reject above; never silently truncate). */
+/**
+ * Absolute ceiling of sendable recipients per campaign.
+ * This is a hard reject threshold — NOT permission to blast 2000 messages at once.
+ * Actual throughput is gated by OUTREACH_SEND_CONCURRENCY + tick size + worker continuation.
+ */
 export const OUTREACH_MAX_RECIPIENTS = 2000
 
 /** Max raw workbook rows (including header) accepted during parse. */
@@ -21,8 +25,17 @@ export const OUTREACH_MAX_WORKBOOK_ROWS = 2500
 /** Max upload size bytes (5 MiB). */
 export const OUTREACH_MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
-/** Concurrent Resend sends within a worker tick. */
+/**
+ * Concurrent Resend API calls within a single processCampaignSends tick.
+ * Keep small to protect provider rate limits and Cloud Run CPU.
+ */
 export const OUTREACH_SEND_CONCURRENCY = 3
+
+/** Max queued deliveries claimed per send tick (compose request or worker loop). */
+export const OUTREACH_SEND_TICK_SIZE = 300
+
+/** Max worker ticks per automation invocation before yielding. */
+export const OUTREACH_WORKER_MAX_TICKS = 8
 
 export const OUTREACH_TEMPLATE_VERSION = 'sme-invitation-v1' as const
 
