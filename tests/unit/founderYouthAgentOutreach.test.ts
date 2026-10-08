@@ -256,12 +256,13 @@ describe('Founder outreach auth + infrastructure (youth agent)', () => {
 })
 
 describe('Founder outreach UI audience selector', () => {
-  it('exposes SME and Youth Agent choices with distinct send labels', () => {
+  it('exposes Blank / SME / Youth Agent templates in the composer', () => {
     const src = readFileSync(join(process.cwd(), 'app/founder/outreach/page.tsx'), 'utf8')
+    expect(src).toContain('Compose Email')
+    expect(src).toContain('Blank Email')
     expect(src).toContain('SME Invitation')
     expect(src).toContain('Youth Agent Invitation')
-    expect(src).toContain('SEND YOUTH AGENT INVITATIONS')
-    expect(src).toContain('campaignType')
-    expect(src).toContain('I confirm I want to send the Youth Agent invitation')
+    expect(src).toContain('Confirm & Send')
+    expect(src).not.toContain('Upload Excel')
   })
 })

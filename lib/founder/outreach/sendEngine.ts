@@ -1,15 +1,58 @@
 import type { Firestore } from 'firebase-admin/firestore'
 import { OUTREACH_SEND_CONCURRENCY } from './featureFlag'
-import { OUTREACH_CAMPAIGNS, type OutreachCampaign, type OutreachDelivery } from './types'
+import {
+  OUTREACH_CAMPAIGNS,
+  type OutreachCampaign,
+  type OutreachDelivery,
+} from './types'
 import { listIdForCampaignType, renderOutreachEmail } from './templateRegistry'
 import { templateVersionForCampaignType, type OutreachCampaignType } from './campaignTypes'
+import { renderComposerEmail } from './renderComposerEmail'
 import {
   sendFounderOutreachEmail,
   isRetryableOutreachError,
 } from '@/lib/services/founderOutreachEmail'
 
 function resolveCampaignType(campaign: OutreachCampaign): OutreachCampaignType {
-  return campaign.type === 'youth_agent_invitation' ? 'youth_agent_invitation' : 'sme_invitation'
+  if (campaign.type === 'youth_agent_invitation') return 'youth_agent_invitation'
+  if (campaign.type === 'blank_email') return 'blank_email'
+  if (campaign.type === 'composer_custom') return 'composer_custom'
+  return 'sme_invitation'
+}
+
+function renderDeliveryEmail(campaign: OutreachCampaign, delivery: OutreachDelivery) {
+  const campaignType = resolveCampaignType(campaign)
+  const hasComposerBody =
+    campaign.source === 'composer' ||
+    Boolean(campaign.composerHtml && String(campaign.composerHtml).trim())
+
+  if (hasComposerBody) {
+    const rendered = renderComposerEmail({
+      subject: campaign.subject || 'Message from TenderBriefing',
+      bodyHtml: campaign.composerHtml || '',
+      recipientEmail: delivery.normalisedEmail,
+    })
+    return {
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      unsubscribeUrl: rendered.unsubscribeUrl,
+      templateVersion: templateVersionForCampaignType(campaignType),
+    }
+  }
+
+  const rendered = renderOutreachEmail(campaignType, {
+    name: delivery.name,
+    companyName: delivery.companyName,
+    email: delivery.normalisedEmail,
+  })
+  return {
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
+    unsubscribeUrl: rendered.unsubscribeUrl,
+    templateVersion: templateVersionForCampaignType(campaignType),
+  }
 }
 
 function nowIso() {
@@ -120,11 +163,7 @@ export async function processCampaignSends(params: {
     if (!claimed) return
 
     const campaignType = resolveCampaignType(campaign)
-    const rendered = renderOutreachEmail(campaignType, {
-      name: delivery.name,
-      companyName: delivery.companyName,
-      email: delivery.normalisedEmail,
-    })
+    const rendered = renderDeliveryEmail(campaign, delivery)
 
     const headers: Record<string, string> = {
       'X-Entity-Ref-ID': `${campaignId}:${delivery.normalisedEmail}`,
@@ -140,6 +179,7 @@ export async function processCampaignSends(params: {
     }
     const maxAttempts = 3
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      // One recipient per Resend message — BCC privacy + per-address failure isolation
       lastResult = await sendFounderOutreachEmail({
         to: delivery.normalisedEmail,
         subject: rendered.subject,
@@ -162,7 +202,7 @@ export async function processCampaignSends(params: {
           errorMessageSafe: null,
           sentAt: nowIso(),
           updatedAt: nowIso(),
-          templateVersion: templateVersionForCampaignType(campaignType),
+          templateVersion: rendered.templateVersion,
         },
         { merge: true }
       )
