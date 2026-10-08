@@ -35,6 +35,12 @@ export async function sendFounderOutreachEmail(opts: {
   html: string
   text: string
   headers?: Record<string, string>
+  /**
+   * Durable Resend Idempotency-Key (1–256 chars). Required for safe worker resume
+   * after accept-before-persist crashes — same key returns original response without
+   * sending a second email (Resend retains keys ~24h).
+   */
+  idempotencyKey?: string | null
   env?: NodeJS.ProcessEnv
   resendClient?: ReturnType<typeof getResendClient>
 }): Promise<OutreachSendResult> {
@@ -51,28 +57,40 @@ export async function sendFounderOutreachEmail(opts: {
     return { sent: false, errorCode: 'provider_auth_error', error: 'RESEND_API_KEY not configured' }
   }
 
+  const idempotencyKey = String(opts.idempotencyKey || '')
+    .trim()
+    .slice(0, 256)
+
   try {
-    const { data, error } = await client.emails.send({
-      from: fromAddress(env),
-      to: [recipient],
-      subject: String(opts.subject || '').slice(0, 200),
-      html: opts.html,
-      text: opts.text,
-      replyTo: SUPPORT_EMAIL,
-      headers: {
-        'X-TenderBriefing-Channel': 'FOUNDER_OUTREACH',
-        ...(opts.headers || {}),
+    const { data, error } = await client.emails.send(
+      {
+        from: fromAddress(env),
+        to: [recipient],
+        subject: String(opts.subject || '').slice(0, 200),
+        html: opts.html,
+        text: opts.text,
+        replyTo: SUPPORT_EMAIL,
+        headers: {
+          'X-TenderBriefing-Channel': 'FOUNDER_OUTREACH',
+          ...(opts.headers || {}),
+        },
       },
-    })
+      idempotencyKey ? { idempotencyKey } : undefined
+    )
 
     if (error) {
       const message =
         typeof error === 'object' && error && 'message' in error
           ? String((error as { message?: string }).message)
           : 'Resend send failed'
-      const lower = message.toLowerCase()
+      const name =
+        typeof error === 'object' && error && 'name' in error
+          ? String((error as { name?: string }).name)
+          : ''
+      const lower = `${name} ${message}`.toLowerCase()
       let errorCode = 'provider_rejected'
       if (lower.includes('429') || lower.includes('rate')) errorCode = 'provider_rate_limit'
+      else if (lower.includes('concurrent_idempotent')) errorCode = 'provider_rate_limit'
       else if (lower.includes('401') || lower.includes('403') || lower.includes('api key')) {
         errorCode = 'provider_auth_error'
       } else if (/\b5\d\d\b/.test(lower)) errorCode = 'provider_server_error'

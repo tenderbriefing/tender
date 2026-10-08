@@ -193,12 +193,15 @@ export async function processCampaignSends(params: {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       // One recipient per Resend message — To/Cc/Bcc role is bookkeeping only;
       // the Resend `to` array always contains exactly this recipient (privacy).
+      // Durable provider idempotency: delivery.id is stable across worker restarts,
+      // so accept-before-persist crashes cannot create a second mailbox delivery.
       lastResult = await sendFounderOutreachEmail({
         to: delivery.normalisedEmail,
         subject: rendered.subject,
         html: rendered.html,
         text: rendered.text,
         headers,
+        idempotencyKey: `outreach-delivery:${delivery.id}`.slice(0, 256),
       })
       if (lastResult.sent) break
       if (!isRetryableOutreachError(lastResult.errorCode)) break
