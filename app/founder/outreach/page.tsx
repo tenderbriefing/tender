@@ -11,11 +11,18 @@ import { isFounderSmeOutreachEnabledClient } from '@/lib/founder/outreach/client
 import type { ComposerTemplateKey } from '@/lib/founder/outreach/composerTemplates'
 import {
   OUTREACH_CTA_LABEL,
+  OUTREACH_SEND_CONCURRENCY,
+  OUTREACH_SEND_TICK_SIZE,
   OUTREACH_SUBJECT,
   YOUTH_AGENT_OUTREACH_CTA_LABEL,
   YOUTH_AGENT_OUTREACH_SUBJECT,
 } from '@/lib/founder/outreach/featureFlag'
 import { isValidEmailSyntax, parseRecipientFields } from '@/lib/founder/outreach/parseRecipients'
+import {
+  individualEmailConfirmCopy,
+  labelCampaignStatus,
+  providerAcceptanceDisclaimer,
+} from '@/lib/founder/outreach/statusLabels'
 
 type CampaignSummary = {
   id: string
@@ -185,7 +192,7 @@ export default function FounderOutreachPage() {
       toast.success(
         data.duplicate
           ? 'Already submitted (duplicate click protected)'
-          : `Submitted ${data.submitted} · Failed ${data.failed}`
+          : `SUBMITTED ${data.submitted} · FAILED ${data.failed}`
       )
       void loadHistory()
     } catch {
@@ -354,26 +361,25 @@ export default function FounderOutreachPage() {
 
         {report && (
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-base font-bold text-brand-900">Delivery submission report</h3>
-            <p className="mt-1 text-sm text-slate-600">
-              Provider acceptance is not the same as mailbox delivery. Statuses reflect
-              submission to Resend.
-            </p>
+            <h3 className="text-base font-bold text-brand-900">Send submission report</h3>
+            <p className="mt-1 text-sm text-slate-600">{providerAcceptanceDisclaimer()}</p>
             <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-slate-500">Campaign</dt>
                 <dd className="font-mono text-xs text-brand-900">{report.campaignId}</dd>
               </div>
               <div>
-                <dt className="text-slate-500">Status</dt>
-                <dd className="font-semibold text-brand-900">{report.status}</dd>
+                <dt className="text-slate-500">Campaign status</dt>
+                <dd className="font-semibold text-brand-900">
+                  {labelCampaignStatus(report.status)}
+                </dd>
               </div>
               <div>
-                <dt className="text-slate-500">Submitted</dt>
+                <dt className="text-slate-500">SUBMITTED (provider accepted)</dt>
                 <dd className="font-semibold text-emerald-700">{report.submitted}</dd>
               </div>
               <div>
-                <dt className="text-slate-500">Failed</dt>
+                <dt className="text-slate-500">FAILED</dt>
                 <dd className="font-semibold text-red-700">{report.failed}</dd>
               </div>
             </dl>
@@ -412,7 +418,7 @@ export default function FounderOutreachPage() {
                         {c.subject || c.originalFileName || c.id}
                       </p>
                       <p className="mt-0.5 text-xs text-slate-500">
-                        {new Date(c.createdAt).toLocaleString()} · {c.status} ·{' '}
+                        {new Date(c.createdAt).toLocaleString()} · {labelCampaignStatus(c.status)} ·{' '}
                         {c.source || (c.originalFileName === 'composer' ? 'composer' : 'xlsx')}
                         {c.templateKey ? ` · ${c.templateKey}` : ''}
                       </p>
@@ -421,7 +427,7 @@ export default function FounderOutreachPage() {
                         {typeof c.toCount === 'number'
                           ? ` (To ${c.toCount} · Cc ${c.ccCount || 0} · Bcc ${c.bccCount || 0})`
                           : ''}{' '}
-                        · Submitted {c.sentCount} · Failed {c.failedCount}
+                        · SUBMITTED {c.sentCount} · FAILED {c.failedCount}
                       </p>
                     </div>
                     <Link
@@ -445,19 +451,24 @@ export default function FounderOutreachPage() {
       {confirmOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-bold text-brand-900">Confirm send</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              {parsed.totalSendable >= LARGE_CONFIRM
-                ? `You are about to send this email to ${parsed.totalSendable} recipients.`
-                : 'Review the summary, then confirm.'}
+            <h3 className="text-lg font-bold text-brand-900">Final send confirmation</h3>
+            <p className="mt-2 text-base font-semibold text-brand-900">
+              {individualEmailConfirmCopy(parsed.totalSendable)}
             </p>
+            {parsed.totalSendable >= LARGE_CONFIRM && (
+              <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                Large send: messages are queued and submitted in controlled batches (concurrency{' '}
+                {OUTREACH_SEND_CONCURRENCY}, tick size {OUTREACH_SEND_TICK_SIZE}) — not blasted
+                simultaneously. OUTREACH_MAX_RECIPIENTS=2000 is a ceiling, not a blast size.
+              </p>
+            )}
             <dl className="mt-4 space-y-1.5 text-sm">
               <div className="flex justify-between gap-3">
                 <dt className="text-slate-500">From</dt>
                 <dd className="text-right font-medium text-brand-900">{fromDisplay}</dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className="text-slate-500">Recipients</dt>
+                <dt className="text-slate-500">Individual emails</dt>
                 <dd className="font-semibold">{parsed.totalSendable}</dd>
               </div>
               <div className="flex justify-between gap-3">
@@ -474,11 +485,9 @@ export default function FounderOutreachPage() {
               </div>
             </dl>
             <p className="mt-3 text-xs text-slate-500">
-              Each address is sent individually via Resend so recipients cannot see each other.
-              Invalid addresses already blocked: {to.filter((e) => !isValidEmailSyntax(e)).length +
-                cc.filter((e) => !isValidEmailSyntax(e)).length +
-                bcc.filter((e) => !isValidEmailSyntax(e)).length}
-              .
+              Privacy: each address receives its own Resend message with only that address in{' '}
+              <code>to</code>. Cc/Bcc labels are bookkeeping — other recipients are never exposed.
+              Provider acceptance is recorded as SUBMITTED, not DELIVERED.
             </p>
             <div className="mt-5 flex justify-end gap-2">
               <button

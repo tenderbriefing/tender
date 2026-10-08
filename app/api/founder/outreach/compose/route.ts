@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyFounderUser } from '@/lib/founder/verifyFounder'
-import { isFounderSmeOutreachEnabled, OUTREACH_MAX_RECIPIENTS } from '@/lib/founder/outreach/featureFlag'
+import {
+  isFounderSmeOutreachEnabled,
+  OUTREACH_MAX_RECIPIENTS,
+  OUTREACH_SEND_TICK_SIZE,
+} from '@/lib/founder/outreach/featureFlag'
 import { getFirebaseAdmin } from '@/lib/backend/firebaseAdmin'
 import {
   createComposerCampaign,
@@ -11,7 +15,11 @@ import { parseRecipientFields } from '@/lib/founder/outreach/parseRecipients'
 import { sanitizeComposerHtml, htmlToPlainText } from '@/lib/founder/outreach/sanitizeComposerHtml'
 import { parseOutreachCampaignType } from '@/lib/founder/outreach/campaignTypes'
 import { getComposerTemplate } from '@/lib/founder/outreach/composerTemplates'
-import { resolveAuthorizedSender, listAuthorizedOutreachSenders } from '@/lib/founder/outreach/authorizedSenders'
+import {
+  resolveAuthorizedSender,
+  listAuthorizedOutreachSenders,
+} from '@/lib/founder/outreach/authorizedSenders'
+import { individualEmailConfirmCopy } from '@/lib/founder/outreach/statusLabels'
 import { confirmAndStartCampaign, processCampaignSends } from '@/lib/founder/outreach/sendEngine'
 import { checkRateLimit } from '@/lib/security/rateLimit'
 import { OUTREACH_CAMPAIGNS } from '@/lib/founder/outreach/types'
@@ -78,6 +86,9 @@ export async function POST(request: NextRequest) {
     html?: string
     templateKey?: string
     senderId?: string
+    /** Rejected if present — From is server-authorized only */
+    from?: string
+    fromEmail?: string
     confirmSend?: boolean
     authorisedList?: boolean
     confirmCount?: number
@@ -87,6 +98,17 @@ export async function POST(request: NextRequest) {
     body = await request.json()
   } catch {
     return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 })
+  }
+
+  if (body.from != null || body.fromEmail != null) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'From address cannot be set by the client. Use an authorized senderId.',
+        code: 'unauthorized_from',
+      },
+      { status: 400 }
+    )
   }
 
   const rl = checkRateLimit(`founder-outreach-compose:${auth.user.uid}`, 10, 60_000)
@@ -163,6 +185,16 @@ export async function POST(request: NextRequest) {
   else if (template.key === 'blank') campaignType = 'blank_email'
 
   const sender = resolveAuthorizedSender(body.senderId)
+  if (!sender) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Unauthorized sender identity.',
+        code: 'unauthorized_from',
+      },
+      { status: 400 }
+    )
+  }
   const idempotencyKey = String(body.idempotencyKey || '').trim().slice(0, 200)
 
   const db = getFirebaseAdmin().firestore()
@@ -193,6 +225,8 @@ export async function POST(request: NextRequest) {
         data: {
           preview: {
             recipients: parsed.totalSendable,
+            individualEmails: parsed.totalSendable,
+            confirmCopy: individualEmailConfirmCopy(parsed.totalSendable),
             to: parsed.toCount,
             cc: parsed.ccCount,
             bcc: parsed.bccCount,
@@ -250,7 +284,7 @@ export async function POST(request: NextRequest) {
     const result = await processCampaignSends({
       db,
       campaignId: campaign.id,
-      maxToProcess: 400,
+      maxToProcess: OUTREACH_SEND_TICK_SIZE,
     })
 
     const still = await db

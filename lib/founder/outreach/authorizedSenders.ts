@@ -32,10 +32,30 @@ export function listAuthorizedOutreachSenders(
   ]
 }
 
+/** Default primary sender when client omits senderId. */
+export function defaultAuthorizedSender(
+  env: NodeJS.ProcessEnv = process.env
+): AuthorizedSender {
+  return listAuthorizedOutreachSenders(env)[0]
+}
+
+/**
+ * Resolve a requested sender id. Unknown / spoofed ids are rejected (null).
+ * Empty/missing id → primary (authorized default).
+ */
 export function resolveAuthorizedSender(
   requestedId: string | undefined | null,
   env: NodeJS.ProcessEnv = process.env
-): AuthorizedSender {
+): AuthorizedSender | null {
   const list = listAuthorizedOutreachSenders(env)
-  return list.find((s) => s.id === requestedId) || list[0]
+  const raw = String(requestedId ?? '').trim()
+  if (!raw) return list[0]
+  return list.find((s) => s.id === raw) || null
+}
+
+export function isAuthorizedSenderId(
+  requestedId: string | undefined | null,
+  env: NodeJS.ProcessEnv = process.env
+): boolean {
+  return resolveAuthorizedSender(requestedId, env) != null
 }

@@ -1,5 +1,5 @@
 import type { Firestore } from 'firebase-admin/firestore'
-import { OUTREACH_SEND_CONCURRENCY } from './featureFlag'
+import { OUTREACH_SEND_CONCURRENCY, OUTREACH_SEND_TICK_SIZE } from './featureFlag'
 import {
   OUTREACH_CAMPAIGNS,
   type OutreachCampaign,
@@ -76,13 +76,24 @@ async function mapPool<T, R>(items: T[], concurrency: number, fn: (item: T) => P
 /**
  * Process queued deliveries for a campaign. Idempotent — skips already-sent.
  */
+/**
+ * Process a bounded tick of queued deliveries.
+ * Idempotent across worker restarts:
+ * - status === 'sent' is never resent (transaction claim rejects)
+ * - only 'queued' rows are claimed
+ * - stale 'sending' rows (>15m) return to 'queued' for resume
+ * Internal status 'sent' means provider ACCEPTED/SUBMITTED — not mailbox DELIVERED.
+ */
 export async function processCampaignSends(params: {
   db: Firestore
   campaignId: string
   maxToProcess?: number
 }): Promise<{ processed: number; sent: number; failed: number }> {
   const { db, campaignId } = params
-  const maxToProcess = params.maxToProcess ?? 500
+  const maxToProcess = Math.min(
+    Math.max(1, params.maxToProcess ?? OUTREACH_SEND_TICK_SIZE),
+    OUTREACH_SEND_TICK_SIZE
+  )
   const campRef = db.collection(OUTREACH_CAMPAIGNS).doc(campaignId)
   const campSnap = await campRef.get()
   if (!campSnap.exists) throw new Error('Campaign not found')
@@ -145,9 +156,8 @@ export async function processCampaignSends(params: {
       const fresh = await tx.get(ref)
       if (!fresh.exists) return false
       const data = fresh.data() as OutreachDelivery
+      // Never re-send a provider-accepted delivery after worker restart
       if (data.status === 'sent') return false
-      if (data.status !== 'queued' && data.status !== 'failed') return false
-      // Only auto-retry failed if retryable — for v1 worker only picks queued
       if (data.status !== 'queued') return false
       tx.set(
         ref,
@@ -168,6 +178,8 @@ export async function processCampaignSends(params: {
     const headers: Record<string, string> = {
       'X-Entity-Ref-ID': `${campaignId}:${delivery.normalisedEmail}`,
       'List-ID': listIdForCampaignType(campaignType),
+      // Privacy: never attach other campaign recipients to this message
+      'X-TenderBriefing-Recipient-Field': String(delivery.recipientField || 'to'),
     }
     if (rendered.unsubscribeUrl) {
       headers['List-Unsubscribe'] = `<${rendered.unsubscribeUrl}>`
@@ -179,7 +191,8 @@ export async function processCampaignSends(params: {
     }
     const maxAttempts = 3
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      // One recipient per Resend message — BCC privacy + per-address failure isolation
+      // One recipient per Resend message — To/Cc/Bcc role is bookkeeping only;
+      // the Resend `to` array always contains exactly this recipient (privacy).
       lastResult = await sendFounderOutreachEmail({
         to: delivery.normalisedEmail,
         subject: rendered.subject,
@@ -197,6 +210,8 @@ export async function processCampaignSends(params: {
       await ref.set(
         {
           status: 'sent',
+          /** Resend API acceptance — UI label SUBMITTED; not mailbox DELIVERED */
+          providerAcceptance: 'accepted',
           resendMessageId: lastResult.id || null,
           errorCode: null,
           errorMessageSafe: null,

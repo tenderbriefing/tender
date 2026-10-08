@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAutomationAuthorized, automationAuthErrorResponse } from '@/lib/automation/authorizeAutomation'
-import { isFounderSmeOutreachEnabled } from '@/lib/founder/outreach/featureFlag'
+import {
+  isFounderSmeOutreachEnabled,
+  OUTREACH_SEND_TICK_SIZE,
+  OUTREACH_WORKER_MAX_TICKS,
+} from '@/lib/founder/outreach/featureFlag'
 import { getFirebaseAdmin } from '@/lib/backend/firebaseAdmin'
 import { processCampaignSends } from '@/lib/founder/outreach/sendEngine'
 
@@ -27,12 +31,16 @@ export async function POST(request: NextRequest) {
 
   const db = getFirebaseAdmin().firestore()
   let ticks = 0
-  let totalSent = 0
-  // Process up to several ticks within maxDuration budget
-  while (ticks < 8) {
-    const result = await processCampaignSends({ db, campaignId, maxToProcess: 300 })
+  let totalSubmitted = 0
+  // Bounded ticks — never process the full 2000-recipient ceiling in one invocation
+  while (ticks < OUTREACH_WORKER_MAX_TICKS) {
+    const result = await processCampaignSends({
+      db,
+      campaignId,
+      maxToProcess: OUTREACH_SEND_TICK_SIZE,
+    })
     ticks += 1
-    totalSent += result.sent
+    totalSubmitted += result.sent
     if (result.processed === 0) break
     const still = await db
       .collection('founderOutreachCampaigns')
@@ -44,5 +52,13 @@ export async function POST(request: NextRequest) {
     if (still.empty) break
   }
 
-  return NextResponse.json({ success: true, data: { ticks, totalSent } })
+  return NextResponse.json({
+    success: true,
+    data: {
+      ticks,
+      /** Provider API acceptances this invocation — not mailbox DELIVERED */
+      submitted: totalSubmitted,
+      totalSent: totalSubmitted,
+    },
+  })
 }
