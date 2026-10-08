@@ -217,7 +217,13 @@ describe('founder outreach Resend transport isolation', () => {
       subject: OUTREACH_SUBJECT,
       html: '<p>hi</p>',
       text: 'hi',
-      env: { ...process.env, RESEND_API_KEY: 're_test_key', RESEND_FROM_EMAIL: 'hello@tenderbriefing.co.za' },
+      env: {
+        ...process.env,
+        RESEND_API_KEY: 're_test_key',
+        // Transactional From must not leak into Outreach
+        RESEND_FROM_EMAIL: 'hello@tenderbriefing.co.za',
+        FOUNDER_OUTREACH_FROM_EMAIL: 'info@tenderbriefing.co.za',
+      },
       resendClient: { emails: { send } } as any,
     })
     expect(result.sent).toBe(true)
@@ -225,7 +231,8 @@ describe('founder outreach Resend transport isolation', () => {
     expect(send).toHaveBeenCalledOnce()
     const arg = send.mock.calls[0][0]
     expect(arg.headers['X-TenderBriefing-Channel']).toBe('FOUNDER_OUTREACH')
-    expect(arg.from).toContain('hello@tenderbriefing.co.za')
+    expect(arg.from).toContain('info@tenderbriefing.co.za')
+    expect(arg.from).not.toContain('hello@tenderbriefing.co.za')
   })
 
   it('does not consult suppression inside outreach transport (caller responsibility)', async () => {

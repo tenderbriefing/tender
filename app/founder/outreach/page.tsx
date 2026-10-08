@@ -117,7 +117,7 @@ function newIdempotencyKey() {
 export default function FounderOutreachPage() {
   const flagOn = isFounderSmeOutreachEnabledClient()
   const [templateKey, setTemplateKey] = useState<ComposerTemplateKey>('blank')
-  const [fromDisplay, setFromDisplay] = useState('TenderBriefing <hello@tenderbriefing.co.za>')
+  const [fromDisplay, setFromDisplay] = useState('TenderBriefing <info@tenderbriefing.co.za>')
   const [senderId, setSenderId] = useState('primary')
   const [to, setTo] = useState<string[]>([])
   const [cc, setCc] = useState<string[]>([])

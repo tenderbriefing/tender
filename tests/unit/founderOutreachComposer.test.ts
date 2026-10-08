@@ -98,10 +98,11 @@ describe('Founder Outreach Composer V2', () => {
     expect(ya.subject.toLowerCase()).toContain('youth')
   })
 
-  it('authorized senders come from Resend fromAddress — no spoofing list', () => {
+  it('authorized senders come from Outreach fromAddress — no spoofing list', () => {
     const senders = listAuthorizedOutreachSenders({
       ...process.env,
-      RESEND_FROM_EMAIL: 'TenderBriefing <info@tenderbriefing.co.za>',
+      RESEND_FROM_EMAIL: 'TenderBriefing <hello@tenderbriefing.co.za>',
+      FOUNDER_OUTREACH_FROM_EMAIL: 'info@tenderbriefing.co.za',
     })
     expect(senders).toHaveLength(1)
     expect(senders[0].display).toContain('info@tenderbriefing.co.za')
