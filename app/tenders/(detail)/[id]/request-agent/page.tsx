@@ -231,7 +231,7 @@ function RequestYouthAgentContent() {
   const missingPhone = !userPhone
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/30">
+    <div className="min-h-screen overflow-x-hidden bg-gradient-to-b from-slate-50 via-white to-brand-50/30">
       <Header />
 
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 text-white">

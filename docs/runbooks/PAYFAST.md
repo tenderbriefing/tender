@@ -41,6 +41,16 @@ PayFast blocks merchants from paying into their own merchant account. This surfa
 
 `POST /api/payments/payfast/create-checkout` with `{ attendanceRequestId }` rebuilds a signed live checkout for `pending` / `failed` requests owned by the SME. Re-booking the same tender resumes the existing unpaid request instead of creating a duplicate (see attendance-requests resume flow).
 
+### Controlled live settle (Founder-approved only)
+
+Production runs `PAYFAST_MODE=live`. There is no separate sandbox merchant in Cloud Run. A real R349 settle is the only way to exercise COMPLETE ITN → emails → YA dispatch end-to-end.
+
+1. Sign in as `ops-smoke-sme@…` (never the PayFast merchant mailbox).
+2. Open a compulsory-briefing tender → **Request an Agent — R349** → complete checkout summary → PayFast.
+3. Pay with a **non-merchant** PayFast identity / card.
+4. Confirm: payment-success polls to paid; SME confirmation email; Founder ops email to `info@…`; request shows notified agents / assignment pending.
+5. Do **not** mark paid in Firestore by hand. If ITN is missing after COMPLETE, use admin reconcile with PayFast `pf_payment_id` evidence only.
+
 ## Production checklist (config)
 
 | Check | Expected |
