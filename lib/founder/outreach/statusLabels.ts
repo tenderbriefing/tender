@@ -71,6 +71,13 @@ export function individualEmailConfirmCopy(count: number): string {
   return `You are about to send ${n} individual email${n === 1 ? '' : 's'}.`
 }
 
+/** Explain suppressed exclusions — never offers override. */
+export function suppressionExclusionCopy(suppressedCount: number): string | null {
+  const n = Math.max(0, Math.floor(Number(suppressedCount) || 0))
+  if (n <= 0) return null
+  return `${n} recipient${n === 1 ? ' has' : 's have'} been excluded because of suppression/unsubscribe and will not be sent.`
+}
+
 export function providerAcceptanceDisclaimer(): string {
   return 'SUBMITTED means Resend accepted the send API call. It is not mailbox delivery confirmation (DELIVERED requires webhook confirmation, which is not yet wired for outreach).'
 }

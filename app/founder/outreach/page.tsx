@@ -22,6 +22,7 @@ import {
   individualEmailConfirmCopy,
   labelCampaignStatus,
   providerAcceptanceDisclaimer,
+  suppressionExclusionCopy,
 } from '@/lib/founder/outreach/statusLabels'
 
 type CampaignSummary = {
@@ -53,6 +54,23 @@ type SendReport = {
   subject?: string
   from?: string
   failures?: Array<{ email: string; errorCode?: string; error?: string }>
+}
+
+type ComposePreview = {
+  rawRecipients?: number
+  duplicatesRemoved?: number
+  suppressedRecipients?: string[]
+  sendableRecipients: number
+  individualEmails: number
+  confirmCount: number
+  confirmCopy: string
+  suppressionCopy?: string | null
+  to: number
+  cc: number
+  bcc: number
+  subject: string
+  from: string
+  requiresLargeConfirm?: boolean
 }
 
 const TEMPLATES: Array<{ key: ComposerTemplateKey; label: string; subject: string; html: string }> = [
@@ -108,6 +126,7 @@ export default function FounderOutreachPage() {
   const [html, setHtml] = useState('<p></p>')
   const [busy, setBusy] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [preview, setPreview] = useState<ComposePreview | null>(null)
   const [history, setHistory] = useState<CampaignSummary[]>([])
   const [report, setReport] = useState<SendReport | null>(null)
   const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey)
@@ -160,7 +179,7 @@ export default function FounderOutreachPage() {
   }
 
   async function sendConfirmed() {
-    if (busy) return
+    if (busy || !preview) return
     setBusy(true)
     try {
       const res = await authFetch('/api/founder/outreach/compose', {
@@ -176,7 +195,7 @@ export default function FounderOutreachPage() {
           senderId,
           confirmSend: true,
           authorisedList: true,
-          confirmCount: parsed.totalSendable,
+          confirmCount: preview.confirmCount,
           idempotencyKey,
         }),
       })
@@ -188,6 +207,7 @@ export default function FounderOutreachPage() {
       const data = json.data as SendReport & { duplicate?: boolean }
       setReport(data)
       setConfirmOpen(false)
+      setPreview(null)
       setIdempotencyKey(newIdempotencyKey())
       toast.success(
         data.duplicate
@@ -202,7 +222,7 @@ export default function FounderOutreachPage() {
     }
   }
 
-  function onSendClick() {
+  async function onSendClick() {
     if (busy) return
     if (!subject.trim()) {
       toast.error('Subject is required')
@@ -225,7 +245,47 @@ export default function FounderOutreachPage() {
       toast.error('Email body is required')
       return
     }
-    setConfirmOpen(true)
+    setBusy(true)
+    try {
+      // Server preview applies the same suppression filter as create/send.
+      const res = await authFetch('/api/founder/outreach/compose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to,
+          cc,
+          bcc,
+          subject: subject.trim(),
+          html,
+          templateKey,
+          senderId,
+          confirmSend: false,
+          authorisedList: false,
+        }),
+      })
+      const json = await res.json()
+      const p = json.data?.preview as ComposePreview | undefined
+      if (json.code === 'all_suppressed' || (p && p.sendableRecipients === 0)) {
+        toast.error(
+          p?.suppressionCopy ||
+            suppressionExclusionCopy(p?.suppressedRecipients?.length || parsed.totalSendable) ||
+            'No sendable recipients after suppression filtering.'
+        )
+        setPreview(null)
+        setConfirmOpen(false)
+        return
+      }
+      if (json.code !== 'confirmation_required' || !p) {
+        toast.error(json.error || 'Unable to prepare send confirmation')
+        return
+      }
+      setPreview(p)
+      setConfirmOpen(true)
+    } catch {
+      toast.error('Network error while preparing confirmation')
+    } finally {
+      setBusy(false)
+    }
   }
 
   if (!flagOn) {
@@ -448,14 +508,22 @@ export default function FounderOutreachPage() {
         </section>
       </div>
 
-      {confirmOpen && (
+      {confirmOpen && preview && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <h3 className="text-lg font-bold text-brand-900">Final send confirmation</h3>
             <p className="mt-2 text-base font-semibold text-brand-900">
-              {individualEmailConfirmCopy(parsed.totalSendable)}
+              {preview.confirmCopy || individualEmailConfirmCopy(preview.confirmCount)}
             </p>
-            {parsed.totalSendable >= LARGE_CONFIRM && (
+            {!!preview.suppressionCopy && (
+              <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                {preview.suppressionCopy}
+                {preview.suppressedRecipients?.length
+                  ? ` Excluded: ${preview.suppressedRecipients.join(', ')}.`
+                  : ''}
+              </p>
+            )}
+            {(preview.requiresLargeConfirm || preview.confirmCount >= LARGE_CONFIRM) && (
               <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
                 Large send: messages are queued and submitted in controlled batches (concurrency{' '}
                 {OUTREACH_SEND_CONCURRENCY}, tick size {OUTREACH_SEND_TICK_SIZE}) — not blasted
@@ -465,42 +533,48 @@ export default function FounderOutreachPage() {
             <dl className="mt-4 space-y-1.5 text-sm">
               <div className="flex justify-between gap-3">
                 <dt className="text-slate-500">From</dt>
-                <dd className="text-right font-medium text-brand-900">{fromDisplay}</dd>
+                <dd className="text-right font-medium text-brand-900">
+                  {preview.from || fromDisplay}
+                </dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className="text-slate-500">Individual emails</dt>
-                <dd className="font-semibold">{parsed.totalSendable}</dd>
+                <dt className="text-slate-500">Individual emails (sendable)</dt>
+                <dd className="font-semibold">{preview.confirmCount}</dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-slate-500">To / Cc / Bcc</dt>
                 <dd>
-                  {parsed.toCount} / {parsed.ccCount} / {parsed.bccCount}
+                  {preview.to} / {preview.cc} / {preview.bcc}
                 </dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-slate-500">Subject</dt>
                 <dd className="max-w-[60%] text-right font-medium text-brand-900">
-                  {subject.trim()}
+                  {preview.subject || subject.trim()}
                 </dd>
               </div>
             </dl>
             <p className="mt-3 text-xs text-slate-500">
               Privacy: each address receives its own Resend message with only that address in{' '}
               <code>to</code>. Cc/Bcc labels are bookkeeping — other recipients are never exposed.
-              Provider acceptance is recorded as SUBMITTED, not DELIVERED.
+              Provider acceptance is recorded as SUBMITTED, not DELIVERED. Suppression
+              cannot be overridden from this screen.
             </p>
             <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => setConfirmOpen(false)}
+                onClick={() => {
+                  setConfirmOpen(false)
+                  setPreview(null)
+                }}
                 className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                disabled={busy}
+                disabled={busy || preview.confirmCount <= 0}
                 onClick={() => void sendConfirmed()}
                 className="rounded-xl bg-accent-500 px-4 py-2 text-sm font-bold text-brand-900 hover:bg-accent-400 disabled:opacity-60"
               >
