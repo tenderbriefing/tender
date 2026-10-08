@@ -11,7 +11,6 @@ import {
   findCampaignByIdempotencyKey,
   getCampaign,
 } from '@/lib/founder/outreach/campaignStore'
-import { parseRecipientFields } from '@/lib/founder/outreach/parseRecipients'
 import { sanitizeComposerHtml, htmlToPlainText } from '@/lib/founder/outreach/sanitizeComposerHtml'
 import { parseOutreachCampaignType } from '@/lib/founder/outreach/campaignTypes'
 import { getComposerTemplate } from '@/lib/founder/outreach/composerTemplates'
@@ -19,7 +18,11 @@ import {
   resolveAuthorizedSender,
   listAuthorizedOutreachSenders,
 } from '@/lib/founder/outreach/authorizedSenders'
-import { individualEmailConfirmCopy } from '@/lib/founder/outreach/statusLabels'
+import {
+  individualEmailConfirmCopy,
+  suppressionExclusionCopy,
+} from '@/lib/founder/outreach/statusLabels'
+import { resolveComposerRecipients } from '@/lib/founder/outreach/resolveComposerRecipients'
 import { confirmAndStartCampaign, processCampaignSends } from '@/lib/founder/outreach/sendEngine'
 import { checkRateLimit } from '@/lib/security/rateLimit'
 import { OUTREACH_CAMPAIGNS } from '@/lib/founder/outreach/types'
@@ -116,45 +119,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Compose rate limited' }, { status: 429 })
   }
 
-  const parsed = parseRecipientFields({
-    to: body.to,
-    cc: body.cc,
-    bcc: body.bcc,
-    maxRecipients: OUTREACH_MAX_RECIPIENTS,
-  })
-
-  if (parsed.invalid.some((r) => r.reason === 'invalid_email')) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'One or more email addresses are invalid.',
-        code: 'invalid_recipients',
-        data: {
-          invalid: parsed.invalid.filter((r) => r.reason === 'invalid_email').slice(0, 50),
-        },
-      },
-      { status: 400 }
-    )
-  }
-
-  if (parsed.totalSendable === 0) {
-    return NextResponse.json(
-      { success: false, error: 'At least one valid recipient is required.', code: 'empty_recipients' },
-      { status: 400 }
-    )
-  }
-
-  if (parsed.exceedsMax) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: `Maximum ${OUTREACH_MAX_RECIPIENTS} recipients per send.`,
-        code: 'recipient_limit',
-      },
-      { status: 400 }
-    )
-  }
-
   const subject = String(body.subject || '')
     .replace(/\s+/g, ' ')
     .trim()
@@ -199,6 +163,75 @@ export async function POST(request: NextRequest) {
 
   const db = getFirebaseAdmin().firestore()
 
+  // Preview and create share the same parse → dedupe → suppression resolution.
+  const { parsed, resolution } = await resolveComposerRecipients(db, {
+    to: body.to,
+    cc: body.cc,
+    bcc: body.bcc,
+    maxRecipients: OUTREACH_MAX_RECIPIENTS,
+  })
+
+  if (parsed.invalid.some((r) => r.reason === 'invalid_email')) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'One or more email addresses are invalid.',
+        code: 'invalid_recipients',
+        data: {
+          invalid: parsed.invalid.filter((r) => r.reason === 'invalid_email').slice(0, 50),
+        },
+      },
+      { status: 400 }
+    )
+  }
+
+  if (parsed.totalSendable === 0) {
+    return NextResponse.json(
+      { success: false, error: 'At least one valid recipient is required.', code: 'empty_recipients' },
+      { status: 400 }
+    )
+  }
+
+  if (resolution.exceedsMax) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Maximum ${OUTREACH_MAX_RECIPIENTS} recipients per send.`,
+        code: 'recipient_limit',
+      },
+      { status: 400 }
+    )
+  }
+
+  if (resolution.sendableRecipients === 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'No sendable recipients after suppression filtering.',
+        code: 'all_suppressed',
+        data: {
+          preview: {
+            rawRecipients: resolution.rawRecipients,
+            duplicatesRemoved: resolution.duplicatesRemoved,
+            suppressedRecipients: resolution.suppressedRecipients,
+            sendableRecipients: 0,
+            individualEmails: 0,
+            confirmCount: 0,
+            confirmCopy: individualEmailConfirmCopy(0),
+            suppressionCopy: suppressionExclusionCopy(resolution.suppressedRecipients.length),
+            to: 0,
+            cc: 0,
+            bcc: 0,
+            subject,
+            from: sender.display,
+            requiresLargeConfirm: false,
+          },
+        },
+      },
+      { status: 400 }
+    )
+  }
+
   if (idempotencyKey) {
     const existing = await findCampaignByIdempotencyKey(db, auth.user.uid, idempotencyKey)
     if (existing) {
@@ -224,15 +257,21 @@ export async function POST(request: NextRequest) {
         code: 'confirmation_required',
         data: {
           preview: {
-            recipients: parsed.totalSendable,
-            individualEmails: parsed.totalSendable,
-            confirmCopy: individualEmailConfirmCopy(parsed.totalSendable),
-            to: parsed.toCount,
-            cc: parsed.ccCount,
-            bcc: parsed.bccCount,
+            rawRecipients: resolution.rawRecipients,
+            duplicatesRemoved: resolution.duplicatesRemoved,
+            suppressedRecipients: resolution.suppressedRecipients,
+            sendableRecipients: resolution.sendableRecipients,
+            recipients: resolution.sendableRecipients,
+            individualEmails: resolution.individualEmails,
+            confirmCount: resolution.confirmCount,
+            confirmCopy: individualEmailConfirmCopy(resolution.confirmCount),
+            suppressionCopy: suppressionExclusionCopy(resolution.suppressedRecipients.length),
+            to: resolution.toCount,
+            cc: resolution.ccCount,
+            bcc: resolution.bccCount,
             subject,
             from: sender.display,
-            requiresLargeConfirm: parsed.totalSendable >= LARGE_SEND_CONFIRM_THRESHOLD,
+            requiresLargeConfirm: resolution.confirmCount >= LARGE_SEND_CONFIRM_THRESHOLD,
           },
         },
       },
@@ -242,12 +281,12 @@ export async function POST(request: NextRequest) {
 
   if (
     typeof body.confirmCount === 'number' &&
-    body.confirmCount !== parsed.totalSendable
+    body.confirmCount !== resolution.confirmCount
   ) {
     return NextResponse.json(
       {
         success: false,
-        error: `Confirmation count mismatch. Expected ${parsed.totalSendable}.`,
+        error: `Confirmation count mismatch. Expected ${resolution.confirmCount}.`,
         code: 'count_mismatch',
       },
       { status: 400 }
@@ -264,14 +303,15 @@ export async function POST(request: NextRequest) {
       subject,
       composerHtml,
       fromAddress: sender.display,
+      // Pass post-parse valid recipients; create re-applies the same suppression filter.
       recipients: parsed.sendable.map((r) => ({
         email: r.email,
         normalisedEmail: r.normalisedEmail,
         field: r.field,
       })),
-      toCount: parsed.toCount,
-      ccCount: parsed.ccCount,
-      bccCount: parsed.bccCount,
+      toCount: resolution.toCount,
+      ccCount: resolution.ccCount,
+      bccCount: resolution.bccCount,
       idempotencyKey: idempotencyKey || `outreach-compose:${Date.now()}`,
     })
 

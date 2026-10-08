@@ -123,7 +123,7 @@ describe('Founder Outreach Composer V2', () => {
     expect(src).toContain('confirmSend')
     expect(src).toContain('authorisedList')
     expect(src).toContain('idempotencyKey')
-    expect(src).toContain('parseRecipientFields')
+    expect(src).toContain('resolveComposerRecipients')
     expect(src).not.toContain('parseOutreachXlsx')
   })
 

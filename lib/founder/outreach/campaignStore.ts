@@ -208,15 +208,17 @@ export async function createComposerCampaign(params: {
     composerHtml,
     fromAddress,
     recipients,
-    toCount,
-    ccCount,
-    bccCount,
   } = params
 
+  // Same suppression authority as compose preview (listSuppressedAmong).
   const readyEmails = recipients.map((r) => r.normalisedEmail)
   const suppressed = await listSuppressedAmong(db, readyEmails)
   const sendable = recipients.filter((r) => !suppressed.has(r.normalisedEmail))
   const suppressedRows = recipients.length - sendable.length
+  // Field counts reflect post-suppression sendable population (matches preview).
+  const resolvedToCount = sendable.filter((r) => r.field === 'to').length
+  const resolvedCcCount = sendable.filter((r) => r.field === 'cc').length
+  const resolvedBccCount = sendable.filter((r) => r.field === 'bcc').length
   if (sendable.length === 0) {
     throw new Error('No sendable recipients after suppression filtering.')
   }
@@ -235,9 +237,9 @@ export async function createComposerCampaign(params: {
     subject: subject.slice(0, 500),
     composerHtml,
     fromAddress: fromAddress.slice(0, 200),
-    toCount,
-    ccCount,
-    bccCount,
+    toCount: resolvedToCount,
+    ccCount: resolvedCcCount,
+    bccCount: resolvedBccCount,
     templateKey: templateKey.slice(0, 80),
     totalRows: recipients.length,
     validRows: recipients.length,
@@ -278,9 +280,9 @@ export async function createComposerCampaign(params: {
       campaignType,
       templateKey,
       sendableRows: campaign.sendableRows,
-      toCount,
-      ccCount,
-      bccCount,
+      toCount: resolvedToCount,
+      ccCount: resolvedCcCount,
+      bccCount: resolvedBccCount,
       suppressedRows,
     })
   )
