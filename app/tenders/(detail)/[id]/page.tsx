@@ -33,7 +33,7 @@ export default async function TenderDetailsPage(
   const privateSector = isPrivateSectorTender(tender)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/20 pb-24 lg:pb-12">
+    <div className="min-h-screen overflow-x-hidden bg-gradient-to-b from-slate-50 via-white to-brand-50/20 pb-24 lg:pb-12">
       <TenderDetailFunnelBeacon tenderId={tender.id} province={tender.province} />
       <Header />
       <TenderBreadcrumbs tender={tender} />

@@ -121,12 +121,48 @@ async function createPayfastCheckoutForRequest(request, baseUrl) {
   }
 }
 
+/**
+ * Enter YA fulfilment immediately after authoritative payment.
+ * Prefer liveDispatch (populates notifiedAgents + notifies). Fall back to
+ * workflow-only notify so a dispatch failure never undoes payment.
+ * No-op when agents were already dispatched (idempotent / duplicate ITN).
+ */
 async function notifyAgentsAfterPayment(request) {
-  await workflowAutomationService.dispatchWorkflowEvent('attendance_requested', {
-    ...request,
-    id: request.id,
-    requestId: request.id,
-  })
+  const alreadyDispatched =
+    Boolean(request.lastDispatchAt) ||
+    (Array.isArray(request.notifiedAgents) && request.notifiedAgents.length > 0)
+  if (alreadyDispatched) {
+    return request
+  }
+
+  try {
+    const liveDispatchService = require('../liveDispatchService')
+    const result = await liveDispatchService.autoDispatchRequest(request, {
+      radiusKm: request.radiusKm || 50,
+      reason: 'post_payment_initial',
+    })
+    return result?.request || request
+  } catch (err) {
+    console.error(
+      '[attendancePayment] post-payment auto-dispatch failed:',
+      err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+    )
+  }
+
+  try {
+    await workflowAutomationService.dispatchWorkflowEvent('attendance_requested', {
+      ...request,
+      id: request.id,
+      requestId: request.id,
+      idempotencySuffix: 'post_payment',
+    })
+  } catch (err) {
+    console.error(
+      '[attendancePayment] post-payment agent notify failed:',
+      err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+    )
+  }
+  return request
 }
 
 async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'webhook' } = {}) {
@@ -151,6 +187,15 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
     } catch (err) {
       console.error(
         '[attendancePayment] already-paid founder ops notify failed:',
+        err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+      )
+    }
+    // Retry fulfilment handoff if a prior paid transition never dispatched agents
+    try {
+      await notifyAgentsAfterPayment(request)
+    } catch (err) {
+      console.error(
+        '[attendancePayment] already-paid fulfilment handoff failed:',
         err instanceof Error ? err.message.slice(0, 160) : 'unknown'
       )
     }
@@ -270,7 +315,18 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
     )
   }
 
-  return { request: updated, alreadyPaid: false }
+  // YA fulfilment handoff — fail-soft; payment remains authoritative
+  let fulfilmentRequest = updated
+  try {
+    fulfilmentRequest = (await notifyAgentsAfterPayment(updated)) || updated
+  } catch (err) {
+    console.error(
+      '[attendancePayment] fulfilment handoff failed:',
+      err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+    )
+  }
+
+  return { request: fulfilmentRequest, alreadyPaid: false }
 }
 
 async function markRequestFailed(requestId, reason = 'Payment failed') {
