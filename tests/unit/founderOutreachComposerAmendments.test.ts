@@ -97,15 +97,10 @@ describe('Founder Outreach Composer V2 — Founder amendments', () => {
     expect(
       resolveAuthorizedSender('spoofed-id', {
         ...process.env,
-        FOUNDER_OUTREACH_FROM_EMAIL: 'info@tenderbriefing.co.za',
+        RESEND_FROM_EMAIL: 'TenderBriefing <hello@tenderbriefing.co.za>',
       })
     ).toBeNull()
-    expect(
-      isAuthorizedSenderId('primary', {
-        ...process.env,
-        FOUNDER_OUTREACH_FROM_EMAIL: 'info@tenderbriefing.co.za',
-      })
-    ).toBe(true)
+    expect(isAuthorizedSenderId('primary')).toBe(true)
     expect(isAuthorizedSenderId('evil')).toBe(false)
     const compose = read('app/api/founder/outreach/compose/route.ts')
     expect(compose).toContain('unauthorized_from')
