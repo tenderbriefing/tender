@@ -5,18 +5,13 @@
  */
 import { Resend } from 'resend'
 
-/** Founder Outreach default From — independent of transactional RESEND_FROM_EMAIL. */
-const DEFAULT_FROM = 'TenderBriefing <info@tenderbriefing.co.za>'
+const DEFAULT_FROM = 'TenderBriefing <hello@tenderbriefing.co.za>'
 const SUPPORT_EMAIL = 'support@tenderbriefing.co.za'
 const LOG_PREFIX = '[founderOutreachEmail]'
 
-/**
- * Authorized Outreach From identity.
- * Prefer FOUNDER_OUTREACH_FROM_EMAIL; never silently inherit hello@ from transactional mail.
- */
 export function fromAddress(env: NodeJS.ProcessEnv = process.env): string {
-  const dedicated = (env.FOUNDER_OUTREACH_FROM_EMAIL || '').trim()
-  const raw = dedicated || DEFAULT_FROM
+  const raw = (env.RESEND_FROM_EMAIL || '').trim()
+  if (!raw) return DEFAULT_FROM
   if (raw.includes('<')) return raw
   return `TenderBriefing <${raw}>`
 }
