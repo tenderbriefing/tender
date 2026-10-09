@@ -12,6 +12,7 @@ import {
   sendFounderOutreachEmail,
   isRetryableOutreachError,
 } from '@/lib/services/founderOutreachEmail'
+import { indexOutreachProviderMessage } from '@/lib/founder/outreach/deliverability/webhookReconcile'
 
 function resolveCampaignType(campaign: OutreachCampaign): OutreachCampaignType {
   if (campaign.type === 'youth_agent_invitation') return 'youth_agent_invitation'
@@ -213,8 +214,9 @@ export async function processCampaignSends(params: {
       await ref.set(
         {
           status: 'sent',
-          /** Resend API acceptance — UI label SUBMITTED; not mailbox DELIVERED */
+          /** Resend API acceptance — UI label SUBMITTED; not mailbox Primary */
           providerAcceptance: 'accepted',
+          providerLifecycle: 'accepted',
           resendMessageId: lastResult.id || null,
           errorCode: null,
           errorMessageSafe: null,
@@ -224,6 +226,14 @@ export async function processCampaignSends(params: {
         },
         { merge: true }
       )
+      if (lastResult.id) {
+        await indexOutreachProviderMessage(db, {
+          providerMessageId: lastResult.id,
+          campaignId,
+          deliveryId: delivery.id,
+          normalisedEmail: delivery.normalisedEmail,
+        })
+      }
       console.info(
         JSON.stringify({
           event: 'founder_outreach_recipient_sent',

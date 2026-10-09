@@ -307,6 +307,12 @@ export default function FounderOutreachPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold text-brand-900">Compose Email</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                <Link href="/founder/outreach/deliverability" className="font-semibold text-brand-800 hover:underline">
+                  Deliverability dashboard
+                </Link>
+                {' · '}Bulk outreach blocked · hello@ sender
+              </p>
               <p className="mt-1 text-sm text-slate-600">
                 Outlook-style composer. Delivery uses production Resend — not Microsoft 365.
               </p>

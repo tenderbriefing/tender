@@ -24,6 +24,8 @@ import {
 } from '@/lib/founder/outreach/statusLabels'
 import { resolveComposerRecipients } from '@/lib/founder/outreach/resolveComposerRecipients'
 import { confirmAndStartCampaign, processCampaignSends } from '@/lib/founder/outreach/sendEngine'
+import { analyseComposerContent } from '@/lib/founder/outreach/deliverability/contentWarnings'
+import { assertOutreachSendAllowed } from '@/lib/founder/outreach/deliverability/reputation'
 import { checkRateLimit } from '@/lib/security/rateLimit'
 import { OUTREACH_CAMPAIGNS } from '@/lib/founder/outreach/types'
 
@@ -249,7 +251,14 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const contentAnalysis = analyseComposerContent({
+    subject,
+    html: composerHtml,
+    text: htmlToPlainText(composerHtml),
+  })
+
   if (!body.confirmSend || !body.authorisedList) {
+    const reputationPreview = await assertOutreachSendAllowed(db, resolution.sendableRecipients)
     return NextResponse.json(
       {
         success: false,
@@ -272,6 +281,18 @@ export async function POST(request: NextRequest) {
             subject,
             from: sender.display,
             requiresLargeConfirm: resolution.confirmCount >= LARGE_SEND_CONFIRM_THRESHOLD,
+            contentWarnings: contentAnalysis.warnings,
+            contentHasBlocking: contentAnalysis.hasBlocking,
+            reputation: {
+              bulkAuthorized: reputationPreview.bulkAuthorized,
+              paused: reputationPreview.paused,
+              maxAllowed: reputationPreview.maxAllowed,
+              ok: reputationPreview.ok,
+              code: reputationPreview.code || null,
+              error: reputationPreview.error || null,
+            },
+            providerVsInboxDisclaimer:
+              'Provider delivery is not inbox placement. Bulk outreach remains blocked until Founder authorization.',
           },
         },
       },
@@ -290,6 +311,35 @@ export async function POST(request: NextRequest) {
         code: 'count_mismatch',
       },
       { status: 400 }
+    )
+  }
+
+  if (contentAnalysis.hasBlocking) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Message content failed deliverability safety checks.',
+        code: 'content_blocked',
+        data: { contentWarnings: contentAnalysis.warnings },
+      },
+      { status: 400 }
+    )
+  }
+
+  const reputationGate = await assertOutreachSendAllowed(db, resolution.sendableRecipients)
+  if (!reputationGate.ok) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: reputationGate.error || 'Send not allowed.',
+        code: reputationGate.code || 'reputation_blocked',
+        data: {
+          maxAllowed: reputationGate.maxAllowed,
+          bulkAuthorized: reputationGate.bulkAuthorized,
+          paused: reputationGate.paused,
+        },
+      },
+      { status: 403 }
     )
   }
 

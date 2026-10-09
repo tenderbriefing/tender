@@ -7,6 +7,11 @@ export type OutreachUiDeliveryStatus =
   | 'QUEUED'
   | 'SENDING'
   | 'SUBMITTED'
+  | 'PROVIDER_SENT'
+  | 'PROVIDER_DELIVERED'
+  | 'DELAYED'
+  | 'BOUNCED'
+  | 'COMPLAINED'
   | 'FAILED'
   | 'SUPPRESSED'
   | 'SKIPPED'
@@ -21,15 +26,29 @@ export type OutreachUiCampaignStatus =
   | 'COMPLETED_WITH_FAILURES'
   | 'FAILED'
 
-/** Map Firestore delivery.status → Founder UI label */
-export function labelDeliveryStatus(status: string | null | undefined): OutreachUiDeliveryStatus {
+/**
+ * Map delivery status + optional providerLifecycle → Founder UI label.
+ * PROVIDER_DELIVERED is never claimed as Gmail/Outlook Primary placement.
+ */
+export function labelDeliveryStatus(
+  status: string | null | undefined,
+  providerLifecycle?: string | null
+): OutreachUiDeliveryStatus {
+  const life = String(providerLifecycle || '').toLowerCase()
+  if (life === 'complained') return 'COMPLAINED'
+  if (life === 'bounced') return 'BOUNCED'
+  if (life === 'failed') return 'FAILED'
+  if (life === 'delivered') return 'PROVIDER_DELIVERED'
+  if (life === 'delayed') return 'DELAYED'
+  if (life === 'sent') return 'PROVIDER_SENT'
+
   switch (String(status || '').toLowerCase()) {
     case 'queued':
       return 'QUEUED'
     case 'sending':
       return 'SENDING'
     case 'sent':
-      // Provider accepted the API request — not mailbox delivery confirmation
+      // Resend API acceptance — not mailbox Primary
       return 'SUBMITTED'
     case 'failed':
       return 'FAILED'
@@ -79,5 +98,5 @@ export function suppressionExclusionCopy(suppressedCount: number): string | null
 }
 
 export function providerAcceptanceDisclaimer(): string {
-  return 'SUBMITTED means Resend accepted the send API call. It is not mailbox delivery confirmation (DELIVERED requires webhook confirmation, which is not yet wired for outreach).'
+  return 'SUBMITTED means Resend accepted the send API call — not mailbox delivery. PROVIDER_DELIVERED means the recipient mail system accepted the message (webhook). Neither status proves Gmail/Outlook Primary Inbox placement.'
 }
