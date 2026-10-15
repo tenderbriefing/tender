@@ -169,4 +169,43 @@ describe('briefingPricing', () => {
       })
     ).toBe(priorEpochPaidCents)
   })
+
+  it('multi-briefing unpaid charge = line count × R750 (ignores forged totals)', () => {
+    const lines = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        tenderNumber: `RFQ-${i + 1}`,
+        tenderDescription: `Briefing ${i + 1}`,
+      }))
+
+    expect(
+      resolveRequestChargeCents({
+        paymentStatus: 'pending',
+        briefingLines: lines(1),
+        paymentAmount: 1,
+        briefingPriceCents: 1,
+      })
+    ).toBe(75000)
+    expect(
+      resolveRequestChargeCents({
+        paymentStatus: 'pending',
+        briefingLines: lines(2),
+        paymentAmount: 75000,
+      })
+    ).toBe(150000)
+    expect(
+      resolveRequestChargeCents({
+        paymentStatus: 'pending',
+        briefingLines: lines(4),
+        paymentAmount: 75000,
+        briefingCount: 1,
+      })
+    ).toBe(300000)
+    expect(
+      resolveRequestChargeCents({
+        paymentStatus: 'pending',
+        briefingLines: lines(10),
+        quotedFee: 0,
+      })
+    ).toBe(750000)
+  })
 })

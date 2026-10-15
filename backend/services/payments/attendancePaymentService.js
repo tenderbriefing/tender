@@ -95,6 +95,14 @@ async function createPayfastCheckoutForRequest(request, baseUrl) {
   const nameFirst = nameParts[0] || 'Customer'
   const nameLast = nameParts.slice(1).join(' ') || 'Account'
 
+  const briefingLineCount = Array.isArray(request?.briefingLines)
+    ? request.briefingLines.length
+    : 0
+  const manualItemDescription =
+    briefingLineCount > 1
+      ? `TenderBriefing booking ${request.invoiceNumber || request.id} - ${briefingLineCount} briefings`
+      : `TenderBriefing booking ${request.invoiceNumber || request.id} - ${request.tenderNumber || 'RFQ'}`
+
   const result = payfastService.createCheckoutPayload({
     amountCents: chargeCents,
     mPaymentId: paymentReferenceForRequest(request.id),
@@ -103,10 +111,11 @@ async function createPayfastCheckoutForRequest(request, baseUrl) {
       : isManual
         ? 'Tender Briefing Attendance Service'
         : 'Compulsory briefing attendance support',
+    // Keep PayFast item text ASCII-safe — unicode dashes/punctuation can break hosted checkout.
     itemDescription: isLiveCert
-      ? `Founder live certification ${request.invoiceNumber || request.id} (R75 — not commercial)`
+      ? `Founder live certification ${request.invoiceNumber || request.id} (R75 not commercial)`
       : isManual
-        ? `TenderBriefing booking ${request.invoiceNumber || request.id} — ${request.tenderNumber || 'RFQ'}`
+        ? manualItemDescription
         : `Youth Agent attendance for tender ${request.tenderNumber || request.tenderId || request.id}`,
     returnUrl: successUrl,
     cancelUrl,
@@ -224,6 +233,20 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
 
   const now = new Date().toISOString()
   const chargeCents = resolveRequestChargeCents(request)
+  // Authorize child briefing lines for fulfilment — payment ≠ attended/completed.
+  let authorizedLines = request.briefingLines
+  if (Array.isArray(request.briefingLines) && request.briefingLines.length > 0) {
+    authorizedLines = request.briefingLines.map((line) => ({
+      ...line,
+      paymentAuthorized: true,
+      fulfilmentStatus:
+        line.fulfilmentStatus === 'confirmed' || line.fulfilmentStatus === 'assigned'
+          ? line.fulfilmentStatus
+          : 'awaiting_assignment',
+      attended: line.attended === true,
+      completed: line.completed === true,
+    }))
+  }
   const patched = applyPaymentTransition(request, 'paid', {
     actorId: source,
     now,
@@ -240,6 +263,7 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
       paymentFailureReason: null,
       invoiceStatus: 'PAID',
       availableForAssignment: true,
+      ...(authorizedLines ? { briefingLines: authorizedLines } : {}),
     },
   })
 
