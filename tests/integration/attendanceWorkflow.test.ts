@@ -65,8 +65,8 @@ describe('SME → Pay → Agent → Complete workflow', () => {
     })
 
     expect(request.paymentStatus).toBe('pending')
-    expect(request.paymentAmount).toBe(34900)
-    expect(request.briefingPriceCents).toBe(34900)
+    expect(request.paymentAmount).toBe(75000)
+    expect(request.briefingPriceCents).toBe(75000)
 
     await expect(
       agentService.acceptRequest(request.id, { id: 'agent-a', displayName: 'A' })
@@ -127,9 +127,9 @@ describe('SME → Pay → Agent → Complete workflow', () => {
       updatedAt: new Date().toISOString(),
     })
     const paid = await paymentService.markRequestPaid(legacyId, { pfPaymentId: 'PF-legacy' })
-    expect(paid.request.paymentAmount).toBe(34900)
-    expect(paid.request.briefingPriceCents).toBe(34900)
-    expect(paid.request.quotedFee).toBe(34900)
+    expect(paid.request.paymentAmount).toBe(75000)
+    expect(paid.request.briefingPriceCents).toBe(75000)
+    expect(paid.request.quotedFee).toBe(75000)
   })
 
   it('rejects payment downgrade after paid', async () => {

@@ -537,11 +537,11 @@ describe('authorization surface', () => {
     expect(failedBody).not.toContain('notifyAttendanceRequestPaid')
   })
 
-  it('R349 constant unchanged', () => {
+  it('R750 constant unchanged', () => {
     const pricing = fs.readFileSync(
       path.join(process.cwd(), 'backend/constants/briefingPricing.js'),
       'utf8'
     )
-    expect(pricing).toMatch(/BRIEFING_PRICE_CENTS\s*=\s*34900/)
+    expect(pricing).toMatch(/BRIEFING_PRICE_CENTS\s*=\s*75000/)
   })
 })

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 import { Inter, Space_Grotesk } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/providers/AuthProvider'
@@ -40,8 +41,7 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: 'TenderBriefing',
     title: 'Compulsory Tender Briefings for South African SMEs | TenderBriefing',
-    description:
-      'Discover compulsory tender briefings across South Africa. Free SME registration — R750 only when requesting a Youth Agent for physical briefing attendance.',
+    description: `Discover compulsory tender briefings across South Africa. Free SME registration — ${BRIEFING_PRICE_LABEL} only when requesting a Youth Agent for physical briefing attendance.`,
     images: ['/brand/og-logo.png'],
   },
   twitter: {

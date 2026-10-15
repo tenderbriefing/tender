@@ -1,4 +1,4 @@
-/** Attendance support fee — R349.00 ZAR (cents). Server charge is canonical; display label may use NEXT_PUBLIC. */
+/** Attendance support fee — R750.00 ZAR (cents). Server charge is canonical; display label may use NEXT_PUBLIC. */
 
 import {
   CANONICAL_ATTENDANCE_FEE_CENTS,

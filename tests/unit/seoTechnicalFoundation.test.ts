@@ -176,14 +176,14 @@ describe('SEO Phase 1 — global structured data', () => {
   })
 })
 
-describe('SEO Phase 1 — public pricing uses canonical R349 helpers', () => {
-  it('uses R349 in root layout and SEO helpers', () => {
+describe('SEO Phase 1 — public pricing uses canonical R750 helpers', () => {
+  it('uses R750 in root layout and SEO helpers', () => {
     expect(src('app/layout.tsx')).toMatch(/BRIEFING_PRICE_LABEL/)
-    expect(src('lib/domain/briefingPricing.ts')).toMatch(/34900/)
+    expect(src('lib/domain/briefingPricing.ts')).toMatch(/75000/)
   })
 })
 
-describe('Homepage SEO metadata — R349 public pricing', () => {
+describe('Homepage SEO metadata — R750 public pricing', () => {
   it('uses the Compulsory Tender Briefings title without Government', () => {
     const page = src('app/page.tsx')
     expect(page).toMatch(/HOMEPAGE_SEO_TITLE/)
@@ -193,7 +193,7 @@ describe('Homepage SEO metadata — R349 public pricing', () => {
     expect(src('lib/seo/homepageMetadata.ts')).not.toMatch(/Compulsory Government Tender Briefings/)
   })
 
-  it('uses the canonical R349 homepage description for metadata and JSON-LD', () => {
+  it('uses the canonical R750 homepage description for metadata and JSON-LD', () => {
     const homepageMeta = src('lib/seo/homepageMetadata.ts')
     expect(homepageMeta).toMatch(/book a Youth Agent for/)
     expect(homepageMeta).toMatch(/BRIEFING_PRICE_SHORT_LABEL/)

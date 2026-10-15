@@ -201,14 +201,14 @@ describe('private tender publish mapping', () => {
 })
 
 describe('commercial invariants regression (private tenders)', () => {
-  it('preserves R349 / R200 cents constants', async () => {
+  it('preserves R750 / R200 cents constants', async () => {
     const {
       BRIEFING_PRICE_CENTS,
       YOUTH_AGENT_PAYOUT_CENTS,
       GROSS_CONTRIBUTION_CENTS,
     } = await import('@/lib/domain/briefingPricing')
-    expect(BRIEFING_PRICE_CENTS).toBe(34900)
+    expect(BRIEFING_PRICE_CENTS).toBe(75000)
     expect(YOUTH_AGENT_PAYOUT_CENTS).toBe(20000)
-    expect(GROSS_CONTRIBUTION_CENTS).toBe(14900)
+    expect(GROSS_CONTRIBUTION_CENTS).toBe(55000)
   })
 })

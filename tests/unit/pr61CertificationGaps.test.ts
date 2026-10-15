@@ -100,15 +100,15 @@ describe('PR61 private tender certification gaps', () => {
     }
   })
 
-  it('private tender booking uses R349 / R200 commercial constants (no alternate path)', async () => {
+  it('private tender booking uses R750 / R200 commercial constants (no alternate path)', async () => {
     const {
       BRIEFING_PRICE_CENTS,
       YOUTH_AGENT_PAYOUT_CENTS,
       GROSS_CONTRIBUTION_CENTS,
     } = await import('../../lib/domain/briefingPricing')
-    expect(BRIEFING_PRICE_CENTS).toBe(34900)
+    expect(BRIEFING_PRICE_CENTS).toBe(75000)
     expect(YOUTH_AGENT_PAYOUT_CENTS).toBe(20000)
-    expect(GROSS_CONTRIBUTION_CENTS).toBe(14900)
+    expect(GROSS_CONTRIBUTION_CENTS).toBe(55000)
 
     expect(fs.existsSync(path.join(process.cwd(), 'backend/services/privateBooking.js'))).toBe(false)
     expect(fs.existsSync(path.join(process.cwd(), 'app/api/private-bookings'))).toBe(false)

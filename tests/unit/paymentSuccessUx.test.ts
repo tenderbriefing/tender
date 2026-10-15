@@ -20,17 +20,17 @@ describe('payment-success UX — server paid is authority', () => {
 })
 
 describe('request-agent conversion CTA', () => {
-  it('surfaces Request an Agent — R349 and no pre-pay attendance promise', async () => {
+  it('surfaces Book an agent — R750 and no pre-pay attendance promise', async () => {
     const { BOOK_AGENT_PAY_CTA, BOOK_AGENT_CTA } = await import('@/lib/booking/labels')
-    expect(BOOK_AGENT_CTA).toBe('Request an Agent')
-    expect(BOOK_AGENT_PAY_CTA).toMatch(/Request an Agent/)
-    expect(BOOK_AGENT_PAY_CTA).toMatch(/R349/)
+    expect(BOOK_AGENT_CTA).toBe('Book an agent')
+    expect(BOOK_AGENT_PAY_CTA).toMatch(/Continue to pay/)
+    expect(BOOK_AGENT_PAY_CTA).toMatch(/R750/)
 
     const page = fs.readFileSync(
       path.join(process.cwd(), 'app/tenders/(detail)/[id]/request-agent/page.tsx'),
       'utf8'
     )
-    expect(page).toContain('compulsory tender briefing')
+    expect(page).toContain('Book a Youth Agent for')
     expect(page).toContain('assigned only after they accept')
   })
 })

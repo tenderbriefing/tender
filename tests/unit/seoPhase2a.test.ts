@@ -254,9 +254,9 @@ describe('SEO Phase 2A — route and sitemap wiring', () => {
 })
 
 describe('SEO Phase 2A — commercial safeguards', () => {
-  it('keeps R349 pricing guard in hub CTA copy', () => {
+  it('keeps R750 pricing guard in hub CTA copy', () => {
     const hubs = src('lib/seo/compulsoryBriefingHubs.ts')
     expect(hubs).toMatch(/BRIEFING_PRICE_LABEL/)
-    expect(src('lib/domain/briefingPricing.ts')).toMatch(/34900/)
+    expect(src('lib/domain/briefingPricing.ts')).toMatch(/75000/)
   })
 })

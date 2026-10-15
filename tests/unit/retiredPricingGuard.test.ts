@@ -145,13 +145,13 @@ describe('Complete retirement of prior attendance price', () => {
     expect(offenders).toEqual([])
   })
 
-  it('keeps R349 as the sole canonical attendance price', () => {
+  it('keeps R750 as the sole canonical attendance price', () => {
     const legacyConst = ['LEGACY', 'BRIEFING', 'PRICE', 'CENTS'].join('_')
     const pricing = readFileSync(join(root, 'lib/domain/briefingPricing.ts'), 'utf8')
-    expect(pricing).toMatch(/BRIEFING_PRICE_CENTS\s*=\s*34900/)
+    expect(pricing).toMatch(/BRIEFING_PRICE_CENTS\s*=\s*75000/)
     expect(pricing).not.toContain(legacyConst)
     const backend = readFileSync(join(root, 'backend/constants/briefingPricing.js'), 'utf8')
-    expect(backend).toMatch(/BRIEFING_PRICE_CENTS\s*=\s*34900/)
+    expect(backend).toMatch(/BRIEFING_PRICE_CENTS\s*=\s*75000/)
     expect(backend).not.toContain(legacyConst)
   })
 })

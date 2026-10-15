@@ -73,7 +73,7 @@ describe('payment authority — charge + entitlement', () => {
     else if (fs.existsSync(requestsFile)) fs.writeFileSync(requestsFile, '[]\n', 'utf8')
   })
 
-  it('ATTACK 10: legitimate server createRequest stamps pending + R349 snapshot', async () => {
+  it('ATTACK 10: legitimate server createRequest stamps pending + R750 snapshot', async () => {
     const { request } = await agentService.createRequest({
       tenderId: `t-auth-${Date.now()}`,
       tenderNumber: 'TN-AUTH',
@@ -94,7 +94,7 @@ describe('payment authority — charge + entitlement', () => {
     expect(request.paymentExemptionAuthorized).toBeUndefined()
   })
 
-  it('ATTACK 11: PayFast checkout charges canonical 34900 cents', async () => {
+  it('ATTACK 11: PayFast checkout charges canonical 75000 cents', async () => {
     const { request } = await agentService.createRequest({
       tenderId: `t-chk-${Date.now()}`,
       smeId: 'sme-chk',
@@ -109,13 +109,13 @@ describe('payment authority — charge + entitlement', () => {
 
     expect(checkout.ok).toBe(true)
     expect(payfastService.createCheckoutPayload).toHaveBeenCalledWith(
-      expect.objectContaining({ amountCents: 34900 })
+      expect.objectContaining({ amountCents: 75000 })
     )
-    expect(checkout.request.briefingPriceCents).toBe(34900)
-    expect(checkout.request.paymentAmount).toBe(34900)
+    expect(checkout.request.briefingPriceCents).toBe(75000)
+    expect(checkout.request.paymentAmount).toBe(75000)
   })
 
-  it('ATTACK 12: manipulated stored price 100¢ still charges 34900 on checkout', async () => {
+  it('ATTACK 12: manipulated stored price 100¢ still charges 75000 on checkout', async () => {
     const storage = require('../../backend/services/storageAdapter').getStorage()
     const id = `req-corrupt-${Date.now()}`
     await storage.saveAttendanceRequest({
@@ -136,7 +136,7 @@ describe('payment authority — charge + entitlement', () => {
       briefingPriceCents: 100,
       paymentAmount: 100,
       quotedFee: 100,
-    })).toBe(34900)
+    })).toBe(75000)
 
     const jsPricing = require('../../backend/constants/briefingPricing')
     expect(
@@ -145,7 +145,7 @@ describe('payment authority — charge + entitlement', () => {
         briefingPriceCents: 100,
         paymentAmount: 100,
       })
-    ).toBe(34900)
+    ).toBe(75000)
 
     const checkout = await paymentService.createCheckoutForExistingRequest(
       id,
@@ -154,9 +154,9 @@ describe('payment authority — charge + entitlement', () => {
     )
     expect(checkout.ok).toBe(true)
     expect(payfastService.createCheckoutPayload).toHaveBeenCalledWith(
-      expect.objectContaining({ amountCents: 34900 })
+      expect.objectContaining({ amountCents: 75000 })
     )
-    expect(checkout.request.briefingPriceCents).toBe(34900)
+    expect(checkout.request.briefingPriceCents).toBe(75000)
   })
 
   it('ATTACK 13: SME payload cannot manufacture not_required entitlement', async () => {

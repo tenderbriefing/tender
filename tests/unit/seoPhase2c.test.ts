@@ -273,8 +273,8 @@ describe('SEO Phase 2C — wiring safeguards', () => {
     expect(getOrganisationBySlug('city-of-cape-town')).toBeNull()
   })
 
-  it('keeps R349 pricing guard', () => {
-    expect(src('lib/domain/briefingPricing.ts')).toMatch(/34900/)
+  it('keeps R750 pricing guard', () => {
+    expect(src('lib/domain/briefingPricing.ts')).toMatch(/75000/)
     expect(src('lib/domain/briefingPricing.ts')).toMatch(/20000/)
     expect(src('lib/seo/organisationHubs.ts')).toMatch(/BRIEFING_PRICE_LABEL/)
   })

@@ -75,8 +75,8 @@ describe('PayFast ITN → paid → once dispatch', () => {
       smeId: 'sme-1',
       status: 'pending',
       paymentStatus: 'pending',
-      paymentAmount: 34900,
-      quotedFee: 34900,
+      paymentAmount: 75000,
+      quotedFee: 75000,
       currency: 'ZAR',
       paymentReference: 'TB-REQ-req-1786562638424-6nlcb3',
       payfastPaymentId: null,
@@ -99,7 +99,7 @@ describe('PayFast ITN → paid → once dispatch', () => {
       payment_status: 'COMPLETE',
       item_name: 'Compulsory briefing attendance support',
       item_description: '',
-      amount_gross: '349.00',
+      amount_gross: '750.00',
       amount_fee: '-16.05',
       amount_net: '332.95',
       custom_str1: 'req-1786562638424-6nlcb3',
@@ -212,8 +212,8 @@ describe('PayFast ITN → paid → once dispatch', () => {
       smeId: 'sme-1',
       status: 'pending',
       paymentStatus: 'pending',
-      paymentAmount: 34900,
-      quotedFee: 34900,
+      paymentAmount: 75000,
+      quotedFee: 75000,
       currency: 'ZAR',
       paymentReference: 'TB-REQ-req-2',
       payfastPaymentId: null,
@@ -244,7 +244,7 @@ describe('PayFast ITN → paid → once dispatch', () => {
       pfPaymentId: '320990497',
       mPaymentId: 'TB-REQ-req-1786562638424-6nlcb3',
       status: 'COMPLETE',
-      amountCents: 34900,
+      amountCents: 75000,
     })
     const audit = require('../../backend/services/auditLogService')
     const workflow = require('../../backend/services/workflowAutomationService')
@@ -272,7 +272,7 @@ describe('PayFast ITN → paid → once dispatch', () => {
       ok: true,
       status: 'PENDING',
       mPaymentId: 'TB-REQ-req-1786562638424-6nlcb3',
-      amountCents: 34900,
+      amountCents: 75000,
       pfPaymentId: '320990497',
     })
     const result = await paymentService.reconcileAuthoritativePayfastPayment({

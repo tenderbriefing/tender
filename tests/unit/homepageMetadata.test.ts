@@ -6,11 +6,11 @@ describe('homepageMetadata', () => {
     expect(HOMEPAGE_SEO_TITLE).toBe('Tender Briefing South Africa | Compulsory Tender Briefings')
   })
 
-  it('exports the preferred homepage SEO description with R349', () => {
+  it('exports the preferred homepage SEO description with R750', () => {
     expect(HOMEPAGE_SEO_DESCRIPTION).toBe(
-      'TenderBriefing helps South African SMEs discover compulsory tender briefings from official eTenders data. Free to browse — book a Youth Agent for R349.'
+      'TenderBriefing helps South African SMEs discover compulsory tender briefings from official eTenders data. Free to browse — book a Youth Agent for R750.'
     )
     expect(HOMEPAGE_SEO_DESCRIPTION.length).toBeLessThanOrEqual(160)
-    expect(HOMEPAGE_SEO_DESCRIPTION).toMatch(/R349/)
+    expect(HOMEPAGE_SEO_DESCRIPTION).toMatch(/R750/)
   })
 })
