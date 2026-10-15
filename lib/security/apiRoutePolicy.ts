@@ -44,6 +44,11 @@ export function isPublicApiRoute(pathname: string, method: string): boolean {
   // Marketing outreach unsubscribe — public, signed token; no login required.
   if (pathname === '/api/outreach/unsubscribe' && (m === 'GET' || m === 'POST')) return true
 
+  // Manual payment links — unguessable token; handlers rate-limit + sanitize.
+  if (/^\/api\/pay\/[^/]+$/.test(pathname) && m === 'GET') return true
+  if (/^\/api\/pay\/[^/]+\/checkout$/.test(pathname) && m === 'POST') return true
+  if (/^\/api\/pay\/[^/]+\/invoice$/.test(pathname) && m === 'GET') return true
+
   return false
 }
 

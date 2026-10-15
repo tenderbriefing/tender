@@ -13,6 +13,7 @@ import {
 describe('admin control centre IA', () => {
   it('exposes primary actions for RFQ, assignments, disputes, and payments', () => {
     const hrefs = CONTROL_CENTRE_PRIMARY_ACTIONS.map((a) => a.href)
+    expect(hrefs).toContain('/admin/payments/manual')
     expect(hrefs).toContain('/admin/procurement-inbox')
     expect(hrefs).toContain('/admin/operations')
     expect(hrefs).toContain('/admin/fraud')
@@ -48,6 +49,7 @@ describe('admin control centre IA', () => {
       '/admin/agents/performance',
       '/admin/agent-workspace',
       '/admin/finance',
+      '/admin/payments/manual',
       '/admin/integrations',
       '/admin/fraud',
       '/admin/scraping',
