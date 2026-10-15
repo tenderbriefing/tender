@@ -131,7 +131,7 @@ export const attendanceConfig: SeoLandingConfig = {
       scenario:
         'Two compulsory sessions same day in different metros.',
       outcome:
-        `Director attends priority bid; Youth Agent covers second for ${BRIEFING_PRICE_LABEL}.`,
+        `Director attends priority bid; Youth Agent covers second ${BRIEFING_PRICE_LABEL}.`,
     },
   ],
   provinceFocus: [],
@@ -139,7 +139,7 @@ export const attendanceConfig: SeoLandingConfig = {
     'Briefing date and time on every tender detail page',
     'Venue addresses and virtual meeting links when published',
     'Calendar export for briefing and closing events',
-    `Youth Agent attendance backup for ${BRIEFING_PRICE_LABEL} per session`,
+    `Youth Agent attendance backup ${BRIEFING_PRICE_LABEL} per session`,
     'Official documents synced from eTenders',
   ],
   features: [
@@ -189,7 +189,7 @@ export const attendanceConfig: SeoLandingConfig = {
   ],
   ctaTitle: 'Never miss a compulsory briefing date again',
   ctaDescription:
-    `Register free, export briefing calendars from live tenders, and book Youth Agent attendance for ${BRIEFING_PRICE_LABEL} when your team cannot be there.`,
+    `Register free, export briefing calendars from live tenders, and book Youth Agent attendance ${BRIEFING_PRICE_LABEL} when your team cannot be there.`,
   ctaPrimaryLabel: 'Create free account',
   ctaSecondaryLabel: 'Browse briefing dates',
   relatedLinks: [

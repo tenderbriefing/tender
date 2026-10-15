@@ -5,7 +5,7 @@ export const southAfricaConfig: SeoLandingConfig = {
   slug: 'tender-briefings-south-africa',
   path: '/tender-briefings-south-africa',
   metaDescription:
-    `Nationwide tender briefing discovery for South African SMEs. Track compulsory government briefings in all nine provinces, sync official eTenders data and request Youth Agent attendance for ${BRIEFING_PRICE_LABEL} on TenderBriefing.`,
+    `Nationwide tender briefing discovery for South African SMEs. Track compulsory government briefings in all nine provinces, sync official eTenders data and request Youth Agent attendance ${BRIEFING_PRICE_LABEL} on TenderBriefing.`,
   eyebrow: 'South Africa · All provinces',
   title: 'Tender Briefings Across South Africa',
   heroDescription:

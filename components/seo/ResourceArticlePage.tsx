@@ -1,10 +1,10 @@
 import Link from 'next/link'
+import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 import MarketingPageLayout from '@/components/marketing/MarketingPageLayout'
 import JsonLd from '@/components/seo/JsonLd'
 import SeoFaqSection, { SeoCtaBand } from '@/components/seo/SeoFaqSection'
 import type { ResourceArticle } from '@/lib/seo/resources'
 import { breadcrumbJsonLd, faqPageJsonLd, articleJsonLd } from '@/lib/seo/structuredData'
-import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 
 export default function ResourceArticlePage({ article }: { article: ResourceArticle }) {
   const breadcrumbs = breadcrumbJsonLd([

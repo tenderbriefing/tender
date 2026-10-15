@@ -245,11 +245,41 @@ export async function POST(request: NextRequest) {
       'https://www.tenderbriefing.co.za'
 
     const paymentService = require('../../../backend/services/payments/attendancePaymentService')
+    const { isAttendanceFree } = require('../../../backend/constants/briefingPricing')
     const checkout = await paymentService.createCheckoutForExistingRequest(
       result.request.id,
       user.uid,
       origin
     )
+
+    // Free platform — request is dispatchable immediately; no PayFast.
+    if (checkout.ok && (checkout.required === false || isAttendanceFree())) {
+      logEvent({
+        event: 'attendance_request_created',
+        requestId,
+        userId: user.uid,
+        role: 'sme',
+        attendanceRequestId: result.request.id,
+        tenderId: body.tenderId || undefined,
+        outcome: 'success',
+      })
+      return NextResponse.json({
+        success: true,
+        data: {
+          request: checkout.request || result.request,
+          nearbyAgents: [],
+          resumed: Boolean(result.resumed),
+          resumeUrl: `/sme/requests/${result.request.id}`,
+          payment: {
+            required: false,
+            amountCents: 0,
+            currency: 'ZAR',
+            provider: 'none',
+            message: 'Youth Agent attendance is free — no payment required.',
+          },
+        },
+      })
+    }
 
     if (!checkout.ok) {
       const code =

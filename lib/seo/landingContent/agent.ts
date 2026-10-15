@@ -5,7 +5,7 @@ export const briefingAgentConfig: SeoLandingConfig = {
   slug: 'tender-briefing-agent',
   path: '/tender-briefing-agent',
   metaDescription:
-    `Hire a verified Youth Agent to attend compulsory tender briefings for ${BRIEFING_PRICE_LABEL}. Free tender discovery for SMEs — fixed fee per briefing, structured reports and official eTenders data on TenderBriefing.`,
+    `Hire a verified Youth Agent to attend compulsory tender briefings ${BRIEFING_PRICE_LABEL}. Free tender discovery for SMEs — fixed fee per briefing, structured reports and official eTenders data on TenderBriefing.`,
   eyebrow: `Youth Agents · Fixed ${BRIEFING_PRICE_LABEL}`,
   title: 'Tender Briefing Agent Service for SMEs',
   heroDescription:
@@ -13,7 +13,7 @@ export const briefingAgentConfig: SeoLandingConfig = {
   heroPrimaryCta: 'Request a briefing agent',
   heroSecondaryCta: 'Find compulsory briefings',
   intro:
-    `Compulsory tender briefings create a scheduling conflict for almost every growing SME: the session is mid-week, out of town, or overlaps with client delivery — but missing it disqualifies the bid. Hiring a full-time tender administrator is expensive; skipping the briefing is worse. TenderBriefing’s briefing agent service bridges that gap with verified Youth Agents who attend official government sessions on your behalf for a fixed ${BRIEFING_PRICE_LABEL} per compulsory briefing, while tender discovery on the platform remains completely free.`,
+    `Compulsory tender briefings create a scheduling conflict for almost every growing SME: the session is mid-week, out of town, or overlaps with client delivery — but missing it disqualifies the bid. Hiring a full-time tender administrator is expensive; skipping the briefing is worse. TenderBriefing’s briefing agent service bridges that gap with verified Youth Agents who attend official government sessions on your behalf ${BRIEFING_PRICE_LABEL} per compulsory briefing, while tender discovery on the platform remains completely free.`,
   sections: [
     {
       heading: 'What a TenderBriefing agent does at the session',
@@ -98,7 +98,7 @@ export const briefingAgentConfig: SeoLandingConfig = {
     {
       step: '3',
       title: 'Submit agent request',
-      text: `Confirm ${BRIEFING_PRICE_LABEL} attendance support through the platform.`,
+      text: `Confirm ${BRIEFING_PRICE_LABEL} fee support through the platform.`,
     },
     {
       step: '4',
@@ -117,7 +117,7 @@ export const briefingAgentConfig: SeoLandingConfig = {
       scenario:
         'A director faces compulsory briefings in Johannesburg and Rustenburg on the same morning.',
       outcome:
-        `They attend one personally and dispatch an agent to the other for ${BRIEFING_PRICE_LABEL} — both bids stay eligible.`,
+        `They attend one personally and dispatch an agent to the other ${BRIEFING_PRICE_LABEL} — both bids stay eligible.`,
     },
     {
       title: 'Out-of-province exploratory bid',

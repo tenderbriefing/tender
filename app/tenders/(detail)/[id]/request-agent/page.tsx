@@ -157,7 +157,7 @@ function RequestYouthAgentContent() {
         return
       }
 
-      if (payment?.formAction && payment?.fields) {
+      if (payment?.required !== false && payment?.formAction && payment?.fields) {
         const { startPayFastFromApiPayload } = await import('@/lib/payments/payfastClient')
         toast.success(
           json.data?.resumed
@@ -168,7 +168,7 @@ function RequestYouthAgentContent() {
         return
       }
 
-      const redirectUrl = payment?.redirectUrl
+      const redirectUrl = payment?.required !== false ? payment?.redirectUrl : null
       if (redirectUrl) {
         toast.success(
           json.data?.resumed
@@ -181,9 +181,11 @@ function RequestYouthAgentContent() {
 
       const requestId = json.data?.request?.id
       toast.success(
-        json.data?.resumed
-          ? 'Opening your existing attendance request'
-          : 'Agent booking submitted'
+        payment?.required === false
+          ? 'Agent booking submitted — free, no payment required'
+          : json.data?.resumed
+            ? 'Opening your existing attendance request'
+            : 'Agent booking submitted'
       )
       router.push(
         requestId
@@ -261,7 +263,8 @@ function RequestYouthAgentContent() {
           </span>
 
           <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-4xl">
-            Get a Youth Agent to attend this compulsory tender briefing for you
+            Book a Youth Agent for{' '}
+            <span className="text-accent-400">{ATTENDANCE_FEE_LABEL}</span>
           </h1>
           <p className="mt-3 max-w-2xl text-brand-100/80">
             Fixed fee{' '}
@@ -506,7 +509,7 @@ function RequestYouthAgentContent() {
               <div className="relative">
                 <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-accent-400">
                   <span className="h-1.5 w-6 rounded-full bg-accent-500" />
-                  Fixed fee
+                  Attendance
                 </span>
                 <div className="mt-3 flex items-baseline gap-1">
                   <span className="text-4xl font-bold text-accent-400">

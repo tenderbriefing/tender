@@ -10,10 +10,10 @@ import {
 } from '../../lib/domain/paymentLifecycle'
 
 describe('paymentLifecycle', () => {
-  it('uses canonical R349 fee by default', () => {
+  it('uses canonical R750 fee by default', () => {
     delete process.env.ATTENDANCE_FEE_CENTS
     expect(resolveAttendanceFeeCents()).toBe(CANONICAL_ATTENDANCE_FEE_CENTS)
-    expect(CANONICAL_ATTENDANCE_FEE_CENTS).toBe(34900)
+    expect(CANONICAL_ATTENDANCE_FEE_CENTS).toBe(75000)
   })
 
   it('allows pending → paid and rejects paid → pending', () => {

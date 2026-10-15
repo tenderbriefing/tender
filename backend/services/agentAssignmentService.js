@@ -8,6 +8,10 @@ const {
   notifyAgentsAfterPayment,
 } = require('./payments/attendancePaymentService')
 const {
+  isAttendanceFree,
+  briefingPriceSnapshotFields,
+} = require('../constants/briefingPricing')
+const {
   assertWorkflowTransition,
   applyWorkflowTransition,
   isDispatchablePayment,
@@ -62,19 +66,16 @@ function createAttendanceRequest(payload, options = {}) {
     ...safePayload
   } = payload || {}
 
-  // paymentStatus=not_required is Admin SDK / trusted-server only.
-  // Must pass options.allowPaymentExemption — payload flags are stripped and ignored.
+  // Free platform mode OR Admin SDK exemption → no SME charge.
+  // Payload paymentStatus flags are stripped and ignored except via allowPaymentExemption.
   const allowExemption = options.allowPaymentExemption === true
+  const freeMode = isAttendanceFree()
   const paymentDefaults =
-    allowExemption && requestedPaymentStatus === 'not_required'
+    freeMode || (allowExemption && requestedPaymentStatus === 'not_required')
       ? {
           paymentStatus: 'not_required',
           paymentProvider: 'none',
-          paymentAmount: null,
-          quotedFee: null,
-          briefingPriceCents: null,
-          currency: 'ZAR',
-          pricingVersion: null,
+          ...briefingPriceSnapshotFields(),
           paymentReference: null,
           yocoCheckoutId: null,
           yocoRedirectUrl: null,

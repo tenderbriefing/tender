@@ -58,7 +58,7 @@ export default function SubmitPrivateTenderPage() {
           <li>Submission does not guarantee publication.</li>
           <li>TenderBriefing does not manage your procurement evaluation or award.</li>
           <li>Your company remains responsible for its tender process and documents.</li>
-          <li>TenderBriefing facilitates discovery and compulsory briefing attendance (R349).</li>
+          <li>TenderBriefing facilitates discovery and compulsory briefing attendance (R750).</li>
         </ul>
 
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">

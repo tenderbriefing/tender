@@ -3,18 +3,23 @@
  * Backend services must import from here — never trust client amounts.
  */
 
-const BRIEFING_PRICE_CENTS = 34900
+const BRIEFING_PRICE_CENTS = 75000
 const YOUTH_AGENT_PAYOUT_CENTS = 20000
 const GROSS_CONTRIBUTION_CENTS = BRIEFING_PRICE_CENTS - YOUTH_AGENT_PAYOUT_CENTS
 const BRIEFING_PRICE_CURRENCY = 'ZAR'
-const PRICING_VERSION = '2026-08-v349'
+const PRICING_VERSION = '2026-10-v750'
 const PAYOUT_VERSION = '2026-08-fixed-200'
+
+function isAttendanceFree(cents) {
+  const value = cents == null ? resolveBriefingPriceCents() : Number(cents)
+  return !Number.isFinite(value) || value <= 0
+}
 
 function resolveBriefingPriceCents() {
   const server = process.env.ATTENDANCE_FEE_CENTS
   if (server != null && server !== '') {
     const n = Number(server)
-    if (Number.isFinite(n) && n > 0) return Math.round(n)
+    if (Number.isFinite(n) && n >= 0) return Math.round(n)
   }
   return BRIEFING_PRICE_CENTS
 }
@@ -29,6 +34,7 @@ function resolveYouthAgentPayoutCents() {
 }
 
 function formatBriefingPriceZar(cents = BRIEFING_PRICE_CENTS) {
+  if (isAttendanceFree(cents)) return 'Free'
   return `R${(cents / 100).toFixed(2)}`
 }
 
@@ -51,16 +57,13 @@ function briefingPriceSnapshotFields() {
 
 /**
  * Resolve the amount PayFast must charge / ITN must verify.
- *
- * Unpaid (or unknown) documents MUST NOT influence the payable amount —
- * fee snapshot fields on the doc are informational until payment is verified.
- * Already-paid records may retain their verified snapshot for accounting.
+ * Free mode (0 cents) always returns 0 — never start a checkout.
  */
 function resolveRequestChargeCents(request) {
   const canonical = resolveBriefingPriceCents()
+  if (isAttendanceFree(canonical)) return 0
   if (!request) return canonical
 
-  // Only trust stored fee snapshots after ITN/reconcile marked the booking paid.
   if (request.paymentStatus === 'paid') {
     const snap = Number(request.briefingPriceCents)
     if (Number.isFinite(snap) && snap > 0) return Math.round(snap)
@@ -80,6 +83,7 @@ module.exports = {
   BRIEFING_PRICE_CURRENCY,
   PRICING_VERSION,
   PAYOUT_VERSION,
+  isAttendanceFree,
   resolveBriefingPriceCents,
   resolveYouthAgentPayoutCents,
   formatBriefingPriceZar,

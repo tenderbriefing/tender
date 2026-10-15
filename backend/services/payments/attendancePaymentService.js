@@ -12,10 +12,11 @@ const {
   resolveBriefingPriceCents,
   briefingPriceSnapshotFields,
   resolveRequestChargeCents,
+  isAttendanceFree,
   BRIEFING_PRICE_CURRENCY,
 } = require('../../constants/briefingPricing')
 
-/** Server-authoritative fee — R349. Prefer ATTENDANCE_FEE_CENTS; never trust client body amounts. */
+/** Server-authoritative fee — Free (R0) unless ATTENDANCE_FEE_CENTS overrides. */
 const EFFECTIVE_FEE_CENTS = resolveBriefingPriceCents()
 const ATTENDANCE_FEE_CURRENCY = BRIEFING_PRICE_CURRENCY
 
@@ -387,6 +388,22 @@ async function createCheckoutForExistingRequest(requestId, smeId, baseUrl) {
   }
   if (request.paymentStatus === 'cancelled') {
     throw new Error('This request was cancelled. Submit a new attendance request.')
+  }
+
+  // Free platform / not_required — no PayFast checkout.
+  if (isAttendanceFree() || request.paymentStatus === 'not_required') {
+    if (isPaidForAgents(request.paymentStatus)) {
+      await notifyAgentsAfterPayment(request)
+    }
+    return {
+      ok: true,
+      required: false,
+      request,
+      formAction: null,
+      fields: null,
+      redirectUrl: null,
+      checkoutId: null,
+    }
   }
 
   const checkout = await createPayfastCheckoutForRequest(request, baseUrl)

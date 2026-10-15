@@ -19,7 +19,7 @@ export const youthAgentConfig: SeoLandingConfig = {
       heading: 'The dual mission: SME compliance and youth opportunity',
       paragraphs: [
         'Government wants capable SMEs in supply chains. SMEs want fair access without disqualification on attendance technicalities. Young job seekers want credible work experience beyond generic internships.',
-        `Youth Agent tender support aligns those interests: when an SME confirms ${BRIEFING_PRICE_LABEL} attendance support, a verified agent travels to or joins the compulsory briefing, registers correctly and documents session intelligence.`,
+        `Youth Agent tender support aligns those interests: when an SME confirms ${BRIEFING_PRICE_LABEL} fee support, a verified agent travels to or joins the compulsory briefing, registers correctly and documents session intelligence.`,
         'The model is transparent — no hidden subscription for SMEs, no pay-to-list for agents beyond platform onboarding requirements outlined in the agent signup flow.',
       ],
     },
@@ -137,7 +137,7 @@ export const youthAgentConfig: SeoLandingConfig = {
   provinceFocus: [],
   highlights: [
     'Verified Youth Agent network for compulsory briefings',
-    `SMEs browse tenders free — ${BRIEFING_PRICE_LABEL} only per agent request`,
+    `SMEs browse tenders free — free per agent request`,
     'Structured post-briefing reports for bid teams',
     'Separate onboarding for youth agents and SMEs',
     'Official eTenders data drives real assignments',
@@ -145,7 +145,7 @@ export const youthAgentConfig: SeoLandingConfig = {
   features: [
     {
       title: 'For SMEs',
-      text: `Free registration, live tenders, optional ${BRIEFING_PRICE_LABEL} attendance when you cannot be on site.`,
+      text: `Free registration, live tenders, optional ${BRIEFING_PRICE_LABEL} fee when you cannot be on site.`,
     },
     {
       title: 'For Youth Agents',

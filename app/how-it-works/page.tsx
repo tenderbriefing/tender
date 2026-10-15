@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { BRIEFING_PRICE_LABEL } from '@/lib/domain/briefingPricing'
 import Link from 'next/link'
 import MarketingPageLayout from '@/components/marketing/MarketingPageLayout'
 import AnimateIn from '@/components/ui/AnimateIn'
@@ -10,7 +9,7 @@ import { ArrowRight, Building2, Users } from 'lucide-react'
 export const metadata: Metadata = buildPageMetadata({
   title: 'How TenderBriefing Works | SME & Youth Agent Briefing Flow',
   description:
-    `Learn how SMEs discover compulsory tender briefings for free, request Youth Agents for ${BRIEFING_PRICE_LABEL}, and receive structured briefing reports on TenderBriefing South Africa.`,
+    'Learn how SMEs discover compulsory tender briefings for free, request Youth Agents for R750, and receive structured briefing reports on TenderBriefing South Africa.',
   path: '/how-it-works',
   keywords: [
     'how tender briefing works',

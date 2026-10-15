@@ -43,14 +43,14 @@ describe('Phase 3H briefing lifecycle notifications', () => {
 })
 
 describe('Phase 3 financial invariants', () => {
-  it('keeps R349 / R200 / R149 cents authoritative', () => {
-    expect(BRIEFING_PRICE_CENTS).toBe(34900)
+  it('keeps R750 / R200 / R550 cents authoritative', () => {
+    expect(BRIEFING_PRICE_CENTS).toBe(75000)
     expect(YOUTH_AGENT_PAYOUT_CENTS).toBe(20000)
-    expect(GROSS_CONTRIBUTION_CENTS).toBe(14900)
+    expect(GROSS_CONTRIBUTION_CENTS).toBe(55000)
     expect(BRIEFING_PRICE_CENTS - YOUTH_AGENT_PAYOUT_CENTS).toBe(GROSS_CONTRIBUTION_CENTS)
   })
 
-  it('booking snapshot stamps 34900 and ignores client price spoof conceptually', () => {
+  it('booking snapshot stamps 75000 and ignores client price spoof conceptually', () => {
     const snap = buildPrivateTenderBookingSnapshot({
       id: 'priv-1',
       sourceType: 'private',
@@ -58,8 +58,8 @@ describe('Phase 3 financial invariants', () => {
       briefingPriceCents: 1,
       paymentAmount: 1,
     })
-    expect(snap.briefingPriceCents).toBe(34900)
-    expect(snap.paymentAmount).toBe(34900)
+    expect(snap.briefingPriceCents).toBe(75000)
+    expect(snap.paymentAmount).toBe(75000)
   })
 })
 
