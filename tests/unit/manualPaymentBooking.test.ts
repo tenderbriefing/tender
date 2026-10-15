@@ -146,7 +146,7 @@ describe('manualPaymentBookingService', () => {
   })
 
   it('renders invoice PDF without VAT inclusive wording', async () => {
-    const { renderManualInvoicePdf } = require('../../backend/services/payments/manualInvoicePdf')
+    const { renderManualInvoicePdf, BOOKING_CONFIRMATION } = require('../../backend/services/payments/manualInvoicePdf')
     const pdf = await renderManualInvoicePdf({
       id: 'req-test-1',
       invoiceNumber: 'TB-INV-20261015-ABC',
@@ -163,5 +163,7 @@ describe('manualPaymentBookingService', () => {
     expect(pdf.slice(0, 5).toString()).toBe('%PDF-')
     const asString = pdf.toString('latin1')
     expect(asString).not.toMatch(/VAT inclusive/i)
+    expect(asString).not.toMatch(/Tax Invoice/i)
+    expect(BOOKING_CONFIRMATION).toMatch(/booking request for a TenderBriefing Youth Agent/)
   })
 })
