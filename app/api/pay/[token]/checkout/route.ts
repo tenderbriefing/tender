@@ -31,10 +31,14 @@ export async function POST(
     }
 
     const service = require('../../../../../backend/services/payments/manualPaymentBookingService')
+    const certService = require('../../../../../backend/services/payments/payfastLiveCertificationService')
     const origin =
       process.env.NEXT_PUBLIC_SITE_URL || 'https://www.tenderbriefing.co.za'
 
-    const result = await service.createCheckoutForPaymentToken(token, origin)
+    let result = await service.createCheckoutForPaymentToken(token, origin)
+    if (!result.ok && result.status === 404) {
+      result = await certService.createCheckoutForCertificationToken(token, origin)
+    }
     if (!result.ok) {
       return NextResponse.json(
         {
@@ -60,7 +64,8 @@ export async function POST(
       event: 'payment_initiated',
       requestId,
       outcome: 'success',
-      attendanceRequestId: result.request?.bookingId,
+      attendanceRequestId:
+        result.request?.bookingId || result.request?.id || undefined,
     })
 
     return NextResponse.json({

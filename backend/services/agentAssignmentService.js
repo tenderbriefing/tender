@@ -55,6 +55,12 @@ function createAttendanceRequest(payload, options = {}) {
     paidAt: _paidAt,
     paymentFailureReason: _paymentFailureReason,
     paymentExemptionAuthorized: _paymentExemptionAuthorized,
+    // Live-certification locks — only payfastLiveCertificationService may set these.
+    purpose: _purpose,
+    singleUse: _singleUse,
+    expectedAmountCents: _expectedAmountCents,
+    certificationAmountCents: _certificationAmountCents,
+    serverAuthorizedCertification: _serverAuthorizedCertification,
     assignedByAdmin: _assignedByAdmin,
     agentId: _agentId,
     assignedAgentId: _assignedAgentId,

@@ -4,10 +4,14 @@ import {
   BRIEFING_PRICE_SHORT_LABEL,
   YOUTH_AGENT_PAYOUT_CENTS,
   GROSS_CONTRIBUTION_CENTS,
+  LIVE_CERTIFICATION_AMOUNT_CENTS,
+  LIVE_CERTIFICATION_PURPOSE,
+  LIVE_CERTIFICATION_SOURCE,
   grossContributionForRevenueCents,
   briefingPriceSnapshotFields,
   formatBriefingPriceZar,
   resolveRequestChargeCents,
+  resolveLiveCertificationChargeCents,
   isAttendanceFree,
 } from '@/lib/domain/briefingPricing'
 
@@ -102,6 +106,50 @@ describe('briefingPricing', () => {
       resolveRequestChargeCents({
         paymentStatus: 'paid',
         briefingPriceCents: 75000,
+      })
+    ).toBe(75000)
+  })
+
+  it('allows only server-authorized live certification bookings to charge R75', () => {
+    expect(LIVE_CERTIFICATION_AMOUNT_CENTS).toBe(7500)
+    expect(BRIEFING_PRICE_CENTS).toBe(75000)
+
+    const locked = {
+      paymentStatus: 'pending',
+      purpose: LIVE_CERTIFICATION_PURPOSE,
+      source: LIVE_CERTIFICATION_SOURCE,
+      singleUse: true,
+      expectedAmountCents: 7500,
+      certificationAmountCents: 7500,
+      serverAuthorizedCertification: true,
+      briefingPriceCents: 7500,
+      paymentAmount: 7500,
+      quotedFee: 7500,
+    }
+    expect(resolveLiveCertificationChargeCents(locked)).toBe(7500)
+    expect(resolveRequestChargeCents(locked)).toBe(7500)
+
+    // Client spoof without serverAuthorizedCertification stays R750
+    expect(
+      resolveRequestChargeCents({
+        paymentStatus: 'pending',
+        purpose: LIVE_CERTIFICATION_PURPOSE,
+        source: LIVE_CERTIFICATION_SOURCE,
+        singleUse: true,
+        expectedAmountCents: 7500,
+        certificationAmountCents: 7500,
+        serverAuthorizedCertification: false,
+        paymentAmount: 7500,
+      })
+    ).toBe(75000)
+
+    // Wrong amount lock rejected
+    expect(
+      resolveRequestChargeCents({
+        ...locked,
+        expectedAmountCents: 100,
+        certificationAmountCents: 100,
+        paymentAmount: 100,
       })
     ).toBe(75000)
   })

@@ -77,22 +77,58 @@ export function briefingPriceSnapshotFields() {
   }
 }
 
+/** Founder-only live PayFast pipeline certification amount — never commercial price. */
+export const LIVE_CERTIFICATION_AMOUNT_CENTS = 7500
+export const LIVE_CERTIFICATION_PURPOSE = 'payfast_live_certification'
+export const LIVE_CERTIFICATION_SOURCE = 'payfast_live_certification'
+
+export type ChargeRequestShape = {
+  paymentStatus?: string | null
+  briefingPriceCents?: number | null
+  quotedFee?: number | null
+  paymentAmount?: number | null
+  purpose?: string | null
+  source?: string | null
+  singleUse?: boolean | null
+  expectedAmountCents?: number | null
+  certificationAmountCents?: number | null
+  serverAuthorizedCertification?: boolean | null
+}
+
+/**
+ * Server-authorized R75 certification booking only.
+ * Client-forged purpose/amount fields without serverAuthorizedCertification are ignored.
+ */
+export function resolveLiveCertificationChargeCents(
+  request?: ChargeRequestShape | null
+): number | null {
+  if (!request || request.serverAuthorizedCertification !== true) return null
+  if (request.purpose !== LIVE_CERTIFICATION_PURPOSE) return null
+  if (request.source !== LIVE_CERTIFICATION_SOURCE) return null
+  if (request.singleUse !== true) return null
+  const expected = Number(request.expectedAmountCents)
+  const locked = Number(request.certificationAmountCents)
+  if (expected !== LIVE_CERTIFICATION_AMOUNT_CENTS) return null
+  if (locked !== LIVE_CERTIFICATION_AMOUNT_CENTS) return null
+  return LIVE_CERTIFICATION_AMOUNT_CENTS
+}
+
 /**
  * Resolve PayFast charge / ITN expected amount.
  * Unpaid documents never influence the payable amount — only paid (verified)
- * snapshots are trusted for historical accounting.
+ * snapshots are trusted for historical accounting — except server-authorized
+ * live-certification bookings which charge the locked certification amount.
  */
 export function resolveRequestChargeCents(
-  request?: {
-    paymentStatus?: string | null
-    briefingPriceCents?: number | null
-    quotedFee?: number | null
-    paymentAmount?: number | null
-  } | null
+  request?: ChargeRequestShape | null
 ): number {
   const canonical = resolveBriefingPriceCents()
   if (isAttendanceFree(canonical)) return 0
   if (!request) return canonical
+
+  const certificationCents = resolveLiveCertificationChargeCents(request)
+  if (certificationCents != null) return certificationCents
+
   if (request.paymentStatus === 'paid') {
     const snap = Number(request.briefingPriceCents)
     if (Number.isFinite(snap) && snap > 0) return Math.round(snap)

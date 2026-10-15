@@ -79,10 +79,13 @@ async function createPayfastCheckoutForRequest(request, baseUrl) {
   const origin = siteBaseUrl(baseUrl)
   const isManual =
     request?.source === 'manual_payment_link' && Boolean(request?.paymentToken)
-  const successUrl = isManual
+  const isLiveCert =
+    request?.source === 'payfast_live_certification' && Boolean(request?.paymentToken)
+  const isTokenPay = isManual || isLiveCert
+  const successUrl = isTokenPay
     ? `${origin}/pay/${encodeURIComponent(request.paymentToken)}/success`
     : `${origin}/sme/requests/payment-success?requestId=${encodeURIComponent(request.id)}`
-  const cancelUrl = isManual
+  const cancelUrl = isTokenPay
     ? `${origin}/pay/${encodeURIComponent(request.paymentToken)}/cancelled`
     : `${origin}/sme/requests/payment-cancelled?requestId=${encodeURIComponent(request.id)}`
   const notifyUrl = `${origin}/api/webhooks/payfast`
@@ -95,12 +98,16 @@ async function createPayfastCheckoutForRequest(request, baseUrl) {
   const result = payfastService.createCheckoutPayload({
     amountCents: chargeCents,
     mPaymentId: paymentReferenceForRequest(request.id),
-    itemName: isManual
-      ? 'Tender Briefing Attendance Service'
-      : 'Compulsory briefing attendance support',
-    itemDescription: isManual
-      ? `TenderBriefing booking ${request.invoiceNumber || request.id} — ${request.tenderNumber || 'RFQ'}`
-      : `Youth Agent attendance for tender ${request.tenderNumber || request.tenderId || request.id}`,
+    itemName: isLiveCert
+      ? 'TenderBriefing PayFast live certification'
+      : isManual
+        ? 'Tender Briefing Attendance Service'
+        : 'Compulsory briefing attendance support',
+    itemDescription: isLiveCert
+      ? `Founder live certification ${request.invoiceNumber || request.id} (R75 — not commercial)`
+      : isManual
+        ? `TenderBriefing booking ${request.invoiceNumber || request.id} — ${request.tenderNumber || 'RFQ'}`
+        : `Youth Agent attendance for tender ${request.tenderNumber || request.tenderId || request.id}`,
     returnUrl: successUrl,
     cancelUrl,
     notifyUrl,
