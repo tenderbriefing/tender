@@ -16,7 +16,7 @@ import { DEFAULT_OG_IMAGE, SITE_NAME, absoluteUrl, truncateMeta } from './site'
  * - endDate: eTenders has no briefing end — never invent start+N hours
  * - organizer.url: no verified official org homepage on tender records
  * - performer: compulsory briefings have no performers
- * - offers: R349 is TenderBriefing Youth Agent attendance fee, NOT event admission
+ * - offers: R750 is TenderBriefing Youth Agent attendance fee, NOT event admission
  *
  * image: reusable crawlable TenderBriefing brand OG (logo-class asset Google permits)
  * when no tender-specific briefing photo exists in the feed.
@@ -186,7 +186,7 @@ function buildEventImage(): string[] {
 
 /**
  * Canonical Event JSON-LD for the compulsory tender briefing / site meeting only —
- * not the procurement opportunity, publication date, closing date, or R349 service fee.
+ * not the procurement opportunity, publication date, closing date, or R750 service fee.
  * Returns null when required briefing fields are insufficient for Google Event markup.
  */
 export function buildTenderBriefingEventJsonLd(tender: TenderBriefing): Record<string, unknown> | null {

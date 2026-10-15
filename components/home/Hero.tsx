@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import TenderSearchForm from '@/components/tenders/TenderSearchForm'
+import { BRIEFING_PRICE_SHORT_LABEL } from '@/lib/domain/briefingPricing'
 
 export default function Hero() {
   const { user, userProfile } = useAuth()
@@ -97,8 +98,8 @@ export default function Hero() {
           </p>
           <TenderSearchForm variant="hero" />
           <p className="mt-2 text-left text-xs text-brand-200/70 sm:text-center">
-            Find by keyword, tender number, or organisation — then appoint a Youth Agent for
-            R349 when attendance is required.
+            Find by keyword, tender number, or organisation — then appoint a Youth Agent for{' '}
+            {BRIEFING_PRICE_SHORT_LABEL} when attendance is required.
           </p>
         </motion.div>
 

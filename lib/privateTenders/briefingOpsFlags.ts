@@ -9,7 +9,7 @@ function truthy(v: string | undefined | null): boolean {
   return s === '1' || s === 'true' || s === 'yes' || s === 'on'
 }
 
-/** Private tender → R349 physical briefing booking enrichment / CTA gating. */
+/** Private tender → R750 physical briefing booking enrichment / CTA gating. */
 export function isPrivateTenderBriefingBookingEnabled(): boolean {
   return truthy(process.env.PRIVATE_TENDER_BRIEFING_BOOKING_ENABLED)
 }
