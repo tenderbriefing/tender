@@ -34,4 +34,12 @@ describe('apiRoutePolicy', () => {
     expect(isPublicApiRoute('/api/outreach/unsubscribe', 'GET')).toBe(true)
     expect(isPublicApiRoute('/api/outreach/unsubscribe', 'POST')).toBe(true)
   })
+
+  it('allows secure manual payment token APIs without Bearer', () => {
+    expect(isPublicApiRoute('/api/pay/abcTokenValueWithEnoughEntropy', 'GET')).toBe(true)
+    expect(isPublicApiRoute('/api/pay/abcTokenValueWithEnoughEntropy/checkout', 'POST')).toBe(true)
+    expect(isPublicApiRoute('/api/pay/abcTokenValueWithEnoughEntropy/invoice', 'GET')).toBe(true)
+    expect(isPublicApiRoute('/api/pay/abcTokenValueWithEnoughEntropy/checkout', 'GET')).toBe(false)
+    expect(isPublicApiRoute('/api/admin/manual-payments', 'GET')).toBe(false)
+  })
 })

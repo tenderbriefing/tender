@@ -77,20 +77,30 @@ async function saveRequest(patch) {
 
 async function createPayfastCheckoutForRequest(request, baseUrl) {
   const origin = siteBaseUrl(baseUrl)
-  const successUrl = `${origin}/sme/requests/payment-success?requestId=${encodeURIComponent(request.id)}`
-  const cancelUrl = `${origin}/sme/requests/payment-cancelled?requestId=${encodeURIComponent(request.id)}`
+  const isManual =
+    request?.source === 'manual_payment_link' && Boolean(request?.paymentToken)
+  const successUrl = isManual
+    ? `${origin}/pay/${encodeURIComponent(request.paymentToken)}/success`
+    : `${origin}/sme/requests/payment-success?requestId=${encodeURIComponent(request.id)}`
+  const cancelUrl = isManual
+    ? `${origin}/pay/${encodeURIComponent(request.paymentToken)}/cancelled`
+    : `${origin}/sme/requests/payment-cancelled?requestId=${encodeURIComponent(request.id)}`
   const notifyUrl = `${origin}/api/webhooks/payfast`
   const chargeCents = resolveRequestChargeCents(request)
 
-  const nameParts = String(request.smeName || '').trim().split(/\s+/)
-  const nameFirst = nameParts[0] || 'SME'
-  const nameLast = nameParts.slice(1).join(' ') || 'Owner'
+  const nameParts = String(request.smeName || request.smeCompany || '').trim().split(/\s+/)
+  const nameFirst = nameParts[0] || 'Customer'
+  const nameLast = nameParts.slice(1).join(' ') || 'Account'
 
   const result = payfastService.createCheckoutPayload({
     amountCents: chargeCents,
     mPaymentId: paymentReferenceForRequest(request.id),
-    itemName: 'Compulsory briefing attendance support',
-    itemDescription: `Youth Agent attendance for tender ${request.tenderNumber || request.tenderId || request.id}`,
+    itemName: isManual
+      ? 'Tender Briefing Attendance Service'
+      : 'Compulsory briefing attendance support',
+    itemDescription: isManual
+      ? `TenderBriefing booking ${request.invoiceNumber || request.id} — ${request.tenderNumber || 'RFQ'}`
+      : `Youth Agent attendance for tender ${request.tenderNumber || request.tenderId || request.id}`,
     returnUrl: successUrl,
     cancelUrl,
     notifyUrl,
@@ -100,7 +110,7 @@ async function createPayfastCheckoutForRequest(request, baseUrl) {
     cellNumber: request.smePhone || undefined,
     customStr1: String(request.id),
     customStr2: String(request.smeId || ''),
-    customStr3: String(request.tenderId || ''),
+    customStr3: String(request.tenderId || request.source || ''),
   })
 
   if (result.skipped || !result.ok) {
@@ -221,6 +231,8 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
       payfastPaymentId: pfPaymentId || request.payfastPaymentId || null,
       paidAt: now,
       paymentFailureReason: null,
+      invoiceStatus: 'PAID',
+      availableForAssignment: true,
     },
   })
 

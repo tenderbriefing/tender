@@ -98,6 +98,12 @@ export const ADMIN_CONTROL_CENTRE_MODULES: AdminNavGroup[] = [
         description: 'Revenue and reconciliation',
       },
       {
+        href: '/admin/payments/manual',
+        label: 'Manual bookings',
+        description: 'Invoice + R750 payment links for emailed RFQs',
+        accent: true,
+      },
+      {
         href: '/admin/integrations',
         label: 'Integrations',
         description: 'PayFast, WhatsApp, and connectors',
@@ -134,6 +140,11 @@ export type PrimaryAction = {
 }
 
 export const CONTROL_CENTRE_PRIMARY_ACTIONS: PrimaryAction[] = [
+  {
+    href: '/admin/payments/manual',
+    label: 'Manual payment',
+    description: 'Create invoice + R750 link',
+  },
   {
     href: '/admin/procurement-inbox',
     label: 'Review RFQs',

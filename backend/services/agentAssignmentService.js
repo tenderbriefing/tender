@@ -511,6 +511,7 @@ module.exports = {
   findActiveRequestForSmeTender,
   ActiveRequestExistsError,
   isUnpaidResumable,
+  createAttendanceRequest,
   createRequest,
   acceptRequest,
   assignRequestToAgent,
