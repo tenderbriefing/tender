@@ -182,7 +182,7 @@ function RequestYouthAgentContent() {
       const requestId = json.data?.request?.id
       toast.success(
         payment?.required === false
-          ? 'Agent booking submitted — free, no payment required'
+          ? 'Agent booking submitted — no payment required'
           : json.data?.resumed
             ? 'Opening your existing attendance request'
             : 'Agent booking submitted'
