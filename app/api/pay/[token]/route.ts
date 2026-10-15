@@ -18,8 +18,12 @@ export async function GET(
     if (!limited.allowed) return tooManyRequests(limited.retryAfterSec)
 
     const service = require('../../../../backend/services/payments/manualPaymentBookingService')
-    const booking = await service.getRequestByPaymentToken(token)
+    const certService = require('../../../../backend/services/payments/payfastLiveCertificationService')
+    let booking = await service.getRequestByPaymentToken(token)
     if (!booking || booking.source !== service.MANUAL_SOURCE) {
+      booking = await certService.getRequestByPaymentToken(token)
+    }
+    if (!booking) {
       return NextResponse.json({ success: false, error: 'Payment link not found' }, { status: 404 })
     }
 

@@ -55,14 +55,40 @@ function briefingPriceSnapshotFields() {
   }
 }
 
+/** Founder-only live PayFast pipeline certification amount — never commercial price. */
+const LIVE_CERTIFICATION_AMOUNT_CENTS = 7500
+const LIVE_CERTIFICATION_PURPOSE = 'payfast_live_certification'
+const LIVE_CERTIFICATION_SOURCE = 'payfast_live_certification'
+
+/**
+ * Server-authorized R75 certification booking only.
+ * Client-forged purpose/amount fields without serverAuthorizedCertification are ignored.
+ */
+function resolveLiveCertificationChargeCents(request) {
+  if (!request || request.serverAuthorizedCertification !== true) return null
+  if (request.purpose !== LIVE_CERTIFICATION_PURPOSE) return null
+  if (request.source !== LIVE_CERTIFICATION_SOURCE) return null
+  if (request.singleUse !== true) return null
+  const expected = Number(request.expectedAmountCents)
+  const locked = Number(request.certificationAmountCents)
+  if (expected !== LIVE_CERTIFICATION_AMOUNT_CENTS) return null
+  if (locked !== LIVE_CERTIFICATION_AMOUNT_CENTS) return null
+  return LIVE_CERTIFICATION_AMOUNT_CENTS
+}
+
 /**
  * Resolve the amount PayFast must charge / ITN must verify.
  * Free mode (0 cents) always returns 0 — never start a checkout.
+ * Commercial unpaid bookings always use canonical R750 unless a server-authorized
+ * live-certification booking is present.
  */
 function resolveRequestChargeCents(request) {
   const canonical = resolveBriefingPriceCents()
   if (isAttendanceFree(canonical)) return 0
   if (!request) return canonical
+
+  const certificationCents = resolveLiveCertificationChargeCents(request)
+  if (certificationCents != null) return certificationCents
 
   if (request.paymentStatus === 'paid') {
     const snap = Number(request.briefingPriceCents)
@@ -83,11 +109,15 @@ module.exports = {
   BRIEFING_PRICE_CURRENCY,
   PRICING_VERSION,
   PAYOUT_VERSION,
+  LIVE_CERTIFICATION_AMOUNT_CENTS,
+  LIVE_CERTIFICATION_PURPOSE,
+  LIVE_CERTIFICATION_SOURCE,
   isAttendanceFree,
   resolveBriefingPriceCents,
   resolveYouthAgentPayoutCents,
   formatBriefingPriceZar,
   grossContributionForRevenueCents,
   briefingPriceSnapshotFields,
+  resolveLiveCertificationChargeCents,
   resolveRequestChargeCents,
 }
