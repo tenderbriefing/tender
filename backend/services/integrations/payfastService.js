@@ -296,7 +296,14 @@ function createCheckoutPayload({
     item_name: String(itemName || 'TenderBriefing attendance support').slice(0, 100),
   }
 
-  if (itemDescription) fields.item_description = String(itemDescription).slice(0, 255)
+  if (itemDescription) {
+    // PayFast hosted checkout is sensitive to non-ASCII in signed fields.
+    fields.item_description = String(itemDescription)
+      .normalize('NFKD')
+      .replace(/[^\x20-\x7E]/g, '')
+      .trim()
+      .slice(0, 255)
+  }
   // PayFast rejects checkout when payer email matches the merchant profile email
   // ("unable to receive payments from the same account"). Omit colliding email so
   // the hosted page can collect a different payer address. Still blocked if the

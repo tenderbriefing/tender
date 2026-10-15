@@ -152,7 +152,8 @@ async function createLiveCertificationBooking(adminUser = {}) {
     smeId: `cert-${crypto.createHash('sha256').update(String(adminUser.uid || 'founder')).digest('hex').slice(0, 12)}`,
     smeName: 'TenderBriefing Founder Certification',
     smeCompany: 'TenderBriefing Founder Certification',
-    smeEmail: String(adminUser.email || 'info@tenderbriefing.co.za').trim().toLowerCase(),
+    // Never use merchant account email — PayFast rejects same-account checkouts.
+    smeEmail: 'ops-smoke-sme@tenderbriefing.co.za',
     smePhone: '',
     briefingDate: '',
     briefingTime: '',

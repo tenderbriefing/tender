@@ -103,10 +103,11 @@ async function createPayfastCheckoutForRequest(request, baseUrl) {
       : isManual
         ? 'Tender Briefing Attendance Service'
         : 'Compulsory briefing attendance support',
+    // Keep PayFast item text ASCII-safe — unicode dashes/punctuation can break hosted checkout.
     itemDescription: isLiveCert
-      ? `Founder live certification ${request.invoiceNumber || request.id} (R75 — not commercial)`
+      ? `Founder live certification ${request.invoiceNumber || request.id} (R75 not commercial)`
       : isManual
-        ? `TenderBriefing booking ${request.invoiceNumber || request.id} — ${request.tenderNumber || 'RFQ'}`
+        ? `TenderBriefing booking ${request.invoiceNumber || request.id} - ${request.tenderNumber || 'RFQ'}`
         : `Youth Agent attendance for tender ${request.tenderNumber || request.tenderId || request.id}`,
     returnUrl: successUrl,
     cancelUrl,
