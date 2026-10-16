@@ -74,6 +74,16 @@ export async function POST(
         result = delivered
         break
       }
+      case 'complete': {
+        const closure = require('../../../../../backend/services/ops/fulfilmentClosureService')
+        result = await closure.completeFulfilment(params.id, adminUser, body)
+        break
+      }
+      case 'reopen': {
+        const closure = require('../../../../../backend/services/ops/fulfilmentClosureService')
+        result = await closure.reopenForCorrection(params.id, body, adminUser)
+        break
+      }
       case 'close':
         result = await ops.closeRequest(params.id, body, adminUser)
         break

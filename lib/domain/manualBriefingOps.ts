@@ -22,6 +22,7 @@ export const OPS_LIFECYCLE_STAGES = [
   'report_in_progress',
   'report_ready',
   'delivered',
+  'completed',
   'closed',
 ] as const
 
@@ -43,6 +44,7 @@ export const OPS_LIFECYCLE_LABELS: Record<OpsLifecycleStage, string> = {
   report_in_progress: 'Report In Progress',
   report_ready: 'Report Ready',
   delivered: 'Delivered',
+  completed: 'Completed',
   closed: 'Closed',
 }
 
@@ -69,6 +71,8 @@ export const OPS_STAGE_ALIASES: Record<string, OpsLifecycleStage> = {
   report_in_progress: 'report_in_progress',
   report_ready: 'report_ready',
   delivered: 'delivered',
+  completed: 'completed',
+  fulfilment_completed: 'completed',
   closed: 'closed',
 }
 
@@ -116,6 +120,7 @@ type OpsInput = {
   clientReportDeliveredAt?: string | null
   deliveredAt?: string | null
   closedAt?: string | null
+  completedAt?: string | null
   fulfilmentStatus?: string | null
   availableForAssignment?: boolean | null
   sourcing?: boolean | null
@@ -160,6 +165,13 @@ function briefingMoment(request: OpsInput): Date | null {
 export function deriveManualOpsStage(request: OpsInput): OpsLifecycleStage {
   const explicit = normalizeOpsStage(request.opsStage)
   if (explicit === 'closed' || request.closedAt) return 'closed'
+  if (
+    explicit === 'completed' ||
+    request.completedAt ||
+    String(request.fulfilmentStatus || '').toLowerCase() === 'completed'
+  ) {
+    return 'completed'
+  }
   if (
     explicit === 'delivered' ||
     request.deliveredAt ||
@@ -328,6 +340,8 @@ export function nextRequiredAction(stage: OpsLifecycleStage): string {
     case 'report_ready':
       return 'Send report to client (delivery review)'
     case 'delivered':
+      return 'Mark fulfilment completed'
+    case 'completed':
       return 'Close when ops complete'
     case 'closed':
       return 'None'
@@ -355,6 +369,7 @@ export const OPS_ADMIN_TRANSITIONS: Partial<Record<OpsLifecycleStage, OpsLifecyc
   evidence_received: ['report_in_progress', 'report_ready'],
   report_in_progress: ['report_ready'],
   report_ready: ['delivered'],
-  delivered: ['closed'],
+  delivered: ['completed', 'closed'],
+  completed: ['closed'],
   closed: [],
 }

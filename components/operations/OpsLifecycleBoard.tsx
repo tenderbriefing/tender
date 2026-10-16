@@ -5,7 +5,6 @@ import toast from 'react-hot-toast'
 import { authFetch } from '@/lib/api/authenticatedFetch'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import {
-  OPS_LIFECYCLE_LABELS,
   type OpsLifecycleStage,
   SUGGESTED_AGENT_PAYOUT_CENTS,
 } from '@/lib/domain/manualBriefingOps'
@@ -31,6 +30,7 @@ type OpsRow = {
   urgencyFlags?: string[]
   lastOpsUpdate?: string | null
   nextAction?: string
+  actionHref?: string | null
   evidenceCount?: number
   reportReadyAt?: string | null
   reportStatus?: string | null
@@ -40,10 +40,30 @@ type OpsRow = {
   reportDocxFileName?: string | null
   clientDeliveryId?: string | null
   clientDeliveryStatus?: string | null
+  clientDeliveryProviderStatus?: string | null
   deliveredAt?: string | null
+  completedAt?: string | null
+  finalReportVersionId?: string | null
+  finalDeliveryId?: string | null
   invoiceNumber?: string | null
   amountCents?: number | null
+  slaTrack?: string | null
+  exceptionCode?: string | null
+  exceptionLabel?: string | null
+  overdueLabel?: string | null
+  boardFilter?: string | null
 }
+
+const BOARD_FILTERS = [
+  { value: '', label: 'All active' },
+  { value: 'needs_attention', label: 'Needs attention' },
+  { value: 'due_soon', label: 'Due soon' },
+  { value: 'overdue', label: 'Overdue' },
+  { value: 'in_progress', label: 'In progress' },
+  { value: 'ready_to_send', label: 'Ready to send' },
+  { value: 'delivery_issue', label: 'Delivery issue' },
+  { value: 'completed', label: 'Completed' },
+] as const
 
 const EXCEPTION_STAGES = new Set([
   'payment_required',
@@ -61,10 +81,12 @@ function formatPayout(cents?: number | null) {
 
 export default function OpsLifecycleBoard() {
   const [rows, setRows] = useState<OpsRow[]>([])
+  const [exceptions, setExceptions] = useState<OpsRow[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [stageFilter, setStageFilter] = useState('')
+  const [boardFilter, setBoardFilter] = useState('')
   const [busy, setBusy] = useState(false)
+  const [reopenReason, setReopenReason] = useState('')
 
   const [assignForm, setAssignForm] = useState({
     representativeName: '',
@@ -76,20 +98,20 @@ export default function OpsLifecycleBoard() {
   const [evidenceCategory, setEvidenceCategory] = useState('attendance_proof')
 
   const load = useCallback(async () => {
-    const res = await authFetch('/api/admin/ops/board?limit=200')
+    const q = boardFilter ? `&filter=${encodeURIComponent(boardFilter)}` : ''
+    const res = await authFetch(`/api/admin/ops/board?limit=200${q}`)
     const json = await res.json()
-    if (json.success) setRows(json.data.rows || [])
-    else toast.error(json.error || 'Failed to load ops board')
-  }, [])
+    if (json.success) {
+      setRows(json.data.rows || [])
+      setExceptions(json.data.exceptions || [])
+    } else toast.error(json.error || 'Failed to load ops board')
+  }, [boardFilter])
 
   useEffect(() => {
     load().finally(() => setLoading(false))
   }, [load])
 
-  const filtered = useMemo(() => {
-    if (!stageFilter) return rows
-    return rows.filter((r) => r.opsStage === stageFilter)
-  }, [rows, stageFilter])
+  const filtered = rows
 
   const selected = filtered.find((r) => r.id === selectedId) || rows.find((r) => r.id === selectedId)
 
@@ -228,26 +250,23 @@ export default function OpsLifecycleBoard() {
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Operations Board</h2>
           <p className="text-sm text-slate-600">
-            Payment through report delivery. Representatives are assigned manually — no Youth
-            Agent account required. Delivery email is sent by the Founder outside the platform.
+            What needs attention, what is due next, what completed, what failed. No silent
+            failures — exceptions link to the required action.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <label className="text-sm text-slate-600">
-            Stage{' '}
+            Focus{' '}
             <select
               className="ml-1 rounded border border-slate-300 px-2 py-1.5 text-sm"
-              value={stageFilter}
-              onChange={(e) => setStageFilter(e.target.value)}
+              value={boardFilter}
+              onChange={(e) => setBoardFilter(e.target.value)}
             >
-              <option value="">All active</option>
-              {Object.entries(OPS_LIFECYCLE_LABELS)
-                .filter(([k]) => k !== 'closed')
-                .map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
+              {BOARD_FILTERS.map((f) => (
+                <option key={f.value || 'all'} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
             </select>
           </label>
           <button
@@ -259,6 +278,49 @@ export default function OpsLifecycleBoard() {
           </button>
         </div>
       </div>
+
+      {exceptions.length > 0 && !boardFilter ? (
+        <section className="rounded-xl border border-amber-300 bg-amber-50 p-4 shadow-sm">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-950">
+            Exception queue ({exceptions.length})
+          </h3>
+          <p className="mt-1 text-xs text-amber-900">
+            Derived exceptions — what needs human intervention now.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {exceptions.slice(0, 12).map((ex) => (
+              <li
+                key={ex.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm"
+              >
+                <button
+                  type="button"
+                  className="text-left"
+                  onClick={() => setSelectedId(ex.id)}
+                >
+                  <div className="font-medium text-slate-900">
+                    {ex.companyName} · {ex.tenderNumber}
+                  </div>
+                  <div className="text-xs text-amber-900">
+                    {ex.exceptionLabel} · {ex.opsStageLabel}
+                    {ex.overdueLabel ? ` · overdue ${ex.overdueLabel}` : ''}
+                  </div>
+                </button>
+                {ex.actionHref ? (
+                  <a
+                    href={ex.actionHref}
+                    className="rounded bg-amber-800 px-2.5 py-1 text-xs font-semibold text-white"
+                  >
+                    {ex.nextAction}
+                  </a>
+                ) : (
+                  <span className="text-xs font-medium text-slate-700">{ex.nextAction}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
@@ -272,20 +334,25 @@ export default function OpsLifecycleBoard() {
               <th className="px-3 py-2">Stage</th>
               <th className="px-3 py-2">Representative</th>
               <th className="px-3 py-2">Payout</th>
-              <th className="px-3 py-2">Urgency</th>
+              <th className="px-3 py-2">SLA</th>
+              <th className="px-3 py-2">Exception</th>
               <th className="px-3 py-2">Next action</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-3 py-8 text-center text-slate-500">
+                <td colSpan={11} className="px-3 py-8 text-center text-slate-500">
                   No active operations rows.
                 </td>
               </tr>
             ) : (
               filtered.map((row) => {
-                const isException = EXCEPTION_STAGES.has(String(row.opsStage))
+                const isException =
+                  EXCEPTION_STAGES.has(String(row.opsStage)) ||
+                  Boolean(row.exceptionCode) ||
+                  row.slaTrack === 'OVERDUE' ||
+                  row.slaTrack === 'BLOCKED'
                 return (
                   <tr
                     key={row.id}
@@ -326,22 +393,36 @@ export default function OpsLifecycleBoard() {
                     </td>
                     <td className="px-3 py-2">{row.representativeName || '—'}</td>
                     <td className="px-3 py-2">{formatPayout(row.representativePayoutCents)}</td>
-                    <td className="px-3 py-2 text-xs text-amber-800">
-                      {(row.urgencyFlags || [])
-                        .filter((f) =>
-                          [
-                            'payment_required',
-                            'assignment_required',
-                            'briefing_due',
-                            'evidence_required',
-                            'report_required',
-                            'report_ready',
-                          ].includes(f)
-                        )
-                        .map((f) => f.replace(/_/g, ' '))
-                        .join(' · ') || '—'}
+                    <td className="px-3 py-2 text-xs">
+                      <span
+                        className={`rounded px-1.5 py-0.5 font-semibold ${
+                          row.slaTrack === 'BLOCKED'
+                            ? 'bg-red-100 text-red-900'
+                            : row.slaTrack === 'OVERDUE'
+                              ? 'bg-amber-100 text-amber-900'
+                              : row.slaTrack === 'DUE_SOON'
+                                ? 'bg-yellow-100 text-yellow-900'
+                                : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {row.slaTrack || '—'}
+                      </span>
                     </td>
-                    <td className="px-3 py-2 text-xs text-slate-700">{row.nextAction}</td>
+                    <td className="px-3 py-2 text-xs text-amber-900">
+                      {row.exceptionLabel || '—'}
+                      {row.overdueLabel ? (
+                        <div className="text-slate-500">{row.overdueLabel}</div>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-slate-700">
+                      {row.actionHref ? (
+                        <a href={row.actionHref} className="font-medium text-brand-800 underline">
+                          {row.nextAction}
+                        </a>
+                      ) : (
+                        row.nextAction
+                      )}
+                    </td>
                   </tr>
                 )
               })
@@ -598,6 +679,61 @@ export default function OpsLifecycleBoard() {
                 </button>
               </form>
 
+              {(selected.opsStage === 'delivered' ||
+                selected.opsStage === 'completed' ||
+                selected.clientDeliveryStatus) && (
+                <div className="space-y-2 border-t border-slate-100 pt-3 text-sm">
+                  <h5 className="font-medium text-slate-800">Delivery visibility</h5>
+                  <ul className="space-y-1 text-xs text-slate-700">
+                    <li>
+                      Sent:{' '}
+                      {selected.deliveredAt
+                        ? new Date(selected.deliveredAt).toLocaleString()
+                        : '—'}
+                    </li>
+                    <li>Provider: Resend</li>
+                    <li>
+                      Provider state:{' '}
+                      {selected.clientDeliveryProviderStatus ||
+                        selected.clientDeliveryStatus ||
+                        '—'}
+                    </li>
+                    <li>Recipient: {selected.customerEmail || '—'}</li>
+                    <li>
+                      Report version:{' '}
+                      {selected.finalReportVersionId || selected.opsReportId || '—'}
+                      {selected.opsReportVersion != null ? ` (v${selected.opsReportVersion})` : ''}
+                    </li>
+                    <li>
+                      Attachments: PDF
+                      {selected.reportDocxFileName ? ' / DOCX' : ''}
+                    </li>
+                    <li>
+                      Completed:{' '}
+                      {selected.completedAt
+                        ? new Date(selected.completedAt).toLocaleString()
+                        : '—'}
+                    </li>
+                  </ul>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <a
+                      href={`/admin/operations/delivery/${selected.id}`}
+                      className="rounded border border-slate-300 px-2.5 py-1 text-xs font-semibold hover:bg-slate-50"
+                    >
+                      View delivery history
+                    </a>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="rounded border border-slate-300 px-2.5 py-1 text-xs font-semibold hover:bg-slate-50"
+                      onClick={() => downloadReport(selected.id, 'pdf')}
+                    >
+                      Download final report
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {selected.opsStage === 'report_ready' || selected.opsStage === 'delivered' ? (
                 <div className="space-y-2 border-t border-slate-100 pt-3">
                   <p className="text-sm text-slate-700">
@@ -621,9 +757,65 @@ export default function OpsLifecycleBoard() {
                   >
                     Mark as delivered (no email)
                   </button>
+                  {selected.opsStage === 'delivered' ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="ml-2 rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                      onClick={() => runAction(selected.id, 'complete')}
+                    >
+                      Mark completed
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     disabled={busy || selected.opsStage !== 'delivered'}
+                    className="ml-2 rounded-lg border border-slate-400 px-3 py-2 text-sm font-semibold disabled:opacity-60"
+                    onClick={() => runAction(selected.id, 'close')}
+                  >
+                    Close
+                  </button>
+                </div>
+              ) : null}
+
+              {selected.opsStage === 'completed' ? (
+                <div className="space-y-2 border-t border-slate-100 pt-3">
+                  <h5 className="text-sm font-medium text-slate-800">Reopen for correction</h5>
+                  <p className="text-xs text-slate-600">
+                    Historical delivered report versions stay immutable. Corrections require a new
+                    version, approval, and Confirm &amp; Send.
+                  </p>
+                  <textarea
+                    rows={2}
+                    required
+                    placeholder="Mandatory reopen reason"
+                    className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                    value={reopenReason}
+                    onChange={(e) => setReopenReason(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    disabled={busy || reopenReason.trim().length < 8}
+                    className="rounded-lg bg-amber-800 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                    onClick={() => {
+                      if (
+                        !window.confirm(
+                          'Reopen this completed fulfilment for correction? Prior delivered versions remain in history.'
+                        )
+                      ) {
+                        return
+                      }
+                      runAction(selected.id, 'reopen', {
+                        confirm: true,
+                        reason: reopenReason.trim(),
+                      })
+                    }}
+                  >
+                    Reopen for correction
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
                     className="ml-2 rounded-lg border border-slate-400 px-3 py-2 text-sm font-semibold disabled:opacity-60"
                     onClick={() => runAction(selected.id, 'close')}
                   >

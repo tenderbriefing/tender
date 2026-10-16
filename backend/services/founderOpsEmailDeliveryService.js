@@ -415,6 +415,23 @@ async function processVerifiedResendWebhook(payload, { providerEventId, getFires
     return { ok: true, ignored: true, eventType, reason: 'missing_email_id' }
   }
 
+  // Phase 13: always attempt ops client-report delivery update (idempotent).
+  // Independent of founder-ops ledger correlation.
+  let clientDelivery = null
+  try {
+    const clientDeliverySvc = require('./ops/reportClientDeliveryService')
+    clientDelivery = await clientDeliverySvc.applyProviderEventByMessageId(providerMessageId, {
+      status,
+      at: occurredAt,
+      reason: eventType,
+    })
+  } catch (err) {
+    console.warn(
+      `${LOG_PREFIX} client delivery update skipped:`,
+      err instanceof Error ? err.message.slice(0, 120) : 'unknown'
+    )
+  }
+
   const ledger = await findLedgerByProviderMessageId(db, providerMessageId)
   if (!ledger) {
     await storePendingWebhook(db, providerMessageId, {
@@ -425,8 +442,10 @@ async function processVerifiedResendWebhook(payload, { providerEventId, getFires
     })
     await claim.ref.set(
       sanitizeFirestoreData({
-        status: 'pending_correlation',
+        status: clientDelivery?.applied ? 'applied_client_delivery' : 'pending_correlation',
         deliveryStatus: status,
+        clientDeliveryApplied: Boolean(clientDelivery?.applied),
+        clientDeliveryId: clientDelivery?.deliveryId || null,
         processedAt: nowIso(),
         expireAt: expireAtDate(),
       }),
@@ -434,26 +453,37 @@ async function processVerifiedResendWebhook(payload, { providerEventId, getFires
     )
     return {
       ok: true,
-      pending: true,
+      pending: !clientDelivery?.applied,
+      applied: Boolean(clientDelivery?.applied),
       eventType,
       providerMessageId,
       deliveryStatus: status,
+      clientDelivery,
     }
   }
 
-  // Only correlate founder-ops ledger rows (ignore other Resend traffic)
+  // Only correlate founder-ops ledger rows (ignore other Resend traffic for founder ledger)
   const channel = ledger.data.channel
   if (channel && !FOUNDER_OPS_CHANNELS.includes(channel) && !ledger.data.founderOpsDelivery) {
     await claim.ref.set(
       sanitizeFirestoreData({
-        status: 'ignored',
-        reason: 'not_founder_ops',
+        status: clientDelivery?.applied ? 'applied_client_delivery' : 'ignored',
+        reason: clientDelivery?.applied ? null : 'not_founder_ops',
+        clientDeliveryApplied: Boolean(clientDelivery?.applied),
+        clientDeliveryId: clientDelivery?.deliveryId || null,
         processedAt: nowIso(),
         expireAt: expireAtDate(),
       }),
       { merge: true }
     )
-    return { ok: true, ignored: true, eventType, reason: 'not_founder_ops' }
+    return {
+      ok: true,
+      ignored: !clientDelivery?.applied,
+      applied: Boolean(clientDelivery?.applied),
+      eventType,
+      reason: clientDelivery?.applied ? undefined : 'not_founder_ops',
+      clientDelivery,
+    }
   }
 
   const applied = await applyStatusToLedger(ledger.ref, ledger.data, status, {
@@ -464,9 +494,11 @@ async function processVerifiedResendWebhook(payload, { providerEventId, getFires
 
   await claim.ref.set(
     sanitizeFirestoreData({
-      status: applied.applied ? 'applied' : 'duplicate_state',
+      status: applied.applied || clientDelivery?.applied ? 'applied' : 'duplicate_state',
       deliveryStatus: applied.deliveryStatus,
       ledgerDocId: ledger.id,
+      clientDeliveryApplied: Boolean(clientDelivery?.applied),
+      clientDeliveryId: clientDelivery?.deliveryId || null,
       processedAt: nowIso(),
       expireAt: expireAtDate(),
     }),
@@ -475,11 +507,12 @@ async function processVerifiedResendWebhook(payload, { providerEventId, getFires
 
   return {
     ok: true,
-    applied: Boolean(applied.applied),
+    applied: Boolean(applied.applied || clientDelivery?.applied),
     eventType,
     providerMessageId,
     deliveryStatus: applied.deliveryStatus,
     ledgerDocId: ledger.id,
+    clientDelivery,
   }
 }
 

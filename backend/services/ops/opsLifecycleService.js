@@ -16,6 +16,11 @@ const {
   SUGGESTED_AGENT_PAYOUT_CENTS,
   OPS_EVIDENCE_CATEGORIES,
 } = require('../../domain/manualBriefingOps')
+const {
+  evaluateOpsSla,
+  classifyBoardFilter,
+  EXCEPTION_CODES,
+} = require('../../domain/opsSlaEngine')
 
 const EVIDENCE_MAX_BYTES = 15 * 1024 * 1024
 const EVIDENCE_ALLOWED_TYPES = new Set([
@@ -63,10 +68,16 @@ function toOpsBoardRow(request) {
   if (!request) return null
   const stage = deriveManualOpsStage(request)
   const urgencyFlags = deriveUrgencyFlags(request)
+  const sla = evaluateOpsSla(request)
   const isManual =
     request.source === 'manual_payment_link' ||
     request.bookingKind === 'manual' ||
     request.catalogueTenderRequired === false
+  const recommended = sla.recommendedAction || {}
+  let actionHref = null
+  if (recommended.hrefPath === 'report') actionHref = `/admin/operations/report/${request.id}`
+  else if (recommended.hrefPath === 'delivery') actionHref = `/admin/operations/delivery/${request.id}`
+
   return {
     id: request.id,
     companyName: request.smeCompany || request.smeName || '',
@@ -95,7 +106,8 @@ function toOpsBoardRow(request) {
     assignedAt: request.representativeAssignedAt || request.acceptedAt || null,
     urgencyFlags,
     lastOpsUpdate: request.opsUpdatedAt || request.updatedAt || request.paidAt || request.createdAt,
-    nextAction: nextRequiredAction(stage),
+    nextAction: recommended.label || nextRequiredAction(stage),
+    actionHref,
     evidenceCount: Array.isArray(request.evidenceItems) ? request.evidenceItems.length : 0,
     reportReadyAt: request.reportReadyAt || null,
     reportStatus: request.reportStatus || request.reportStage || null,
@@ -105,10 +117,21 @@ function toOpsBoardRow(request) {
     reportDocxFileName: request.reportDocxFileName || null,
     clientDeliveryId: request.clientDeliveryId || null,
     clientDeliveryStatus: request.clientDeliveryStatus || null,
+    clientDeliveryProviderStatus: request.clientDeliveryProviderStatus || null,
     deliveredAt: request.deliveredAt || null,
+    completedAt: request.completedAt || null,
+    finalReportVersionId: request.finalReportVersionId || null,
+    finalDeliveryId: request.finalDeliveryId || null,
+    reopenedAt: request.reopenedAt || null,
     closedAt: request.closedAt || null,
     invoiceNumber: request.invoiceNumber || null,
     amountCents: request.paymentAmount || request.briefingPriceCents || null,
+    slaTrack: sla.track,
+    exceptionCode: sla.exceptionCode,
+    exceptionLabel: sla.exceptionLabel,
+    overdueLabel: sla.overdueLabel,
+    boardFilter: classifyBoardFilter(sla, request),
+    briefingAtIso: sla.briefingAt,
   }
 }
 
@@ -438,8 +461,8 @@ async function closeRequest(requestId, input = {}, adminUser = {}) {
   const request = await getRequest(requestId)
   if (!request) throw new Error('Attendance request not found')
   const stage = deriveManualOpsStage(request)
-  if (stage !== 'delivered' && stage !== 'closed') {
-    throw new Error('Request must be Delivered before closing')
+  if (stage !== 'delivered' && stage !== 'completed' && stage !== 'closed') {
+    throw new Error('Request must be Delivered or Completed before closing')
   }
   const now = new Date().toISOString()
   request.closedAt = now
@@ -456,16 +479,54 @@ async function closeRequest(requestId, input = {}, adminUser = {}) {
   return saved
 }
 
-async function listOpsBoard({ limit = 150 } = {}) {
+async function listOpsBoard({ limit = 150, filter = '' } = {}) {
   const storage = getStorage()
   const all = await storage.getAttendanceRequests()
-  const rows = all
+  let rows = all
     .map((r) => toOpsBoardRow(r))
     .filter(Boolean)
     .filter((r) => r.opsStage !== 'closed')
-    .sort((a, b) => String(b.lastOpsUpdate || '').localeCompare(String(a.lastOpsUpdate || '')))
-    .slice(0, Math.min(Math.max(Number(limit) || 150, 1), 300))
+
+  const f = String(filter || '').trim().toLowerCase()
+  if (f === 'needs_attention' || f === 'overdue') {
+    rows = rows.filter(
+      (r) =>
+        r.boardFilter === 'needs_attention' ||
+        r.slaTrack === 'OVERDUE' ||
+        r.slaTrack === 'BLOCKED' ||
+        Boolean(r.exceptionCode)
+    )
+  } else if (f === 'due_soon') {
+    rows = rows.filter((r) => r.boardFilter === 'due_soon' || r.slaTrack === 'DUE_SOON')
+  } else if (f === 'in_progress') {
+    rows = rows.filter((r) => r.boardFilter === 'in_progress')
+  } else if (f === 'ready_to_send') {
+    rows = rows.filter((r) => r.boardFilter === 'ready_to_send' || r.opsStage === 'report_ready')
+  } else if (f === 'delivery_issue') {
+    rows = rows.filter((r) => r.boardFilter === 'delivery_issue')
+  } else if (f === 'completed') {
+    rows = rows.filter((r) => r.opsStage === 'completed' || Boolean(r.completedAt))
+  } else if (f && Object.values(EXCEPTION_CODES).includes(f.toUpperCase())) {
+    rows = rows.filter((r) => r.exceptionCode === f.toUpperCase())
+  }
+
+  rows.sort((a, b) => {
+    const rank = { BLOCKED: 0, OVERDUE: 1, DUE_SOON: 2, ON_TRACK: 3 }
+    const ra = rank[a.slaTrack] ?? 9
+    const rb = rank[b.slaTrack] ?? 9
+    if (ra !== rb) return ra - rb
+    return String(b.lastOpsUpdate || '').localeCompare(String(a.lastOpsUpdate || ''))
+  })
+
+  return rows.slice(0, Math.min(Math.max(Number(limit) || 150, 1), 300))
+}
+
+/** Derived exception queue — no duplicate persistence on page load. */
+async function listExceptionQueue({ limit = 100 } = {}) {
+  const rows = await listOpsBoard({ limit: 300, filter: 'needs_attention' })
   return rows
+    .filter((r) => r.exceptionCode)
+    .slice(0, Math.min(Math.max(Number(limit) || 100, 1), 200))
 }
 
 /** Stamp paid → assignment_required after ITN (compat with paid_agent_required). */
@@ -488,6 +549,7 @@ module.exports = {
   markReportReady,
   markDelivered,
   closeRequest,
+  listExceptionQueue,
   opsStageAfterPayment,
   deriveManualOpsStage,
   normalizeOpsStage,
