@@ -14,7 +14,7 @@ import { isPublicApiRoute } from '../../lib/security/apiRoutePolicy'
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'phase15-assign-'))
 process.env.STORAGE_ADAPTER = 'json'
 process.env.JSON_DATA_DIR = tmpRoot
-process.env.NODE_ENV = 'test'
+;(process.env as { NODE_ENV?: string }).NODE_ENV = 'test'
 process.env.RESEND_API_KEY = ''
 
 vi.mock('../../backend/services/auditLogService', () => ({
