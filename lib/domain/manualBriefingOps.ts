@@ -14,6 +14,7 @@ export const OPS_LIFECYCLE_STAGES = [
   'payment_required',
   'paid',
   'assignment_required',
+  'assignment_pending',
   'assigned',
   'briefing_due',
   'attended',
@@ -36,6 +37,7 @@ export const OPS_LIFECYCLE_LABELS: Record<OpsLifecycleStage, string> = {
   payment_required: 'Payment Required',
   paid: 'Paid',
   assignment_required: 'Assignment Required',
+  assignment_pending: 'Awaiting Representative Acceptance',
   assigned: 'Assigned',
   briefing_due: 'Briefing Due',
   attended: 'Attended',
@@ -59,6 +61,8 @@ export const OPS_STAGE_ALIASES: Record<string, OpsLifecycleStage> = {
   paid_assignment_required: 'assignment_required',
   assignment_required: 'assignment_required',
   agent_sourcing: 'assignment_required',
+  assignment_pending: 'assignment_pending',
+  awaiting_acceptance: 'assignment_pending',
   agent_assigned: 'assigned',
   assigned: 'assigned',
   briefing_due: 'briefing_due',
@@ -109,6 +113,7 @@ type OpsInput = {
   assignedAgentId?: string | null
   agentId?: string | null
   representativeName?: string | null
+  assignmentSubstate?: string | null
   attended?: boolean | null
   attendedAt?: string | null
   completed?: boolean | null
@@ -132,7 +137,19 @@ type OpsInput = {
   now?: Date | null
 }
 
+const PENDING_ASSIGNMENT_SUBSTATES = new Set([
+  'dispatch_sent',
+  'candidate_selected',
+  'declined',
+  'expired',
+  'reassignment_required',
+])
+
 function hasRepresentative(request: OpsInput): boolean {
+  const sub = String(request.assignmentSubstate || '')
+    .trim()
+    .toLowerCase()
+  if (PENDING_ASSIGNMENT_SUBSTATES.has(sub)) return false
   return Boolean(
     request.assignedAgentId ||
       request.agentId ||
@@ -240,6 +257,16 @@ export function deriveManualOpsStage(request: OpsInput): OpsLifecycleStage {
   }
 
   if (payment === 'paid' || payment === 'not_required') {
+    const sub = String(request.assignmentSubstate || '')
+      .trim()
+      .toLowerCase()
+    if (
+      explicit === 'assignment_pending' ||
+      sub === 'dispatch_sent' ||
+      sub === 'candidate_selected'
+    ) {
+      return 'assignment_pending'
+    }
     if (explicit === 'paid') return 'paid'
     return 'assignment_required'
   }
@@ -255,6 +282,7 @@ export function manualOpsLabel(stage: string): string {
 export type UrgencyFlag =
   | 'payment_required'
   | 'assignment_required'
+  | 'assignment_pending'
   | 'briefing_due'
   | 'evidence_required'
   | 'report_required'
@@ -289,10 +317,11 @@ export function deriveUrgencyFlags(request: {
   const stage = deriveManualOpsStage({ ...request, now })
 
   if (stage === 'payment_required') flags.push('payment_required')
-  if (stage === 'assignment_required') {
+  if (stage === 'assignment_required' || stage === 'assignment_pending') {
     flags.push('assignment_required')
     flags.push('paid_no_agent')
   }
+  if (stage === 'assignment_pending') flags.push('assignment_pending')
   if (stage === 'briefing_due') flags.push('briefing_due')
   if (stage === 'evidence_required') flags.push('evidence_required')
   if (stage === 'report_in_progress' || stage === 'evidence_received') {
@@ -325,7 +354,9 @@ export function nextRequiredAction(stage: OpsLifecycleStage): string {
       return 'Collect payment / send invoice link'
     case 'paid':
     case 'assignment_required':
-      return 'Assign representative'
+      return 'Select representative and dispatch'
+    case 'assignment_pending':
+      return 'Await representative acceptance (or reassign)'
     case 'assigned':
       return 'Monitor briefing date'
     case 'briefing_due':
@@ -361,7 +392,8 @@ export function clampAgentPayoutCents(value: unknown): number | null {
 export const OPS_ADMIN_TRANSITIONS: Partial<Record<OpsLifecycleStage, OpsLifecycleStage[]>> = {
   payment_required: [],
   paid: ['assignment_required'],
-  assignment_required: ['assigned'],
+  assignment_required: ['assignment_pending', 'assigned'],
+  assignment_pending: ['assigned', 'assignment_required'],
   assigned: ['briefing_due', 'attended'],
   briefing_due: ['attended'],
   attended: ['evidence_required', 'evidence_received'],

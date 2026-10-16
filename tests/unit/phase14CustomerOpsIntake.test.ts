@@ -35,7 +35,7 @@ describe('Phase 14 customer booking status mapping', () => {
         paymentStatus: 'paid',
         assignedAgentId: 'agent-1',
       })
-    ).toBe('booking_confirmed')
+    ).toBe('representative_confirmed')
     expect(
       resolveCustomerBookingStatus({
         paymentStatus: 'paid',

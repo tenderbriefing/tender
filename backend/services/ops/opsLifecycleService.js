@@ -100,10 +100,20 @@ function toOpsBoardRow(request) {
     legacyOpsStage:
       stage === 'assignment_required' ? 'paid_agent_required' : request.opsStage || stage,
     representativeName:
-      request.representativeName || request.agentName || request.assignedAgentName || null,
-    representativePhone: request.representativePhone || null,
+      request.representativeName ||
+      request.assignmentCandidateName ||
+      request.agentName ||
+      request.assignedAgentName ||
+      null,
+    representativePhone: request.representativePhone || request.assignmentCandidatePhone || null,
+    representativeEmail: request.assignmentCandidateEmail || null,
     representativePayoutCents: request.agentPayoutCents || request.representativePayoutCents || null,
-    assignedAt: request.representativeAssignedAt || request.acceptedAt || null,
+    assignedAt: request.representativeAssignedAt || request.acceptedAt || request.assignmentAcceptedAt || null,
+    assignmentSubstate: request.assignmentSubstate || null,
+    assignmentAcceptanceDeadlineAt: request.assignmentAcceptanceDeadlineAt || null,
+    assignmentAcceptanceUrgency: request.assignmentAcceptanceUrgency || null,
+    assignmentDispatchedAt: request.assignmentDispatchedAt || null,
+    assignmentDispatchId: request.assignmentDispatchId || null,
     urgencyFlags,
     lastOpsUpdate: request.opsUpdatedAt || request.updatedAt || request.paidAt || request.createdAt,
     nextAction: recommended.label || nextRequiredAction(stage),
@@ -175,6 +185,13 @@ async function assignManualRepresentative(requestId, input = {}, adminUser = {})
   request.agentPayoutCents = payout
   request.representativePayoutCents = payout
   request.agentName = name
+  // Offline / force confirm — stamps accepted without token accept
+  request.assignmentSubstate = 'accepted'
+  request.assignmentAcceptedAt = now
+  request.assignmentCandidateName = name
+  request.assignmentCandidatePhone = phone || null
+  request.assignmentDispatchTokenHash = null
+  request.assignmentDispatchTokenId = null
   // Do NOT invent a YA user id — leave agentId null unless already set
   if (!request.assignedAgentId && !request.agentId) {
     request.manualRepresentative = true
@@ -190,8 +207,15 @@ async function assignManualRepresentative(requestId, input = {}, adminUser = {})
     actorEmail: adminUser.email || null,
     representativeName: name,
     payoutCents: payout,
+    forceAssign: true,
   })
   return saved
+}
+
+/** Phase 15 — dispatch for acceptance (preferred Ops path). */
+async function dispatchRepresentative(requestId, input = {}, adminUser = {}) {
+  const dispatch = require('./assignmentDispatchService')
+  return dispatch.dispatchRepresentative(requestId, input, adminUser)
 }
 
 async function markAttended(requestId, input = {}, adminUser = {}) {
@@ -481,7 +505,21 @@ async function closeRequest(requestId, input = {}, adminUser = {}) {
 
 async function listOpsBoard({ limit = 150, filter = '' } = {}) {
   const storage = getStorage()
-  const all = await storage.getAttendanceRequests()
+  let all = await storage.getAttendanceRequests()
+  // Phase 15: expire overdue dispatches from canonical timestamps (not email delivery).
+  try {
+    const dispatch = require('./assignmentDispatchService')
+    const { isDispatchPending, isAcceptanceExpired } = require('../../domain/assignmentDispatch')
+    const now = new Date()
+    for (const r of all) {
+      if (isDispatchPending(r) && isAcceptanceExpired(r, now)) {
+        await dispatch.expireDispatchIfNeeded(r.id, now)
+      }
+    }
+    all = await storage.getAttendanceRequests()
+  } catch {
+    /* non-fatal */
+  }
   let rows = all
     .map((r) => toOpsBoardRow(r))
     .filter(Boolean)
@@ -507,11 +545,45 @@ async function listOpsBoard({ limit = 150, filter = '' } = {}) {
   } else if (f === 'completed') {
     rows = rows.filter((r) => r.opsStage === 'completed' || Boolean(r.completedAt))
   } else if (f === 'paid_intake' || f === 'assignment_required') {
-    // Phase 14: paid bookings awaiting representative assignment
+    // Phase 14/15: paid bookings awaiting representative selection/dispatch
     rows = rows.filter(
       (r) =>
         (r.paymentStatus === 'paid' || r.paymentStatus === 'not_required') &&
-        (r.opsStage === 'assignment_required' || r.opsStage === 'paid_agent_required')
+        (r.opsStage === 'assignment_required' ||
+          r.opsStage === 'paid_agent_required' ||
+          r.assignmentSubstate === 'reassignment_required' ||
+          r.assignmentSubstate === 'declined' ||
+          r.assignmentSubstate === 'expired')
+    )
+  } else if (f === 'awaiting_acceptance' || f === 'assignment_pending') {
+    rows = rows.filter(
+      (r) =>
+        r.opsStage === 'assignment_pending' ||
+        r.assignmentSubstate === 'dispatch_sent' ||
+        r.assignmentSubstate === 'candidate_selected'
+    )
+  } else if (f === 'assigned') {
+    rows = rows.filter(
+      (r) =>
+        r.opsStage === 'assigned' ||
+        r.opsStage === 'briefing_due' ||
+        r.assignmentSubstate === 'accepted'
+    )
+  } else if (f === 'reassignment_required' || f === 'declined') {
+    rows = rows.filter(
+      (r) =>
+        r.assignmentSubstate === 'reassignment_required' ||
+        r.assignmentSubstate === 'declined' ||
+        r.assignmentSubstate === 'expired' ||
+        r.exceptionCode === 'REPRESENTATIVE_DECLINED' ||
+        r.exceptionCode === 'REPRESENTATIVE_RESPONSE_OVERDUE'
+    )
+  } else if (f === 'assignment_overdue') {
+    rows = rows.filter(
+      (r) =>
+        r.exceptionCode === 'REPRESENTATIVE_RESPONSE_OVERDUE' ||
+        r.exceptionCode === 'UNASSIGNED_APPROACHING_BRIEFING' ||
+        (r.opsStage === 'assignment_required' && r.slaTrack === 'OVERDUE')
     )
   } else if (f === 'unpaid') {
     rows = rows.filter(
@@ -555,6 +627,7 @@ module.exports = {
   toOpsBoardRow,
   listOpsBoard,
   assignManualRepresentative,
+  dispatchRepresentative,
   markAttended,
   overrideEvidenceRequirement,
   uploadEvidence,

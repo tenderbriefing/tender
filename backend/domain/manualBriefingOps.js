@@ -6,6 +6,7 @@ const OPS_LIFECYCLE_STAGES = [
   'payment_required',
   'paid',
   'assignment_required',
+  'assignment_pending',
   'assigned',
   'briefing_due',
   'attended',
@@ -24,6 +25,7 @@ const OPS_LIFECYCLE_LABELS = {
   payment_required: 'Payment Required',
   paid: 'Paid',
   assignment_required: 'Assignment Required',
+  assignment_pending: 'Awaiting Representative Acceptance',
   assigned: 'Assigned',
   briefing_due: 'Briefing Due',
   attended: 'Attended',
@@ -46,6 +48,8 @@ const OPS_STAGE_ALIASES = {
   paid_assignment_required: 'assignment_required',
   assignment_required: 'assignment_required',
   agent_sourcing: 'assignment_required',
+  assignment_pending: 'assignment_pending',
+  awaiting_acceptance: 'assignment_pending',
   agent_assigned: 'assigned',
   assigned: 'assigned',
   briefing_due: 'briefing_due',
@@ -84,11 +88,17 @@ const MAX_AGENT_PAYOUT_CENTS = 60000
 const MIN_AGENT_PAYOUT_CENTS = 10000
 
 function hasRepresentative(request) {
-  return Boolean(
-    request.assignedAgentId ||
-      request.agentId ||
-      String(request.representativeName || '').trim()
-  )
+  // Phase 15: pending/declined/expired dispatch must not count as assigned.
+  try {
+    const { hasConfirmedRepresentative } = require('./assignmentDispatch')
+    return hasConfirmedRepresentative(request)
+  } catch {
+    return Boolean(
+      request.assignedAgentId ||
+        request.agentId ||
+        String(request.representativeName || '').trim()
+    )
+  }
 }
 
 function evidenceCountOf(request) {
@@ -189,6 +199,16 @@ function deriveManualOpsStage(request = {}) {
   }
 
   if (payment === 'paid' || payment === 'not_required') {
+    const sub = String(request.assignmentSubstate || '')
+      .trim()
+      .toLowerCase()
+    if (
+      explicit === 'assignment_pending' ||
+      sub === 'dispatch_sent' ||
+      sub === 'candidate_selected'
+    ) {
+      return 'assignment_pending'
+    }
     if (explicit === 'paid') return 'paid'
     return 'assignment_required'
   }
@@ -207,10 +227,11 @@ function deriveUrgencyFlags(request = {}) {
   const stage = deriveManualOpsStage({ ...request, now })
 
   if (stage === 'payment_required') flags.push('payment_required')
-  if (stage === 'assignment_required') {
+  if (stage === 'assignment_required' || stage === 'assignment_pending') {
     flags.push('assignment_required')
     flags.push('paid_no_agent')
   }
+  if (stage === 'assignment_pending') flags.push('assignment_pending')
   if (stage === 'briefing_due') flags.push('briefing_due')
   if (stage === 'evidence_required') flags.push('evidence_required')
   if (stage === 'report_in_progress' || stage === 'evidence_received') {
@@ -243,7 +264,9 @@ function nextRequiredAction(stage) {
       return 'Collect payment / send invoice link'
     case 'paid':
     case 'assignment_required':
-      return 'Assign representative'
+      return 'Select representative and dispatch'
+    case 'assignment_pending':
+      return 'Await representative acceptance (or reassign)'
     case 'assigned':
       return 'Monitor briefing date'
     case 'briefing_due':
@@ -278,7 +301,8 @@ function clampAgentPayoutCents(value) {
 const OPS_ADMIN_TRANSITIONS = {
   payment_required: [],
   paid: ['assignment_required'],
-  assignment_required: ['assigned'],
+  assignment_required: ['assignment_pending', 'assigned'],
+  assignment_pending: ['assigned', 'assignment_required'],
   assigned: ['briefing_due', 'attended'],
   briefing_due: ['attended'],
   attended: ['evidence_required', 'evidence_received'],
