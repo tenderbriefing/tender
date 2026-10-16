@@ -119,6 +119,22 @@ describe('reportDraftBuilder', () => {
     expect(blob).not.toMatch(/bbbee level 1/)
   })
 
+  it('section edits do not introduce undefined keys (Firestore-safe)', () => {
+    const draft = buildReportDraft(baseRequest())
+    const next = applySectionEdits(draft, {
+      sections: [
+        {
+          id: 'executive_brief',
+          title: 'Executive Brief',
+          paragraphs: ['Edited only paragraphs.'],
+        },
+      ],
+    })
+    const section = next.sections.find((s: any) => s.id === 'executive_brief')
+    expect(Object.values(section).every((v) => v !== undefined)).toBe(true)
+    expect(JSON.stringify(section)).not.toMatch(/undefined/)
+  })
+
   it('preserves human edits and blocks silent regenerate overwrite', () => {
     const req = baseRequest()
     let draft = buildReportDraft(req)

@@ -335,16 +335,25 @@ function applySectionEdits(draft, edits = {}) {
     const idx = (next.sections || []).findIndex((s) => s.id === edit.id)
     if (idx < 0) continue
     const current = next.sections[idx]
-    next.sections[idx] = {
+    const nextSection = {
       ...current,
       title: edit.title != null ? String(edit.title) : current.title,
-      paragraphs: Array.isArray(edit.paragraphs) ? edit.paragraphs.map(String) : current.paragraphs,
-      bullets: Array.isArray(edit.bullets) ? edit.bullets.map(String) : current.bullets,
-      details: Array.isArray(edit.details) ? edit.details : current.details,
-      imageRefs: Array.isArray(edit.imageRefs) ? edit.imageRefs : current.imageRefs,
       humanEdited: true,
       locked: edit.locked === true ? true : current.locked,
     }
+    if (Array.isArray(edit.paragraphs)) nextSection.paragraphs = edit.paragraphs.map(String)
+    else if (current.paragraphs != null) nextSection.paragraphs = current.paragraphs
+    if (Array.isArray(edit.bullets)) nextSection.bullets = edit.bullets.map(String)
+    else if (current.bullets != null) nextSection.bullets = current.bullets
+    if (Array.isArray(edit.details)) nextSection.details = edit.details
+    else if (current.details != null) nextSection.details = current.details
+    if (Array.isArray(edit.imageRefs)) nextSection.imageRefs = edit.imageRefs
+    else if (current.imageRefs != null) nextSection.imageRefs = current.imageRefs
+    // Drop undefined keys so Firestore writes do not reject the document
+    for (const key of Object.keys(nextSection)) {
+      if (nextSection[key] === undefined) delete nextSection[key]
+    }
+    next.sections[idx] = nextSection
   }
   if (edits.cover && typeof edits.cover === 'object') {
     next.cover = { ...next.cover, ...edits.cover, humanEdited: true }

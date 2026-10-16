@@ -59,25 +59,50 @@ async function listVersions(requestId) {
   }
 }
 
+/** Firestore rejects `undefined` field values — strip recursively before write. */
+function stripUndefined(value) {
+  if (value === undefined) return undefined
+  if (value === null || typeof value !== 'object') return value
+  if (Buffer.isBuffer(value)) return value
+  if (Array.isArray(value)) {
+    return value.map((v) => stripUndefined(v)).filter((v) => v !== undefined)
+  }
+  const out = {}
+  for (const [k, v] of Object.entries(value)) {
+    if (v === undefined) continue
+    const cleaned = stripUndefined(v)
+    if (cleaned !== undefined) out[k] = cleaned
+  }
+  return out
+}
+
 async function saveVersion(versionDoc) {
   const storage = getStorage()
+  const cleanDoc = stripUndefined(versionDoc)
   try {
     const db = getFirebaseAdmin().firestore()
-    await db.collection(REPORTS_COLLECTION).doc(versionDoc.id).set(versionDoc, { merge: true })
+    await db.collection(REPORTS_COLLECTION).doc(cleanDoc.id).set(cleanDoc, { merge: true })
   } catch (err) {
-    // JSON adapter path — keep on request document
+    // Production Firestore must not silently lose edits — only fall back for JSON adapter.
+    if (String(process.env.STORAGE_ADAPTER || '').toLowerCase() === 'firestore') {
+      throw err
+    }
+    console.warn(
+      '[reportProduction] version write fell back to request embed:',
+      err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+    )
     const req = await getRequest(versionDoc.requestId)
     if (!req) throw err
     const versions = Array.isArray(req.opsReportVersions) ? [...req.opsReportVersions] : []
     const idx = versions.findIndex((v) => v.id === versionDoc.id)
-    if (idx >= 0) versions[idx] = versionDoc
-    else versions.push(versionDoc)
+    if (idx >= 0) versions[idx] = cleanDoc
+    else versions.push(cleanDoc)
     req.opsReportVersions = versions
     req.opsReportId = versionDoc.id
     req.opsReportVersion = versionDoc.version
     await storage.saveAttendanceRequest(req)
   }
-  return versionDoc
+  return cleanDoc
 }
 
 async function getVersion(reportId) {
