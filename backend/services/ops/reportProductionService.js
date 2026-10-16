@@ -385,8 +385,41 @@ async function approveFinalReport(requestId, adminUser = {}) {
   }
 }
 
-async function getSignedDownload(requestId, format, adminUser = {}) {
-  const { request, report } = await getActiveReport(requestId)
+/**
+ * Prefer an explicit version, then the locked final / prior-completion version,
+ * then the active draft. Keeps historical delivered PDFs downloadable after reopen.
+ */
+async function resolveDownloadableReport(requestId, opts = {}) {
+  const request = await opsLifecycle.getRequest(requestId)
+  if (!request) throw new Error('Attendance request not found')
+
+  const preferredIds = [
+    opts.versionId,
+    request.finalReportVersionId,
+    request.previousCompletion?.finalReportVersionId,
+    request.previousCompletion?.opsReportId,
+    request.opsReportId,
+  ].filter(Boolean)
+
+  for (const id of preferredIds) {
+    const version = await getVersion(id)
+    if (!version) continue
+    if (version.requestId && version.requestId !== requestId) continue
+    const hasArtifact =
+      Boolean(version.pdfStoragePath) ||
+      Boolean(version.docxStoragePath) ||
+      Boolean(version.localPdfBase64) ||
+      Boolean(version.localDocxBase64)
+    if (hasArtifact || String(id) === String(opts.versionId || '')) {
+      return { request, report: version }
+    }
+  }
+
+  return getActiveReport(requestId)
+}
+
+async function getSignedDownload(requestId, format, adminUser = {}, opts = {}) {
+  const { report } = await resolveDownloadableReport(requestId, opts)
   if (!report) throw new Error('Report not found')
   const isPdf = String(format || 'pdf').toLowerCase() !== 'docx'
   const storagePath = isPdf ? report.pdfStoragePath : report.docxStoragePath
@@ -398,6 +431,7 @@ async function getSignedDownload(requestId, format, adminUser = {}) {
       fileName,
       contentType: 'application/pdf',
       buffer: Buffer.from(report.localPdfBase64, 'base64'),
+      reportVersionId: report.id,
     }
   }
   if (report.localDocxBase64 && !isPdf) {
@@ -407,6 +441,7 @@ async function getSignedDownload(requestId, format, adminUser = {}) {
       contentType:
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       buffer: Buffer.from(report.localDocxBase64, 'base64'),
+      reportVersionId: report.id,
     }
   }
   if (!storagePath) throw new Error('Report file not generated yet — approve first')
@@ -426,7 +461,15 @@ async function getSignedDownload(requestId, format, adminUser = {}) {
     actorId: adminUser.uid || 'admin',
   })
 
-  return { mode: 'url', url, fileName, contentType: isPdf ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }
+  return {
+    mode: 'url',
+    url,
+    fileName,
+    contentType: isPdf
+      ? 'application/pdf'
+      : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    reportVersionId: report.id,
+  }
 }
 
 module.exports = {
@@ -436,6 +479,7 @@ module.exports = {
   regenerateReportSection,
   approveFinalReport,
   getSignedDownload,
+  resolveDownloadableReport,
   listVersions,
   getVersion,
   buildReportDraft,

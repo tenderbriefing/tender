@@ -16,13 +16,19 @@ export async function GET(
   if (!user) return unauthorizedResponse('Admin sign-in required')
   const params = await props.params
   const format = request.nextUrl.searchParams.get('format') || 'pdf'
+  const versionId = request.nextUrl.searchParams.get('versionId') || undefined
 
   try {
     const reports = reportService()
-    const file = await reports.getSignedDownload(params.id, format, {
-      uid: user.uid,
-      email: user.email,
-    })
+    const file = await reports.getSignedDownload(
+      params.id,
+      format,
+      {
+        uid: user.uid,
+        email: user.email,
+      },
+      { versionId }
+    )
 
     if (file.mode === 'buffer') {
       return new NextResponse(new Uint8Array(file.buffer), {

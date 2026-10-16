@@ -201,6 +201,27 @@ describe('reportProductionService', () => {
     expect(versions.find((v: any) => v.version === 2)?.approvalStatus).toBe('pending')
   })
 
+  it('downloads prior locked final after reopen clears active ready report', async () => {
+    await reports.generateDraft(requestId, { uid: 'admin-1' })
+    const approved = await reports.approveFinalReport(requestId, { uid: 'admin-1' })
+    const storage = require('../../backend/services/storageAdapter').getStorage()
+    const doc = await ops.getRequest(requestId)
+    doc.previousCompletion = {
+      finalReportVersionId: approved.report.id,
+      opsReportId: approved.report.id,
+      completedAt: new Date().toISOString(),
+    }
+    doc.finalReportVersionId = null
+    doc.reportStatus = 'in_progress'
+    doc.reportReadyAt = null
+    doc.opsReportId = 'orpt-draft-only'
+    await storage.saveAttendanceRequest(doc)
+
+    const file = await reports.getSignedDownload(requestId, 'pdf', { uid: 'admin-1' })
+    expect(file.reportVersionId).toBe(approved.report.id)
+    expect(file.mode === 'buffer' || file.mode === 'url').toBe(true)
+  })
+
   it('flags source conflicts on draft generation', async () => {
     const storage = require('../../backend/services/storageAdapter').getStorage()
     const doc = await ops.getRequest(requestId)
