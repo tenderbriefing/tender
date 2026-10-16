@@ -261,7 +261,11 @@ async function createRequest(payload, agents = []) {
   return { request, nearbyAgents }
 }
 
-async function assignRequestToAgent(requestId, agent, { byAdmin = false } = {}) {
+async function assignRequestToAgent(
+  requestId,
+  agent,
+  { byAdmin = false, agentPayoutCents = null } = {}
+) {
   const storage = getStorage()
   const request = await getRequestById(requestId)
 
@@ -293,6 +297,24 @@ async function assignRequestToAgent(requestId, agent, { byAdmin = false } = {}) 
   transitioned.agentReliabilityScore = agent.rating || null
   transitioned.acceptedAt = now
   if (byAdmin) transitioned.assignedByAdmin = true
+
+  // Per-assignment YA payout — never shown on SME invoice. Admin may override at assign.
+  if (byAdmin && agentPayoutCents != null) {
+    const { clampAgentPayoutCents } = require('../domain/manualBriefingOps')
+    const clamped = clampAgentPayoutCents(agentPayoutCents)
+    if (clamped == null) {
+      throw new Error(
+        'agentPayoutCents must be between R100.00 and R600.00 (10000–60000 cents)'
+      )
+    }
+    transitioned.agentPayoutCents = clamped
+    transitioned.agentPayoutCentsOverride = clamped
+    transitioned.payoutVersion = 'assignment-override'
+  } else if (transitioned.agentPayoutCents == null) {
+    const { resolveYouthAgentPayoutCents } = require('../constants/briefingPricing')
+    transitioned.agentPayoutCents = resolveYouthAgentPayoutCents(transitioned)
+  }
+  transitioned.opsStage = 'agent_assigned'
 
   // Stamp report SLA fields (briefing scheduled + 24h fallback when meetingEndedAt absent)
   try {

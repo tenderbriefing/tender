@@ -263,6 +263,8 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
       paymentFailureReason: null,
       invoiceStatus: 'PAID',
       availableForAssignment: true,
+      // Payment confirms booking — agent is NOT yet secured
+      opsStage: 'paid_agent_required',
       ...(authorizedLines ? { briefingLines: authorizedLines } : {}),
     },
   })

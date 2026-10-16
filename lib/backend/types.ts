@@ -69,7 +69,7 @@ export interface AgentAssignmentService {
   assignRequestToAgent: (
     requestId: string,
     agent: Record<string, unknown>,
-    options?: { byAdmin?: boolean }
+    options?: { byAdmin?: boolean; agentPayoutCents?: number | null }
   ) => Promise<AttendanceRequest>
   declineRequest: (
     requestId: string,
