@@ -68,7 +68,7 @@ async function main() {
   console.log('AUTH_OK', { uid: auth.uid, email: auth.email, base: BASE })
 
   // Create non-chargeable manual booking
-  const create = await fetchJson(`${BASE}/api/admin/manual-payment-requests`, {
+  const create = await fetchJson(`${BASE}/api/admin/manual-payments`, {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -90,9 +90,19 @@ async function main() {
     }),
   })
   check('create manual HTTP 200', create.status === 200, create.status)
-  const requestId = create.json?.data?.request?.id || create.json?.data?.id
-  check('booking created', Boolean(requestId), requestId)
+  const booking = create.json?.data?.booking || {}
+  const requestId =
+    create.json?.data?.bookingId ||
+    booking.id ||
+    create.json?.data?.request?.id ||
+    create.json?.data?.id
+  check('booking created', Boolean(requestId), requestId || JSON.stringify(create.json).slice(0, 200))
   if (!requestId) throw new Error('No request id')
+  check(
+    'amount R750',
+    booking.amountCents === 75000 || create.json?.data?.amountCents === 75000,
+    String(booking.amountCents || create.json?.data?.amountCents)
+  )
 
   // Simulate paid WITHOUT PayFast
   const { getFirebaseAdmin } = require('../backend/config/firebaseAdmin')
@@ -211,23 +221,34 @@ async function main() {
     approve.json?.data?.row?.opsStage === 'report_ready',
     approve.json?.data?.row?.opsStage
   )
+  // Re-load report after approval to verify persistence (not only approve response)
+  const after = await fetchJson(`${BASE}/api/admin/ops/${requestId}/report`, { headers })
   const stillEdited =
-    approve.json?.data?.report?.draft?.sections?.find((s) => s.id === 'executive_brief')
+    after.json?.data?.report?.draft?.sections?.find((s) => s.id === 'executive_brief')
       ?.paragraphs?.[0] || ''
-  check('edit survived approval', /PHASE11_HUMAN_EDIT/.test(stillEdited), stillEdited.slice(0, 80))
+  check(
+    'edit survived approval',
+    /PHASE11_HUMAN_EDIT/.test(stillEdited),
+    stillEdited.slice(0, 120)
+  )
+  check(
+    'humanEdited flag',
+    after.json?.data?.report?.draft?.sections?.find((s) => s.id === 'executive_brief')
+      ?.humanEdited === true,
+    String(
+      after.json?.data?.report?.draft?.sections?.find((s) => s.id === 'executive_brief')
+        ?.humanEdited
+    )
+  )
 
   // Download PDF + DOCX
   const pdf = await fetch(`${BASE}/api/admin/ops/${requestId}/report/download?format=pdf`, {
     headers: { Authorization: `Bearer ${auth.idToken}` },
   })
+  const pdfCt = pdf.headers.get('content-type') || ''
   const pdfBuf = Buffer.from(await pdf.arrayBuffer())
-  const pdfOk =
-    pdf.status === 200 &&
-    (pdfBuf.slice(0, 4).toString() === '%PDF' ||
-      (await pdf.clone?.().json?.().catch?.(async () => null)))
-  // If JSON signed URL mode:
   let pdfResult = 'buffer'
-  if (pdf.headers.get('content-type')?.includes('json')) {
+  if (pdfCt.includes('json')) {
     const j = JSON.parse(pdfBuf.toString('utf8'))
     check('pdf signed url', Boolean(j?.data?.url), j?.error)
     pdfResult = 'url'
