@@ -26,7 +26,11 @@ type OpsRow = {
   opsStageLabel: string
   representativeName?: string | null
   representativePhone?: string | null
+  representativeEmail?: string | null
   representativePayoutCents?: number | null
+  assignmentSubstate?: string | null
+  assignmentAcceptanceDeadlineAt?: string | null
+  assignmentAcceptanceUrgency?: string | null
   urgencyFlags?: string[]
   lastOpsUpdate?: string | null
   nextAction?: string
@@ -57,6 +61,10 @@ type OpsRow = {
 const BOARD_FILTERS = [
   { value: '', label: 'All active' },
   { value: 'paid_intake', label: 'Paid — needs assignment' },
+  { value: 'awaiting_acceptance', label: 'Awaiting representative acceptance' },
+  { value: 'assigned', label: 'Assigned' },
+  { value: 'reassignment_required', label: 'Declined / reassignment required' },
+  { value: 'assignment_overdue', label: 'Assignment overdue' },
   { value: 'unpaid', label: 'Unpaid' },
   { value: 'needs_attention', label: 'Needs attention' },
   { value: 'due_soon', label: 'Due soon' },
@@ -93,8 +101,10 @@ export default function OpsLifecycleBoard() {
   const [assignForm, setAssignForm] = useState({
     representativeName: '',
     representativePhone: '',
+    representativeEmail: '',
     agentPayoutCents: String(SUGGESTED_AGENT_PAYOUT_CENTS),
     internalNotes: '',
+    assignmentInstructions: '',
   })
   const [deliveryNote, setDeliveryNote] = useState('')
   const [evidenceCategory, setEvidenceCategory] = useState('attendance_proof')
@@ -142,9 +152,29 @@ export default function OpsLifecycleBoard() {
     }
   }
 
-  async function onAssign(e: FormEvent) {
+  async function onDispatch(e: FormEvent) {
     e.preventDefault()
     if (!selectedId) return
+    await runAction(selectedId, 'dispatch', {
+      representativeName: assignForm.representativeName,
+      representativePhone: assignForm.representativePhone,
+      representativeEmail: assignForm.representativeEmail,
+      agentPayoutCents: Number(assignForm.agentPayoutCents),
+      internalNotes: assignForm.internalNotes,
+      assignmentInstructions: assignForm.assignmentInstructions,
+    })
+  }
+
+  async function onForceAssign(e: FormEvent) {
+    e.preventDefault()
+    if (!selectedId) return
+    if (
+      !window.confirm(
+        'Force-assign without acceptance link? Use only when the representative confirmed offline (e.g. phone).'
+      )
+    ) {
+      return
+    }
     await runAction(selectedId, 'assign', {
       representativeName: assignForm.representativeName,
       representativePhone: assignForm.representativePhone,
@@ -454,10 +484,18 @@ export default function OpsLifecycleBoard() {
           </div>
 
           <div className="mt-5 grid gap-6 lg:grid-cols-2">
-            <form onSubmit={onAssign} className="space-y-3 rounded-lg border border-slate-200 p-4">
+            <form onSubmit={onDispatch} className="space-y-3 rounded-lg border border-slate-200 p-4">
               <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
-                Assign representative (no account required)
+                Dispatch representative (await acceptance)
               </h4>
+              {selected.assignmentSubstate ? (
+                <p className="text-xs text-slate-600">
+                  Dispatch state: <strong>{selected.assignmentSubstate}</strong>
+                  {selected.assignmentAcceptanceDeadlineAt
+                    ? ` · accept by ${new Date(selected.assignmentAcceptanceDeadlineAt).toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' })}`
+                    : ''}
+                </p>
+              ) : null}
               <label className="block text-sm">
                 Name *
                 <input
@@ -466,6 +504,18 @@ export default function OpsLifecycleBoard() {
                   value={assignForm.representativeName}
                   onChange={(e) =>
                     setAssignForm((f) => ({ ...f, representativeName: e.target.value }))
+                  }
+                />
+              </label>
+              <label className="block text-sm">
+                Email * (dispatch link)
+                <input
+                  required
+                  type="email"
+                  className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+                  value={assignForm.representativeEmail}
+                  onChange={(e) =>
+                    setAssignForm((f) => ({ ...f, representativeEmail: e.target.value }))
                   }
                 />
               </label>
@@ -480,7 +530,7 @@ export default function OpsLifecycleBoard() {
                 />
               </label>
               <label className="block text-sm">
-                Agreed payout (cents, internal only)
+                Agreed payout (cents, internal / representative only)
                 <input
                   type="number"
                   className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
@@ -489,9 +539,23 @@ export default function OpsLifecycleBoard() {
                     setAssignForm((f) => ({ ...f, agentPayoutCents: e.target.value }))
                   }
                 />
+                <span className="mt-1 block text-xs text-slate-500">
+                  Suggested R{(SUGGESTED_AGENT_PAYOUT_CENTS / 100).toFixed(0)} — editable R100–R600. Never shown to customers.
+                </span>
               </label>
               <label className="block text-sm">
-                Internal notes
+                Assignment instructions
+                <textarea
+                  rows={2}
+                  className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+                  value={assignForm.assignmentInstructions}
+                  onChange={(e) =>
+                    setAssignForm((f) => ({ ...f, assignmentInstructions: e.target.value }))
+                  }
+                />
+              </label>
+              <label className="block text-sm">
+                Internal notes (Ops only)
                 <textarea
                   rows={2}
                   className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
@@ -501,13 +565,23 @@ export default function OpsLifecycleBoard() {
                   }
                 />
               </label>
-              <button
-                type="submit"
-                disabled={busy}
-                className="rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
-              >
-                Assign / reassign
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  Dispatch for acceptance
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={onForceAssign}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 disabled:opacity-60"
+                >
+                  Force assign (offline confirm)
+                </button>
+              </div>
             </form>
 
             <div className="space-y-3 rounded-lg border border-slate-200 p-4">

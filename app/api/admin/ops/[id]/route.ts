@@ -34,8 +34,9 @@ export async function GET(
 
 /**
  * Admin lifecycle actions.
- * Body: { action: 'assign' | 'attend' | 'evidence_override' | 'report_in_progress' |
- *   'report_ready' | 'mark_delivered' | 'close', ...fields }
+ * Body: { action: 'dispatch' | 'assign' | 'attend' | 'evidence_override' |
+ *   'report_in_progress' | 'report_ready' | 'mark_delivered' | 'close', ...fields }
+ * Preferred: dispatch (await acceptance). assign = offline force-confirm.
  * NEVER sends client email on mark_delivered.
  */
 export async function POST(
@@ -54,7 +55,11 @@ export async function POST(
     let result: unknown
 
     switch (action) {
+      case 'dispatch':
+        result = await ops.dispatchRepresentative(params.id, body, adminUser)
+        break
       case 'assign':
+        // Offline force-confirm (phone accept) — stamps assigned immediately
         result = await ops.assignManualRepresentative(params.id, body, adminUser)
         break
       case 'attend':
@@ -99,6 +104,16 @@ export async function POST(
         ? (result as { request: unknown }).request
         : result
 
+    // Never leak dispatch tokens or payout internals beyond admin row projection
+    const safeResult =
+      result && typeof result === 'object'
+        ? (() => {
+            const clone = { ...(result as Record<string, unknown>) }
+            delete clone._testToken
+            return clone
+          })()
+        : result
+
     return NextResponse.json({
       success: true,
       data: {
@@ -107,8 +122,9 @@ export async function POST(
           action === 'mark_delivered'
             ? false
             : (result as { emailSent?: boolean })?.emailSent ?? null,
+        alreadyDispatched: (result as { alreadyDispatched?: boolean })?.alreadyDispatched ?? null,
         row: ops.toOpsBoardRow(requestDoc),
-        result,
+        result: safeResult,
       },
     })
   } catch (error) {

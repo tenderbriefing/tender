@@ -8,6 +8,7 @@ export type CustomerBookingStatusKey =
   | 'payment_processing'
   | 'booking_confirmed'
   | 'representative_arranging'
+  | 'representative_confirmed'
   | 'briefing_processing'
   | 'report_preparing'
   | 'report_ready'
@@ -18,8 +19,9 @@ export type CustomerBookingStatusKey =
 const LABELS: Record<CustomerBookingStatusKey, string> = {
   payment_required: 'Payment required',
   payment_processing: 'Payment processing',
-  booking_confirmed: 'Booking confirmed',
+  booking_confirmed: 'Payment received',
   representative_arranging: 'Representative being arranged',
+  representative_confirmed: 'Representative confirmed',
   briefing_processing: 'Briefing attended / processing report',
   report_preparing: 'Report being prepared',
   report_ready: 'Report ready / delivered',
@@ -83,9 +85,13 @@ export function resolveCustomerBookingStatus(request: {
     workflow === 'assigned' ||
     workflow === 'accepted'
   ) {
-    return 'booking_confirmed'
+    return 'representative_confirmed'
   }
-  if (stage === 'assignment_required' || stage === 'paid_agent_required') {
+  if (
+    stage === 'assignment_required' ||
+    stage === 'assignment_pending' ||
+    stage === 'paid_agent_required'
+  ) {
     return 'representative_arranging'
   }
   return 'booking_confirmed'

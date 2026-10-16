@@ -49,6 +49,9 @@ export function isPublicApiRoute(pathname: string, method: string): boolean {
   if (/^\/api\/pay\/[^/]+\/checkout$/.test(pathname) && m === 'POST') return true
   if (/^\/api\/pay\/[^/]+\/invoice$/.test(pathname) && m === 'GET') return true
 
+  // Phase 15 assignment accept/decline — scoped expiring token; handler verifies hash.
+  if (pathname === '/api/assignments/respond' && (m === 'GET' || m === 'POST')) return true
+
   return false
 }
 

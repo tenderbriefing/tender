@@ -16,6 +16,9 @@ const SLA_TRACK = Object.freeze({
 
 const EXCEPTION_CODES = Object.freeze({
   UNASSIGNED_APPROACHING_BRIEFING: 'UNASSIGNED_APPROACHING_BRIEFING',
+  REPRESENTATIVE_RESPONSE_PENDING: 'REPRESENTATIVE_RESPONSE_PENDING',
+  REPRESENTATIVE_DECLINED: 'REPRESENTATIVE_DECLINED',
+  REPRESENTATIVE_RESPONSE_OVERDUE: 'REPRESENTATIVE_RESPONSE_OVERDUE',
   BRIEFING_PASSED_NO_EVIDENCE: 'BRIEFING_PASSED_NO_EVIDENCE',
   EVIDENCE_RECEIVED_REPORT_PENDING: 'EVIDENCE_RECEIVED_REPORT_PENDING',
   REPORT_READY_NOT_SENT: 'REPORT_READY_NOT_SENT',
@@ -26,6 +29,9 @@ const EXCEPTION_CODES = Object.freeze({
 
 const EXCEPTION_LABELS = Object.freeze({
   UNASSIGNED_APPROACHING_BRIEFING: 'Unassigned — briefing approaching',
+  REPRESENTATIVE_RESPONSE_PENDING: 'Awaiting representative acceptance',
+  REPRESENTATIVE_DECLINED: 'Representative declined — reassign',
+  REPRESENTATIVE_RESPONSE_OVERDUE: 'Acceptance overdue — reassign',
   BRIEFING_PASSED_NO_EVIDENCE: 'Briefing passed — no evidence',
   EVIDENCE_RECEIVED_REPORT_PENDING: 'Evidence received — report pending',
   REPORT_READY_NOT_SENT: 'Report ready — not sent',
@@ -79,7 +85,12 @@ function formatDuration(ms) {
 function recommendedActionForException(code, stage) {
   switch (code) {
     case EXCEPTION_CODES.UNASSIGNED_APPROACHING_BRIEFING:
-      return { label: 'Assign representative', hrefAction: 'assign' }
+      return { label: 'Dispatch representative', hrefAction: 'dispatch' }
+    case EXCEPTION_CODES.REPRESENTATIVE_RESPONSE_PENDING:
+      return { label: 'Monitor acceptance / reassign', hrefAction: 'dispatch' }
+    case EXCEPTION_CODES.REPRESENTATIVE_DECLINED:
+    case EXCEPTION_CODES.REPRESENTATIVE_RESPONSE_OVERDUE:
+      return { label: 'Dispatch replacement', hrefAction: 'dispatch' }
     case EXCEPTION_CODES.BRIEFING_PASSED_NO_EVIDENCE:
       return { label: 'Upload evidence / mark attended', hrefAction: 'evidence' }
     case EXCEPTION_CODES.EVIDENCE_RECEIVED_REPORT_PENDING:
@@ -144,7 +155,52 @@ function evaluateOpsSla(request = {}, opts = {}) {
     })
   }
 
-  if (paid && stage === 'assignment_required' && briefingAt) {
+  const sub = String(request.assignmentSubstate || '')
+    .trim()
+    .toLowerCase()
+
+  // Phase 15 assignment exceptions (before generic unassigned approaching)
+  if (paid && (stage === 'assignment_pending' || sub === 'dispatch_sent' || sub === 'candidate_selected')) {
+    const deadlineRaw = request.assignmentAcceptanceDeadlineAt
+    const deadlineMs = deadlineRaw ? new Date(deadlineRaw).getTime() : NaN
+    if (Number.isFinite(deadlineMs) && now.getTime() >= deadlineMs) {
+      exceptions.push({
+        code: EXCEPTION_CODES.REPRESENTATIVE_RESPONSE_OVERDUE,
+        overdueMs: now.getTime() - deadlineMs,
+      })
+    } else {
+      exceptions.push({
+        code: EXCEPTION_CODES.REPRESENTATIVE_RESPONSE_PENDING,
+        overdueMs: Number.isFinite(deadlineMs) ? Math.max(0, deadlineMs - now.getTime()) : 0,
+        dueSoon: true,
+      })
+    }
+  }
+
+  if (
+    paid &&
+    (sub === 'declined' ||
+      sub === 'reassignment_required' ||
+      (stage === 'assignment_required' && request.assignmentDeclinedAt))
+  ) {
+    if (sub === 'declined' || request.assignmentDeclinedAt) {
+      exceptions.push({
+        code: EXCEPTION_CODES.REPRESENTATIVE_DECLINED,
+        overdueMs: ageMs(request.assignmentDeclinedAt || request.opsUpdatedAt, now) || 0,
+      })
+    } else if (sub === 'reassignment_required' || request.assignmentExpiredAt) {
+      exceptions.push({
+        code: EXCEPTION_CODES.REPRESENTATIVE_RESPONSE_OVERDUE,
+        overdueMs: ageMs(request.assignmentExpiredAt || request.opsUpdatedAt, now) || 0,
+      })
+    }
+  }
+
+  if (
+    paid &&
+    (stage === 'assignment_required' || stage === 'assignment_pending') &&
+    briefingAt
+  ) {
     const untilBriefing = briefingAt.getTime() - now.getTime()
     if (untilBriefing <= thresholds.ASSIGNMENT_APPROACHING_MS) {
       exceptions.push({
@@ -236,7 +292,10 @@ function evaluateOpsSla(request = {}, opts = {}) {
     EXCEPTION_CODES.DELIVERY_FAILED,
     EXCEPTION_CODES.STUCK_LIFECYCLE,
     EXCEPTION_CODES.BRIEFING_PASSED_NO_EVIDENCE,
+    EXCEPTION_CODES.REPRESENTATIVE_RESPONSE_OVERDUE,
+    EXCEPTION_CODES.REPRESENTATIVE_DECLINED,
     EXCEPTION_CODES.UNASSIGNED_APPROACHING_BRIEFING,
+    EXCEPTION_CODES.REPRESENTATIVE_RESPONSE_PENDING,
     EXCEPTION_CODES.REPORT_READY_NOT_SENT,
     EXCEPTION_CODES.EVIDENCE_RECEIVED_REPORT_PENDING,
   ]
