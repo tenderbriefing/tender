@@ -449,7 +449,7 @@ async function createManualPaymentRequest(input, adminUser = {}) {
   request.linkedSmeId = linkedSmeId
   request.documents = documents
   request.loaStatus = hasLoa ? 'received' : 'missing'
-  request.opsStage = 'awaiting_payment'
+  request.opsStage = 'payment_required'
 
   const storage = getStorage()
   await storage.saveAttendanceRequest(sanitizeFirestoreData(request))
