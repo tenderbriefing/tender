@@ -15,6 +15,7 @@ const {
   isAttendanceFree,
   BRIEFING_PRICE_CURRENCY,
 } = require('../../constants/briefingPricing')
+const { ensureInvoiceOnRequest } = require('./invoiceNumber')
 
 /** Server-authoritative fee — Free (R0) unless ATTENDANCE_FEE_CENTS overrides. */
 const EFFECTIVE_FEE_CENTS = resolveBriefingPriceCents()
@@ -426,7 +427,7 @@ async function markRequestCancelled(requestId) {
 }
 
 async function createCheckoutForExistingRequest(requestId, smeId, baseUrl) {
-  const request = await getRequestById(requestId)
+  let request = await getRequestById(requestId)
   if (!request) throw new Error('Attendance request not found')
   if (request.smeId !== smeId) throw new Error('This request does not belong to your account')
   if (request.paymentStatus === 'paid') {
@@ -452,6 +453,12 @@ async function createCheckoutForExistingRequest(requestId, smeId, baseUrl) {
     }
   }
 
+  // Phase 14: stamp invoice once if an older unpaid request lacks one (idempotent).
+  const invoiceStamp = ensureInvoiceOnRequest(request)
+  if (invoiceStamp.minted) {
+    request = await saveRequest({ id: requestId, ...invoiceStamp.request })
+  }
+
   const checkout = await createPayfastCheckoutForRequest(request, baseUrl)
   if (!checkout.ok) {
     return { ok: false, error: checkout.error, configured: checkout.configured !== false }
@@ -469,6 +476,9 @@ async function createCheckoutForExistingRequest(requestId, smeId, baseUrl) {
       paymentReference: paymentReferenceForRequest(requestId),
       payfastRedirectUrl: checkout.formAction,
       paymentFailureReason: null,
+      invoiceNumber: request.invoiceNumber || null,
+      invoiceIssuedAt: request.invoiceIssuedAt || null,
+      invoiceStatus: request.invoiceStatus || 'UNPAID',
     },
   })
 

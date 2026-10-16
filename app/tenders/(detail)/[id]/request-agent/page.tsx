@@ -15,7 +15,6 @@ import {
   MapPin,
   ShieldCheck,
   Sparkles,
-  User,
 } from 'lucide-react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
@@ -58,6 +57,9 @@ function RequestYouthAgentContent() {
   const [tenderLoading, setTenderLoading] = useState(true)
   const [notes, setNotes] = useState('')
   const [showNotes, setShowNotes] = useState(false)
+  const [representedEntity, setRepresentedEntity] = useState('')
+  const [contactPerson, setContactPerson] = useState('')
+  const [mobileNumber, setMobileNumber] = useState('')
   const [acknowledged, setAcknowledged] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -105,11 +107,28 @@ function RequestYouthAgentContent() {
       .finally(() => setTenderLoading(false))
   }, [id, user, userProfile, authLoading, inviteToken])
 
+  useEffect(() => {
+    if (!userProfile && !user) return
+    setContactPerson((prev) => prev || userProfile?.displayName || user?.displayName || '')
+    setRepresentedEntity((prev) => prev || userProfile?.companyName || '')
+    setMobileNumber(
+      (prev) =>
+        prev ||
+        userProfile?.whatsAppNumber ||
+        userProfile?.phoneNumber ||
+        ''
+    )
+  }, [user, userProfile])
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!user || !tender) return
     if (!acknowledged) {
       toast.error('Please confirm your submission responsibility')
+      return
+    }
+    if (!representedEntity.trim()) {
+      toast.error('Enter the bidder / company TenderBriefing must represent')
       return
     }
 
@@ -121,6 +140,11 @@ function RequestYouthAgentContent() {
         body: JSON.stringify({
           tenderId: tender.id,
           notes,
+          specialInstructions: notes,
+          contactPerson: contactPerson.trim() || userProfile?.displayName || user.displayName,
+          representedEntity: representedEntity.trim(),
+          smePhone: mobileNumber.trim() || undefined,
+          mobileNumber: mobileNumber.trim() || undefined,
           responsibilityAcknowledged: true,
           ...(inviteToken ? { invite: inviteToken } : {}),
         }),
@@ -226,11 +250,10 @@ function RequestYouthAgentContent() {
 
   const briefingCountdown = countdownLabel(tender.briefingDate)
   const closingCountdown = countdownLabel(tender.closingDate)
-  const contactPerson = userProfile?.displayName || user?.displayName || 'On profile'
   const companyName = userProfile?.companyName || 'Company name on profile'
-  const userPhone =
+  const profilePhone =
     userProfile?.whatsAppNumber || userProfile?.phoneNumber || null
-  const missingPhone = !userPhone
+  const missingPhone = !(mobileNumber || profilePhone)
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-gradient-to-b from-slate-50 via-white to-brand-50/30">
@@ -353,50 +376,51 @@ function RequestYouthAgentContent() {
             </section>
 
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-              <h2 className="text-lg font-bold text-brand-900">Your contact</h2>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="flex items-start gap-3 rounded-xl bg-slate-50/60 p-4">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-100">
-                    <User className="h-4 w-4" />
+              <h2 className="text-lg font-bold text-brand-900">Your booking details</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Confirm who we represent at the briefing. Account company:{' '}
+                <span className="font-semibold text-brand-900">{companyName}</span>
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm sm:col-span-2">
+                  <span className="font-medium text-slate-700">
+                    Bidder / company we must represent *
                   </span>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                      Contact person
-                    </p>
-                    <p className="mt-0.5 truncate text-sm font-semibold text-brand-900">
-                      {contactPerson}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 rounded-xl bg-slate-50/60 p-4">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-100">
-                    <Building2 className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                      Company
-                    </p>
-                    <p className="mt-0.5 truncate text-sm font-semibold text-brand-900">
-                      {companyName}
-                    </p>
-                  </div>
-                </div>
+                  <input
+                    required
+                    className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5"
+                    value={representedEntity}
+                    onChange={(e) => setRepresentedEntity(e.target.value)}
+                    placeholder="Company name on the attendance register"
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span className="font-medium text-slate-700">Contact person</span>
+                  <input
+                    className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5"
+                    value={contactPerson}
+                    onChange={(e) => setContactPerson(e.target.value)}
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span className="font-medium text-slate-700">Mobile / WhatsApp</span>
+                  <input
+                    className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5"
+                    value={mobileNumber}
+                    onChange={(e) => setMobileNumber(e.target.value)}
+                    placeholder="+27…"
+                  />
+                </label>
                 <div className="flex items-start gap-3 rounded-xl bg-slate-50/60 p-4 sm:col-span-2">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-100">
                     <FileText className="h-4 w-4" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                      Email · WhatsApp
+                      Email on account
                     </p>
                     <p className="mt-0.5 truncate text-sm font-semibold text-brand-900">
                       {user?.email}
-                      {userPhone && (
-                        <>
-                          <span className="text-slate-400"> · </span>
-                          <span>{userPhone}</span>
-                        </>
-                      )}
                     </p>
                   </div>
                 </div>
@@ -404,26 +428,10 @@ function RequestYouthAgentContent() {
 
               {missingPhone ? (
                 <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-                  Add a WhatsApp number so we can update you when an agent accepts.{' '}
-                  <Link
-                    href="/sme/onboarding"
-                    className="font-semibold underline underline-offset-2 hover:text-amber-700"
-                  >
-                    Update profile
-                  </Link>
-                  {' '}(optional — you can book now).
+                  A mobile number helps us confirm when a representative is assigned (optional — you
+                  can book now).
                 </p>
-              ) : (
-                <p className="mt-3 text-xs text-slate-500">
-                  Need to update these?{' '}
-                  <Link
-                    href="/sme/onboarding"
-                    className="font-semibold text-brand-800 hover:text-accent-600"
-                  >
-                    Edit SME profile
-                  </Link>
-                </p>
-              )}
+              ) : null}
             </section>
 
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">

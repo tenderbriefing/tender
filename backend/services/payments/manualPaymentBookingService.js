@@ -49,14 +49,7 @@ function generatePaymentToken() {
   return crypto.randomBytes(32).toString('base64url')
 }
 
-function nextInvoiceNumber() {
-  const d = new Date()
-  const y = d.getUTCFullYear()
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
-  const day = String(d.getUTCDate()).padStart(2, '0')
-  const suffix = crypto.randomBytes(3).toString('hex').toUpperCase()
-  return `TB-INV-${y}${m}${day}-${suffix}`
-}
+const { nextInvoiceNumber } = require('./invoiceNumber')
 
 function normalizeEmail(email) {
   return String(email || '')

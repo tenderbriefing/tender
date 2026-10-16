@@ -190,6 +190,13 @@ function buildAttendanceSummary(request = {}, phase = 'created') {
     request.assignedAgentId || request.agentId || '',
     128
   )
+  const assignmentStatus =
+    assignedAgentId || assignedAgentName
+      ? `Assigned${assignedAgentName ? `: ${assignedAgentName}` : ''}`
+      : phase === 'paid'
+        ? 'Unassigned — assignment required'
+        : 'Awaiting payment'
+
   return {
     kind: 'attendance',
     eventType,
@@ -198,6 +205,13 @@ function buildAttendanceSummary(request = {}, phase = 'created') {
     smeName: sliceStr(request.smeName || request.smeCompany || 'SME'),
     smeCompany: sliceStr(request.smeCompany || ''),
     smeEmail: sliceStr(request.smeEmail || ''),
+    contactPerson: sliceStr(request.contactPerson || request.smeName || ''),
+    representedEntity: sliceStr(
+      request.representedEntity ||
+        request.registerAttendOnBehalfOf ||
+        request.smeCompany ||
+        ''
+    ),
     tenderTitle: sliceStr(request.tenderTitle || 'Untitled tender'),
     tenderNumber: sliceStr(request.tenderNumber || ''),
     briefingDate: sliceStr(request.briefingDate || ''),
@@ -212,10 +226,12 @@ function buildAttendanceSummary(request = {}, phase = 'created') {
       request.paymentReference || request.payfastPaymentId || request.pfPaymentId || '',
       128
     ),
+    invoiceNumber: sliceStr(request.invoiceNumber || '', 64),
     feeCents,
     feeLabel: formatFee(feeCents, request.currency || 'ZAR'),
     assignedAgentName,
     assignedAgentId,
+    assignmentStatus,
     timestamp,
     adminPath,
     adminUrl: `${baseUrl()}${adminPath}`,
@@ -280,30 +296,41 @@ function buildEmailTemplate(summary) {
   if (summary.phase === 'paid') {
     const amountPart =
       summary.feeLabel && summary.feeLabel !== 'n/a' ? summary.feeLabel : 'amount unresolved'
-    const subject = `Payment Received — ${amountPart} — TenderBriefing`.slice(0, 180)
+    const subject = `NEW PAID BRIEFING REQUEST — ${amountPart} — TenderBriefing`.slice(0, 180)
+    const briefingBits = [summary.briefingDate, summary.briefingTime, summary.briefingVenue]
+      .filter(Boolean)
+      .join(' · ')
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;">
         <div style="background:#0F1E3D;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0;">
-          <h1 style="margin:0;font-size:18px;">Payment received</h1>
+          <h1 style="margin:0;font-size:18px;">NEW PAID BRIEFING REQUEST</h1>
         </div>
         <div style="border:1px solid #e2e8f0;border-top:none;padding:20px;border-radius:0 0 8px 8px;color:#334155;">
-          <p style="margin:0 0 10px;"><strong>SME:</strong> ${escapeHtml(summary.smeName)}${
+          <p style="margin:0 0 10px;"><strong>Request ID:</strong> ${escapeHtml(summary.requestId)}</p>
+          <p style="margin:0 0 10px;"><strong>Customer:</strong> ${escapeHtml(summary.smeName)}${
             summary.smeCompany && summary.smeCompany !== summary.smeName
               ? ` (${escapeHtml(summary.smeCompany)})`
               : ''
           }</p>
-          ${optionalHtml('SME email', summary.smeEmail)}
+          ${optionalHtml('Contact', summary.contactPerson)}
+          ${optionalHtml('Customer email', summary.smeEmail)}
+          ${optionalHtml('Bidder / represented', summary.representedEntity)}
           <p style="margin:0 0 10px;"><strong>Tender:</strong> ${escapeHtml(summary.tenderTitle)}</p>
-          ${optionalHtml('Ref', summary.tenderNumber)}
+          ${optionalHtml('RFQ / tender ref', summary.tenderNumber)}
+          ${optionalHtml('Briefing', briefingBits)}
           <p style="margin:0 0 10px;"><strong>Amount:</strong> ${escapeHtml(summary.feeLabel)}</p>
           <p style="margin:0 0 10px;"><strong>Payment status:</strong> ${escapeHtml(summary.paymentStatus)}</p>
+          ${optionalHtml('Invoice', summary.invoiceNumber)}
           ${optionalHtml('Payment / reference ID', summary.paymentReference)}
-          <p style="margin:0 0 10px;"><strong>Booking ID:</strong> ${escapeHtml(summary.requestId)}</p>
+          <p style="margin:0 0 10px;"><strong>Assignment:</strong> ${escapeHtml(summary.assignmentStatus || 'Unassigned')}</p>
           <p style="margin:0 0 10px;"><strong>When:</strong> ${escapeHtml(summary.timestamp)}</p>
           <p style="margin:16px 0 10px;">
-            <a href="${escapeHtml(summary.founderUrl)}" style="display:inline-block;background:#0F1E3D;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:600;">
-              Open briefing
+            <a href="${escapeHtml(summary.adminUrl)}" style="display:inline-block;background:#0F1E3D;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:600;">
+              Open Operations Board
             </a>
+          </p>
+          <p style="margin:0;font-size:13px;color:#64748b;">
+            Founder: <a href="${escapeHtml(summary.founderUrl)}">${escapeHtml(summary.founderUrl)}</a>
           </p>
         </div>
       </div>
@@ -311,15 +338,22 @@ function buildEmailTemplate(summary) {
     const text = [
       subject,
       '',
-      `SME: ${summary.smeName}${summary.smeCompany ? ` (${summary.smeCompany})` : ''}`,
-      optionalLine('SME email', summary.smeEmail),
+      'NEW PAID BRIEFING REQUEST',
+      `Request ID: ${summary.requestId}`,
+      `Customer: ${summary.smeName}${summary.smeCompany ? ` (${summary.smeCompany})` : ''}`,
+      optionalLine('Contact', summary.contactPerson),
+      optionalLine('Customer email', summary.smeEmail),
+      optionalLine('Bidder / represented', summary.representedEntity),
       `Tender: ${summary.tenderTitle}`,
-      optionalLine('Ref', summary.tenderNumber),
+      optionalLine('RFQ / tender ref', summary.tenderNumber),
+      optionalLine('Briefing', briefingBits),
       `Amount: ${summary.feeLabel}`,
       `Payment status: ${summary.paymentStatus}`,
+      optionalLine('Invoice', summary.invoiceNumber),
       optionalLine('Payment / reference ID', summary.paymentReference),
-      `Booking ID: ${summary.requestId}`,
+      `Assignment: ${summary.assignmentStatus || 'Unassigned'}`,
       `When: ${summary.timestamp}`,
+      `Operations: ${summary.adminUrl}`,
       `Founder: ${summary.founderUrl}`,
     ]
       .filter(Boolean)

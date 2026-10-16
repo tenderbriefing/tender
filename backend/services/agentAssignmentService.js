@@ -16,6 +16,7 @@ const {
   applyWorkflowTransition,
   isDispatchablePayment,
 } = require('./domain/lifecycleEnforcement')
+const { ensureInvoiceOnRequest } = require('./payments/invoiceNumber')
 
 const DEFAULT_RADIUS_KM = 50
 
@@ -93,7 +94,17 @@ function createAttendanceRequest(payload, options = {}) {
         }
       : defaultPaymentFields(id)
 
-  return {
+  const contactPerson = String(
+    safePayload.contactPerson || safePayload.smeName || ''
+  ).trim()
+  const representedEntity = String(
+    safePayload.representedEntity ||
+      safePayload.registerAttendOnBehalfOf ||
+      safePayload.smeCompany ||
+      ''
+  ).trim()
+
+  const draft = {
     tenderId: safePayload.tenderId,
     tenderNumber: safePayload.tenderNumber || '',
     tenderTitle: safePayload.tenderTitle || '',
@@ -110,6 +121,8 @@ function createAttendanceRequest(payload, options = {}) {
     ...safePayload,
     ...paymentDefaults,
     id,
+    contactPerson,
+    representedEntity,
     status: 'pending',
     agentId: null,
     assignedAgentId: null,
@@ -119,11 +132,16 @@ function createAttendanceRequest(payload, options = {}) {
     radiusKm: safePayload.radiusKm || DEFAULT_RADIUS_KM,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    notes: safePayload.notes || '',
+    notes: safePayload.notes || safePayload.specialInstructions || '',
     responsibilityAcknowledged: safePayload.responsibilityAcknowledged === true,
     notifiedAgents: [],
     declines: [],
+    // Phase 14: unpaid catalogue bookings still surface as payment_required on Ops Board
+    opsStage: paymentDefaults.paymentStatus === 'not_required' ? null : 'payment_required',
   }
+
+  // Idempotent commercial invoice stamp (shared with manual bookings).
+  return ensureInvoiceOnRequest(draft).request
 }
 
 const ACTIVE_REQUEST_STATUSES = new Set(['pending', 'assigned', 'accepted'])

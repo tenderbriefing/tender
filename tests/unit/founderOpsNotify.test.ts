@@ -102,14 +102,15 @@ describe('founderOpsNotificationService helpers', () => {
     const paid = notifyService.buildAttendanceSummary(
       sampleRequest({
         paymentStatus: 'paid',
-        paymentAmount: 34900,
+        paymentAmount: 75000,
+        briefingPriceCents: 75000,
         paymentReference: 'ATT-req-abc123',
         paidAt: '2026-08-06T18:05:00.000Z',
       }),
       'paid'
     )
     expect(paid.eventType).toBe(notifyService.EVENT_TYPES.PAYMENT_CONFIRMED)
-    expect(paid.feeLabel).toBe('R349.00')
+    expect(paid.feeLabel).toBe('R750.00')
     expect(paid.paymentReference).toBe('ATT-req-abc123')
   })
 
@@ -131,11 +132,15 @@ describe('founderOpsNotificationService helpers', () => {
 
     const paid = notifyService.buildEmailTemplate(
       notifyService.buildAttendanceSummary(
-        sampleRequest({ paymentStatus: 'paid', paymentAmount: 34900 }),
+        sampleRequest({
+          paymentStatus: 'paid',
+          paymentAmount: 75000,
+          briefingPriceCents: 75000,
+        }),
         'paid'
       )
     )
-    expect(paid.subject).toBe('Payment Received — R349.00 — TenderBriefing')
+    expect(paid.subject).toBe('NEW PAID BRIEFING REQUEST — R750.00 — TenderBriefing')
   })
 })
 
@@ -230,7 +235,8 @@ describe('notifyUserRegistered / notifyAttendance* / sendFounderOperationalNotif
     const result = await notifyService.notifyAttendanceRequestPaid(
       sampleRequest({
         paymentStatus: 'paid',
-        paymentAmount: 34900,
+        paymentAmount: 75000,
+        briefingPriceCents: 75000,
         paymentReference: 'ATT-req-abc123',
         paidAt: '2026-08-06T18:05:00.000Z',
       }),
@@ -246,8 +252,11 @@ describe('notifyUserRegistered / notifyAttendance* / sendFounderOperationalNotif
     expect(result.notified).toBe(true)
     expect(result.eventType).toBe('PAYMENT_CONFIRMED')
     expect(send).toHaveBeenCalledTimes(1)
-    expect(send.mock.calls[0][0].subject).toBe('Payment Received — R349.00 — TenderBriefing')
+    expect(send.mock.calls[0][0].subject).toBe(
+      'NEW PAID BRIEFING REQUEST — R750.00 — TenderBriefing'
+    )
     expect(send.mock.calls[0][0].text).toContain('ATT-req-abc123')
+    expect(send.mock.calls[0][0].text).toMatch(/NEW PAID BRIEFING REQUEST/)
     expect(send.mock.calls[0][0].headers['X-Entity-Ref-ID']).toBe(
       'attendance-request:req-abc123:paid'
     )
