@@ -73,7 +73,8 @@ const nextConfig = {
   },
 
   // Next 15: renamed from experimental.serverComponentsExternalPackages
-  serverExternalPackages: ['firebase-admin'],
+  // docx uses dynamic requires that webpack cannot statically analyse
+  serverExternalPackages: ['firebase-admin', 'docx'],
 
   experimental: {
 
