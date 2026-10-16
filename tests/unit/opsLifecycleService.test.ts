@@ -124,8 +124,21 @@ describe('opsLifecycleService', () => {
     doc = await ops.setReportInProgress(requestId, { uid: 'admin-1' })
     expect(ops.deriveManualOpsStage(doc)).toBe('report_in_progress')
 
-    doc = await ops.markReportReady(requestId, {}, { uid: 'admin-1' })
-    expect(ops.deriveManualOpsStage(doc)).toBe('report_ready')
+    // Phase 11 gate: cannot mark ready without Approve Final
+    await expect(ops.markReportReady(requestId, {}, { uid: 'admin-1' })).rejects.toThrow(
+      /Approve Final Report/i
+    )
+
+    for (const k of Object.keys(require.cache).filter(
+      (x) => x.includes('reportProductionService') || x.includes('reportDraftBuilder')
+    )) {
+      delete require.cache[k]
+    }
+    const reports = require('../../backend/services/ops/reportProductionService')
+    await reports.generateDraft(requestId, { uid: 'admin-1' })
+    const approved = await reports.approveFinalReport(requestId, { uid: 'admin-1' })
+    expect(approved.emailSent).toBe(false)
+    expect(ops.deriveManualOpsStage(approved.request)).toBe('report_ready')
 
     const delivered = await ops.markDelivered(
       requestId,
@@ -160,7 +173,14 @@ describe('opsLifecycleService', () => {
     )
     await ops.markAttended(requestId, {}, { uid: 'admin-1' })
     await ops.overrideEvidenceRequirement(requestId, { reason: 'x' }, { uid: 'admin-1' })
-    await ops.markReportReady(requestId, {}, { uid: 'admin-1' })
+    for (const k of Object.keys(require.cache).filter(
+      (x) => x.includes('reportProductionService') || x.includes('reportDraftBuilder')
+    )) {
+      delete require.cache[k]
+    }
+    const reports = require('../../backend/services/ops/reportProductionService')
+    await reports.generateDraft(requestId, { uid: 'admin-1' })
+    await reports.approveFinalReport(requestId, { uid: 'admin-1' })
     await expect(ops.closeRequest(requestId, {}, { uid: 'admin-1' })).rejects.toThrow(
       /Delivered/i
     )

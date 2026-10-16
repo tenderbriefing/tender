@@ -98,6 +98,11 @@ function toOpsBoardRow(request) {
     nextAction: nextRequiredAction(stage),
     evidenceCount: Array.isArray(request.evidenceItems) ? request.evidenceItems.length : 0,
     reportReadyAt: request.reportReadyAt || null,
+    reportStatus: request.reportStatus || request.reportStage || null,
+    opsReportId: request.opsReportId || null,
+    opsReportVersion: request.opsReportVersion || null,
+    reportFileName: request.reportFileName || null,
+    reportDocxFileName: request.reportDocxFileName || null,
     deliveredAt: request.deliveredAt || null,
     closedAt: request.closedAt || null,
     invoiceNumber: request.invoiceNumber || null,
@@ -344,16 +349,47 @@ async function setReportInProgress(requestId, adminUser = {}) {
   return saved
 }
 
+/**
+ * Stamp REPORT READY only after an approved report version exists.
+ * Prefer reportProductionService.approveFinalReport — this is a safety gate /
+ * idempotent stamp for already-approved production reports.
+ */
 async function markReportReady(requestId, input = {}, adminUser = {}) {
   const request = await getRequest(requestId)
   if (!request) throw new Error('Attendance request not found')
+
+  const alreadyReady =
+    request.reportStatus === 'ready' ||
+    request.reportStage === 'ready' ||
+    Boolean(request.reportReadyAt)
+  if (!alreadyReady) {
+    // Phase 11: cannot become REPORT READY without APPROVE FINAL
+    const reports = require('./reportProductionService')
+    const { report } = await reports.getActiveReport(requestId)
+    if (!report || report.approvalStatus !== 'approved') {
+      throw new Error(
+        'Approve Final Report is required before Report Ready — generate, review, then approve'
+      )
+    }
+  }
+
   const now = new Date().toISOString()
   request.reportStage = 'ready'
   request.reportStatus = 'ready'
-  request.reportReadyAt = now
-  request.reportReadyBy = adminUser.uid || null
-  request.reportFilePath = String(input.reportFilePath || request.reportFilePath || '').trim() || null
-  request.reportFileName = String(input.reportFileName || request.reportFileName || '').trim() || null
+  request.reportReadyAt = request.reportReadyAt || now
+  request.reportReadyBy = request.reportReadyBy || adminUser.uid || null
+  request.reportFilePath =
+    String(input.reportFilePath || request.reportFilePath || '').trim() || null
+  request.reportFileName =
+    String(input.reportFileName || request.reportFileName || '').trim() || null
+  request.reportDocxPath =
+    String(input.reportDocxPath || request.reportDocxPath || '').trim() ||
+    request.reportDocxPath ||
+    null
+  request.reportDocxFileName =
+    String(input.reportDocxFileName || request.reportDocxFileName || '').trim() ||
+    request.reportDocxFileName ||
+    null
   request.opsStage = 'report_ready'
   const saved = await saveRequest(request)
   await auditLogService.logEvent({

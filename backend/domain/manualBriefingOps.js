@@ -241,9 +241,9 @@ function nextRequiredAction(stage) {
     case 'evidence_required':
       return 'Upload attendance evidence'
     case 'evidence_received':
-      return 'Start / continue report'
+      return 'Generate report draft'
     case 'report_in_progress':
-      return 'Finish report and mark Report Ready'
+      return 'Review, edit, and Approve Final Report'
     case 'report_ready':
       return 'Email client manually, then Mark as Delivered'
     case 'delivered':

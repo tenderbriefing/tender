@@ -33,6 +33,11 @@ type OpsRow = {
   nextAction?: string
   evidenceCount?: number
   reportReadyAt?: string | null
+  reportStatus?: string | null
+  opsReportId?: string | null
+  opsReportVersion?: number | null
+  reportFileName?: string | null
+  reportDocxFileName?: string | null
   deliveredAt?: string | null
   invoiceNumber?: string | null
   amountCents?: number | null
@@ -120,6 +125,63 @@ export default function OpsLifecycleBoard() {
       agentPayoutCents: Number(assignForm.agentPayoutCents),
       internalNotes: assignForm.internalNotes,
     })
+  }
+
+  async function runReportAction(id: string, action: string, body: Record<string, unknown> = {}) {
+    setBusy(true)
+    try {
+      const res = await authFetch(`/api/admin/ops/${id}/report`, {
+        method: 'POST',
+        body: JSON.stringify({ action, ...body }),
+      })
+      const json = await res.json()
+      if (!json.success) {
+        toast.error(json.error || 'Report action failed')
+        return
+      }
+      if (action === 'approve' && json.data?.emailSent === false) {
+        toast.success('Report approved — PDF & DOCX ready (no email)')
+      } else if (action === 'generate') {
+        toast.success('Draft generated — review before approval')
+      } else {
+        toast.success(`${action.replace(/_/g, ' ')} OK`)
+      }
+      await load()
+    } catch {
+      toast.error('Report action failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function downloadReport(id: string, format: 'pdf' | 'docx') {
+    setBusy(true)
+    try {
+      const res = await authFetch(`/api/admin/ops/${id}/report/download?format=${format}`)
+      const ct = res.headers.get('content-type') || ''
+      if (ct.includes('application/json')) {
+        const json = await res.json()
+        if (!json.success) {
+          toast.error(json.error || 'Download failed')
+          return
+        }
+        if (json.data?.url) {
+          window.open(json.data.url, '_blank', 'noopener,noreferrer')
+          return
+        }
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = format === 'pdf' ? `report-${id}.pdf` : `report-${id}.docx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Download failed')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function onUploadEvidence(e: FormEvent<HTMLFormElement>) {
@@ -385,22 +447,83 @@ export default function OpsLifecycleBoard() {
                 >
                   Evidence override
                 </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
-                  onClick={() => runAction(selected.id, 'report_in_progress')}
-                >
-                  Report in progress
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
-                  onClick={() => runAction(selected.id, 'report_ready')}
-                >
-                  Report ready
-                </button>
+              </div>
+
+              <div className="space-y-2 border-t border-slate-100 pt-3">
+                <h5 className="text-sm font-medium text-slate-800">Client report production</h5>
+                <div className="flex flex-wrap gap-2">
+                  {(selected.opsStage === 'evidence_received' ||
+                    selected.opsStage === 'evidence_required' ||
+                    selected.opsStage === 'attended') &&
+                  !selected.opsReportId ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="rounded-lg bg-brand-700 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+                      onClick={() => runReportAction(selected.id, 'generate')}
+                    >
+                      Generate report
+                    </button>
+                  ) : null}
+                  {selected.opsReportId && selected.opsStage === 'report_in_progress' ? (
+                    <>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
+                        onClick={() => runReportAction(selected.id, 'generate')}
+                      >
+                        Continue / new draft version
+                      </button>
+                      <a
+                        href={`/admin/operations/report/${selected.id}`}
+                        className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-semibold text-white"
+                      >
+                        Review report
+                      </a>
+                    </>
+                  ) : null}
+                  {selected.opsStage === 'evidence_received' && selected.opsReportId ? (
+                    <a
+                      href={`/admin/operations/report/${selected.id}`}
+                      className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-semibold text-white"
+                    >
+                      Review report
+                    </a>
+                  ) : null}
+                  {selected.opsStage === 'report_ready' || selected.reportStatus === 'ready' ? (
+                    <>
+                      <span className="rounded bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-900">
+                        REPORT READY
+                      </span>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
+                        onClick={() => downloadReport(selected.id, 'pdf')}
+                      >
+                        Download PDF
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
+                        onClick={() => downloadReport(selected.id, 'docx')}
+                      >
+                        Download DOCX
+                      </button>
+                      <a
+                        href={`/admin/operations/report/${selected.id}`}
+                        className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
+                      >
+                        View report
+                      </a>
+                    </>
+                  ) : null}
+                </div>
+                <p className="text-xs text-slate-500">
+                  Approval generates PDF + DOCX. Founder emails the client outside the platform.
+                </p>
               </div>
 
               <form onSubmit={onUploadEvidence} className="space-y-2 border-t border-slate-100 pt-3">
