@@ -314,7 +314,7 @@ async function assignRequestToAgent(
     const { resolveYouthAgentPayoutCents } = require('../constants/briefingPricing')
     transitioned.agentPayoutCents = resolveYouthAgentPayoutCents(transitioned)
   }
-  transitioned.opsStage = 'agent_assigned'
+  transitioned.opsStage = 'assigned'
 
   // Stamp report SLA fields (briefing scheduled + 24h fallback when meetingEndedAt absent)
   try {

@@ -6,6 +6,7 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import OperationsDashboard from '@/components/operations/OperationsDashboard'
+import OpsLifecycleBoard from '@/components/operations/OpsLifecycleBoard'
 import ProcurementPageHeader from '@/components/procurement/ProcurementPageHeader'
 import { TrustStrip } from '@/components/procurement/TrustDisclaimer'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -42,10 +43,11 @@ export default function AdminOperationsPage() {
       <ProcurementPageHeader
         kicker="Administration"
         title="Operations centre"
-        description="Monitor attendance requests, agent assignments, briefing reports, and procurement sync activity across the platform."
+        description="Manage briefings from payment through manual report delivery. Representatives are assigned by admin — no Youth Agent marketplace."
         breadcrumb={{ label: 'Admin dashboard', href: '/admin/dashboard' }}
       />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6 lg:px-8">
+        <OpsLifecycleBoard />
         <OperationsDashboard />
       </main>
       <Footer />

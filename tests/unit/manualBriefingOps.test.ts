@@ -3,47 +3,89 @@ import {
   deriveManualOpsStage,
   deriveUrgencyFlags,
   clampAgentPayoutCents,
+  normalizeOpsStage,
   SUGGESTED_AGENT_PAYOUT_CENTS,
   MAX_AGENT_PAYOUT_CENTS,
+  manualOpsLabel,
 } from '@/lib/domain/manualBriefingOps'
 import { resolveYouthAgentPayoutCents, BRIEFING_PRICE_CENTS } from '@/lib/domain/briefingPricing'
 
-describe('manualBriefingOps', () => {
-  it('maps unpaid → Awaiting Payment', () => {
-    expect(deriveManualOpsStage({ paymentStatus: 'pending' })).toBe('awaiting_payment')
+describe('manualBriefingOps Phase 10', () => {
+  it('maps unpaid → payment_required', () => {
+    expect(deriveManualOpsStage({ paymentStatus: 'pending' })).toBe('payment_required')
   })
 
-  it('maps paid without agent → Paid — Agent Required (payment ≠ agent secured)', () => {
+  it('maps paid without representative → assignment_required', () => {
     expect(
       deriveManualOpsStage({
         paymentStatus: 'paid',
         status: 'pending',
       })
-    ).toBe('paid_agent_required')
+    ).toBe('assignment_required')
   })
 
-  it('maps assigned → Agent Assigned', () => {
+  it('normalizes legacy paid_agent_required → assignment_required', () => {
+    expect(normalizeOpsStage('paid_agent_required')).toBe('assignment_required')
+    expect(normalizeOpsStage('paid_assignment_required')).toBe('assignment_required')
+    expect(manualOpsLabel('paid_agent_required')).toBe('Assignment Required')
+    expect(
+      deriveManualOpsStage({
+        paymentStatus: 'paid',
+        opsStage: 'paid_agent_required',
+      })
+    ).toBe('assignment_required')
+  })
+
+  it('maps assigned representative → assigned', () => {
     expect(
       deriveManualOpsStage({
         paymentStatus: 'paid',
         status: 'assigned',
-        assignedAgentId: 'ya-1',
+        representativeName: 'Thabo Field',
       })
-    ).toBe('agent_assigned')
+    ).toBe('assigned')
   })
 
-  it('maps report approved → Report Ready (not auto-delivered)', () => {
+  it('maps report ready without auto-delivery', () => {
     expect(
       deriveManualOpsStage({
         paymentStatus: 'paid',
-        status: 'completed',
-        completed: true,
-        reportApprovedAt: '2026-10-16T00:00:00Z',
+        representativeName: 'Rep',
+        attended: true,
+        evidenceOverride: true,
+        reportReadyAt: '2026-10-16T00:00:00Z',
       })
     ).toBe('report_ready')
   })
 
-  it('flags paid-no-agent, missing LOA, venue, and 24h urgency', () => {
+  it('delivered does not imply closed', () => {
+    expect(
+      deriveManualOpsStage({
+        paymentStatus: 'paid',
+        deliveredAt: '2026-10-16T00:00:00Z',
+      })
+    ).toBe('delivered')
+    expect(
+      deriveManualOpsStage({
+        paymentStatus: 'paid',
+        deliveredAt: '2026-10-16T00:00:00Z',
+        closedAt: '2026-10-17T00:00:00Z',
+      })
+    ).toBe('closed')
+  })
+
+  it('attended without evidence → evidence_required', () => {
+    expect(
+      deriveManualOpsStage({
+        paymentStatus: 'paid',
+        representativeName: 'Rep',
+        attended: true,
+        evidenceItems: [],
+      })
+    ).toBe('evidence_required')
+  })
+
+  it('flags assignment / briefing / evidence / report exceptions', () => {
     const tomorrow = new Date()
     tomorrow.setHours(tomorrow.getHours() + 12)
     const date = tomorrow.toISOString().slice(0, 10)
@@ -53,13 +95,14 @@ describe('manualBriefingOps', () => {
       briefingVenue: '',
       documents: [{ kind: 'rfq' }],
     })
+    expect(flags).toContain('assignment_required')
     expect(flags).toContain('paid_no_agent')
     expect(flags).toContain('missing_loa')
     expect(flags).toContain('venue_unconfirmed')
     expect(flags).toContain('briefing_within_24h')
   })
 
-  it('clamps YA payout override into R100–R600 band', () => {
+  it('clamps payout override into R100–R600 band', () => {
     expect(clampAgentPayoutCents(40000)).toBe(40000)
     expect(clampAgentPayoutCents(SUGGESTED_AGENT_PAYOUT_CENTS)).toBe(40000)
     expect(clampAgentPayoutCents(MAX_AGENT_PAYOUT_CENTS)).toBe(60000)
@@ -67,7 +110,7 @@ describe('manualBriefingOps', () => {
     expect(clampAgentPayoutCents(70000)).toBeNull()
   })
 
-  it('resolveYouthAgentPayoutCents prefers assignment override without changing SME price', () => {
+  it('resolveYouthAgentPayoutCents prefers override without changing SME price', () => {
     expect(BRIEFING_PRICE_CENTS).toBe(75000)
     expect(resolveYouthAgentPayoutCents({ agentPayoutCents: 45000 })).toBe(45000)
     expect(resolveYouthAgentPayoutCents({})).toBeGreaterThan(0)
