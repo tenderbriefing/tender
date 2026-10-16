@@ -99,7 +99,7 @@ describe('manual briefing request extensions', () => {
     expect(req.briefingLines[0].province).toBe('Gauteng')
     expect(req.briefingLines[0].closingDate).toBe('2026-10-30')
     expect(req.briefingLines[0].contactEmail).toBe('buyer@cot.gov.za')
-    expect(req.opsStage).toBe('awaiting_payment')
+    expect(req.opsStage).toBe('payment_required')
     expect(result.paymentUrl).toMatch(/\/pay\//)
     expect(result.invoiceNumber).toMatch(/^TB-INV-/)
   })
@@ -129,7 +129,7 @@ describe('manual briefing request extensions', () => {
     expect(resolveRequestChargeCents(result.request)).toBe(300000)
 
     const admin = service.toAdminView(result.request)
-    expect(admin.opsStage).toBe('awaiting_payment')
+    expect(admin.opsStage).toBe('payment_required')
     expect(admin.urgencyFlags).toContain('missing_loa')
   })
 })
