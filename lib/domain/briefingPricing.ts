@@ -77,10 +77,33 @@ export function briefingPriceSnapshotFields() {
   }
 }
 
+/** Order-level snapshot for N briefings × unit price (server-calculated). */
+export function multiBriefingPriceSnapshotFields(briefingCount: number) {
+  const unit = resolveBriefingPriceCents()
+  const count = Math.max(1, Math.round(Number(briefingCount) || 1))
+  const total = count * unit
+  return {
+    unitPriceCents: unit,
+    briefingCount: count,
+    briefingPriceCents: total,
+    paymentAmount: total,
+    quotedFee: total,
+    currency: BRIEFING_PRICE_CURRENCY,
+    pricingVersion: PRICING_VERSION,
+  }
+}
+
 /** Founder-only live PayFast pipeline certification amount — never commercial price. */
 export const LIVE_CERTIFICATION_AMOUNT_CENTS = 7500
 export const LIVE_CERTIFICATION_PURPOSE = 'payfast_live_certification'
 export const LIVE_CERTIFICATION_SOURCE = 'payfast_live_certification'
+
+export type BriefingLineShape = {
+  tenderNumber?: string | null
+  tenderDescription?: string | null
+  description?: string | null
+  [key: string]: unknown
+}
 
 export type ChargeRequestShape = {
   paymentStatus?: string | null
@@ -93,6 +116,30 @@ export type ChargeRequestShape = {
   expectedAmountCents?: number | null
   certificationAmountCents?: number | null
   serverAuthorizedCertification?: boolean | null
+  /** Structured child briefing lines — never trust client quantity alone. */
+  briefingLines?: BriefingLineShape[] | null
+  briefingCount?: number | null
+}
+
+/**
+ * Count structured briefing lines on an order.
+ * Returns null when the document has no briefingLines array (legacy single-unit).
+ * Never trusts client-supplied briefingCount without matching lines.
+ */
+export function countStructuredBriefingLines(
+  request?: ChargeRequestShape | null
+): number | null {
+  if (!request || !Array.isArray(request.briefingLines)) return null
+  if (request.briefingLines.length < 1) return null
+  return request.briefingLines.length
+}
+
+/** TOTAL = briefingCount × unit price (server unit only). */
+export function chargeCentsForBriefingCount(briefingCount: number): number {
+  const unit = resolveBriefingPriceCents()
+  if (isAttendanceFree(unit)) return 0
+  const count = Math.max(0, Math.round(Number(briefingCount) || 0))
+  return count * unit
 }
 
 /**
@@ -115,9 +162,9 @@ export function resolveLiveCertificationChargeCents(
 
 /**
  * Resolve PayFast charge / ITN expected amount.
- * Unpaid documents never influence the payable amount — only paid (verified)
- * snapshots are trusted for historical accounting — except server-authorized
- * live-certification bookings which charge the locked certification amount.
+ * Unpaid fee snapshots are ignored — only structured briefingLines drive multi-briefing
+ * totals (count × unit). Paid snapshots are trusted for historical accounting.
+ * Server-authorized live-certification bookings charge the locked certification amount.
  */
 export function resolveRequestChargeCents(
   request?: ChargeRequestShape | null
@@ -137,5 +184,12 @@ export function resolveRequestChargeCents(
     const amount = Number(request.paymentAmount)
     if (Number.isFinite(amount) && amount > 0) return Math.round(amount)
   }
+
+  const lineCount = countStructuredBriefingLines(request)
+  if (lineCount != null) {
+    // Recalculate from stored lines × unit — ignore client/stored totals & quantity claims.
+    return chargeCentsForBriefingCount(lineCount)
+  }
+
   return canonical
 }

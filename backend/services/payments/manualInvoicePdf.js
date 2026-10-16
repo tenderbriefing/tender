@@ -1,7 +1,8 @@
 /**
  * TenderBriefing professional accounting-style payment invoice PDF.
  * Not a tax invoice — TenderBriefing is not VAT registered.
- * Redesign-only: does not touch PayFast / ITN / pricing logic.
+ * Branding: clean mark icon + PDF text for wordmark/contact (never a composite screenshot).
+ * Pricing: resolveRequestChargeCents only — no client amounts.
  */
 const { PDFDocument, StandardFonts, rgb, PDFString, PDFName } = require('pdf-lib')
 const fs = require('fs')
@@ -16,6 +17,8 @@ const PAGE_WIDTH = 595.28
 const PAGE_HEIGHT = 841.89
 const MARGIN = 48
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2
+const FOOTER_RESERVE = 56
+const PAGE_BOTTOM = MARGIN + FOOTER_RESERVE
 
 /** Canonical supplier profile (mirrors lib/contact.ts — JS backend). */
 const SUPPLIER = {
@@ -48,12 +51,17 @@ const payBtn = rgb(0.05, 0.22, 0.38)
 const white = rgb(1, 1, 1)
 const paidGreen = rgb(0.12, 0.45, 0.28)
 const unpaidAmber = rgb(0.55, 0.35, 0.05)
+const markBg = rgb(0.04, 0.04, 0.05)
 
-function loadLogoBytes() {
+/**
+ * Prefer the clean icon mark only.
+ * Never embed the full composite wordmark/brand board as the invoice logo.
+ */
+function loadMarkLogoBytes() {
   const candidates = [
     path.join(process.cwd(), 'public', 'brand', 'mark.png'),
-    path.join(process.cwd(), 'public', 'brand', 'logo.png'),
-    path.join(process.cwd(), 'public', 'logo.png'),
+    // Fallback only if mark is missing — still avoid hires composite boards.
+    path.join(process.cwd(), 'public', 'brand', 'mark.png'),
   ]
   for (const p of candidates) {
     try {
@@ -88,13 +96,19 @@ function formatDisplayDate(value) {
 }
 
 function paymentStatusLabel(request) {
-  return request.paymentStatus === 'paid' ? 'PAID' : 'UNPAID'
+  if (request.paymentStatus === 'paid') return 'PAID'
+  if (request.paymentStatus === 'cancelled') return 'CANCELLED'
+  return 'PENDING'
 }
 
-function moneyLabel(cents) {
-  return formatBriefingPriceZar(
-    Number.isFinite(cents) ? cents : BRIEFING_PRICE_CENTS
-  )
+/** Invoice display money — thousands separator for readability (R3,000.00). */
+function invoiceMoneyLabel(cents) {
+  const n = Number.isFinite(cents) ? cents : BRIEFING_PRICE_CENTS
+  if (!Number.isFinite(n) || n <= 0) return formatBriefingPriceZar(0)
+  const rand = (n / 100).toFixed(2)
+  const [whole, frac] = rand.split('.')
+  const withSep = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  return `R${withSep}.${frac}`
 }
 
 function drawRightText(page, text, rightX, y, size, font, color) {
@@ -170,6 +184,35 @@ function addLinkAnnotation(pdf, page, { x, y, width, height, url }) {
   }
 }
 
+function drawPageFooter(page, font, pageIndex, pageCount) {
+  const footerY = MARGIN
+  page.drawLine({
+    start: { x: MARGIN, y: footerY + 26 },
+    end: { x: PAGE_WIDTH - MARGIN, y: footerY + 26 },
+    thickness: 0.5,
+    color: rule,
+  })
+  page.drawText('Thank you for your business.', {
+    x: MARGIN,
+    y: footerY + 12,
+    size: 8,
+    font,
+    color: muted,
+  })
+  const right = `Page ${pageIndex + 1} of ${pageCount}`
+  drawRightText(page, right, PAGE_WIDTH - MARGIN, footerY + 12, 8, font, muted)
+  page.drawText(
+    `${SUPPLIER.displayName}  ·  ${SUPPLIER.website}  ·  ${SUPPLIER.email}`,
+    {
+      x: MARGIN,
+      y: footerY,
+      size: 8,
+      font,
+      color: muted,
+    }
+  )
+}
+
 /**
  * @param {object} request - attendance request (manual booking)
  * @param {{ paymentUrl?: string }} [opts]
@@ -177,13 +220,13 @@ function addLinkAnnotation(pdf, page, { x, y, width, height, url }) {
  */
 async function renderManualInvoicePdf(request, opts = {}) {
   const pdf = await PDFDocument.create()
-  const page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT])
   const font = await pdf.embedFont(StandardFonts.Helvetica)
   const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold)
 
   const cents = resolveRequestChargeCents(request)
-  const amountLabel = moneyLabel(cents)
-  const zeroLabel = moneyLabel(0)
+  const amountLabel = invoiceMoneyLabel(cents)
+  const unitLabel = invoiceMoneyLabel(BRIEFING_PRICE_CENTS)
+  const zeroLabel = invoiceMoneyLabel(0)
   const status = paymentStatusLabel(request)
   const isPaid = status === 'PAID'
   const invoiceNumber = request.invoiceNumber || '—'
@@ -208,55 +251,96 @@ async function renderManualInvoicePdf(request, opts = {}) {
         : '') ||
       ''
   ).trim()
+  const customerPhone = String(request.smePhone || '').trim()
 
   const tenderRef = String(request.tenderNumber || '').trim()
   const briefingDate = formatDisplayDate(request.briefingDate)
   const briefingTime = String(request.briefingTime || '').trim() || null
   const briefingVenue = String(request.briefingVenue || '').trim() || null
-  const bookingRef = String(request.id || '').trim() || null
+  const structuredLines = Array.isArray(request.briefingLines)
+    ? request.briefingLines
+    : []
+  const briefingCount =
+    structuredLines.length > 0
+      ? structuredLines.length
+      : Math.max(1, Math.round(cents / BRIEFING_PRICE_CENTS) || 1)
 
+  let markImage = null
+  const markBytes = loadMarkLogoBytes()
+  if (markBytes) {
+    try {
+      markImage = await pdf.embedPng(markBytes)
+    } catch {
+      markImage = null
+    }
+  }
+
+  const pages = []
+  function addPage() {
+    const page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT])
+    pages.push(page)
+    return page
+  }
+
+  let page = addPage()
   let y = PAGE_HEIGHT - MARGIN
 
-  // ── Header: supplier left / INVOICE meta right ─────────────────────────
-  const logoBytes = loadLogoBytes()
-  const logoBox = 40
+  async function ensureSpace(needed) {
+    if (y - needed >= PAGE_BOTTOM) return
+    page = addPage()
+    y = PAGE_HEIGHT - MARGIN
+    // Continuation header
+    page.drawText(`${SUPPLIER.name} — Invoice ${invoiceNumber} (continued)`, {
+      x: MARGIN,
+      y,
+      size: 9,
+      font: fontBold,
+      color: brand,
+    })
+    y -= 8
+    page.drawLine({
+      start: { x: MARGIN, y },
+      end: { x: PAGE_WIDTH - MARGIN, y },
+      thickness: 0.6,
+      color: rule,
+    })
+    y -= 18
+  }
+
+  // ── Header: mark icon + text wordmark/contact | INVOICE meta ───────────
+  const logoBox = 44
   let supplierTextX = MARGIN
 
-  if (logoBytes) {
-    try {
-      const logo = await pdf.embedPng(logoBytes)
-      page.drawRectangle({
-        x: MARGIN,
-        y: y - logoBox,
-        width: logoBox,
-        height: logoBox,
-        color: rgb(0.05, 0.05, 0.06),
-      })
-      const pad = 4
-      const fit = logoBox - pad * 2
-      const scale = Math.min(fit / logo.width, fit / logo.height)
-      const lw = logo.width * scale
-      const lh = logo.height * scale
-      page.drawImage(logo, {
-        x: MARGIN + (logoBox - lw) / 2,
-        y: y - logoBox + (logoBox - lh) / 2,
-        width: lw,
-        height: lh,
-      })
-      supplierTextX = MARGIN + logoBox + 10
-    } catch {
-      /* text-only */
-    }
+  if (markImage) {
+    page.drawRectangle({
+      x: MARGIN,
+      y: y - logoBox,
+      width: logoBox,
+      height: logoBox,
+      color: markBg,
+    })
+    const pad = 5
+    const fit = logoBox - pad * 2
+    const scale = Math.min(fit / markImage.width, fit / markImage.height)
+    const lw = markImage.width * scale
+    const lh = markImage.height * scale
+    page.drawImage(markImage, {
+      x: MARGIN + (logoBox - lw) / 2,
+      y: y - logoBox + (logoBox - lh) / 2,
+      width: lw,
+      height: lh,
+    })
+    supplierTextX = MARGIN + logoBox + 12
   }
 
   page.drawText(SUPPLIER.name, {
     x: supplierTextX,
-    y: y - 11,
-    size: 11,
+    y: y - 12,
+    size: 12,
     font: fontBold,
     color: brand,
   })
-  let supplierY = y - 24
+  let supplierY = y - 26
   for (const line of [
     ...SUPPLIER.addressLines,
     SUPPLIER.email,
@@ -266,7 +350,7 @@ async function renderManualInvoicePdf(request, opts = {}) {
     page.drawText(line, {
       x: supplierTextX,
       y: supplierY,
-      size: 7.5,
+      size: 8,
       font,
       color: muted,
     })
@@ -346,98 +430,95 @@ async function renderManualInvoicePdf(request, opts = {}) {
       font,
       color: muted,
     })
-    y -= 16
+    y -= 12
+  }
+  if (customerPhone) {
+    page.drawText(customerPhone.slice(0, 40), {
+      x: MARGIN,
+      y,
+      size: 9,
+      font,
+      color: muted,
+    })
+    y -= 14
   } else {
     y -= 4
   }
 
-  // ── Booking / reference (populated fields only) ────────────────────────
-  const refs = []
-  if (tenderRef) refs.push(['Tender / RFQ Reference', tenderRef])
-  if (briefingDate) refs.push(['Briefing Date', briefingDate])
-  if (briefingTime) refs.push(['Briefing Time', briefingTime])
-  if (briefingVenue) refs.push(['Briefing Venue', briefingVenue])
-  if (bookingRef) refs.push(['Booking Reference', bookingRef])
+  if (structuredLines.length === 0) {
+    const refs = []
+    if (tenderRef) refs.push(['Tender / RFQ Reference', tenderRef])
+    if (briefingDate) refs.push(['Briefing Date', briefingDate])
+    if (briefingTime) refs.push(['Briefing Time', briefingTime])
+    if (briefingVenue) refs.push(['Briefing Venue', briefingVenue])
+    if (request.id) refs.push(['Booking Reference', String(request.id)])
 
-  if (refs.length) {
-    page.drawText('BOOKING DETAILS', {
+    if (refs.length) {
+      page.drawText('BOOKING DETAILS', {
+        x: MARGIN,
+        y,
+        size: 8,
+        font: fontBold,
+        color: muted,
+      })
+      y -= 8
+      const rowH = []
+      for (const [, value] of refs) {
+        const wrapped = wrapLines(String(value), fontBold, 9, CONTENT_WIDTH - 168)
+        rowH.push(Math.max(14, wrapped.length * 11 + 3))
+      }
+      const boxH = rowH.reduce((a, b) => a + b, 0) + 10
+      const boxBottom = y - boxH
+      page.drawRectangle({
+        x: MARGIN,
+        y: boxBottom,
+        width: CONTENT_WIDTH,
+        height: boxH,
+        borderColor: rule,
+        borderWidth: 0.7,
+        color: headerBg,
+      })
+      let ry = y - 10
+      for (let i = 0; i < refs.length; i++) {
+        const [label, value] = refs[i]
+        page.drawText(`${label}:`, {
+          x: MARGIN + 8,
+          y: ry,
+          size: 8,
+          font,
+          color: muted,
+        })
+        const wrapped = wrapLines(String(value), fontBold, 9, CONTENT_WIDTH - 168)
+        let vy = ry
+        for (const vl of wrapped) {
+          page.drawText(vl, {
+            x: MARGIN + 148,
+            y: vy,
+            size: 9,
+            font: fontBold,
+            color: ink,
+          })
+          vy -= 11
+        }
+        ry -= rowH[i]
+      }
+      y = boxBottom - 18
+    }
+  }
+
+  // ── Briefings ──────────────────────────────────────────────────────────
+  await ensureSpace(28)
+  page.drawText(
+    structuredLines.length > 0 ? 'BRIEFINGS REQUESTED' : 'DESCRIPTION',
+    {
       x: MARGIN,
       y,
       size: 8,
       font: fontBold,
       color: muted,
-    })
-    y -= 8
-
-    const rowH = []
-    for (const [, value] of refs) {
-      const lines = wrapLines(String(value), fontBold, 9, CONTENT_WIDTH - 168)
-      rowH.push(Math.max(14, lines.length * 11 + 3))
     }
-    const boxH = rowH.reduce((a, b) => a + b, 0) + 10
-    const boxBottom = y - boxH
-
-    page.drawRectangle({
-      x: MARGIN,
-      y: boxBottom,
-      width: CONTENT_WIDTH,
-      height: boxH,
-      borderColor: rule,
-      borderWidth: 0.7,
-      color: headerBg,
-    })
-
-    let ry = y - 10
-    for (let i = 0; i < refs.length; i++) {
-      const [label, value] = refs[i]
-      page.drawText(`${label}:`, {
-        x: MARGIN + 8,
-        y: ry,
-        size: 8,
-        font,
-        color: muted,
-      })
-      const lines = wrapLines(String(value), fontBold, 9, CONTENT_WIDTH - 168)
-      let vy = ry
-      for (const vl of lines) {
-        page.drawText(vl, {
-          x: MARGIN + 148,
-          y: vy,
-          size: 9,
-          font: fontBold,
-          color: ink,
-        })
-        vy -= 11
-      }
-      ry -= rowH[i]
-    }
-    y = boxBottom - 18
-  }
-
-  // ── Line items table ───────────────────────────────────────────────────
-  const colDesc = MARGIN
-  const colQty = MARGIN + 330
-  const colRate = MARGIN + 385
-  const colAmt = PAGE_WIDTH - MARGIN
-
-  page.drawRectangle({
-    x: MARGIN,
-    y: y - 5,
-    width: CONTENT_WIDTH,
-    height: 18,
-    color: headerBg,
-  })
-  page.drawText('DESCRIPTION', {
-    x: colDesc + 6,
-    y,
-    size: 8,
-    font: fontBold,
-    color: muted,
-  })
-  page.drawText('QTY', { x: colQty, y, size: 8, font: fontBold, color: muted })
-  page.drawText('RATE', { x: colRate, y, size: 8, font: fontBold, color: muted })
-  drawRightText(page, 'AMOUNT', colAmt - 6, y, 8, fontBold, muted)
-  y -= 5
+  )
+  y -= 8
   page.drawLine({
     start: { x: MARGIN, y },
     end: { x: PAGE_WIDTH - MARGIN, y },
@@ -446,104 +527,191 @@ async function renderManualInvoicePdf(request, opts = {}) {
   })
   y -= 16
 
-  page.drawText(SERVICE_DESCRIPTION, {
-    x: colDesc + 6,
-    y,
-    size: 10,
-    font: fontBold,
-    color: ink,
-  })
-  page.drawText('1', { x: colQty + 6, y, size: 10, font, color: ink })
-  page.drawText(amountLabel, { x: colRate, y, size: 10, font, color: ink })
-  drawRightText(page, amountLabel, colAmt - 6, y, 10, fontBold, ink)
-  y -= 12
-  if (tenderRef) {
-    page.drawText(`RFQ / Tender: ${tenderRef}`.slice(0, 92), {
-      x: colDesc + 6,
+  if (structuredLines.length > 0) {
+    for (let i = 0; i < structuredLines.length; i++) {
+      const line = structuredLines[i]
+      const n = line.lineNumber || i + 1
+      const ref = String(line.tenderNumber || '').trim()
+      const desc = String(line.tenderDescription || line.description || '').trim()
+      const entity = String(line.procuringEntity || '').trim()
+      const dateLabel = formatDisplayDate(line.briefingDate)
+      const timeLabel = String(line.briefingTime || '').trim()
+      const venueLabel = String(line.briefingVenue || '').trim()
+      const descLines = wrapLines(desc, font, 9, CONTENT_WIDTH - 100)
+      const blockH =
+        16 + // title
+        (descLines.length ? descLines.length * 11 + 2 : 0) +
+        (entity ? 12 : 0) +
+        (dateLabel || timeLabel ? 12 : 0) +
+        (venueLabel ? 12 : 0) +
+        14
+
+      await ensureSpace(Math.min(blockH, 120))
+
+      page.drawText(`Briefing #${n}`, {
+        x: MARGIN,
+        y,
+        size: 8.5,
+        font: fontBold,
+        color: brand,
+      })
+      drawRightText(page, unitLabel, PAGE_WIDTH - MARGIN, y, 9.5, fontBold, ink)
+      y -= 11
+
+      page.drawText(ref.slice(0, 90) || '—', {
+        x: MARGIN,
+        y,
+        size: 9.5,
+        font: fontBold,
+        color: ink,
+      })
+      y -= 11
+
+      if (desc) {
+        y = drawWrapped(
+          page,
+          desc,
+          MARGIN,
+          y,
+          8.5,
+          font,
+          ink,
+          CONTENT_WIDTH - 8,
+          10
+        )
+        y -= 1
+      }
+      if (entity) {
+        page.drawText(entity.slice(0, 90), {
+          x: MARGIN,
+          y,
+          size: 8,
+          font,
+          color: muted,
+        })
+        y -= 10
+      }
+      if (dateLabel || timeLabel) {
+        const when = [dateLabel, timeLabel].filter(Boolean).join(' · ')
+        page.drawText(when.slice(0, 90), {
+          x: MARGIN,
+          y,
+          size: 8,
+          font,
+          color: muted,
+        })
+        y -= 10
+      }
+      if (venueLabel) {
+        page.drawText(venueLabel.slice(0, 90), {
+          x: MARGIN,
+          y,
+          size: 8,
+          font,
+          color: muted,
+        })
+        y -= 10
+      }
+      y -= 6
+    }
+  } else {
+    await ensureSpace(40)
+    page.drawText(SERVICE_DESCRIPTION, {
+      x: MARGIN,
       y,
-      size: 8,
-      font,
-      color: muted,
+      size: 10,
+      font: fontBold,
+      color: ink,
     })
+    drawRightText(page, amountLabel, PAGE_WIDTH - MARGIN, y, 10, fontBold, ink)
     y -= 12
+    if (tenderRef) {
+      page.drawText(`RFQ / Tender: ${tenderRef}`.slice(0, 92), {
+        x: MARGIN,
+        y,
+        size: 8,
+        font,
+        color: muted,
+      })
+      y -= 12
+    }
   }
-  y -= 4
+
+  // Keep summary + PAY NOW together when possible (avoid a near-empty trailing page).
+  await ensureSpace(175)
   page.drawLine({
     start: { x: MARGIN, y },
     end: { x: PAGE_WIDTH - MARGIN, y },
     thickness: 0.6,
     color: rule,
   })
-  y -= 20
+  y -= 14
 
-  // ── Totals ─────────────────────────────────────────────────────────────
-  const totalsLabelX = PAGE_WIDTH - MARGIN - 170
-  const totalsValueRight = PAGE_WIDTH - MARGIN
+  // ── Summary ────────────────────────────────────────────────────────────
+  page.drawText('SUMMARY', {
+    x: MARGIN,
+    y,
+    size: 8,
+    font: fontBold,
+    color: muted,
+  })
+  y -= 12
 
-  page.drawText('Subtotal', {
-    x: totalsLabelX,
+  const summaryLine = `${briefingCount} Briefing${
+    briefingCount === 1 ? '' : 's'
+  } × ${unitLabel}`
+  page.drawText(summaryLine, {
+    x: MARGIN,
     y,
     size: 10,
     font,
-    color: muted,
+    color: ink,
   })
-  drawRightText(page, amountLabel, totalsValueRight, y, 10, font, ink)
+  drawRightText(page, amountLabel, PAGE_WIDTH - MARGIN, y, 10, font, ink)
+  y -= 13
+
+  page.drawText(`Payment status: ${status}`, {
+    x: MARGIN,
+    y,
+    size: 9,
+    font,
+    color: isPaid ? paidGreen : unpaidAmber,
+  })
   y -= 14
 
-  if (isPaid) {
-    page.drawText('Amount Paid', {
-      x: totalsLabelX,
-      y,
-      size: 10,
-      font,
-      color: muted,
-    })
-    drawRightText(page, amountLabel, totalsValueRight, y, 10, font, paidGreen)
-    y -= 13
-    page.drawText('Balance Due', {
-      x: totalsLabelX,
-      y,
-      size: 10,
-      font,
-      color: muted,
-    })
-    drawRightText(page, zeroLabel, totalsValueRight, y, 10, fontBold, ink)
-    y -= 16
-  }
-
   page.drawLine({
-    start: { x: totalsLabelX - 6, y: y + 6 },
-    end: { x: totalsValueRight, y: y + 6 },
-    thickness: 1,
+    start: { x: PAGE_WIDTH - MARGIN - 200, y: y + 6 },
+    end: { x: PAGE_WIDTH - MARGIN, y: y + 6 },
+    thickness: 1.2,
     color: ruleStrong,
   })
   page.drawText('TOTAL DUE', {
-    x: totalsLabelX,
+    x: PAGE_WIDTH - MARGIN - 200,
     y,
-    size: 11,
+    size: 12,
     font: fontBold,
     color: ink,
   })
   drawRightText(
     page,
     isPaid ? zeroLabel : amountLabel,
-    totalsValueRight,
+    PAGE_WIDTH - MARGIN,
     y,
-    13,
+    14,
     fontBold,
     brand
   )
-  y -= 13
+  y -= 12
   page.drawText('VAT is not charged.', {
-    x: totalsLabelX,
+    x: PAGE_WIDTH - MARGIN - 200,
     y,
     size: 8,
     font,
     color: muted,
   })
-  y -= 24
+  y -= 16
 
-  // ── Payment / paid settlement ──────────────────────────────────────────
+  // ── Payment ────────────────────────────────────────────────────────────
   if (isPaid) {
     page.drawText('PAYMENT RECEIVED', {
       x: MARGIN,
@@ -587,11 +755,11 @@ async function renderManualInvoicePdf(request, opts = {}) {
     })
     y -= 16
 
-    const btnLabel = `PAY NOW — ${amountLabel}`
-    const btnPadX = 14
-    const btnTextW = fontBold.widthOfTextAtSize(btnLabel, 10)
+    const btnLabel = 'PAY NOW'
+    const btnPadX = 18
+    const btnTextW = fontBold.widthOfTextAtSize(btnLabel, 11)
     const btnW = btnTextW + btnPadX * 2
-    const btnH = 24
+    const btnH = 26
     const btnX = MARGIN
     const btnY = y - btnH + 5
 
@@ -604,8 +772,8 @@ async function renderManualInvoicePdf(request, opts = {}) {
     })
     page.drawText(btnLabel, {
       x: btnX + btnPadX,
-      y: btnY + 7,
-      size: 10,
+      y: btnY + 8,
+      size: 11,
       font: fontBold,
       color: white,
     })
@@ -616,7 +784,7 @@ async function renderManualInvoicePdf(request, opts = {}) {
       height: btnH,
       url: paymentUrl,
     })
-    y = btnY - 12
+    y = btnY - 14
 
     page.drawText('Or open this payment link:', {
       x: MARGIN,
@@ -630,50 +798,32 @@ async function renderManualInvoicePdf(request, opts = {}) {
     y -= 8
   }
 
-  page.drawLine({
-    start: { x: MARGIN, y },
-    end: { x: PAGE_WIDTH - MARGIN, y },
-    thickness: 0.5,
-    color: rule,
-  })
-  y -= 12
-  drawWrapped(
-    page,
-    BOOKING_CONFIRMATION,
-    MARGIN,
-    y,
-    8,
-    font,
-    muted,
-    CONTENT_WIDTH,
-    11
-  )
-
-  // ── Footer ─────────────────────────────────────────────────────────────
-  const footerY = MARGIN
-  page.drawLine({
-    start: { x: MARGIN, y: footerY + 26 },
-    end: { x: PAGE_WIDTH - MARGIN, y: footerY + 26 },
-    thickness: 0.5,
-    color: rule,
-  })
-  page.drawText('Thank you for your business.', {
-    x: MARGIN,
-    y: footerY + 12,
-    size: 8,
-    font,
-    color: muted,
-  })
-  page.drawText(
-    `${SUPPLIER.displayName}  ·  ${SUPPLIER.website}  ·  ${SUPPLIER.email}`,
-    {
-      x: MARGIN,
-      y: footerY,
-      size: 8,
+  // Keep confirmation on the current page when space allows — never open a near-empty page for it.
+  if (y - 28 >= PAGE_BOTTOM) {
+    page.drawLine({
+      start: { x: MARGIN, y },
+      end: { x: PAGE_WIDTH - MARGIN, y },
+      thickness: 0.5,
+      color: rule,
+    })
+    y -= 9
+    drawWrapped(
+      page,
+      BOOKING_CONFIRMATION,
+      MARGIN,
+      y,
+      7.5,
       font,
-      color: muted,
-    }
-  )
+      muted,
+      CONTENT_WIDTH,
+      9.5
+    )
+  }
+
+  const pageCount = pages.length
+  for (let i = 0; i < pageCount; i++) {
+    drawPageFooter(pages[i], font, i, pageCount)
+  }
 
   const bytes = await pdf.save()
   return Buffer.from(bytes)
@@ -684,4 +834,5 @@ module.exports = {
   BOOKING_CONFIRMATION,
   SERVICE_DESCRIPTION,
   SUPPLIER,
+  invoiceMoneyLabel,
 }

@@ -2,8 +2,9 @@
  * Admin-created manual payment bookings for emailed RFQs/tenders
  * that are not in the TenderBriefing catalogue.
  *
+ * Supports one or many structured briefing lines on a single invoice.
  * Reuses attendanceRequests + existing PayFast ITN settlement.
- * Amount is always server-authoritative (BRIEFING_PRICE_CENTS).
+ * Amount is always server-authoritative: briefingCount × BRIEFING_PRICE_CENTS.
  */
 const crypto = require('crypto')
 const { getFirestore } = require('../../config/firebaseAdmin')
@@ -18,11 +19,12 @@ const {
   paymentReferenceForRequest,
 } = require('./attendancePaymentService')
 const {
-  briefingPriceSnapshotFields,
+  multiBriefingPriceSnapshotFields,
   resolveRequestChargeCents,
   formatBriefingPriceZar,
   isAttendanceFree,
   BRIEFING_PRICE_CENTS,
+  countStructuredBriefingLines,
 } = require('../../constants/briefingPricing')
 const {
   assertPaymentTransition,
@@ -77,23 +79,125 @@ function paymentUrlFor(request, baseUrl) {
   return `${origin}/pay/${request.paymentToken}`
 }
 
+/**
+ * Build structured briefing lines from admin payload.
+ * Never trusts client quantity, unit price, or total — only line content.
+ */
+function normalizeBriefingLinesFromInput(input = {}) {
+  let raw = []
+  if (Array.isArray(input.briefings) && input.briefings.length > 0) {
+    raw = input.briefings
+  } else if (Array.isArray(input.briefingLines) && input.briefingLines.length > 0) {
+    raw = input.briefingLines
+  } else {
+    // Legacy flat single-briefing fields
+    raw = [
+      {
+        tenderNumber: input.tenderReference || input.rfqReference || input.tenderNumber,
+        tenderDescription: input.tenderDescription || input.description,
+        procuringEntity: input.procuringEntity || input.department || '',
+        briefingDate: input.briefingDate,
+        briefingTime: input.briefingTime,
+        briefingVenue: input.briefingVenue,
+        notes: '',
+      },
+    ]
+  }
+
+  const unit = BRIEFING_PRICE_CENTS
+  const lines = []
+  for (let i = 0; i < raw.length; i++) {
+    const line = raw[i] || {}
+    const tenderNumber = String(
+      line.tenderNumber || line.tenderReference || line.rfqReference || ''
+    ).trim()
+    const tenderDescription = String(
+      line.tenderDescription || line.description || line.tenderTitle || ''
+    ).trim()
+    if (!tenderNumber) {
+      throw new Error(`Briefing #${i + 1}: Tender / RFQ number is required`)
+    }
+    if (!tenderDescription) {
+      throw new Error(`Briefing #${i + 1}: Tender / RFQ description is required`)
+    }
+    lines.push({
+      id: `bl-${i + 1}-${crypto.randomBytes(3).toString('hex')}`,
+      lineNumber: i + 1,
+      tenderNumber,
+      tenderDescription,
+      procuringEntity: String(line.procuringEntity || line.department || '').trim(),
+      briefingDate: String(line.briefingDate || '').trim(),
+      briefingTime: String(line.briefingTime || '').trim(),
+      briefingVenue: String(line.briefingVenue || '').trim(),
+      notes: String(line.notes || line.internalNotes || '').trim(),
+      unitPriceCents: unit,
+      paymentAuthorized: false,
+      fulfilmentStatus: 'awaiting_payment',
+      agentId: null,
+      agentName: null,
+      attended: false,
+      completed: false,
+    })
+  }
+  if (lines.length < 1) {
+    throw new Error('At least one briefing is required')
+  }
+  return lines
+}
+
+/** Mark child lines payment-authorized after parent ITN settlement — not attended/completed. */
+function authorizeBriefingLinesAfterPayment(briefingLines) {
+  if (!Array.isArray(briefingLines) || briefingLines.length < 1) return briefingLines || []
+  return briefingLines.map((line) => ({
+    ...line,
+    paymentAuthorized: true,
+    fulfilmentStatus:
+      line.fulfilmentStatus === 'confirmed' || line.fulfilmentStatus === 'assigned'
+        ? line.fulfilmentStatus
+        : 'awaiting_assignment',
+    // Explicitly preserve operational truth — payment ≠ attendance
+    attended: line.attended === true,
+    completed: line.completed === true,
+  }))
+}
+
 /** Public customer-safe view — never exposes internal notes or admin ids. */
 function toPublicPaymentView(request, baseUrl) {
   if (!request) return null
   const cents = resolveRequestChargeCents(request)
+  const lines = Array.isArray(request.briefingLines) ? request.briefingLines : []
+  const briefingCount = countStructuredBriefingLines(request) || (lines.length || 1)
   return {
     bookingId: request.id,
     invoiceNumber: request.invoiceNumber || null,
     invoiceStatus: request.paymentStatus === 'paid' ? 'PAID' : 'UNPAID',
     paymentStatus: request.paymentStatus,
     companyName: request.smeCompany || request.smeName || '',
+    contactPerson: request.contactPerson || '',
     customerEmail: request.smeEmail || '',
+    customerPhone: request.smePhone || '',
     tenderReference: request.tenderNumber || '',
     description: SERVICE_NAME,
     tenderDescription: request.tenderTitle || '',
     briefingDate: request.briefingDate || '',
     briefingTime: request.briefingTime || '',
     briefingVenue: request.briefingVenue || '',
+    briefingCount,
+    unitPriceCents: BRIEFING_PRICE_CENTS,
+    unitPriceLabel: formatBriefingPriceZar(BRIEFING_PRICE_CENTS),
+    briefingLines: lines.map((l) => ({
+      lineNumber: l.lineNumber,
+      tenderNumber: l.tenderNumber,
+      tenderDescription: l.tenderDescription,
+      procuringEntity: l.procuringEntity || '',
+      briefingDate: l.briefingDate || '',
+      briefingTime: l.briefingTime || '',
+      briefingVenue: l.briefingVenue || '',
+      unitPriceCents: BRIEFING_PRICE_CENTS,
+      unitPriceLabel: formatBriefingPriceZar(BRIEFING_PRICE_CENTS),
+      fulfilmentStatus: l.fulfilmentStatus || null,
+      paymentAuthorized: Boolean(l.paymentAuthorized),
+    })),
     amountCents: cents,
     amountLabel: formatBriefingPriceZar(cents),
     currency: 'ZAR',
@@ -108,6 +212,7 @@ function toPublicPaymentView(request, baseUrl) {
 function toAdminView(request, baseUrl) {
   if (!request) return null
   const publicView = toPublicPaymentView(request, baseUrl)
+  const lines = Array.isArray(request.briefingLines) ? request.briefingLines : []
   return {
     ...publicView,
     id: request.id,
@@ -123,6 +228,24 @@ function toAdminView(request, baseUrl) {
     status: request.status,
     availableForAssignment:
       request.paymentStatus === 'paid' || request.paymentStatus === 'not_required',
+    briefingLinesAdmin: lines.map((l) => ({
+      id: l.id,
+      lineNumber: l.lineNumber,
+      tenderNumber: l.tenderNumber,
+      tenderDescription: l.tenderDescription,
+      procuringEntity: l.procuringEntity || '',
+      briefingDate: l.briefingDate || '',
+      briefingTime: l.briefingTime || '',
+      briefingVenue: l.briefingVenue || '',
+      notes: l.notes || '',
+      unitPriceCents: l.unitPriceCents || BRIEFING_PRICE_CENTS,
+      paymentAuthorized: Boolean(l.paymentAuthorized),
+      fulfilmentStatus: l.fulfilmentStatus || 'awaiting_payment',
+      agentId: l.agentId || null,
+      agentName: l.agentName || null,
+      attended: l.attended === true,
+      completed: l.completed === true,
+    })),
   }
 }
 
@@ -176,51 +299,53 @@ async function listManualPaymentRequests({ limit = 100 } = {}) {
 }
 
 /**
- * Create a manual R750 payment request (no catalogue tender required).
+ * Create a manual payment request for one or more briefing lines.
+ * Client-supplied totals / quantities / unit prices are ignored.
  */
 async function createManualPaymentRequest(input, adminUser = {}) {
   const companyName = String(input.companyName || input.customerName || '').trim()
   const customerEmail = normalizeEmail(input.customerEmail || input.email)
-  const tenderReference = String(input.tenderReference || input.rfqReference || '').trim()
-  const tenderDescription = String(
-    input.tenderDescription || input.description || ''
-  ).trim()
-  const briefingDate = String(input.briefingDate || '').trim()
-  const briefingTime = String(input.briefingTime || '').trim()
-  const briefingVenue = String(input.briefingVenue || '').trim()
+  const contactPerson = String(input.contactPerson || input.customerContact || '').trim()
+  const customerPhone = String(input.customerPhone || input.phone || input.phoneNumber || '').trim()
   const internalNotes = String(input.internalNotes || input.notes || '').trim()
 
   if (!companyName) throw new Error('Customer/company name is required')
   if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
     throw new Error('A valid customer email is required')
   }
-  if (!tenderReference) throw new Error('Tender/RFQ reference is required')
-  if (!tenderDescription) throw new Error('Tender/RFQ description is required')
 
   if (isAttendanceFree()) {
     throw new Error('Attendance fee is configured as free — manual payment links are disabled')
   }
 
+  const briefingLines = normalizeBriefingLinesFromInput(input)
+  const briefingCount = briefingLines.length
+  const price = multiBriefingPriceSnapshotFields(briefingCount)
+  const first = briefingLines[0]
+
   const paymentToken = generatePaymentToken()
   const invoiceNumber = nextInvoiceNumber()
   const now = new Date().toISOString()
-  const price = briefingPriceSnapshotFields()
 
   const request = createAttendanceRequest({
     tenderId: null,
-    tenderNumber: tenderReference,
-    tenderTitle: tenderDescription,
+    tenderNumber: first.tenderNumber,
+    tenderTitle:
+      briefingCount === 1
+        ? first.tenderDescription
+        : `${briefingCount} tender briefings`,
     smeId: guestSmeId(customerEmail),
-    smeName: companyName,
+    smeName: contactPerson || companyName,
     smeCompany: companyName,
     smeEmail: customerEmail,
-    smePhone: String(input.customerPhone || '').trim(),
-    briefingDate,
-    briefingTime,
-    briefingVenue,
+    smePhone: customerPhone,
+    contactPerson,
+    briefingDate: first.briefingDate,
+    briefingTime: first.briefingTime,
+    briefingVenue: first.briefingVenue,
     notes: '',
     province: String(input.province || '').trim(),
-    department: '',
+    department: first.procuringEntity || '',
     source: MANUAL_SOURCE,
     bookingKind: 'manual',
     paymentToken,
@@ -233,13 +358,24 @@ async function createManualPaymentRequest(input, adminUser = {}) {
     catalogueTenderRequired: false,
     serviceName: SERVICE_NAME,
     availableForAssignment: false,
-    ...price,
+    briefingLines,
+    briefingCount,
+    unitPriceCents: BRIEFING_PRICE_CENTS,
   })
 
-  // Ensure payment defaults were applied (createAttendanceRequest already does this)
+  // createAttendanceRequest strips fee fields — re-apply server total after create.
   request.paymentToken = paymentToken
   request.invoiceNumber = invoiceNumber
   request.source = MANUAL_SOURCE
+  request.briefingLines = briefingLines
+  request.briefingCount = briefingCount
+  request.unitPriceCents = BRIEFING_PRICE_CENTS
+  request.briefingPriceCents = price.briefingPriceCents
+  request.paymentAmount = price.paymentAmount
+  request.quotedFee = price.quotedFee
+  request.currency = price.currency
+  request.pricingVersion = price.pricingVersion
+  request.contactPerson = contactPerson
 
   const storage = getStorage()
   await storage.saveAttendanceRequest(sanitizeFirestoreData(request))
@@ -250,7 +386,9 @@ async function createManualPaymentRequest(input, adminUser = {}) {
     invoiceNumber,
     actorId: adminUser.uid || 'admin',
     customerEmail,
-    tenderReference,
+    briefingCount,
+    amountCents: price.paymentAmount,
+    tenderReference: first.tenderNumber,
   })
 
   // Founder/ops notify on create — fail-soft
@@ -274,7 +412,7 @@ async function createManualPaymentRequest(input, adminUser = {}) {
 }
 
 /**
- * Token-authenticated PayFast checkout — amount locked server-side.
+ * Token-authenticated PayFast checkout — amount locked server-side from briefing lines.
  */
 async function createCheckoutForPaymentToken(token, baseUrl) {
   const request = await getRequestByPaymentToken(token)
@@ -300,6 +438,7 @@ async function createCheckoutForPaymentToken(token, baseUrl) {
     return { ok: false, error: 'No payment required for this booking', status: 400 }
   }
 
+  const chargeCents = resolveRequestChargeCents(request)
   const checkout = await createPayfastCheckoutForRequest(request, baseUrl)
   if (!checkout.ok) {
     return {
@@ -314,7 +453,12 @@ async function createCheckoutForPaymentToken(token, baseUrl) {
   const patched = applyPaymentTransition(request, 'pending', {
     actorId: 'payment_token',
     extra: {
-      ...briefingPriceSnapshotFields(),
+      briefingPriceCents: chargeCents,
+      paymentAmount: chargeCents,
+      quotedFee: chargeCents,
+      unitPriceCents: BRIEFING_PRICE_CENTS,
+      briefingCount: countStructuredBriefingLines(request) || 1,
+      currency: 'ZAR',
       paymentProvider: 'payfast',
       paymentReference: paymentReferenceForRequest(request.id),
       payfastRedirectUrl: checkout.formAction,
@@ -338,7 +482,7 @@ async function createCheckoutForPaymentToken(token, baseUrl) {
     fields: checkout.fields,
     redirectUrl: checkout.redirectUrl,
     checkoutId: checkout.checkoutId,
-    amountCents: resolveRequestChargeCents(updated),
+    amountCents: chargeCents,
   }
 }
 
@@ -374,6 +518,8 @@ module.exports = {
   generatePaymentToken,
   nextInvoiceNumber,
   paymentUrlFor,
+  normalizeBriefingLinesFromInput,
+  authorizeBriefingLinesAfterPayment,
   toPublicPaymentView,
   toAdminView,
   getRequestByPaymentToken,

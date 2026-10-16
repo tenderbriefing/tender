@@ -55,6 +55,41 @@ function briefingPriceSnapshotFields() {
   }
 }
 
+/** Order-level snapshot for N briefings × unit price (server-calculated). */
+function multiBriefingPriceSnapshotFields(briefingCount) {
+  const unit = resolveBriefingPriceCents()
+  const count = Math.max(1, Math.round(Number(briefingCount) || 1))
+  const total = count * unit
+  return {
+    unitPriceCents: unit,
+    briefingCount: count,
+    briefingPriceCents: total,
+    paymentAmount: total,
+    quotedFee: total,
+    currency: BRIEFING_PRICE_CURRENCY,
+    pricingVersion: PRICING_VERSION,
+  }
+}
+
+/**
+ * Count structured briefing lines on an order.
+ * Returns null when the document has no briefingLines array (legacy single-unit).
+ * Never trusts client-supplied briefingCount without matching lines.
+ */
+function countStructuredBriefingLines(request) {
+  if (!request || !Array.isArray(request.briefingLines)) return null
+  if (request.briefingLines.length < 1) return null
+  return request.briefingLines.length
+}
+
+/** TOTAL = briefingCount × unit price (server unit only). */
+function chargeCentsForBriefingCount(briefingCount) {
+  const unit = resolveBriefingPriceCents()
+  if (isAttendanceFree(unit)) return 0
+  const count = Math.max(0, Math.round(Number(briefingCount) || 0))
+  return count * unit
+}
+
 /** Founder-only live PayFast pipeline certification amount — never commercial price. */
 const LIVE_CERTIFICATION_AMOUNT_CENTS = 7500
 const LIVE_CERTIFICATION_PURPOSE = 'payfast_live_certification'
@@ -79,8 +114,8 @@ function resolveLiveCertificationChargeCents(request) {
 /**
  * Resolve the amount PayFast must charge / ITN must verify.
  * Free mode (0 cents) always returns 0 — never start a checkout.
- * Commercial unpaid bookings always use canonical R750 unless a server-authorized
- * live-certification booking is present.
+ * Multi-briefing unpaid orders charge count(briefingLines) × unit price.
+ * Legacy documents without briefingLines charge one unit (canonical R750).
  */
 function resolveRequestChargeCents(request) {
   const canonical = resolveBriefingPriceCents()
@@ -97,6 +132,11 @@ function resolveRequestChargeCents(request) {
     if (Number.isFinite(quoted) && quoted > 0) return Math.round(quoted)
     const amount = Number(request.paymentAmount)
     if (Number.isFinite(amount) && amount > 0) return Math.round(amount)
+  }
+
+  const lineCount = countStructuredBriefingLines(request)
+  if (lineCount != null) {
+    return chargeCentsForBriefingCount(lineCount)
   }
 
   return canonical
@@ -118,6 +158,9 @@ module.exports = {
   formatBriefingPriceZar,
   grossContributionForRevenueCents,
   briefingPriceSnapshotFields,
+  multiBriefingPriceSnapshotFields,
+  countStructuredBriefingLines,
+  chargeCentsForBriefingCount,
   resolveLiveCertificationChargeCents,
   resolveRequestChargeCents,
 }
