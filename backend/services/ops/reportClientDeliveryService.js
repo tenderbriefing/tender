@@ -230,6 +230,7 @@ async function openDeliveryReview(requestId, adminUser = {}, opts = {}) {
   const latest = (await opsLifecycle.getRequest(requestId)) || request
   latest.clientDeliveryId = delivery.id
   latest.clientDeliveryStatus = 'delivery_review'
+  latest.clientDeliveryOpenedAt = latest.clientDeliveryOpenedAt || new Date().toISOString()
   await opsLifecycle.saveRequest(latest)
 
   await auditLogService.logEvent({
@@ -638,9 +639,138 @@ async function resendReport(requestId, adminUser = {}, opts = {}) {
   return opened
 }
 
+const PROVIDER_RANK = {
+  sending: 5,
+  sent: 20,
+  delivered: 40,
+  failed: 50,
+  bounced: 50,
+}
+
+function canApplyProviderStatus(fromStatus, toStatus) {
+  if (!toStatus) return false
+  if (fromStatus === toStatus) return false
+  // Terminal bounce/failed: only allow same or stay
+  if (fromStatus === 'bounced' || fromStatus === 'failed') {
+    return false
+  }
+  return (PROVIDER_RANK[toStatus] || 0) > (PROVIDER_RANK[fromStatus] || 0)
+}
+
+async function findDeliveryByProviderMessageId(providerMessageId) {
+  const id = String(providerMessageId || '').trim()
+  if (!id) return null
+  try {
+    const db = getFirebaseAdmin().firestore()
+    const snap = await db
+      .collection(COLLECTION)
+      .where('providerMessageId', '==', id)
+      .limit(5)
+      .get()
+    if (!snap.empty) {
+      const d = snap.docs[0]
+      return { id: d.id, ...d.data() }
+    }
+  } catch {
+    /* json */
+  }
+  const all = await getStorage().getAttendanceRequests()
+  for (const req of all) {
+    const hit = (req.opsClientDeliveries || []).find(
+      (d) => String(d.providerMessageId || '') === id
+    )
+    if (hit) return hit
+  }
+  return null
+}
+
+/**
+ * Apply Resend lifecycle event onto ops client delivery (idempotent / ordered).
+ * Does NOT change locked report version.
+ */
+async function applyProviderEventByMessageId(providerMessageId, event = {}) {
+  const delivery = await findDeliveryByProviderMessageId(providerMessageId)
+  if (!delivery) {
+    return { applied: false, reason: 'delivery_not_found' }
+  }
+
+  const mapped = String(event.status || '').toLowerCase()
+  const nextStatus =
+    mapped === 'delivered'
+      ? 'delivered'
+      : mapped === 'bounced' || mapped === 'complained'
+        ? 'bounced'
+        : mapped === 'failed'
+          ? 'failed'
+          : mapped === 'sent' || mapped === 'accepted'
+            ? 'sent'
+            : null
+
+  if (!nextStatus) {
+    return { applied: false, reason: 'unsupported_status', deliveryId: delivery.id }
+  }
+  if (!canApplyProviderStatus(delivery.status, nextStatus)) {
+    return {
+      applied: false,
+      reason: 'out_of_order_or_duplicate',
+      deliveryId: delivery.id,
+      status: delivery.status,
+    }
+  }
+
+  const at = event.at || new Date().toISOString()
+  delivery.providerStatus = nextStatus
+  delivery.providerStatusUpdatedAt = at
+  if (nextStatus === 'delivered') {
+    delivery.status = 'delivered'
+    delivery.deliveredAt = at
+  } else if (nextStatus === 'bounced') {
+    delivery.status = 'bounced'
+    delivery.bouncedAt = at
+    delivery.failureReason = String(event.reason || 'bounced').slice(0, 240)
+  } else if (nextStatus === 'failed') {
+    delivery.status = 'failed'
+    delivery.failedAt = at
+    delivery.failureReason = String(event.reason || 'failed').slice(0, 240)
+  } else if (nextStatus === 'sent' && delivery.status !== 'delivered') {
+    delivery.status = 'sent'
+    delivery.sentAt = delivery.sentAt || at
+  }
+  await saveDelivery(delivery)
+
+  const request = await opsLifecycle.getRequest(delivery.requestId)
+  if (request) {
+    request.clientDeliveryStatus = delivery.status
+    request.clientDeliveryProviderStatus = nextStatus
+    request.clientDeliveryUpdatedAt = at
+    await opsLifecycle.saveRequest(request)
+  }
+
+  await auditLogService.logEvent({
+    type: `ops_client_delivery_provider_${nextStatus}`,
+    entityId: delivery.requestId,
+    deliveryId: delivery.id,
+    providerMessageId,
+    reportVersionId: delivery.reportVersionId,
+  })
+
+  return {
+    applied: true,
+    deliveryId: delivery.id,
+    status: delivery.status,
+    reportVersionId: delivery.reportVersionId,
+  }
+}
+
 async function recordProviderDelivered(deliveryId, meta = {}) {
   const delivery = await getDelivery(deliveryId)
   if (!delivery) throw new Error('Delivery not found')
+  if (delivery.providerMessageId) {
+    return applyProviderEventByMessageId(delivery.providerMessageId, {
+      status: 'delivered',
+      at: meta.at,
+    })
+  }
   if (delivery.status === 'bounced' || delivery.status === 'failed') return delivery
   delivery.status = 'delivered'
   delivery.deliveredAt = meta.at || new Date().toISOString()
@@ -662,13 +792,19 @@ async function recordProviderDelivered(deliveryId, meta = {}) {
 async function recordProviderBounce(deliveryId, meta = {}) {
   const delivery = await getDelivery(deliveryId)
   if (!delivery) throw new Error('Delivery not found')
+  if (delivery.providerMessageId) {
+    return applyProviderEventByMessageId(delivery.providerMessageId, {
+      status: 'bounced',
+      at: meta.at,
+      reason: meta.reason,
+    })
+  }
   delivery.status = 'bounced'
   delivery.bouncedAt = meta.at || new Date().toISOString()
   delivery.failureReason = String(meta.reason || 'bounced').slice(0, 240)
   await saveDelivery(delivery)
   const request = await opsLifecycle.getRequest(delivery.requestId)
   if (request) {
-    // Do not claim inbox delivery; keep ops delivered if previously stamped, but surface bounce
     request.clientDeliveryStatus = 'bounced'
     await opsLifecycle.saveRequest(request)
   }
@@ -692,6 +828,8 @@ module.exports = {
   publicDeliveryView,
   recordProviderDelivered,
   recordProviderBounce,
+  findDeliveryByProviderMessageId,
+  applyProviderEventByMessageId,
   buildDefaultDraft,
   assertApprovedReport,
 }

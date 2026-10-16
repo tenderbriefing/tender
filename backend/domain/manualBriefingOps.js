@@ -14,6 +14,7 @@ const OPS_LIFECYCLE_STAGES = [
   'report_in_progress',
   'report_ready',
   'delivered',
+  'completed',
   'closed',
 ]
 
@@ -31,6 +32,7 @@ const OPS_LIFECYCLE_LABELS = {
   report_in_progress: 'Report In Progress',
   report_ready: 'Report Ready',
   delivered: 'Delivered',
+  completed: 'Completed',
   closed: 'Closed',
 }
 
@@ -56,6 +58,8 @@ const OPS_STAGE_ALIASES = {
   report_in_progress: 'report_in_progress',
   report_ready: 'report_ready',
   delivered: 'delivered',
+  completed: 'completed',
+  fulfilment_completed: 'completed',
   closed: 'closed',
 }
 
@@ -108,6 +112,13 @@ function briefingMoment(request) {
 function deriveManualOpsStage(request = {}) {
   const explicit = normalizeOpsStage(request.opsStage)
   if (explicit === 'closed' || request.closedAt) return 'closed'
+  if (
+    explicit === 'completed' ||
+    request.completedAt ||
+    String(request.fulfilmentStatus || '').toLowerCase() === 'completed'
+  ) {
+    return 'completed'
+  }
   if (
     explicit === 'delivered' ||
     request.deliveredAt ||
@@ -247,6 +258,8 @@ function nextRequiredAction(stage) {
     case 'report_ready':
       return 'Send report to client (delivery review)'
     case 'delivered':
+      return 'Mark fulfilment completed'
+    case 'completed':
       return 'Close when ops complete'
     case 'closed':
       return 'None'
@@ -273,7 +286,8 @@ const OPS_ADMIN_TRANSITIONS = {
   evidence_received: ['report_in_progress', 'report_ready'],
   report_in_progress: ['report_ready'],
   report_ready: ['delivered'],
-  delivered: ['closed'],
+  delivered: ['completed', 'closed'],
+  completed: ['closed'],
   closed: [],
 }
 
