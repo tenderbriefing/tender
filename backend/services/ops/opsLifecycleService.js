@@ -103,6 +103,8 @@ function toOpsBoardRow(request) {
     opsReportVersion: request.opsReportVersion || null,
     reportFileName: request.reportFileName || null,
     reportDocxFileName: request.reportDocxFileName || null,
+    clientDeliveryId: request.clientDeliveryId || null,
+    clientDeliveryStatus: request.clientDeliveryStatus || null,
     deliveredAt: request.deliveredAt || null,
     closedAt: request.closedAt || null,
     invoiceNumber: request.invoiceNumber || null,
