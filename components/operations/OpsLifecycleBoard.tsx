@@ -178,10 +178,13 @@ export default function OpsLifecycleBoard() {
     }
   }
 
-  async function downloadReport(id: string, format: 'pdf' | 'docx') {
+  async function downloadReport(id: string, format: 'pdf' | 'docx', versionId?: string | null) {
     setBusy(true)
     try {
-      const res = await authFetch(`/api/admin/ops/${id}/report/download?format=${format}`)
+      const versionQ = versionId ? `&versionId=${encodeURIComponent(versionId)}` : ''
+      const res = await authFetch(
+        `/api/admin/ops/${id}/report/download?format=${format}${versionQ}`
+      )
       const ct = res.headers.get('content-type') || ''
       if (ct.includes('application/json')) {
         const json = await res.json()
@@ -726,7 +729,13 @@ export default function OpsLifecycleBoard() {
                       type="button"
                       disabled={busy}
                       className="rounded border border-slate-300 px-2.5 py-1 text-xs font-semibold hover:bg-slate-50"
-                      onClick={() => downloadReport(selected.id, 'pdf')}
+                      onClick={() =>
+                        downloadReport(
+                          selected.id,
+                          'pdf',
+                          selected.finalReportVersionId || selected.opsReportId
+                        )
+                      }
                     >
                       Download final report
                     </button>
