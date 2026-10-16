@@ -56,6 +56,8 @@ type OpsRow = {
 
 const BOARD_FILTERS = [
   { value: '', label: 'All active' },
+  { value: 'paid_intake', label: 'Paid — needs assignment' },
+  { value: 'unpaid', label: 'Unpaid' },
   { value: 'needs_attention', label: 'Needs attention' },
   { value: 'due_soon', label: 'Due soon' },
   { value: 'overdue', label: 'Overdue' },

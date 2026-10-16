@@ -243,10 +243,15 @@ class JsonStorageAdapter {
   async saveAttendanceRequest(request) {
     const items = readCollection(JSON_FILES.ATTENDANCE_REQUESTS, [])
     const index = items.findIndex((r) => r.id === request.id)
-    if (index >= 0) items[index] = request
-    else items.push(request)
+    // Merge like Firestore (.set merge:true) so partial SLA/payment stamps
+    // cannot wipe authoritative fields (paymentStatus, opsStage, invoice…).
+    if (index >= 0) {
+      items[index] = { ...items[index], ...request, id: request.id }
+    } else {
+      items.push(request)
+    }
     writeCollection(JSON_FILES.ATTENDANCE_REQUESTS, items)
-    return request
+    return index >= 0 ? items[index] : request
   }
 
   async getBriefingReports(filters = {}) {

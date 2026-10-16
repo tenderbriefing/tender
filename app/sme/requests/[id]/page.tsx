@@ -31,6 +31,8 @@ import { authFetch } from '@/lib/api/authenticatedFetch'
 import { signInWithReturnHref } from '@/lib/auth/safeReturnPath'
 import type { BriefingReport } from '@/lib/tenderBriefing/types'
 import AttendancePaymentSummary from '@/components/payments/AttendancePaymentSummary'
+import { customerBookingStatusFromRequest } from '@/lib/domain/customerBookingStatus'
+import toast from 'react-hot-toast'
 
 export default function SmeRequestDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -42,6 +44,7 @@ export default function SmeRequestDetailPage() {
     Array<{ id: string; title: string; content: string; updateType?: string; createdAt?: string }>
   >([])
   const [loading, setLoading] = useState(true)
+  const [invoiceBusy, setInvoiceBusy] = useState(false)
 
   useEffect(() => {
     if (!authLoading) {
@@ -109,6 +112,36 @@ export default function SmeRequestDetailPage() {
   const tender = request.tender
   const hasReport = reports.length > 0
   const briefingCountdown = countdownLabel(tender?.briefingDate || request.briefingDate)
+  const customerStatus = customerBookingStatusFromRequest({
+    paymentStatus: request.paymentStatus,
+    opsStage: (request as { opsStage?: string }).opsStage,
+    status: request.status,
+    completedAt: (request as { completedAt?: string }).completedAt,
+    deliveredAt: (request as { deliveredAt?: string }).deliveredAt,
+    reportReadyAt: (request as { reportReadyAt?: string }).reportReadyAt,
+    assignedAgentId: request.assignedAgentId,
+    agentId: request.agentId,
+  })
+  const invoiceNumber = (request as { invoiceNumber?: string }).invoiceNumber
+
+  async function downloadInvoice() {
+    if (!id || invoiceBusy) return
+    setInvoiceBusy(true)
+    try {
+      const res = await authFetch(`/api/attendance-requests/${id}/invoice`)
+      if (!res.ok) throw new Error('Invoice download failed')
+      const blob = await res.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `${invoiceNumber || id}.pdf`
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } catch {
+      toast.error('Could not download invoice')
+    } finally {
+      setInvoiceBusy(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-brand-50/30">
@@ -139,6 +172,9 @@ export default function SmeRequestDetailPage() {
           </Link>
 
           <div className="mt-6 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-accent-500 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-900">
+              {customerStatus.label}
+            </span>
             <RequestStatusBadge status={request.status} />
             {(request as { source?: string }).source === 'private_tender' ||
             (request as { privateTenderId?: string }).privateTenderId ? (
@@ -147,7 +183,7 @@ export default function SmeRequestDetailPage() {
               </span>
             ) : null}
             {tender?.briefingCompulsory && (
-              <span className="inline-flex items-center gap-2 rounded-full bg-accent-500 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-900">
+              <span className="inline-flex items-center gap-2 rounded-full bg-accent-500/90 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-900">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Compulsory briefing
               </span>
@@ -177,8 +213,26 @@ export default function SmeRequestDetailPage() {
       </section>
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-        <div className="mb-8">
+        <div className="mb-8 space-y-3">
           <AttendancePaymentSummary request={request} showRetry />
+          {request.paymentStatus !== 'not_required' ? (
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
+              <span className="text-slate-600">
+                Invoice:{' '}
+                <span className="font-semibold text-brand-900">
+                  {invoiceNumber || 'Generated at booking'}
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => void downloadInvoice()}
+                disabled={invoiceBusy}
+                className="font-semibold text-brand-700 hover:underline disabled:opacity-60"
+              >
+                {invoiceBusy ? 'Preparing…' : 'Download invoice PDF'}
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr,340px]">

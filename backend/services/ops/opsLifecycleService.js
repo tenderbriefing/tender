@@ -506,6 +506,21 @@ async function listOpsBoard({ limit = 150, filter = '' } = {}) {
     rows = rows.filter((r) => r.boardFilter === 'delivery_issue')
   } else if (f === 'completed') {
     rows = rows.filter((r) => r.opsStage === 'completed' || Boolean(r.completedAt))
+  } else if (f === 'paid_intake' || f === 'assignment_required') {
+    // Phase 14: paid bookings awaiting representative assignment
+    rows = rows.filter(
+      (r) =>
+        (r.paymentStatus === 'paid' || r.paymentStatus === 'not_required') &&
+        (r.opsStage === 'assignment_required' || r.opsStage === 'paid_agent_required')
+    )
+  } else if (f === 'unpaid') {
+    rows = rows.filter(
+      (r) =>
+        r.paymentStatus === 'pending' ||
+        r.paymentStatus === 'failed' ||
+        r.paymentStatus === 'cancelled' ||
+        r.opsStage === 'payment_required'
+    )
   } else if (f && Object.values(EXCEPTION_CODES).includes(f.toUpperCase())) {
     rows = rows.filter((r) => r.exceptionCode === f.toUpperCase())
   }

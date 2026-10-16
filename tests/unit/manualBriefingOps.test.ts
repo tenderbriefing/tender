@@ -86,12 +86,10 @@ describe('manualBriefingOps Phase 10', () => {
   })
 
   it('flags assignment / briefing / evidence / report exceptions', () => {
-    const tomorrow = new Date()
-    tomorrow.setHours(tomorrow.getHours() + 12)
-    const date = tomorrow.toISOString().slice(0, 10)
+    const soonIso = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString()
     const flags = deriveUrgencyFlags({
       paymentStatus: 'paid',
-      briefingDate: date,
+      briefingDate: soonIso,
       briefingVenue: '',
       documents: [{ kind: 'rfq' }],
     })

@@ -156,12 +156,19 @@ export async function POST(request: NextRequest) {
         tenderId: body.tenderId,
         tenderNumber: tender?.tenderNumber || bookingSnapshot.tenderNumber,
         tenderTitle: tender?.title || body.tenderTitle || bookingSnapshot.tenderTitle,
-        department: tender?.department,
+        department: tender?.department || body.issuingOrganisation || body.department,
         smeId: user.uid,
-        smeName: user.displayName || body.smeName,
+        smeName: user.displayName || body.smeName || body.contactPerson,
         smeCompany: user.companyName || body.smeCompany,
         smeEmail: user.email,
-        smePhone: body.smePhone,
+        smePhone: body.smePhone || body.mobileNumber || body.phone,
+        contactPerson: body.contactPerson || user.displayName || body.smeName,
+        representedEntity:
+          body.representedEntity ||
+          body.bidderCompanyName ||
+          body.registerAttendOnBehalfOf ||
+          user.companyName ||
+          body.smeCompany,
         province: tender?.province || body.province || bookingSnapshot.briefingSnapshot?.briefingProvince,
         briefingVenue: tender?.briefingVenue || body.briefingVenue || bookingSnapshot.briefingSnapshot?.briefingVenue,
         briefingDate: tender?.briefingDate || body.briefingDate || bookingSnapshot.briefingSnapshot?.briefingDate,
@@ -169,7 +176,8 @@ export async function POST(request: NextRequest) {
           tender?.briefingTime ||
           body.briefingTime ||
           bookingSnapshot.briefingSnapshot?.briefingStartTime,
-        notes: body.notes,
+        notes: body.notes || body.specialInstructions,
+        specialInstructions: body.specialInstructions || body.notes,
         responsibilityAcknowledged: body.responsibilityAcknowledged === true,
         latitude: body.latitude,
         longitude: body.longitude,
