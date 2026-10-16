@@ -356,7 +356,6 @@ export default function ManualPaymentsPanel() {
                           linkedSmeId: hit.id,
                         })
                         setSmeQuery(hit.companyName || hit.email || '')
-                        setSmeHits([])
                       }}
                     >
                       <span className="font-medium text-slate-900">
