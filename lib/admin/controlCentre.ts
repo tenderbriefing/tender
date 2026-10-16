@@ -41,6 +41,12 @@ export const ADMIN_CONTROL_CENTRE_MODULES: AdminNavGroup[] = [
         description: 'Attendance queue, automation, live board',
       },
       {
+        href: '/admin/briefings/manual',
+        label: 'Create Manual Request',
+        description: 'RFQ briefings outside the tender catalogue',
+        accent: true,
+      },
+      {
         href: '/admin/dispatch',
         label: 'Dispatch',
         description: 'Assign agents to briefings',

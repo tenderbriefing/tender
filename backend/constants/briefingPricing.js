@@ -24,7 +24,20 @@ function resolveBriefingPriceCents() {
   return BRIEFING_PRICE_CENTS
 }
 
-function resolveYouthAgentPayoutCents() {
+/**
+ * Youth Agent payout (cents). Prefer per-assignment override on the request,
+ * then env, then default constant. Never exposed on SME invoices.
+ * @param {{ agentPayoutCents?: unknown, agentPayoutCentsOverride?: unknown } | null} [request]
+ */
+function resolveYouthAgentPayoutCents(request) {
+  if (request && typeof request === 'object') {
+    const override = Number(
+      request.agentPayoutCents != null
+        ? request.agentPayoutCents
+        : request.agentPayoutCentsOverride
+    )
+    if (Number.isFinite(override) && override > 0) return Math.round(override)
+  }
   const env = process.env.YOUTH_AGENT_PAYOUT_CENTS
   if (env != null && env !== '') {
     const n = Number(env)

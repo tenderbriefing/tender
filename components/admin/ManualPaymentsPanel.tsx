@@ -36,6 +36,7 @@ type ManualBooking = {
   contactPerson?: string
   customerEmail: string
   customerPhone?: string
+  representedEntity?: string
   tenderReference: string
   tenderDescription?: string
   briefingDate?: string
@@ -50,6 +51,10 @@ type ManualBooking = {
   availableForAssignment?: boolean
   agentName?: string | null
   internalNotes?: string
+  opsStage?: string
+  opsStageLabel?: string
+  urgencyFlags?: string[]
+  loaStatus?: string
   briefingLines?: Array<{
     lineNumber: number
     tenderNumber: string
@@ -67,7 +72,30 @@ type BriefingFormLine = {
   briefingDate: string
   briefingTime: string
   briefingVenue: string
+  province: string
+  closingDate: string
+  closingTime: string
+  contactPerson: string
+  contactPhone: string
+  contactEmail: string
   notes: string
+}
+
+type DocKind = 'rfq' | 'loa' | 'boq' | 'other'
+
+type PendingDoc = {
+  key: string
+  kind: DocKind
+  name: string
+  url: string
+}
+
+type SmeHit = {
+  id: string
+  companyName?: string
+  displayName?: string
+  email?: string
+  phone?: string
 }
 
 const EMPTY_CUSTOMER = {
@@ -75,6 +103,8 @@ const EMPTY_CUSTOMER = {
   contactPerson: '',
   customerEmail: '',
   customerPhone: '',
+  representedEntity: '',
+  linkedSmeId: '',
 }
 
 function newBriefingLine(): BriefingFormLine {
@@ -86,6 +116,12 @@ function newBriefingLine(): BriefingFormLine {
     briefingDate: '',
     briefingTime: '',
     briefingVenue: '',
+    province: '',
+    closingDate: '',
+    closingTime: '',
+    contactPerson: '',
+    contactPhone: '',
+    contactEmail: '',
     notes: '',
   }
 }
@@ -96,9 +132,49 @@ export default function ManualPaymentsPanel() {
   const [creating, setCreating] = useState(false)
   const [customer, setCustomer] = useState(EMPTY_CUSTOMER)
   const [briefings, setBriefings] = useState<BriefingFormLine[]>([newBriefingLine()])
+  const [documents, setDocuments] = useState<PendingDoc[]>([])
+  const [smeQuery, setSmeQuery] = useState('')
+  const [smeDirectory, setSmeDirectory] = useState<SmeHit[]>([])
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [lastCreatedUrl, setLastCreatedUrl] = useState<string | null>(null)
   const [lastCreatedInvoice, setLastCreatedInvoice] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await authFetch('/api/admin/registrations')
+        const json = await res.json()
+        if (!json.success || cancelled) return
+        const rows = (json.data?.smes || []) as SmeHit[]
+        if (Array.isArray(rows)) setSmeDirectory(rows)
+      } catch {
+        /* searchable SME is best-effort */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const smeHits = useMemo(() => {
+    const q = smeQuery.trim().toLowerCase()
+    if (q.length < 2) return []
+    return smeDirectory
+      .filter((hit) => {
+        const hay = [
+          hit.companyName,
+          hit.displayName,
+          hit.email,
+          hit.phone,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        return hay.includes(q)
+      })
+      .slice(0, 8)
+  }, [smeDirectory, smeQuery])
 
   const briefingCount = briefings.length
   const displayTotalCents = briefingCount * BRIEFING_PRICE_CENTS
@@ -146,6 +222,9 @@ export default function ManualPaymentsPanel() {
           contactPerson: customer.contactPerson,
           customerEmail: customer.customerEmail,
           customerPhone: customer.customerPhone,
+          representedEntity:
+            customer.representedEntity.trim() || customer.companyName.trim(),
+          linkedSmeId: customer.linkedSmeId || undefined,
           // Server ignores any client totals — only briefing content is authoritative input.
           briefings: briefings.map((b) => ({
             tenderNumber: b.tenderNumber,
@@ -154,8 +233,21 @@ export default function ManualPaymentsPanel() {
             briefingDate: b.briefingDate,
             briefingTime: b.briefingTime,
             briefingVenue: b.briefingVenue,
+            province: b.province,
+            closingDate: b.closingDate,
+            closingTime: b.closingTime,
+            contactPerson: b.contactPerson,
+            contactPhone: b.contactPhone,
+            contactEmail: b.contactEmail,
             notes: b.notes,
           })),
+          documents: documents
+            .filter((d) => d.name.trim() || d.url.trim())
+            .map((d) => ({
+              kind: d.kind,
+              name: d.name.trim() || `${d.kind}-document`,
+              url: d.url.trim() || undefined,
+            })),
         }),
       })
       const json = await res.json()
@@ -170,6 +262,8 @@ export default function ManualPaymentsPanel() {
       )
       setCustomer(EMPTY_CUSTOMER)
       setBriefings([newBriefingLine()])
+      setDocuments([])
+      setSmeQuery('')
       await load()
     } catch {
       toast.error('Could not create payment request')
@@ -227,13 +321,57 @@ export default function ManualPaymentsPanel() {
   return (
     <div className="space-y-8">
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Create payment request</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Create Manual Request</h2>
         <p className="mt-1 text-sm text-slate-600">
           For emailed RFQs that are not in the tender catalogue. One customer invoice can cover
-          multiple briefings — total is always calculated server-side at R750.00 each.
+          multiple briefings — total is always calculated server-side at R750.00 each. Generate
+          invoice &amp; payment link on submit (no catalogue tender required).
         </p>
 
         <form onSubmit={onCreate} className="mt-6 space-y-6">
+          <div className="space-y-3">
+            <label className="block text-sm">
+              <span className="font-medium text-slate-700">Search existing SME / customer</span>
+              <input
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                placeholder="Company, contact, or email…"
+                value={smeQuery}
+                onChange={(e) => setSmeQuery(e.target.value)}
+              />
+            </label>
+            {smeHits.length > 0 ? (
+              <ul className="rounded-lg border border-slate-200 bg-slate-50 text-sm">
+                {smeHits.map((hit) => (
+                  <li key={hit.id}>
+                    <button
+                      type="button"
+                      className="flex w-full flex-col items-start px-3 py-2 text-left hover:bg-white"
+                      onClick={() => {
+                        setCustomer({
+                          companyName: hit.companyName || hit.displayName || '',
+                          contactPerson: hit.displayName || '',
+                          customerEmail: hit.email || '',
+                          customerPhone: hit.phone || '',
+                          representedEntity: hit.companyName || hit.displayName || '',
+                          linkedSmeId: hit.id,
+                        })
+                        setSmeQuery(hit.companyName || hit.email || '')
+                        setSmeHits([])
+                      }}
+                    >
+                      <span className="font-medium text-slate-900">
+                        {hit.companyName || hit.displayName || hit.id}
+                      </span>
+                      <span className="text-slate-500">
+                        {[hit.displayName, hit.email, hit.phone].filter(Boolean).join(' · ')}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="font-medium text-slate-700">Company name *</span>
@@ -242,7 +380,11 @@ export default function ManualPaymentsPanel() {
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
                 value={customer.companyName}
                 onChange={(e) =>
-                  setCustomer((c) => ({ ...c, companyName: e.target.value }))
+                  setCustomer((c) => ({
+                    ...c,
+                    companyName: e.target.value,
+                    linkedSmeId: '',
+                  }))
                 }
               />
             </label>
@@ -264,12 +406,16 @@ export default function ManualPaymentsPanel() {
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
                 value={customer.customerEmail}
                 onChange={(e) =>
-                  setCustomer((c) => ({ ...c, customerEmail: e.target.value }))
+                  setCustomer((c) => ({
+                    ...c,
+                    customerEmail: e.target.value,
+                    linkedSmeId: '',
+                  }))
                 }
               />
             </label>
             <label className="block text-sm">
-              <span className="font-medium text-slate-700">Phone number</span>
+              <span className="font-medium text-slate-700">Mobile number</span>
               <input
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
                 value={customer.customerPhone}
@@ -277,6 +423,22 @@ export default function ManualPaymentsPanel() {
                   setCustomer((c) => ({ ...c, customerPhone: e.target.value }))
                 }
               />
+            </label>
+            <label className="block text-sm sm:col-span-2">
+              <span className="font-medium text-slate-700">
+                Register / Attend on behalf of
+              </span>
+              <input
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                placeholder="Bidding entity if different from paying customer"
+                value={customer.representedEntity}
+                onChange={(e) =>
+                  setCustomer((c) => ({ ...c, representedEntity: e.target.value }))
+                }
+              />
+              <span className="mt-1 block text-xs text-slate-500">
+                Defaults to company name when left blank.
+              </span>
             </label>
           </div>
 
@@ -378,8 +540,77 @@ export default function ManualPaymentsPanel() {
                         }
                       />
                     </label>
+                    <label className="block text-sm">
+                      <span className="font-medium text-slate-700">Province</span>
+                      <input
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                        value={b.province}
+                        onChange={(e) =>
+                          updateBriefing(index, { province: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="font-medium text-slate-700">Closing date</span>
+                      <input
+                        type="date"
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                        value={b.closingDate}
+                        onChange={(e) =>
+                          updateBriefing(index, { closingDate: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="font-medium text-slate-700">Closing time</span>
+                      <input
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                        placeholder="e.g. 11:00"
+                        value={b.closingTime}
+                        onChange={(e) =>
+                          updateBriefing(index, { closingTime: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="font-medium text-slate-700">
+                        Briefing contact person
+                      </span>
+                      <input
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                        value={b.contactPerson}
+                        onChange={(e) =>
+                          updateBriefing(index, { contactPerson: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="font-medium text-slate-700">
+                        Briefing contact number
+                      </span>
+                      <input
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                        value={b.contactPhone}
+                        onChange={(e) =>
+                          updateBriefing(index, { contactPhone: e.target.value })
+                        }
+                      />
+                    </label>
                     <label className="block text-sm sm:col-span-2">
-                      <span className="font-medium text-slate-700">Internal notes</span>
+                      <span className="font-medium text-slate-700">
+                        Briefing contact email
+                      </span>
+                      <input
+                        type="email"
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                        value={b.contactEmail}
+                        onChange={(e) =>
+                          updateBriefing(index, { contactEmail: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="block text-sm sm:col-span-2">
+                      <span className="font-medium text-slate-700">Notes</span>
                       <textarea
                         rows={2}
                         className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
@@ -399,6 +630,108 @@ export default function ManualPaymentsPanel() {
             >
               + Add another briefing
             </button>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
+                Supporting documents
+              </h3>
+              <button
+                type="button"
+                className="text-sm font-medium text-brand-700 hover:underline"
+                onClick={() =>
+                  setDocuments((rows) => [
+                    ...rows,
+                    {
+                      key: `doc-${Date.now()}`,
+                      kind: 'rfq',
+                      name: '',
+                      url: '',
+                    },
+                  ])
+                }
+              >
+                + Add document link
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              RFQ/tender, Letter of Authority, Scope/BOQ, or other. Paste a secure file URL for
+              now; LOA presence drives ops urgency.
+            </p>
+            {documents.length === 0 ? (
+              <p className="mt-3 text-sm text-slate-500">No documents attached yet.</p>
+            ) : (
+              <div className="mt-3 space-y-3">
+                {documents.map((doc, index) => (
+                  <div
+                    key={doc.key}
+                    className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-3"
+                  >
+                    <label className="block text-sm">
+                      <span className="font-medium text-slate-700">Type</span>
+                      <select
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                        value={doc.kind}
+                        onChange={(e) =>
+                          setDocuments((rows) =>
+                            rows.map((row, i) =>
+                              i === index
+                                ? { ...row, kind: e.target.value as DocKind }
+                                : row
+                            )
+                          )
+                        }
+                      >
+                        <option value="rfq">RFQ / tender</option>
+                        <option value="loa">Letter of Authority</option>
+                        <option value="boq">Scope / BOQ</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </label>
+                    <label className="block text-sm">
+                      <span className="font-medium text-slate-700">File name</span>
+                      <input
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                        value={doc.name}
+                        onChange={(e) =>
+                          setDocuments((rows) =>
+                            rows.map((row, i) =>
+                              i === index ? { ...row, name: e.target.value } : row
+                            )
+                          )
+                        }
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="font-medium text-slate-700">URL</span>
+                      <div className="mt-1 flex gap-2">
+                        <input
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                          value={doc.url}
+                          onChange={(e) =>
+                            setDocuments((rows) =>
+                              rows.map((row, i) =>
+                                i === index ? { ...row, url: e.target.value } : row
+                              )
+                            )
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="shrink-0 text-sm text-red-700 hover:underline"
+                          onClick={() =>
+                            setDocuments((rows) => rows.filter((_, i) => i !== index))
+                          }
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="sticky bottom-4 z-10 rounded-xl border border-brand-200 bg-brand-50 p-4 shadow-md sm:static sm:shadow-sm">
@@ -433,7 +766,7 @@ export default function ManualPaymentsPanel() {
             >
               {creating
                 ? 'Creating…'
-                : `Create invoice + payment link (${orderSummary.totalLabel})`}
+                : `Generate invoice & payment link (${orderSummary.totalLabel})`}
             </button>
             <p className="text-sm text-slate-500">Not VAT registered · one PayFast transaction</p>
           </div>
@@ -557,11 +890,16 @@ export default function ManualPaymentsPanel() {
                               : 'rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800'
                           }
                         >
-                          {b.invoiceStatus || b.paymentStatus}
+                          {b.opsStageLabel || b.invoiceStatus || b.paymentStatus}
                         </span>
                         {b.paidAt ? (
                           <div className="mt-1 text-xs text-slate-500">
                             Paid {new Date(b.paidAt).toLocaleString('en-ZA')}
+                          </div>
+                        ) : null}
+                        {b.urgencyFlags && b.urgencyFlags.length > 0 ? (
+                          <div className="mt-1 text-xs font-medium text-amber-800">
+                            {b.urgencyFlags.map((f) => f.replace(/_/g, ' ')).join(' · ')}
                           </div>
                         ) : null}
                       </td>

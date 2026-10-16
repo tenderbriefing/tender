@@ -33,7 +33,11 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         name: body.displayName || agentProfile?.displayName,
         rating: agentProfile?.rating || 3,
       },
-      { byAdmin: true }
+      {
+        byAdmin: true,
+        agentPayoutCents:
+          body.agentPayoutCents != null ? body.agentPayoutCents : body.payoutCents,
+      }
     )
 
     return NextResponse.json({ success: true, data: updated })

@@ -129,6 +129,12 @@ function normalizeBriefingLinesFromInput(input = {}) {
       briefingDate: String(line.briefingDate || '').trim(),
       briefingTime: String(line.briefingTime || '').trim(),
       briefingVenue: String(line.briefingVenue || '').trim(),
+      province: String(line.province || input.province || '').trim(),
+      closingDate: String(line.closingDate || '').trim(),
+      closingTime: String(line.closingTime || '').trim(),
+      contactPerson: String(line.contactPerson || line.briefingContactPerson || '').trim(),
+      contactPhone: String(line.contactPhone || line.briefingContactPhone || '').trim(),
+      contactEmail: String(line.contactEmail || line.briefingContactEmail || '').trim(),
       notes: String(line.notes || line.internalNotes || '').trim(),
       unitPriceCents: unit,
       paymentAuthorized: false,
@@ -211,8 +217,15 @@ function toPublicPaymentView(request, baseUrl) {
 /** Admin list/detail view — includes internal notes and actions metadata. */
 function toAdminView(request, baseUrl) {
   if (!request) return null
+  const {
+    deriveManualOpsStage,
+    manualOpsLabel,
+    deriveUrgencyFlags,
+  } = require('../../domain/manualBriefingOps')
   const publicView = toPublicPaymentView(request, baseUrl)
   const lines = Array.isArray(request.briefingLines) ? request.briefingLines : []
+  const opsStage = deriveManualOpsStage(request)
+  const urgencyFlags = deriveUrgencyFlags(request)
   return {
     ...publicView,
     id: request.id,
@@ -225,7 +238,19 @@ function toAdminView(request, baseUrl) {
     payfastPaymentId: request.payfastPaymentId || null,
     assignedAgentId: request.assignedAgentId || request.agentId || null,
     agentName: request.agentName || null,
+    agentPayoutCents: request.agentPayoutCents || null,
     status: request.status,
+    representedEntity:
+      request.representedEntity || request.registerAttendOnBehalfOf || publicView.companyName,
+    registerAttendOnBehalfOf:
+      request.registerAttendOnBehalfOf || request.representedEntity || publicView.companyName,
+    linkedSmeId: request.linkedSmeId || null,
+    province: request.province || lines[0]?.province || '',
+    documents: Array.isArray(request.documents) ? request.documents : [],
+    loaStatus: request.loaStatus || (Array.isArray(request.documents) && request.documents.some((d) => d.kind === 'loa') ? 'received' : 'missing'),
+    opsStage,
+    opsStageLabel: manualOpsLabel(opsStage),
+    urgencyFlags,
     availableForAssignment:
       request.paymentStatus === 'paid' || request.paymentStatus === 'not_required',
     briefingLinesAdmin: lines.map((l) => ({
@@ -237,6 +262,12 @@ function toAdminView(request, baseUrl) {
       briefingDate: l.briefingDate || '',
       briefingTime: l.briefingTime || '',
       briefingVenue: l.briefingVenue || '',
+      province: l.province || '',
+      closingDate: l.closingDate || '',
+      closingTime: l.closingTime || '',
+      contactPerson: l.contactPerson || '',
+      contactPhone: l.contactPhone || '',
+      contactEmail: l.contactEmail || '',
       notes: l.notes || '',
       unitPriceCents: l.unitPriceCents || BRIEFING_PRICE_CENTS,
       paymentAuthorized: Boolean(l.paymentAuthorized),
@@ -302,12 +333,47 @@ async function listManualPaymentRequests({ limit = 100 } = {}) {
  * Create a manual payment request for one or more briefing lines.
  * Client-supplied totals / quantities / unit prices are ignored.
  */
+function normalizeManualDocuments(input = {}) {
+  const {
+    MANUAL_DOCUMENT_KINDS,
+  } = require('../../domain/manualBriefingOps')
+  const raw = Array.isArray(input.documents) ? input.documents : []
+  const out = []
+  for (const doc of raw) {
+    if (!doc || typeof doc !== 'object') continue
+    const kind = String(doc.kind || 'other').trim().toLowerCase()
+    if (!MANUAL_DOCUMENT_KINDS.includes(kind)) continue
+    const name = String(doc.name || doc.fileName || '').trim()
+    const storagePath = String(doc.storagePath || doc.path || '').trim()
+    const url = String(doc.url || doc.downloadUrl || '').trim()
+    if (!name && !storagePath && !url) continue
+    out.push({
+      id: String(doc.id || `doc-${crypto.randomBytes(4).toString('hex')}`),
+      kind,
+      name: name || `${kind}-document`,
+      storagePath: storagePath || null,
+      url: url || null,
+      contentType: String(doc.contentType || '').trim() || null,
+      sizeBytes: Number.isFinite(Number(doc.sizeBytes)) ? Number(doc.sizeBytes) : null,
+      uploadedAt: String(doc.uploadedAt || new Date().toISOString()),
+    })
+  }
+  return out
+}
+
 async function createManualPaymentRequest(input, adminUser = {}) {
   const companyName = String(input.companyName || input.customerName || '').trim()
   const customerEmail = normalizeEmail(input.customerEmail || input.email)
   const contactPerson = String(input.contactPerson || input.customerContact || '').trim()
   const customerPhone = String(input.customerPhone || input.phone || input.phoneNumber || '').trim()
   const internalNotes = String(input.internalNotes || input.notes || '').trim()
+  const representedEntity = String(
+    input.representedEntity ||
+      input.onBehalfOf ||
+      input.registerAttendOnBehalfOf ||
+      ''
+  ).trim()
+  const linkedSmeId = String(input.linkedSmeId || input.smeId || '').trim() || null
 
   if (!companyName) throw new Error('Customer/company name is required')
   if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
@@ -322,6 +388,8 @@ async function createManualPaymentRequest(input, adminUser = {}) {
   const briefingCount = briefingLines.length
   const price = multiBriefingPriceSnapshotFields(briefingCount)
   const first = briefingLines[0]
+  const documents = normalizeManualDocuments(input)
+  const hasLoa = documents.some((d) => d.kind === 'loa')
 
   const paymentToken = generatePaymentToken()
   const invoiceNumber = nextInvoiceNumber()
@@ -334,7 +402,7 @@ async function createManualPaymentRequest(input, adminUser = {}) {
       briefingCount === 1
         ? first.tenderDescription
         : `${briefingCount} tender briefings`,
-    smeId: guestSmeId(customerEmail),
+    smeId: linkedSmeId || guestSmeId(customerEmail),
     smeName: contactPerson || companyName,
     smeCompany: companyName,
     smeEmail: customerEmail,
@@ -344,7 +412,7 @@ async function createManualPaymentRequest(input, adminUser = {}) {
     briefingTime: first.briefingTime,
     briefingVenue: first.briefingVenue,
     notes: '',
-    province: String(input.province || '').trim(),
+    province: String(input.province || first.province || '').trim(),
     department: first.procuringEntity || '',
     source: MANUAL_SOURCE,
     bookingKind: 'manual',
@@ -376,6 +444,12 @@ async function createManualPaymentRequest(input, adminUser = {}) {
   request.currency = price.currency
   request.pricingVersion = price.pricingVersion
   request.contactPerson = contactPerson
+  request.representedEntity = representedEntity || companyName
+  request.registerAttendOnBehalfOf = representedEntity || companyName
+  request.linkedSmeId = linkedSmeId
+  request.documents = documents
+  request.loaStatus = hasLoa ? 'received' : 'missing'
+  request.opsStage = 'awaiting_payment'
 
   const storage = getStorage()
   await storage.saveAttendanceRequest(sanitizeFirestoreData(request))

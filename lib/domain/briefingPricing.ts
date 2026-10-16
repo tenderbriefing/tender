@@ -51,7 +51,24 @@ export function resolveBriefingPriceCents(): number {
   return BRIEFING_PRICE_CENTS
 }
 
-export function resolveYouthAgentPayoutCents(): number {
+/**
+ * Youth Agent payout (cents). Prefer per-assignment override on the request,
+ * then env, then default constant. Never exposed on SME invoices.
+ */
+export function resolveYouthAgentPayoutCents(
+  request?: {
+    agentPayoutCents?: unknown
+    agentPayoutCentsOverride?: unknown
+  } | null
+): number {
+  if (request && typeof request === 'object') {
+    const override = Number(
+      request.agentPayoutCents != null
+        ? request.agentPayoutCents
+        : request.agentPayoutCentsOverride
+    )
+    if (Number.isFinite(override) && override > 0) return Math.round(override)
+  }
   const env = process.env.YOUTH_AGENT_PAYOUT_CENTS
   if (env != null && env !== '') {
     const n = Number(env)
@@ -60,9 +77,12 @@ export function resolveYouthAgentPayoutCents(): number {
   return YOUTH_AGENT_PAYOUT_CENTS
 }
 
-export function grossContributionForRevenueCents(briefingRevenueCents: number): number {
+export function grossContributionForRevenueCents(
+  briefingRevenueCents: number,
+  request?: { agentPayoutCents?: unknown; agentPayoutCentsOverride?: unknown } | null
+): number {
   const revenue = Math.round(Number(briefingRevenueCents) || 0)
-  const payout = resolveYouthAgentPayoutCents()
+  const payout = resolveYouthAgentPayoutCents(request)
   return Math.max(0, revenue - payout)
 }
 
