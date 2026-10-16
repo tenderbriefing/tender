@@ -1,7 +1,7 @@
 /**
  * TenderBriefing professional accounting-style payment invoice PDF.
  * Not a tax invoice — TenderBriefing is not VAT registered.
- * Branding: clean mark icon + PDF text for wordmark/contact (never a composite screenshot).
+ * Branding: horizontal invoice-logo.png wordmark + PDF text for contact details.
  * Pricing: resolveRequestChargeCents only — no client amounts.
  */
 const { PDFDocument, StandardFonts, rgb, PDFString, PDFName } = require('pdf-lib')
@@ -51,26 +51,16 @@ const payBtn = rgb(0.05, 0.22, 0.38)
 const white = rgb(1, 1, 1)
 const paidGreen = rgb(0.12, 0.45, 0.28)
 const unpaidAmber = rgb(0.55, 0.35, 0.05)
-const markBg = rgb(0.04, 0.04, 0.05)
 
-/**
- * Prefer the clean icon mark only.
- * Never embed the full composite wordmark/brand board as the invoice logo.
- */
-function loadMarkLogoBytes() {
-  const candidates = [
-    path.join(process.cwd(), 'public', 'brand', 'mark.png'),
-    // Fallback only if mark is missing — still avoid hires composite boards.
-    path.join(process.cwd(), 'public', 'brand', 'mark.png'),
-  ]
-  for (const p of candidates) {
-    try {
-      return fs.readFileSync(p)
-    } catch {
-      /* try next */
-    }
+/** Horizontal TenderBriefing wordmark logo for invoice headers (transparent bg). */
+function loadInvoiceLogoBytes() {
+  try {
+    return fs.readFileSync(
+      path.join(process.cwd(), 'public', 'brand', 'invoice-logo.png')
+    )
+  } catch {
+    return null
   }
-  return null
 }
 
 function formatDate(iso) {
@@ -265,13 +255,13 @@ async function renderManualInvoicePdf(request, opts = {}) {
       ? structuredLines.length
       : Math.max(1, Math.round(cents / BRIEFING_PRICE_CENTS) || 1)
 
-  let markImage = null
-  const markBytes = loadMarkLogoBytes()
-  if (markBytes) {
+  let logoImage = null
+  const logoBytes = loadInvoiceLogoBytes()
+  if (logoBytes) {
     try {
-      markImage = await pdf.embedPng(markBytes)
+      logoImage = await pdf.embedPng(logoBytes)
     } catch {
-      markImage = null
+      logoImage = null
     }
   }
 
@@ -307,40 +297,35 @@ async function renderManualInvoicePdf(request, opts = {}) {
     y -= 18
   }
 
-  // ── Header: mark icon + text wordmark/contact | INVOICE meta ───────────
-  const logoBox = 44
-  let supplierTextX = MARGIN
+  // ── Header: horizontal brand logo + text contact | INVOICE meta ────────
+  // Logo already includes the TENDERBRIEFING wordmark — do not draw a tiny
+  // black mark square or duplicate the company name beside the logo.
+  let supplierY = y
+  const logoMaxW = 210
+  const logoMaxH = 78
 
-  if (markImage) {
-    page.drawRectangle({
+  if (logoImage) {
+    const scale = Math.min(logoMaxW / logoImage.width, logoMaxH / logoImage.height)
+    const lw = logoImage.width * scale
+    const lh = logoImage.height * scale
+    page.drawImage(logoImage, {
       x: MARGIN,
-      y: y - logoBox,
-      width: logoBox,
-      height: logoBox,
-      color: markBg,
-    })
-    const pad = 5
-    const fit = logoBox - pad * 2
-    const scale = Math.min(fit / markImage.width, fit / markImage.height)
-    const lw = markImage.width * scale
-    const lh = markImage.height * scale
-    page.drawImage(markImage, {
-      x: MARGIN + (logoBox - lw) / 2,
-      y: y - logoBox + (logoBox - lh) / 2,
+      y: y - lh,
       width: lw,
       height: lh,
     })
-    supplierTextX = MARGIN + logoBox + 12
+    supplierY = y - lh - 10
+  } else {
+    page.drawText(SUPPLIER.name, {
+      x: MARGIN,
+      y: y - 12,
+      size: 12,
+      font: fontBold,
+      color: brand,
+    })
+    supplierY = y - 26
   }
 
-  page.drawText(SUPPLIER.name, {
-    x: supplierTextX,
-    y: y - 12,
-    size: 12,
-    font: fontBold,
-    color: brand,
-  })
-  let supplierY = y - 26
   for (const line of [
     ...SUPPLIER.addressLines,
     SUPPLIER.email,
@@ -348,7 +333,7 @@ async function renderManualInvoicePdf(request, opts = {}) {
     SUPPLIER.website,
   ]) {
     page.drawText(line, {
-      x: supplierTextX,
+      x: MARGIN,
       y: supplierY,
       size: 8,
       font,
