@@ -326,7 +326,7 @@ export function nextRequiredAction(stage: OpsLifecycleStage): string {
     case 'report_in_progress':
       return 'Review, edit, and Approve Final Report'
     case 'report_ready':
-      return 'Email client manually, then Mark as Delivered'
+      return 'Send report to client (delivery review)'
     case 'delivered':
       return 'Close when ops complete'
     case 'closed':

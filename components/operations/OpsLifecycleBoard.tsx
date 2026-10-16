@@ -38,6 +38,8 @@ type OpsRow = {
   opsReportVersion?: number | null
   reportFileName?: string | null
   reportDocxFileName?: string | null
+  clientDeliveryId?: string | null
+  clientDeliveryStatus?: string | null
   deliveredAt?: string | null
   invoiceNumber?: string | null
   amountCents?: number | null
@@ -496,6 +498,27 @@ export default function OpsLifecycleBoard() {
                       <span className="rounded bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-900">
                         REPORT READY
                       </span>
+                      {selected.clientDeliveryStatus === 'delivery_review' ||
+                      selected.clientDeliveryStatus === 'failed' ||
+                      selected.clientDeliveryStatus === 'bounced' ? (
+                        <a
+                          href={`/admin/operations/delivery/${selected.id}`}
+                          className="rounded-lg bg-brand-700 px-3 py-1.5 text-sm font-semibold text-white"
+                        >
+                          Continue delivery
+                        </a>
+                      ) : selected.clientDeliveryStatus === 'sending' ? (
+                        <span className="rounded bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-700">
+                          SENDING…
+                        </span>
+                      ) : (
+                        <a
+                          href={`/admin/operations/delivery/${selected.id}`}
+                          className="rounded-lg bg-brand-700 px-3 py-1.5 text-sm font-semibold text-white"
+                        >
+                          Send to client
+                        </a>
+                      )}
                       <button
                         type="button"
                         disabled={busy}
@@ -520,9 +543,34 @@ export default function OpsLifecycleBoard() {
                       </a>
                     </>
                   ) : null}
+                  {selected.opsStage === 'delivered' ? (
+                    <>
+                      <span className="rounded bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-900">
+                        DELIVERED
+                        {selected.deliveredAt
+                          ? ` · ${new Date(selected.deliveredAt).toLocaleString()}`
+                          : ''}
+                      </span>
+                      {selected.clientDeliveryStatus === 'bounced' ? (
+                        <a
+                          href={`/admin/operations/delivery/${selected.id}`}
+                          className="rounded-lg bg-amber-700 px-3 py-1.5 text-sm font-semibold text-white"
+                        >
+                          Fix recipient / resend
+                        </a>
+                      ) : (
+                        <a
+                          href={`/admin/operations/delivery/${selected.id}`}
+                          className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
+                        >
+                          Delivery history / resend
+                        </a>
+                      )}
+                    </>
+                  ) : null}
                 </div>
                 <p className="text-xs text-slate-500">
-                  Approval generates PDF + DOCX. Founder emails the client outside the platform.
+                  Approval generates PDF + DOCX. Client email only after explicit Confirm &amp; Send.
                 </p>
               </div>
 
@@ -553,12 +601,12 @@ export default function OpsLifecycleBoard() {
               {selected.opsStage === 'report_ready' || selected.opsStage === 'delivered' ? (
                 <div className="space-y-2 border-t border-slate-100 pt-3">
                   <p className="text-sm text-slate-700">
-                    Email the report to <strong>{selected.customerEmail || 'the client'}</strong>{' '}
-                    outside TenderBriefing, then mark delivered.
+                    Prefer <strong>Send to client</strong> for auditable email delivery. Manual mark
+                    remains available if the Founder emailed outside the platform.
                   </p>
                   <textarea
                     rows={2}
-                    placeholder="Optional delivery note"
+                    placeholder="Optional delivery note (manual mark only)"
                     className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
                     value={deliveryNote}
                     onChange={(e) => setDeliveryNote(e.target.value)}
@@ -566,7 +614,7 @@ export default function OpsLifecycleBoard() {
                   <button
                     type="button"
                     disabled={busy || selected.opsStage === 'delivered'}
-                    className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                    className="rounded-lg border border-slate-400 px-3 py-2 text-sm font-semibold disabled:opacity-60"
                     onClick={() =>
                       runAction(selected.id, 'mark_delivered', { deliveryNote })
                     }
