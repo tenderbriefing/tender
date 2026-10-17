@@ -85,12 +85,39 @@ function sanitizeRegistrationAdditional(data) {
   return stripped
 }
 
+/** Mirror of lib/auth/saCellphone.normalizeSaCellphone (pragmatic SA mobile). */
+function normalizeSaCellphone(raw) {
+  const trimmed = String(raw || '').trim()
+  if (!trimmed) return null
+  let digits = trimmed.replace(/\D/g, '')
+  if (!digits) return null
+  if (digits.startsWith('0027')) digits = digits.slice(2)
+  if (digits.startsWith('27') && digits.length === 11) {
+    const national = digits.slice(2)
+    if (!/^[6-8]\d{8}$/.test(national)) return null
+    return `+27${national}`
+  }
+  if (digits.startsWith('0') && digits.length === 10) {
+    const national = digits.slice(1)
+    if (!/^[6-8]\d{8}$/.test(national)) return null
+    return `+27${national}`
+  }
+  if (digits.length === 9 && /^[6-8]\d{8}$/.test(digits)) return `+27${digits}`
+  return null
+}
+
 /** Mirror of serverProfileBootstrap.hasFullRegistrationPayload */
 function hasFullRegistrationPayload(role, data) {
   if (!data || typeof data !== 'object') return false
-  const phone = typeof data.phoneNumber === 'string' && data.phoneNumber.trim().length > 0
+  const phoneOk = Boolean(
+    normalizeSaCellphone(
+      (typeof data.phoneNumber === 'string' && data.phoneNumber) ||
+        (typeof data.whatsAppNumber === 'string' && data.whatsAppNumber) ||
+        ''
+    )
+  )
   const province = typeof data.province === 'string' && data.province.trim().length > 0
-  if (!phone || !province) return false
+  if (!phoneOk || !province) return false
   if (role === 'sme') {
     const company = typeof data.companyName === 'string' && data.companyName.trim().length > 0
     const categories = Array.isArray(data.categories) && data.categories.length > 0
@@ -185,7 +212,7 @@ function check(name, ok, detail = '') {
   const sanitized = sanitizeRegistrationAdditional({
     displayName: 'Keep',
     companyName: 'Acme',
-    phoneNumber: '082',
+    phoneNumber: '0821234567',
     province: 'GP',
     categories: ['IT'],
     founderAccess: true,
@@ -209,7 +236,7 @@ function check(name, ok, detail = '') {
     'structured SME signup is full registration',
     hasFullRegistrationPayload('sme', {
       companyName: 'Acme',
-      phoneNumber: '082',
+      phoneNumber: '0821234567',
       province: 'GP',
       categories: ['IT'],
     }) === true
@@ -221,7 +248,7 @@ function check(name, ok, detail = '') {
   check(
     'structured agent signup is full registration',
     hasFullRegistrationPayload('youth-agent', {
-      phoneNumber: '082',
+      phoneNumber: '0821234567',
       province: 'GP',
       city: 'Johannesburg',
     }) === true

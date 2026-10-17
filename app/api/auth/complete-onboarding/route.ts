@@ -4,6 +4,7 @@ import { verifyApiUser } from '@/lib/auth/verifyApiUser'
 import { stripPrivilegedFields } from '@/lib/auth/googleAuthFlow'
 import { buildMatchingKeywords } from '@/lib/data/csdProcurementCatalog'
 import { logProfileSetupFailure, nowIso } from '@/lib/auth/serverProfileBootstrap'
+import { normalizeSaCellphone, SA_CELLPHONE_INVALID_MESSAGE } from '@/lib/auth/saCellphone'
 import type { AgentOnboardingInput, SmeOnboardingInput } from '@/lib/onboarding/client'
 
 export const dynamic = 'force-dynamic'
@@ -14,6 +15,7 @@ type OnboardingBody =
 
 /**
  * Completes SME / Youth Agent onboarding via Admin SDK (avoids client rules fragility).
+ * New registrations must supply a valid SA cellphone (stored as phoneNumber + whatsAppNumber mirror).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -56,6 +58,13 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
+      const cellphone = normalizeSaCellphone(input.whatsAppNumber)
+      if (!cellphone) {
+        return NextResponse.json(
+          { success: false, error: SA_CELLPHONE_INVALID_MESSAGE, code: 'INVALID_CELLPHONE' },
+          { status: 400 }
+        )
+      }
       const matchingKeywords = buildMatchingKeywords(input.categories, input.commodities || [])
       const profilePatch = stripPrivilegedFields({
         email,
@@ -68,8 +77,8 @@ export async function POST(request: NextRequest) {
         matchingKeywords,
         sectors: input.categories,
         provincesOfInterest: [input.province],
-        phoneNumber: (input.whatsAppNumber || '').trim(),
-        whatsAppNumber: (input.whatsAppNumber || '').trim(),
+        phoneNumber: cellphone,
+        whatsAppNumber: cellphone,
         preferredDepartments: input.preferredDepartments || [],
         tenderInterests: (input.tenderInterests || '').trim(),
         onboardingCompleted: true,
@@ -94,8 +103,8 @@ export async function POST(request: NextRequest) {
           sectors: input.categories,
           preferredDepartments: input.preferredDepartments || [],
           tenderInterests: (input.tenderInterests || '').trim(),
-          phoneNumber: (input.whatsAppNumber || '').trim(),
-          whatsAppNumber: (input.whatsAppNumber || '').trim(),
+          phoneNumber: cellphone,
+          whatsAppNumber: cellphone,
           provincesOfInterest: [input.province],
           userType: 'sme',
           onboardingCompleted: true,
@@ -118,6 +127,13 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
+      const cellphone = normalizeSaCellphone(input.whatsAppNumber)
+      if (!cellphone) {
+        return NextResponse.json(
+          { success: false, error: SA_CELLPHONE_INVALID_MESSAGE, code: 'INVALID_CELLPHONE' },
+          { status: 400 }
+        )
+      }
       const preferredServiceAreas =
         input.preferredServiceAreas?.length > 0
           ? input.preferredServiceAreas
@@ -128,8 +144,8 @@ export async function POST(request: NextRequest) {
         province: input.province,
         city: input.city.trim(),
         location: `${input.city.trim()}, ${input.province}`,
-        phoneNumber: (input.whatsAppNumber || '').trim(),
-        whatsAppNumber: (input.whatsAppNumber || '').trim(),
+        phoneNumber: cellphone,
+        whatsAppNumber: cellphone,
         preferredServiceAreas,
         idVerificationNote: (input.idVerificationNote || '').trim(),
         codeOfConductAccepted: true,
@@ -150,8 +166,8 @@ export async function POST(request: NextRequest) {
           province: input.province,
           city: input.city.trim(),
           location: `${input.city.trim()}, ${input.province}`,
-          phoneNumber: (input.whatsAppNumber || '').trim(),
-          whatsAppNumber: (input.whatsAppNumber || '').trim(),
+          phoneNumber: cellphone,
+          whatsAppNumber: cellphone,
           preferredServiceAreas,
           idVerificationNote: (input.idVerificationNote || '').trim(),
           codeOfConductAccepted: true,

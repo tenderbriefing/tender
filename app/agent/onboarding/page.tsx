@@ -9,6 +9,11 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { SA_PROVINCES } from '@/lib/procurement/provinces'
 import { saveAgentOnboarding } from '@/lib/onboarding/client'
+import {
+  normalizeSaCellphone,
+  SA_CELLPHONE_EXAMPLE,
+  SA_CELLPHONE_INVALID_MESSAGE,
+} from '@/lib/auth/saCellphone'
 import { toast } from 'react-hot-toast'
 
 const inputClass =
@@ -58,7 +63,12 @@ export default function AgentOnboardingPage() {
       return
     }
     if (!form.whatsAppNumber.trim()) {
-      toast.error('WhatsApp number is required')
+      toast.error('Cellphone number is required')
+      return
+    }
+    const cellphone = normalizeSaCellphone(form.whatsAppNumber)
+    if (!cellphone) {
+      toast.error(SA_CELLPHONE_INVALID_MESSAGE)
       return
     }
     if (!form.codeOfConductAccepted) {
@@ -77,7 +87,7 @@ export default function AgentOnboardingPage() {
         displayName: form.displayName,
         province: form.province,
         city: form.city,
-        whatsAppNumber: form.whatsAppNumber,
+        whatsAppNumber: cellphone,
         preferredServiceAreas: areas.length ? areas : [form.province],
         idVerificationNote: form.idVerificationNote,
         codeOfConductAccepted: form.codeOfConductAccepted,
@@ -155,15 +165,19 @@ export default function AgentOnboardingPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700">WhatsApp number *</label>
+            <label className="block text-sm font-semibold text-slate-700">
+              Cellphone number <span className="text-red-600">*</span>
+            </label>
             <input
               type="tel"
+              inputMode="tel"
               value={form.whatsAppNumber}
               onChange={(e) => setForm((p) => ({ ...p, whatsAppNumber: e.target.value }))}
-              placeholder="+27..."
+              placeholder={SA_CELLPHONE_EXAMPLE}
               className={`mt-1 ${inputClass}`}
               required
             />
+            <p className="mt-1 text-xs text-slate-500">Example: {SA_CELLPHONE_EXAMPLE}</p>
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-700">Preferred areas</label>

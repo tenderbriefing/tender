@@ -10,6 +10,11 @@ import SmeCategoryCommoditySelector from '@/components/sme/SmeCategoryCommodityS
 import { useAuth } from '@/components/providers/AuthProvider'
 import { SA_PROVINCES } from '@/lib/procurement/provinces'
 import { saveSmeOnboarding } from '@/lib/onboarding/client'
+import {
+  normalizeSaCellphone,
+  SA_CELLPHONE_EXAMPLE,
+  SA_CELLPHONE_INVALID_MESSAGE,
+} from '@/lib/auth/saCellphone'
 import { toast } from 'react-hot-toast'
 
 const inputClass =
@@ -69,7 +74,12 @@ export default function SmeOnboardingPage() {
       return
     }
     if (!form.whatsAppNumber.trim()) {
-      toast.error('WhatsApp number is required')
+      toast.error('Cellphone number is required')
+      return
+    }
+    const cellphone = normalizeSaCellphone(form.whatsAppNumber)
+    if (!cellphone) {
+      toast.error(SA_CELLPHONE_INVALID_MESSAGE)
       return
     }
 
@@ -87,7 +97,7 @@ export default function SmeOnboardingPage() {
         categories: form.categories,
         commodities: form.commodities,
         preferredDepartments: departments,
-        whatsAppNumber: form.whatsAppNumber,
+        whatsAppNumber: cellphone,
         tenderInterests: form.tenderInterests,
       })
       toast.success('SME profile saved')
@@ -183,15 +193,19 @@ export default function SmeOnboardingPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700">WhatsApp number *</label>
+              <label className="block text-sm font-semibold text-slate-700">
+                Cellphone number <span className="text-red-600">*</span>
+              </label>
               <input
                 type="tel"
+                inputMode="tel"
                 value={form.whatsAppNumber}
                 onChange={(e) => setForm((p) => ({ ...p, whatsAppNumber: e.target.value }))}
-                placeholder="+27..."
+                placeholder={SA_CELLPHONE_EXAMPLE}
                 className={`mt-1 ${inputClass}`}
                 required
               />
+              <p className="mt-1 text-xs text-slate-500">Example: {SA_CELLPHONE_EXAMPLE}</p>
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-semibold text-slate-700">Tender interests</label>

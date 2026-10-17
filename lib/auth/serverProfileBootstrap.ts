@@ -4,6 +4,7 @@ import {
   stripPrivilegedFields,
   type GoogleBootstrapRole,
 } from '@/lib/auth/googleAuthFlow'
+import { isValidSaCellphone, normalizeSaCellphone } from '@/lib/auth/saCellphone'
 
 export function nowIso() {
   return new Date().toISOString()
@@ -31,19 +32,54 @@ export function sanitizeRegistrationAdditional(
 }
 
 /**
+ * If a phone was supplied on registration, normalise to +27… and mirror onto whatsAppNumber.
+ * Returns { ok:false } when a non-empty phone is present but invalid.
+ * Empty phone is allowed here (Google minimal bootstrap → onboarding); full registration
+ * still fails hasFullRegistrationPayload without a valid number.
+ */
+export function applyRegistrationCellphone(
+  data: Partial<UserProfile> | undefined
+): { ok: true; data: Partial<UserProfile> } | { ok: false; error: string } {
+  const extra = sanitizeRegistrationAdditional(data)
+  const raw =
+    (typeof extra.phoneNumber === 'string' && extra.phoneNumber.trim()) ||
+    (typeof extra.whatsAppNumber === 'string' && extra.whatsAppNumber.trim()) ||
+    ''
+  if (!raw) {
+    delete extra.phoneNumber
+    delete extra.whatsAppNumber
+    return { ok: true, data: extra }
+  }
+  const normalized = normalizeSaCellphone(raw)
+  if (!normalized) {
+    return {
+      ok: false,
+      error: 'Enter a valid South African cellphone number (e.g. 082 123 4567).',
+    }
+  }
+  extra.phoneNumber = normalized
+  extra.whatsAppNumber = normalized
+  return { ok: true, data: extra }
+}
+
+/**
  * Structured full email-registration payload (signup form), not a Google minimal bootstrap.
  * Server uses this to decide onboardingCompleted — never trusts client boolean alone.
+ * Requires a valid SA cellphone (normalised or raw acceptable formats).
  */
 export function hasFullRegistrationPayload(
   role: GoogleBootstrapRole,
   data: Partial<UserProfile> | undefined
 ): boolean {
   if (!data || typeof data !== 'object') return false
-  const phone =
-    typeof data.phoneNumber === 'string' && data.phoneNumber.trim().length > 0
+  const phoneOk = isValidSaCellphone(
+    (typeof data.phoneNumber === 'string' && data.phoneNumber) ||
+      (typeof data.whatsAppNumber === 'string' && data.whatsAppNumber) ||
+      ''
+  )
   const province =
     typeof data.province === 'string' && data.province.trim().length > 0
-  if (!phone || !province) return false
+  if (!phoneOk || !province) return false
 
   if (role === 'sme') {
     const company =
