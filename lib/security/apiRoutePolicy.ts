@@ -52,6 +52,9 @@ export function isPublicApiRoute(pathname: string, method: string): boolean {
   // Phase 15 assignment accept/decline — scoped expiring token; handler verifies hash.
   if (pathname === '/api/assignments/respond' && (m === 'GET' || m === 'POST')) return true
 
+  // Phase 16 field check-in / evidence — scoped field token or assigned YA Bearer.
+  if (pathname === '/api/assignments/field' && (m === 'GET' || m === 'POST')) return true
+
   return false
 }
 

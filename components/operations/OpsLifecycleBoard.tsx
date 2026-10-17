@@ -31,6 +31,12 @@ type OpsRow = {
   assignmentSubstate?: string | null
   assignmentAcceptanceDeadlineAt?: string | null
   assignmentAcceptanceUrgency?: string | null
+  checkedInAt?: string | null
+  fieldSubstate?: string | null
+  attendanceConfirmedAt?: string | null
+  evidenceReviewStatus?: string | null
+  fieldNotesPreview?: string | null
+  locationCaptured?: boolean
   urgencyFlags?: string[]
   lastOpsUpdate?: string | null
   nextAction?: string
@@ -588,7 +594,59 @@ export default function OpsLifecycleBoard() {
               <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
                 Lifecycle actions
               </h4>
+              <p className="text-xs text-slate-600">
+                Check-in: {selected.checkedInAt ? new Date(selected.checkedInAt).toLocaleString('en-ZA') : '—'}
+                {selected.locationCaptured ? ' · GPS' : ''}
+                {' · '}
+                Evidence: {selected.evidenceCount ?? 0}
+                {selected.evidenceReviewStatus ? ` · review ${selected.evidenceReviewStatus}` : ''}
+                {selected.fieldSubstate ? ` · field ${selected.fieldSubstate}` : ''}
+              </p>
+              {selected.fieldNotesPreview ? (
+                <p className="text-xs text-slate-500">Notes: {selected.fieldNotesPreview}</p>
+              ) : null}
               <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
+                  onClick={async () => {
+                    setBusy(true)
+                    try {
+                      const res = await authFetch(`/api/admin/ops/${selected.id}`, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'issue_field_link' }),
+                      })
+                      const json = await res.json()
+                      if (!json.success) {
+                        toast.error(json.error || 'Field link failed')
+                        return
+                      }
+                      const url = json.data?.result?.fieldUrl
+                        ? `${window.location.origin}${json.data.result.fieldUrl}`
+                        : null
+                      if (url) {
+                        await navigator.clipboard.writeText(url)
+                        toast.success('Field link copied')
+                      } else toast.success('Field link issued')
+                      await load()
+                    } catch {
+                      toast.error('Field link failed')
+                    } finally {
+                      setBusy(false)
+                    }
+                  }}
+                >
+                  Issue field link
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
+                  onClick={() => runAction(selected.id, 'override_check_in')}
+                >
+                  Override check-in
+                </button>
                 <button
                   type="button"
                   disabled={busy}
@@ -596,6 +654,36 @@ export default function OpsLifecycleBoard() {
                   onClick={() => runAction(selected.id, 'attend')}
                 >
                   Mark attended
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="rounded border border-teal-700 bg-teal-50 px-3 py-1.5 text-sm text-teal-900 hover:bg-teal-100"
+                  onClick={() => runAction(selected.id, 'approve_evidence')}
+                >
+                  Approve evidence
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
+                  onClick={() =>
+                    runAction(selected.id, 'request_more_evidence', {
+                      note: 'Please upload clearer attendance proof',
+                    })
+                  }
+                >
+                  Request more evidence
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="rounded border border-red-300 px-3 py-1.5 text-sm text-red-800 hover:bg-red-50"
+                  onClick={() =>
+                    runAction(selected.id, 'mark_no_show', { reason: 'Representative did not attend' })
+                  }
+                >
+                  Mark no-show
                 </button>
                 <button
                   type="button"

@@ -19,6 +19,11 @@ const EXCEPTION_CODES = Object.freeze({
   REPRESENTATIVE_RESPONSE_PENDING: 'REPRESENTATIVE_RESPONSE_PENDING',
   REPRESENTATIVE_DECLINED: 'REPRESENTATIVE_DECLINED',
   REPRESENTATIVE_RESPONSE_OVERDUE: 'REPRESENTATIVE_RESPONSE_OVERDUE',
+  REPRESENTATIVE_NOT_CHECKED_IN: 'REPRESENTATIVE_NOT_CHECKED_IN',
+  BRIEFING_STARTED_NO_CHECKIN: 'BRIEFING_STARTED_NO_CHECKIN',
+  BRIEFING_PASSED_NO_ATTENDANCE_CONFIRMATION: 'BRIEFING_PASSED_NO_ATTENDANCE_CONFIRMATION',
+  ATTENDED_NO_EVIDENCE: 'ATTENDED_NO_EVIDENCE',
+  EVIDENCE_INCOMPLETE: 'EVIDENCE_INCOMPLETE',
   BRIEFING_PASSED_NO_EVIDENCE: 'BRIEFING_PASSED_NO_EVIDENCE',
   EVIDENCE_RECEIVED_REPORT_PENDING: 'EVIDENCE_RECEIVED_REPORT_PENDING',
   REPORT_READY_NOT_SENT: 'REPORT_READY_NOT_SENT',
@@ -32,6 +37,11 @@ const EXCEPTION_LABELS = Object.freeze({
   REPRESENTATIVE_RESPONSE_PENDING: 'Awaiting representative acceptance',
   REPRESENTATIVE_DECLINED: 'Representative declined — reassign',
   REPRESENTATIVE_RESPONSE_OVERDUE: 'Acceptance overdue — reassign',
+  REPRESENTATIVE_NOT_CHECKED_IN: 'Representative not checked in',
+  BRIEFING_STARTED_NO_CHECKIN: 'Briefing started — no check-in',
+  BRIEFING_PASSED_NO_ATTENDANCE_CONFIRMATION: 'Briefing passed — no attendance confirmation',
+  ATTENDED_NO_EVIDENCE: 'Attended — no evidence',
+  EVIDENCE_INCOMPLETE: 'Evidence incomplete — more required',
   BRIEFING_PASSED_NO_EVIDENCE: 'Briefing passed — no evidence',
   EVIDENCE_RECEIVED_REPORT_PENDING: 'Evidence received — report pending',
   REPORT_READY_NOT_SENT: 'Report ready — not sent',
@@ -91,6 +101,13 @@ function recommendedActionForException(code, stage) {
     case EXCEPTION_CODES.REPRESENTATIVE_DECLINED:
     case EXCEPTION_CODES.REPRESENTATIVE_RESPONSE_OVERDUE:
       return { label: 'Dispatch replacement', hrefAction: 'dispatch' }
+    case EXCEPTION_CODES.REPRESENTATIVE_NOT_CHECKED_IN:
+    case EXCEPTION_CODES.BRIEFING_STARTED_NO_CHECKIN:
+      return { label: 'Follow up check-in / override', hrefAction: 'field' }
+    case EXCEPTION_CODES.BRIEFING_PASSED_NO_ATTENDANCE_CONFIRMATION:
+      return { label: 'Confirm attendance or mark no-show', hrefAction: 'attend' }
+    case EXCEPTION_CODES.ATTENDED_NO_EVIDENCE:
+    case EXCEPTION_CODES.EVIDENCE_INCOMPLETE:
     case EXCEPTION_CODES.BRIEFING_PASSED_NO_EVIDENCE:
       return { label: 'Upload evidence / mark attended', hrefAction: 'evidence' }
     case EXCEPTION_CODES.EVIDENCE_RECEIVED_REPORT_PENDING:
@@ -211,15 +228,90 @@ function evaluateOpsSla(request = {}, opts = {}) {
     }
   }
 
+  const hasRep =
+    Boolean(request.assignedAgentId || request.agentId || String(request.representativeName || '').trim()) &&
+    String(request.fieldSubstate || '') !== 'no_show'
+  const checkedIn = Boolean(request.checkedInAt)
+  const attendanceConfirmed = request.attended === true || Boolean(request.attendanceConfirmedAt)
+  const evidenceN = Array.isArray(request.evidenceItems) ? request.evidenceItems.length : 0
+  const review = String(request.evidenceReviewStatus || '').toLowerCase()
+
+  // Phase 16 field exceptions (deduped vs BRIEFING_PASSED_NO_EVIDENCE)
   if (
-    (stage === 'evidence_required' || stage === 'attended') &&
+    paid &&
+    hasRep &&
+    (stage === 'assigned' || stage === 'briefing_due') &&
+    briefingAt &&
+    !checkedIn &&
+    !attendanceConfirmed
+  ) {
+    const until = briefingAt.getTime() - now.getTime()
+    if (until <= 2 * HOUR && until > 0) {
+      exceptions.push({
+        code: EXCEPTION_CODES.REPRESENTATIVE_NOT_CHECKED_IN,
+        overdueMs: 0,
+        dueSoon: true,
+      })
+    } else if (until <= 0 && until > -4 * HOUR) {
+      exceptions.push({
+        code: EXCEPTION_CODES.BRIEFING_STARTED_NO_CHECKIN,
+        overdueMs: -until,
+      })
+    } else if (until <= -4 * HOUR) {
+      exceptions.push({
+        code: EXCEPTION_CODES.BRIEFING_PASSED_NO_ATTENDANCE_CONFIRMATION,
+        overdueMs: -until,
+      })
+    }
+  }
+
+  if (
+    paid &&
+    hasRep &&
+    checkedIn &&
+    !attendanceConfirmed &&
     briefingAt &&
     briefingAt.getTime() < now.getTime()
   ) {
     exceptions.push({
-      code: EXCEPTION_CODES.BRIEFING_PASSED_NO_EVIDENCE,
+      code: EXCEPTION_CODES.BRIEFING_PASSED_NO_ATTENDANCE_CONFIRMATION,
       overdueMs: now.getTime() - briefingAt.getTime(),
     })
+  }
+
+  if (review === 'more_requested' || String(request.fieldSubstate || '') === 'evidence_incomplete') {
+    exceptions.push({
+      code: EXCEPTION_CODES.EVIDENCE_INCOMPLETE,
+      overdueMs: ageMs(request.evidenceMoreRequestedAt || request.opsUpdatedAt, now) || 0,
+    })
+  }
+
+  if (
+    attendanceConfirmed &&
+    evidenceN <= 0 &&
+    request.evidenceOverride !== true &&
+    (stage === 'evidence_required' || stage === 'attended')
+  ) {
+    exceptions.push({
+      code: EXCEPTION_CODES.ATTENDED_NO_EVIDENCE,
+      overdueMs: ageMs(request.attendedAt || request.attendanceConfirmedAt, now) || 0,
+    })
+  }
+
+  if (
+    (stage === 'evidence_required' || stage === 'attended') &&
+    briefingAt &&
+    briefingAt.getTime() < now.getTime() &&
+    evidenceN <= 0 &&
+    request.evidenceOverride !== true
+  ) {
+    // Prefer ATTENDED_NO_EVIDENCE when already confirmed; else keep legacy code
+    if (!attendanceConfirmed) {
+      exceptions.push({
+        code: EXCEPTION_CODES.BRIEFING_PASSED_NO_EVIDENCE,
+        overdueMs: now.getTime() - briefingAt.getTime(),
+      })
+    }
   }
 
   if (stage === 'evidence_received' || stage === 'report_in_progress') {
@@ -291,7 +383,12 @@ function evaluateOpsSla(request = {}, opts = {}) {
     EXCEPTION_CODES.DELIVERY_BOUNCED,
     EXCEPTION_CODES.DELIVERY_FAILED,
     EXCEPTION_CODES.STUCK_LIFECYCLE,
+    EXCEPTION_CODES.BRIEFING_STARTED_NO_CHECKIN,
+    EXCEPTION_CODES.BRIEFING_PASSED_NO_ATTENDANCE_CONFIRMATION,
+    EXCEPTION_CODES.ATTENDED_NO_EVIDENCE,
+    EXCEPTION_CODES.EVIDENCE_INCOMPLETE,
     EXCEPTION_CODES.BRIEFING_PASSED_NO_EVIDENCE,
+    EXCEPTION_CODES.REPRESENTATIVE_NOT_CHECKED_IN,
     EXCEPTION_CODES.REPRESENTATIVE_RESPONSE_OVERDUE,
     EXCEPTION_CODES.REPRESENTATIVE_DECLINED,
     EXCEPTION_CODES.UNASSIGNED_APPROACHING_BRIEFING,

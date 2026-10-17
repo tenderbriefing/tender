@@ -114,6 +114,20 @@ function toOpsBoardRow(request) {
     assignmentAcceptanceUrgency: request.assignmentAcceptanceUrgency || null,
     assignmentDispatchedAt: request.assignmentDispatchedAt || null,
     assignmentDispatchId: request.assignmentDispatchId || null,
+    checkedInAt: request.checkedInAt || null,
+    fieldSubstate: request.fieldSubstate || null,
+    attendanceConfirmedAt: request.attendanceConfirmedAt || null,
+    evidenceReviewStatus: request.evidenceReviewStatus || null,
+    fieldNotesPreview: String(request.fieldNotes || '').slice(0, 160) || null,
+    locationCaptured: Boolean(request.checkInLocation?.lat != null),
+    checkInLocation: request.checkInLocation
+      ? {
+          lat: request.checkInLocation.lat,
+          lng: request.checkInLocation.lng,
+          accuracy: request.checkInLocation.accuracy || null,
+        }
+      : null,
+    noShowAt: request.noShowAt || null,
     urgencyFlags,
     lastOpsUpdate: request.opsUpdatedAt || request.updatedAt || request.paidAt || request.createdAt,
     nextAction: recommended.label || nextRequiredAction(stage),

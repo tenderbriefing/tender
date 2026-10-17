@@ -114,6 +114,8 @@ type OpsInput = {
   agentId?: string | null
   representativeName?: string | null
   assignmentSubstate?: string | null
+  evidenceReviewStatus?: string | null
+  fieldSubstate?: string | null
   attended?: boolean | null
   attendedAt?: string | null
   completed?: boolean | null
@@ -227,6 +229,23 @@ export function deriveManualOpsStage(request: OpsInput): OpsLifecycleStage {
     fulfilment === 'report_pending'
   ) {
     return 'report_in_progress'
+  }
+
+  const review = String(request.evidenceReviewStatus || '')
+    .trim()
+    .toLowerCase()
+  if (
+    review === 'more_requested' ||
+    String(request.fieldSubstate || '').toLowerCase() === 'evidence_incomplete'
+  ) {
+    if (
+      request.attended === true ||
+      request.attendedAt ||
+      explicit === 'evidence_required' ||
+      explicit === 'attended'
+    ) {
+      return 'evidence_required'
+    }
   }
 
   if (explicit === 'evidence_received' || (hasEvidence && (request.attended === true || explicit === 'attended'))) {
