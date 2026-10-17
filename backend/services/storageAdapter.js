@@ -254,6 +254,12 @@ class JsonStorageAdapter {
     return index >= 0 ? items[index] : request
   }
 
+  async getAttendanceRequestById(id) {
+    if (!id) return null
+    const items = readCollection(JSON_FILES.ATTENDANCE_REQUESTS, [])
+    return items.find((r) => r.id === id) || null
+  }
+
   async getBriefingReports(filters = {}) {
     let items = readCollection(JSON_FILES.BRIEFING_REPORTS, [])
     if (filters.requestId) items = items.filter((r) => r.requestId === filters.requestId)
@@ -412,6 +418,14 @@ class FirestoreStorageAdapter {
 
   async getAttendanceRequests(filters) {
     return this._getService().getAttendanceRequests(filters)
+  }
+
+  async getAttendanceRequestById(id) {
+    const svc = this._getService()
+    if (typeof svc.getAttendanceRequestById === 'function') {
+      return svc.getAttendanceRequestById(id)
+    }
+    return null
   }
 
   async saveAttendanceRequest(request) {

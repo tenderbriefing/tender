@@ -31,6 +31,7 @@ export interface StorageAdapter {
   getAttendanceRequests: (
     filters?: Record<string, unknown>
   ) => Promise<AttendanceRequest[]>
+  getAttendanceRequestById?: (id: string) => Promise<AttendanceRequest | null>
   getBriefingReports: (filters?: Record<string, unknown>) => Promise<BriefingReport[]>
   countDocuments?: (collectionName: string, equality?: Record<string, unknown>) => Promise<number>
   listTenderBriefingsPage?: (filters?: Record<string, unknown>) => Promise<{
