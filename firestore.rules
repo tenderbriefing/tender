@@ -347,6 +347,18 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /founderOutreachByProviderId/{messageId} {
+      allow read, write: if false;
+    }
+
+    match /founderOutreachRuntime/{docId} {
+      allow read, write: if false;
+    }
+
+    match /founderOutreachInboxPlacements/{id} {
+      allow read, write: if false;
+    }
+
     match /emailSuppressions/{emailId} {
       allow read, write: if false;
     }

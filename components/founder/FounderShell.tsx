@@ -19,7 +19,14 @@ const V1_NAV = [
   {
     href: '/founder/outreach',
     label: 'Outreach',
-    match: (p: string) => p.startsWith('/founder/outreach'),
+    match: (p: string) =>
+      p === '/founder/outreach' ||
+      (p.startsWith('/founder/outreach/') && !p.startsWith('/founder/outreach/deliverability')),
+  },
+  {
+    href: '/founder/outreach/deliverability',
+    label: 'Deliverability',
+    match: (p: string) => p.startsWith('/founder/outreach/deliverability'),
   },
 ] as const
 
@@ -53,7 +60,14 @@ const V2_NAV = [
   {
     href: '/founder/outreach',
     label: 'Outreach',
-    match: (p: string) => p.startsWith('/founder/outreach'),
+    match: (p: string) =>
+      p === '/founder/outreach' ||
+      (p.startsWith('/founder/outreach/') && !p.startsWith('/founder/outreach/deliverability')),
+  },
+  {
+    href: '/founder/outreach/deliverability',
+    label: 'Deliverability',
+    match: (p: string) => p.startsWith('/founder/outreach/deliverability'),
   },
 ] as const
 

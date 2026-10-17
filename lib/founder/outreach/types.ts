@@ -73,6 +73,16 @@ export type OutreachCampaign = {
   idempotencyKey: string
 }
 
+/** Resend lifecycle on a delivery — never equals mailbox Primary placement. */
+export type OutreachProviderLifecycle =
+  | 'accepted'
+  | 'sent'
+  | 'delayed'
+  | 'delivered'
+  | 'bounced'
+  | 'complained'
+  | 'failed'
+
 export type OutreachDelivery = {
   id: string
   campaignId: string
@@ -85,6 +95,20 @@ export type OutreachDelivery = {
   /** Composer field role — each recipient is sent individually (privacy) */
   recipientField?: 'to' | 'cc' | 'bcc' | null
   resendMessageId: string | null
+  /** Resend API acceptance on send — UI SUBMITTED */
+  providerAcceptance?: 'accepted' | null
+  /** Latest Resend webhook lifecycle (provider infrastructure) */
+  providerLifecycle?: OutreachProviderLifecycle | null
+  lastProviderEventId?: string | null
+  lastProviderEventType?: string | null
+  lastProviderEventAt?: string | null
+  providerDeliveredAt?: string | null
+  providerBouncedAt?: string | null
+  providerComplainedAt?: string | null
+  /** Founder-verified mailbox placement only */
+  inboxPlacement?: string | null
+  inboxPlacementProvider?: string | null
+  inboxPlacementNotedAt?: string | null
   attemptCount: number
   errorCode: string | null
   errorMessageSafe: string | null
@@ -95,5 +119,8 @@ export type OutreachDelivery = {
 
 export const OUTREACH_CAMPAIGNS = 'founderOutreachCampaigns'
 export const OUTREACH_SUPPRESSIONS = 'emailSuppressions'
+export const OUTREACH_PROVIDER_INDEX = 'founderOutreachByProviderId'
+export const OUTREACH_RUNTIME = 'founderOutreachRuntime'
+export const OUTREACH_INBOX_PLACEMENTS = 'founderOutreachInboxPlacements'
 
 export { OUTREACH_MAX_RECIPIENTS, OUTREACH_MAX_UPLOAD_BYTES, OUTREACH_MAX_WORKBOOK_ROWS }
