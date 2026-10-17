@@ -46,8 +46,10 @@ describe('opsSlaEngine', () => {
       },
       { now }
     )
-    expect(sla.exceptionCode).toBe(EXCEPTION_CODES.BRIEFING_PASSED_NO_EVIDENCE)
+    // Phase 16: attended without evidence is the more precise primary exception
+    expect(sla.exceptionCode).toBe(EXCEPTION_CODES.ATTENDED_NO_EVIDENCE)
     expect(sla.track).toBe(SLA_TRACK.OVERDUE)
+    expect(sla.allExceptionCodes).toContain(EXCEPTION_CODES.ATTENDED_NO_EVIDENCE)
   })
 
   it('flags report pending and report ready not sent', () => {
