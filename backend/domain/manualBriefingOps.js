@@ -169,6 +169,24 @@ function deriveManualOpsStage(request = {}) {
     return 'report_in_progress'
   }
 
+  // Phase 16: Ops requested more evidence — keep evidence_required even if items exist
+  const review = String(request.evidenceReviewStatus || '')
+    .trim()
+    .toLowerCase()
+  if (
+    review === 'more_requested' ||
+    String(request.fieldSubstate || '').toLowerCase() === 'evidence_incomplete'
+  ) {
+    if (
+      request.attended === true ||
+      request.attendedAt ||
+      explicit === 'evidence_required' ||
+      explicit === 'attended'
+    ) {
+      return 'evidence_required'
+    }
+  }
+
   if (
     explicit === 'evidence_received' ||
     (hasEvidence && (request.attended === true || explicit === 'attended'))

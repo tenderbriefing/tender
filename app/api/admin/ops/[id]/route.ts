@@ -62,6 +62,31 @@ export async function POST(
         // Offline force-confirm (phone accept) — stamps assigned immediately
         result = await ops.assignManualRepresentative(params.id, body, adminUser)
         break
+      case 'issue_field_link': {
+        const field = require('../../../../../backend/services/ops/fieldExecutionService')
+        result = await field.issueFieldAccess(params.id, adminUser)
+        break
+      }
+      case 'approve_evidence': {
+        const field = require('../../../../../backend/services/ops/fieldExecutionService')
+        result = await field.approveEvidence(params.id, adminUser, body)
+        break
+      }
+      case 'request_more_evidence': {
+        const field = require('../../../../../backend/services/ops/fieldExecutionService')
+        result = await field.requestMoreEvidence(params.id, adminUser, body)
+        break
+      }
+      case 'mark_no_show': {
+        const field = require('../../../../../backend/services/ops/fieldExecutionService')
+        result = await field.markNoShow(params.id, adminUser, body)
+        break
+      }
+      case 'override_check_in': {
+        const field = require('../../../../../backend/services/ops/fieldExecutionService')
+        result = await field.adminOverrideCheckIn(params.id, adminUser, body)
+        break
+      }
       case 'attend':
         result = await ops.markAttended(params.id, body, adminUser)
         break
@@ -104,15 +129,27 @@ export async function POST(
         ? (result as { request: unknown }).request
         : result
 
-    // Never leak dispatch tokens or payout internals beyond admin row projection
+    // Never leak dispatch/field tokens beyond intentional admin issue_field_link response
     const safeResult =
       result && typeof result === 'object'
         ? (() => {
             const clone = { ...(result as Record<string, unknown>) }
             delete clone._testToken
+            // Keep token only for issue_field_link (Ops copies field URL once)
+            if (action !== 'issue_field_link') {
+              delete clone.token
+              delete clone.fieldUrl
+            }
             return clone
           })()
         : result
+
+    const rowSource =
+      requestDoc && typeof requestDoc === 'object' && 'id' in (requestDoc as object)
+        ? requestDoc
+        : result && typeof result === 'object' && 'id' in (result as object)
+          ? result
+          : requestDoc
 
     return NextResponse.json({
       success: true,
@@ -123,7 +160,7 @@ export async function POST(
             ? false
             : (result as { emailSent?: boolean })?.emailSent ?? null,
         alreadyDispatched: (result as { alreadyDispatched?: boolean })?.alreadyDispatched ?? null,
-        row: ops.toOpsBoardRow(requestDoc),
+        row: ops.toOpsBoardRow(rowSource),
         result: safeResult,
       },
     })

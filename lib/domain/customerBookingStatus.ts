@@ -9,6 +9,7 @@ export type CustomerBookingStatusKey =
   | 'booking_confirmed'
   | 'representative_arranging'
   | 'representative_confirmed'
+  | 'briefing_in_progress'
   | 'briefing_processing'
   | 'report_preparing'
   | 'report_ready'
@@ -22,7 +23,8 @@ const LABELS: Record<CustomerBookingStatusKey, string> = {
   booking_confirmed: 'Payment received',
   representative_arranging: 'Representative being arranged',
   representative_confirmed: 'Representative confirmed',
-  briefing_processing: 'Briefing attended / processing report',
+  briefing_in_progress: 'Briefing attendance in progress',
+  briefing_processing: 'Briefing attended — report being prepared',
   report_preparing: 'Report being prepared',
   report_ready: 'Report ready / delivered',
   completed: 'Completed',
@@ -46,10 +48,16 @@ export function resolveCustomerBookingStatus(request: {
   reportReadyAt?: string | null
   assignedAgentId?: string | null
   agentId?: string | null
+  checkedInAt?: string | null
+  attended?: boolean | null
+  attendedAt?: string | null
+  attendanceConfirmedAt?: string | null
+  fieldSubstate?: string | null
 }): CustomerBookingStatusKey {
   const payment = String(request.paymentStatus || '').toLowerCase()
   const stage = String(request.opsStage || '').toLowerCase()
   const workflow = String(request.status || '').toLowerCase()
+  const fieldSub = String(request.fieldSubstate || '').toLowerCase()
 
   if (payment === 'cancelled') return 'cancelled'
   if (payment === 'failed') return 'payment_failed'
@@ -72,11 +80,28 @@ export function resolveCustomerBookingStatus(request: {
   ) {
     return 'report_ready'
   }
-  if (stage === 'report_in_progress' || stage === 'evidence_received' || stage === 'evidence_required') {
+  if (stage === 'report_in_progress') {
     return 'report_preparing'
   }
-  if (stage === 'briefing_due' || stage === 'attended') {
+  // After attendance confirmed / evidence in — customer-safe "attended → report preparing"
+  if (
+    request.attended === true ||
+    request.attendedAt ||
+    request.attendanceConfirmedAt ||
+    fieldSub === 'attendance_submitted' ||
+    stage === 'evidence_received' ||
+    stage === 'evidence_required' ||
+    stage === 'attended'
+  ) {
     return 'briefing_processing'
+  }
+  // Check-in / briefing window — in progress (no internal enums)
+  if (
+    request.checkedInAt ||
+    fieldSub === 'checked_in' ||
+    stage === 'briefing_due'
+  ) {
+    return 'briefing_in_progress'
   }
   if (
     request.assignedAgentId ||
