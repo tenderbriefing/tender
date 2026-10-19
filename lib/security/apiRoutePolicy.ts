@@ -36,6 +36,8 @@ export function isPublicApiRoute(pathname: string, method: string): boolean {
   if (/^\/api\/tenders\/[^/]+\/documents\/[^/]+$/.test(pathname) && m === 'GET') return true
 
   if (pathname === '/api/sync/run' && m === 'POST') return true
+  // Phase 18 day backfill ticks: middleware-public; handler requires x-sync-secret.
+  if (pathname === '/api/sync/ocds-day-backfill' && m === 'POST') return true
   if (pathname === '/api/automation/run' && m === 'POST') return true
   // Briefing workers: middleware-public; handlers require x-sync-secret / admin Bearer.
   if (pathname === '/api/briefing-intelligence/transcription/worker' && m === 'POST') return true

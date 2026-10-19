@@ -33,6 +33,9 @@ describe('apiRoutePolicy', () => {
     expect(isPublicApiRoute('/api/briefing-intelligence/evidence', 'POST')).toBe(false)
     expect(isPublicApiRoute('/api/outreach/unsubscribe', 'GET')).toBe(true)
     expect(isPublicApiRoute('/api/outreach/unsubscribe', 'POST')).toBe(true)
+    expect(isPublicApiRoute('/api/sync/run', 'POST')).toBe(true)
+    expect(isPublicApiRoute('/api/sync/ocds-day-backfill', 'POST')).toBe(true)
+    expect(isPublicApiRoute('/api/sync/ocds-day-backfill', 'GET')).toBe(false)
   })
 
   it('allows secure manual payment token APIs without Bearer', () => {
