@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}))
-    const ctrl = require('../../../../../backend/services/ocdsBackfillController') as {
+    const ctrl = require('../../../../backend/services/ocdsBackfillController') as {
       planBackfill: (opts: Record<string, unknown>) => Promise<unknown>
       runBackfillTick: (opts: Record<string, unknown>) => Promise<{
         done: boolean
