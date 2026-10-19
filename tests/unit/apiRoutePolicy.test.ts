@@ -36,6 +36,8 @@ describe('apiRoutePolicy', () => {
     expect(isPublicApiRoute('/api/sync/run', 'POST')).toBe(true)
     expect(isPublicApiRoute('/api/sync/ocds-day-backfill', 'POST')).toBe(true)
     expect(isPublicApiRoute('/api/sync/ocds-day-backfill', 'GET')).toBe(false)
+    expect(isPublicApiRoute('/api/sync/ocds-parity-daily', 'POST')).toBe(true)
+    expect(isPublicApiRoute('/api/sync/ocds-parity-daily', 'GET')).toBe(false)
   })
 
   it('allows secure manual payment token APIs without Bearer', () => {

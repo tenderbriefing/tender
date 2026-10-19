@@ -32,6 +32,7 @@ function matchesQuery(tender: TenderBriefing, q: string) {
  * Admin eTenders mirror:
  * GET ?q=… — search full mirror
  * GET ?view=days&lookbackDays=30 — day reconciliation dashboard
+ * GET ?view=exceptions — parity exception queue
  * GET ?view=day&date=YYYY-MM-DD — single day record
  */
 export async function GET(request: NextRequest) {
@@ -45,7 +46,9 @@ export async function GET(request: NextRequest) {
     if (view === 'days' || view === 'summary') {
       const backfill = require('../../../../backend/services/ocdsBackfillController') as {
         summarizeRange: (from: string, to: string) => Promise<unknown>
-        lookbackRange?: never
+      }
+      const parity = require('../../../../backend/services/parityReconciliationService') as {
+        summarizeParityRange: (from: string, to: string) => Promise<unknown>
       }
       const domain = require('../../../../backend/domain/ocdsDayReconciliation') as {
         lookbackRange: (n: number) => { dateFrom: string; dateTo: string }
@@ -54,17 +57,48 @@ export async function GET(request: NextRequest) {
       const range = domain.lookbackRange(lookback)
       const dateFrom = searchParams.get('dateFrom') || range.dateFrom
       const dateTo = searchParams.get('dateTo') || range.dateTo
-      const summary = await backfill.summarizeRange(dateFrom, dateTo)
+      const [summary, paritySummary] = await Promise.all([
+        backfill.summarizeRange(dateFrom, dateTo),
+        parity.summarizeParityRange(dateFrom, dateTo),
+      ])
       const bulk = require('../../../../backend/services/ocdsBulkSourceService') as {
         getInvestigationReport: () => unknown
+      }
+      const website = require('../../../../backend/services/etendersWebsiteSourceService') as {
+        getInvestigationReport: () => unknown
+      }
+      const exceptions = require('../../../../backend/services/parityExceptionService') as {
+        summarizeExceptions: () => Promise<unknown>
       }
       return NextResponse.json({
         success: true,
         data: {
           summary,
+          paritySummary,
+          exceptionSummary: await exceptions.summarizeExceptions(),
           bulkInvestigation: bulk.getInvestigationReport(),
+          websiteInvestigation: website.getInvestigationReport(),
           websiteParityNote:
-            'OCDS parity ≠ eTenders website parity. See bulkInvestigation.websiteParity.',
+            'OCDS parity ≠ eTenders website parity. See websiteInvestigation.',
+        },
+      })
+    }
+
+    if (view === 'exceptions') {
+      const exceptions = require('../../../../backend/services/parityExceptionService') as {
+        listOpenExceptions: (opts?: Record<string, unknown>) => Promise<unknown>
+        summarizeExceptions: () => Promise<unknown>
+      }
+      const category = searchParams.get('category') || undefined
+      const rows = await exceptions.listOpenExceptions({
+        category,
+        limit: Number(searchParams.get('limit') || 200),
+      })
+      return NextResponse.json({
+        success: true,
+        data: {
+          exceptions: rows,
+          summary: await exceptions.summarizeExceptions(),
         },
       })
     }
@@ -142,6 +176,7 @@ export async function GET(request: NextRequest) {
 /**
  * POST actions:
  * reconcile | plan_backfill | backfill_tick | replay_day | historical_backfill
+ * | recover_day | run_parity | classify_briefings | run_daily_parity
  */
 export async function POST(request: NextRequest) {
   const user = await verifyApiUser(request.headers.get('authorization'), ['admin'])
@@ -218,6 +253,58 @@ export async function POST(request: NextRequest) {
       }
       const result = await hist.backfillHistoricalSourceFields({
         limit: Number(body.limit) || 500,
+      })
+      return NextResponse.json({ success: true, data: result, triggeredBy: user.uid })
+    }
+
+    if (action === 'recover_day') {
+      const recovery = require('../../../../backend/services/ocdsSourceRecoveryService') as {
+        recoverUnavailableDay: (date: string, opts?: Record<string, unknown>) => Promise<unknown>
+      }
+      const date = String(body.date || '').slice(0, 10)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return NextResponse.json({ success: false, error: 'date required YYYY-MM-DD' }, { status: 400 })
+      }
+      const result = await recovery.recoverUnavailableDay(date, {
+        force: body.force !== false,
+        skipDocuments: body.skipDocuments !== false,
+      })
+      return NextResponse.json({ success: true, data: result, triggeredBy: user.uid })
+    }
+
+    if (action === 'run_parity') {
+      const parity = require('../../../../backend/services/parityReconciliationService') as {
+        reconcileRange: (opts: Record<string, unknown>) => Promise<unknown>
+      }
+      const result = await parity.reconcileRange({
+        lookbackDays: Number(body.lookbackDays) || 30,
+        maxDays: Number(body.maxDays) || 7,
+        dateFrom: body.dateFrom || undefined,
+        dateTo: body.dateTo || undefined,
+      })
+      return NextResponse.json({ success: true, data: result, triggeredBy: user.uid })
+    }
+
+    if (action === 'classify_briefings') {
+      const classify = require('../../../../backend/services/briefingClassificationService') as {
+        classifyMirrorBatch: (opts?: Record<string, unknown>) => Promise<unknown>
+      }
+      const result = await classify.classifyMirrorBatch({
+        limit: Number(body.limit) || 500,
+        raiseReviews: body.raiseReviews !== false,
+      })
+      return NextResponse.json({ success: true, data: result, triggeredBy: user.uid })
+    }
+
+    if (action === 'run_daily_parity') {
+      const job = require('../../../../backend/services/parityDailyJobService') as {
+        runDailyParityJob: (opts?: Record<string, unknown>) => Promise<unknown>
+      }
+      const result = await job.runDailyParityJob({
+        lookbackDays: Number(body.lookbackDays) || 30,
+        maxDaysPerTick: Number(body.maxDaysPerTick) || 2,
+        maxRecoveryDays: Number(body.maxRecoveryDays) || 3,
+        maxReconcileDays: Number(body.maxReconcileDays) || 5,
       })
       return NextResponse.json({ success: true, data: result, triggeredBy: user.uid })
     }

@@ -224,9 +224,10 @@ describe('Phase 15 assignment dispatch lifecycle', () => {
 
   it('SLA surfaces response pending / overdue and keeps UNASSIGNED_APPROACHING', async () => {
     const { evaluateOpsSla, EXCEPTION_CODES } = require('../../backend/domain/opsSlaEngine')
-    const soon = new Date(Date.now() + 12 * 60 * 60 * 1000)
-    const date = soon.toISOString().slice(0, 10)
-    const time = `${String(soon.getUTCHours() + 2).padStart(2, '0')}:00`
+    // Fixed offset from now — avoid UTC hour+2 wrap producing invalid "24:00"/"25:00".
+    const approaching = new Date(Date.now() + 6 * 60 * 60 * 1000)
+    const date = approaching.toISOString().slice(0, 10)
+    const time = `${String(approaching.getUTCHours()).padStart(2, '0')}:${String(approaching.getUTCMinutes()).padStart(2, '0')}`
 
     const pending = evaluateOpsSla({
       paymentStatus: 'paid',
