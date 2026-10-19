@@ -168,25 +168,44 @@ async function enrichFromDocuments(tender) {
   }
 
   const analysis = analyzeText(combinedText)
+  const {
+    deriveBriefingStatus,
+    catalogueCompulsoryFromDerived,
+  } = require('./tenderModel')
+
+  const matchedBriefingTerms = [
+    ...new Set([
+      ...(tender.matchedBriefingTerms || []),
+      ...analysis.matchedBriefingTerms,
+    ]),
+  ]
+  const briefingVenue = tender.briefingVenue || analysis.briefingVenue
+  const briefingDate = tender.briefingDate || analysis.briefingDate
+  const derivedBriefingStatus = deriveBriefingStatus(tender.sourceBriefingCompulsory, {
+    briefingCompulsory: Boolean(tender.briefingCompulsory || analysis.briefingCompulsory),
+    briefingVenue,
+    briefingDate,
+    matchedBriefingTerms,
+  })
 
   return {
     ...tender,
+    // Never overwrite Treasury source flag with PDF inference
+    sourceBriefingCompulsory:
+      tender.sourceBriefingCompulsory === undefined
+        ? null
+        : tender.sourceBriefingCompulsory,
     documents: enrichedDocs.length ? enrichedDocs : documents,
-    matchedBriefingTerms: [
-      ...new Set([
-        ...(tender.matchedBriefingTerms || []),
-        ...analysis.matchedBriefingTerms,
-      ]),
-    ],
-    briefingCompulsory:
-      tender.briefingCompulsory || analysis.briefingCompulsory,
+    matchedBriefingTerms,
+    derivedBriefingStatus,
+    briefingCompulsory: catalogueCompulsoryFromDerived(derivedBriefingStatus),
     briefingConfidence: Math.max(
       tender.briefingConfidence || 0,
       analysis.briefingConfidence
     ),
-    briefingVenue: tender.briefingVenue || analysis.briefingVenue,
+    briefingVenue,
     briefingTime: tender.briefingTime || analysis.briefingTime,
-    briefingDate: tender.briefingDate || analysis.briefingDate,
+    briefingDate,
     meetingLink: tender.meetingLink || analysis.meetingLink,
     gpsCoordinates: analysis.gpsCoordinates,
     requirements: [

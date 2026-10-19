@@ -120,6 +120,12 @@ export const ADMIN_CONTROL_CENTRE_MODULES: AdminNavGroup[] = [
         description: 'Enrichment scraper controls',
       },
       {
+        href: '/admin/etenders-mirror',
+        label: 'eTenders mirror',
+        description: 'Search full OCDS mirror (incl. non-compulsory)',
+        accent: true,
+      },
+      {
         href: '/admin/pilot',
         label: 'Pilot launch',
         description: 'Pilot tasks and outreach',

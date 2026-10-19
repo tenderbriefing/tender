@@ -59,7 +59,15 @@ export interface TenderBriefing {
   briefingDate: string
   briefingTime: string
   briefingVenue: string
+  /** Catalogue eligibility — derived; may differ from sourceBriefingCompulsory. */
   briefingCompulsory: boolean
+  /** Raw OCDS briefingSession.compulsory (null when absent). */
+  sourceBriefingCompulsory?: boolean | null
+  /** TenderBriefing classification after ingest. */
+  derivedBriefingStatus?:
+    | 'CONFIRMED_COMPULSORY'
+    | 'REVIEW_REQUIRED'
+    | 'NOT_COMPULSORY'
   briefingConfidence: number
   matchedBriefingTerms: string[]
   contactPerson: string
@@ -77,6 +85,12 @@ export interface TenderBriefing {
   calendarEvents: CalendarEvent[]
   history: TenderBriefingHistoryEntry[]
   source: string
+  sourceReleaseId?: string
+  sourcePublishedAt?: string
+  sourceModifiedAt?: string
+  ingestedAt?: string
+  rawSourceHash?: string
+  rawSourceSnapshot?: Record<string, unknown> | null
   /** Sector provenance: private-company published opportunities vs public/eTenders. */
   sourceType?: 'public' | 'private'
   /** Link back to privateTenderSubmissions intake record when sourceType=private. */
