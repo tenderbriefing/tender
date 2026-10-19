@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyApiUser, unauthorizedResponse } from '@/lib/auth/verifyApiUser'
+import { backend } from '@/lib/backend/loadServices'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 function storage() {
-  return require('../../../../../backend/services/storageAdapter').getStorage()
+  return backend.getStorage()
 }
 
 function matchesQuery(tender: Record<string, unknown>, q: string) {
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const recon = require('../../../../../backend/services/ocdsMirrorReconciliationService')
+    const recon = require('../../../../backend/services/ocdsMirrorReconciliationService')
     const result = await recon.reconcileAndSample({
       lookbackDays: Number(body.lookbackDays) || 30,
       sampleSize: Number(body.sampleSize) || 25,
