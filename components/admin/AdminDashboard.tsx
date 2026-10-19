@@ -279,6 +279,13 @@ export default function AdminDashboard() {
               <ArrowPathIcon className={`h-4 w-4 ${isRunning ? 'animate-spin' : ''}`} />
               {isRunning ? 'Sync running…' : 'Run sync'}
             </button>
+            <Link
+              href="/admin/etenders-mirror"
+              onClick={() => onModuleNav('/admin/etenders-mirror', 'eTenders mirror')}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
+            >
+              eTenders mirror
+            </Link>
           </div>
         </div>
       </header>

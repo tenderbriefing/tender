@@ -58,6 +58,7 @@ describe('OCDS day-chunk sync', () => {
       '2026-10-04',
     ])
     expect(result.releases).toHaveLength(3)
+    expect(result.incomplete).toBe(true)
     // Day-chunked: same from/to per request
     expect(pages.every((p) => p.split(':')[0] === p.split(':')[1])).toBe(true)
   })
