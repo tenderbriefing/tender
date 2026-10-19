@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyApiUser, unauthorizedResponse } from '@/lib/auth/verifyApiUser'
 import { backend } from '@/lib/backend/loadServices'
+import type { TenderBriefing } from '@/lib/tenderBriefing/types'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -9,7 +10,7 @@ function storage() {
   return backend.getStorage()
 }
 
-function matchesQuery(tender: Record<string, unknown>, q: string) {
+function matchesQuery(tender: TenderBriefing, q: string) {
   const needle = q.toLowerCase()
   const hay = [
     tender.tenderNumber,
@@ -43,24 +44,18 @@ export async function GET(request: NextRequest) {
     const derived = String(searchParams.get('derivedBriefingStatus') || '').trim()
     const limit = Math.min(Math.max(1, Number(searchParams.get('limit') || 50)), 200)
 
-    const all = await storage().getTenderBriefings({ limit: 5000 })
+    const all = (await storage().getTenderBriefings({ limit: 5000 })) as TenderBriefing[]
     let rows = Array.isArray(all) ? all : []
 
-    if (q) rows = rows.filter((t: Record<string, unknown>) => matchesQuery(t, q))
+    if (q) rows = rows.filter((t) => matchesQuery(t, q))
     if (status) {
-      rows = rows.filter(
-        (t: Record<string, unknown>) =>
-          String(t.status || '').toLowerCase() === status.toLowerCase()
-      )
+      rows = rows.filter((t) => String(t.status || '').toLowerCase() === status.toLowerCase())
     }
     if (derived) {
-      rows = rows.filter(
-        (t: Record<string, unknown>) =>
-          String(t.derivedBriefingStatus || '') === derived
-      )
+      rows = rows.filter((t) => String(t.derivedBriefingStatus || '') === derived)
     }
 
-    const data = rows.slice(0, limit).map((t: Record<string, unknown>) => ({
+    const data = rows.slice(0, limit).map((t) => ({
       id: t.id,
       ocid: t.ocid,
       tenderNumber: t.tenderNumber,
@@ -117,7 +112,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const recon = require('../../../../backend/services/ocdsMirrorReconciliationService')
+    const recon = require('../../../../backend/services/ocdsMirrorReconciliationService') as {
+      reconcileAndSample: (opts: Record<string, unknown>) => Promise<unknown>
+    }
     const result = await recon.reconcileAndSample({
       lookbackDays: Number(body.lookbackDays) || 30,
       sampleSize: Number(body.sampleSize) || 25,
