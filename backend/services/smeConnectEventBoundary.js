@@ -1,14 +1,7 @@
 /**
- * Phase 18 — SME Connect data/event boundary (prepare only).
+ * Phase 18/19 — SME Connect data/event boundary.
  *
- * Future flow (NOT implemented here — no customer messages in Phase 18):
- *   new compulsory briefing ingested
- *   → match against SME prior paid tenders/RFQs
- *   → relevance score
- *   → recommendation + payment link
- *
- * This module only emits an auditable internal event / optional Firestore
- * marker so Phase 19+ can subscribe without changing PayFast/dispatch.
+ * Phase 19: may enqueue matching; NEVER sends customer email or payment links.
  */
 const auditLogService = require('./auditLogService')
 
@@ -21,15 +14,36 @@ const SME_CONNECT_EVENT = 'sme_connect.briefing_ingested'
 async function emitSmeConnectBriefingIngested(payload = {}) {
   const event = {
     type: SME_CONNECT_EVENT,
-    schemaVersion: 1,
+    schemaVersion: 2,
     at: new Date().toISOString(),
     day: payload.day || null,
     sourceCount: payload.sourceCount ?? null,
     persistedCount: payload.persistedCount ?? null,
-    // Placeholders for Phase 19 matching — intentionally null
     matchedSmeCount: null,
     recommendationsQueued: false,
     customerNotified: false,
+  }
+
+  // Phase 19: optionally run matching for compulsory-classified tenders in payload
+  if (payload.runMatching === true && Array.isArray(payload.tenders) && payload.tenders.length) {
+    try {
+      const matching = require('./smeConnectMatchingService')
+      let candidateCount = 0
+      for (const tender of payload.tenders.slice(0, 20)) {
+        if (
+          tender.briefingClassification === 'CONFIRMED_COMPULSORY' ||
+          tender.briefingClassification === 'LIKELY_COMPULSORY'
+        ) {
+          const out = await matching.matchTenderToPaidSmes(tender)
+          candidateCount += out.candidates?.length || 0
+        }
+      }
+      event.matchedSmeCount = candidateCount
+      event.recommendationsQueued = candidateCount > 0
+      event.customerNotified = false
+    } catch {
+      /* matching non-fatal */
+    }
   }
 
   await auditLogService.logEvent({
@@ -38,7 +52,6 @@ async function emitSmeConnectBriefingIngested(payload = {}) {
     ...event,
   })
 
-  // Optional durable marker for future workers (JSON/Firestore sync state)
   try {
     const { getStorage } = require('./storageAdapter')
     const storage = getStorage()

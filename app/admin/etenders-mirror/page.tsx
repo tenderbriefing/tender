@@ -26,15 +26,26 @@ type MirrorRow = {
 
 type DayRow = {
   date: string
-  status: string
+  status?: string
+  ocdsStatus?: string
+  websiteStatus?: string | null
   sourceType?: string | null
   attemptCount?: number
+  recoveryAttemptCount?: number
   sourceCount?: number
+  ocdsCount?: number
+  websiteDiscoverableCount?: number | null
+  mirrorCount?: number
+  websiteOnlyCount?: number
+  ocdsOnlyCount?: number
   missingLocallyCount?: number
   fieldMismatchCount?: number
+  fieldDifferenceCount?: number
   httpStatus?: number | null
   lastSuccessAt?: string | null
+  lastChecked?: string | null
   nextRetryAt?: string | null
+  parityStatus?: string | null
   error?: string | null
   certified?: boolean
 }
@@ -54,6 +65,24 @@ type Summary = {
   totalMissingLocally: number
   totalFieldMismatches: number
   days: DayRow[]
+}
+
+type ParitySummary = {
+  totalWebsiteDiscoverable?: number
+  totalWebsiteOnly?: number
+  totalOcdsOnly?: number
+  unresolvedUnavailableDays?: number
+  days?: DayRow[]
+}
+
+type ExceptionRow = {
+  id: string
+  category: string
+  date?: string | null
+  tenderNumber?: string | null
+  title?: string | null
+  detail?: string | null
+  status?: string
 }
 
 function statusClass(status: string) {
@@ -81,8 +110,11 @@ export default function AdminEtendersMirrorPage() {
   const [rows, setRows] = useState<MirrorRow[]>([])
   const [totalMatched, setTotalMatched] = useState(0)
   const [summary, setSummary] = useState<Summary | null>(null)
+  const [paritySummary, setParitySummary] = useState<ParitySummary | null>(null)
+  const [exceptions, setExceptions] = useState<ExceptionRow[]>([])
   const [selectedDay, setSelectedDay] = useState<Record<string, unknown> | null>(null)
   const [lookback, setLookback] = useState(30)
+  const [tab, setTab] = useState<'days' | 'exceptions'>('days')
 
   const loadDays = useCallback(async () => {
     const res = await authFetch(
@@ -94,7 +126,18 @@ export default function AdminEtendersMirrorPage() {
       return
     }
     setSummary(json.data.summary as Summary)
+    setParitySummary((json.data.paritySummary as ParitySummary) || null)
   }, [lookback])
+
+  const loadExceptions = useCallback(async () => {
+    const res = await authFetch('/api/admin/etenders-mirror?view=exceptions&limit=200')
+    const json = await res.json()
+    if (!json.success) {
+      toast.error(json.error || 'Failed to load exceptions')
+      return
+    }
+    setExceptions((json.data.exceptions as ExceptionRow[]) || [])
+  }, [])
 
   useEffect(() => {
     if (!loading) {
@@ -106,8 +149,9 @@ export default function AdminEtendersMirrorPage() {
   useEffect(() => {
     if (user && userProfile?.userType === 'admin') {
       loadDays().catch(() => toast.error('Day status load failed'))
+      loadExceptions().catch(() => toast.error('Exceptions load failed'))
     }
-  }, [user, userProfile, loadDays])
+  }, [user, userProfile, loadDays, loadExceptions])
 
   async function onSearch(e?: FormEvent) {
     e?.preventDefault()
@@ -178,10 +222,36 @@ export default function AdminEtendersMirrorPage() {
       <ProcurementPageHeader
         kicker="Operations"
         title="eTenders mirror"
-        description="Full OCDS mirror search plus day-level replay/reconciliation. Public /tenders stays compulsory + upcoming only. OCDS parity is not website parity."
+        description="Full OCDS mirror search plus day-level recovery, website parity probes, and exceptions. OCDS parity is not website parity."
         breadcrumb={{ label: 'Admin dashboard', href: '/admin/dashboard' }}
       />
       <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap gap-2 text-sm">
+          <button
+            type="button"
+            className={`rounded px-3 py-1.5 ${tab === 'days' ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}
+            onClick={() => setTab('days')}
+          >
+            Days
+          </button>
+          <button
+            type="button"
+            className={`rounded px-3 py-1.5 ${tab === 'exceptions' ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}
+            onClick={() => {
+              setTab('exceptions')
+              loadExceptions().catch(() => null)
+            }}
+          >
+            Exceptions ({exceptions.length})
+          </button>
+          <Link
+            href="/admin/sme-connect"
+            className="rounded border border-slate-300 px-3 py-1.5 hover:bg-slate-50"
+          >
+            SME Connect
+          </Link>
+        </div>
+
         <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -240,6 +310,22 @@ export default function AdminEtendersMirrorPage() {
               <button
                 type="button"
                 disabled={busy}
+                className="rounded border border-violet-400 px-3 py-1.5 text-sm text-violet-950 hover:bg-violet-50 disabled:opacity-60"
+                onClick={() => runAction('run_parity', { maxDays: 5 })}
+              >
+                Run parity
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-60"
+                onClick={() => runAction('classify_briefings', { limit: 300 })}
+              >
+                Classify briefings
+              </button>
+              <button
+                type="button"
+                disabled={busy}
                 className="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-60"
                 onClick={() => runAction('historical_backfill', { limit: 500 })}
               >
@@ -269,69 +355,144 @@ export default function AdminEtendersMirrorPage() {
             </div>
           ) : null}
 
-          <div className="overflow-x-auto rounded-lg border border-slate-100">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-600">
-                <tr>
-                  <th className="px-2 py-2">Date</th>
-                  <th className="px-2 py-2">Status</th>
-                  <th className="px-2 py-2">HTTP</th>
-                  <th className="px-2 py-2">Source #</th>
-                  <th className="px-2 py-2">Missing</th>
-                  <th className="px-2 py-2">Attempts</th>
-                  <th className="px-2 py-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(summary?.days || []).map((d) => (
-                  <tr key={d.date} className="border-t border-slate-100">
-                    <td className="px-2 py-1.5 font-mono text-xs">{d.date}</td>
-                    <td className="px-2 py-1.5">
-                      <span
-                        className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${statusClass(d.status)}`}
-                      >
-                        {d.status}
-                      </span>
-                    </td>
-                    <td className="px-2 py-1.5 text-xs">{d.httpStatus ?? '—'}</td>
-                    <td className="px-2 py-1.5 text-xs">{d.sourceCount ?? 0}</td>
-                    <td className="px-2 py-1.5 text-xs">{d.missingLocallyCount ?? 0}</td>
-                    <td className="px-2 py-1.5 text-xs">{d.attemptCount ?? 0}</td>
-                    <td className="px-2 py-1.5">
-                      <button
-                        type="button"
-                        disabled={busy}
-                        className="mr-2 text-xs font-medium text-brand-700 hover:underline disabled:opacity-60"
-                        onClick={() => runAction('replay_day', { date: d.date, force: true })}
-                      >
-                        Retry
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        className="text-xs text-slate-600 hover:underline disabled:opacity-60"
-                        onClick={async () => {
-                          const res = await authFetch(
-                            `/api/admin/etenders-mirror?view=day&date=${d.date}`
-                          )
-                          const json = await res.json()
-                          if (json.success) setSelectedDay(json.data.record)
-                        }}
-                      >
-                        Detail
-                      </button>
-                    </td>
+          {tab === 'days' ? (
+            <>
+              <div className="overflow-x-auto rounded-lg border border-slate-100">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase text-slate-600">
+                    <tr>
+                      <th className="px-2 py-2">Date</th>
+                      <th className="px-2 py-2">OCDS</th>
+                      <th className="px-2 py-2">Website</th>
+                      <th className="px-2 py-2">OCDS #</th>
+                      <th className="px-2 py-2">Web #</th>
+                      <th className="px-2 py-2">Mirror</th>
+                      <th className="px-2 py-2">Missing</th>
+                      <th className="px-2 py-2">Diffs</th>
+                      <th className="px-2 py-2">Recovery</th>
+                      <th className="px-2 py-2">Parity</th>
+                      <th className="px-2 py-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(paritySummary?.days || summary?.days || []).map((d) => {
+                      const ocdsStatus = d.ocdsStatus || d.status || 'PENDING'
+                      const websiteStatus = d.websiteStatus || 'PENDING'
+                      return (
+                        <tr
+                          key={d.date}
+                          className={`border-t border-slate-100 ${
+                            ocdsStatus === 'SOURCE_UNAVAILABLE' || websiteStatus === 'SOURCE_UNAVAILABLE'
+                              ? 'bg-amber-50/60'
+                              : ''
+                          }`}
+                        >
+                          <td className="px-2 py-1.5 font-mono text-xs">{d.date}</td>
+                          <td className="px-2 py-1.5">
+                            <span
+                              className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${statusClass(ocdsStatus)}`}
+                            >
+                              {ocdsStatus}
+                            </span>
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <span
+                              className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${statusClass(websiteStatus)}`}
+                            >
+                              {websiteStatus}
+                            </span>
+                          </td>
+                          <td className="px-2 py-1.5 text-xs">
+                            {d.ocdsCount ?? d.sourceCount ?? 0}
+                          </td>
+                          <td className="px-2 py-1.5 text-xs">
+                            {d.websiteDiscoverableCount == null ? '—' : d.websiteDiscoverableCount}
+                          </td>
+                          <td className="px-2 py-1.5 text-xs">{d.mirrorCount ?? '—'}</td>
+                          <td className="px-2 py-1.5 text-xs">{d.missingLocallyCount ?? 0}</td>
+                          <td className="px-2 py-1.5 text-xs">
+                            {d.fieldDifferenceCount ?? d.fieldMismatchCount ?? 0}
+                          </td>
+                          <td className="px-2 py-1.5 text-xs">
+                            {d.recoveryAttemptCount ?? d.attemptCount ?? 0}
+                          </td>
+                          <td className="px-2 py-1.5 text-[10px] font-medium text-slate-700">
+                            {d.parityStatus || '—'}
+                          </td>
+                          <td className="px-2 py-1.5 whitespace-nowrap">
+                            <button
+                              type="button"
+                              disabled={busy}
+                              className="mr-2 text-xs font-medium text-brand-700 hover:underline disabled:opacity-60"
+                              onClick={() =>
+                                runAction('recover_day', { date: d.date, force: true })
+                              }
+                            >
+                              Recover
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              className="text-xs text-slate-600 hover:underline disabled:opacity-60"
+                              onClick={async () => {
+                                const res = await authFetch(
+                                  `/api/admin/etenders-mirror?view=day&date=${d.date}`
+                                )
+                                const json = await res.json()
+                                if (json.success) setSelectedDay(json.data.record)
+                              }}
+                            >
+                              Detail
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {selectedDay ? (
+                <pre className="max-h-64 overflow-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-100">
+                  {JSON.stringify(selectedDay, null, 2)}
+                </pre>
+              ) : null}
+            </>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-slate-100">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-slate-600">
+                  <tr>
+                    <th className="px-2 py-2">Category</th>
+                    <th className="px-2 py-2">Date</th>
+                    <th className="px-2 py-2">Tender</th>
+                    <th className="px-2 py-2">Detail</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {selectedDay ? (
-            <pre className="max-h-64 overflow-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-100">
-              {JSON.stringify(selectedDay, null, 2)}
-            </pre>
-          ) : null}
+                </thead>
+                <tbody>
+                  {exceptions.map((ex) => (
+                    <tr key={ex.id} className="border-t border-slate-100">
+                      <td className="px-2 py-1.5 text-xs font-semibold text-amber-900">
+                        {ex.category}
+                      </td>
+                      <td className="px-2 py-1.5 font-mono text-xs">{ex.date || '—'}</td>
+                      <td className="px-2 py-1.5 text-xs">
+                        {ex.tenderNumber || '—'}
+                        <div className="truncate text-slate-500">{ex.title || ''}</div>
+                      </td>
+                      <td className="px-2 py-1.5 text-xs text-slate-600">{ex.detail || '—'}</td>
+                    </tr>
+                  ))}
+                  {!exceptions.length ? (
+                    <tr>
+                      <td colSpan={4} className="px-3 py-8 text-center text-slate-500">
+                        No open exceptions.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         <section className="space-y-3">

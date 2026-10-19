@@ -14,7 +14,48 @@ const DAY_STATUS = Object.freeze({
 const SOURCE_TYPE = Object.freeze({
   OCDS_RELEASE_API: 'OCDS_RELEASE_API',
   OCDS_BULK_TRANSPARENCY: 'OCDS_BULK_TRANSPARENCY',
+  ETENDERS_WEBSITE: 'ETENDERS_WEBSITE',
   UNRESOLVED: 'UNRESOLVED',
+})
+
+/** Attempt-ledger results (Phase 19). Day-level DAY_STATUS semantics unchanged. */
+const ATTEMPT_RESULT = Object.freeze({
+  SUCCESS: 'SUCCESS',
+  SOURCE_UNAVAILABLE: 'SOURCE_UNAVAILABLE',
+  PARTIAL: 'PARTIAL',
+  ZERO_RECORD_SUCCESS: 'ZERO_RECORD_SUCCESS',
+  RETRY_PENDING: 'RETRY_PENDING',
+  FAILED: 'FAILED',
+})
+
+const SOURCE_CONFIDENCE = Object.freeze({
+  AUTHORITATIVE_STRUCTURED: 'AUTHORITATIVE_STRUCTURED',
+  OFFICIAL_PUBLIC: 'OFFICIAL_PUBLIC',
+})
+
+const EXCEPTION_CATEGORY = Object.freeze({
+  SOURCE_UNAVAILABLE: 'SOURCE_UNAVAILABLE',
+  WEBSITE_ONLY: 'WEBSITE_ONLY',
+  OCDS_ONLY: 'OCDS_ONLY',
+  AMBIGUOUS_MATCH: 'AMBIGUOUS_MATCH',
+  SOURCE_CONFLICT: 'SOURCE_CONFLICT',
+  BRIEFING_CLASSIFICATION_REVIEW: 'BRIEFING_CLASSIFICATION_REVIEW',
+})
+
+const BRIEFING_CLASSIFICATION = Object.freeze({
+  CONFIRMED_COMPULSORY: 'CONFIRMED_COMPULSORY',
+  LIKELY_COMPULSORY: 'LIKELY_COMPULSORY',
+  NOT_COMPULSORY: 'NOT_COMPULSORY',
+  UNKNOWN: 'UNKNOWN',
+})
+
+const SME_CONNECT_STATUS = Object.freeze({
+  NEW_TENDER: 'NEW_TENDER',
+  SME_MATCHING: 'SME_MATCHING',
+  MATCH_CANDIDATES: 'MATCH_CANDIDATES',
+  HUMAN_APPROVED: 'HUMAN_APPROVED',
+  REJECTED: 'REJECTED',
+  READY_FOR_OUTREACH: 'READY_FOR_OUTREACH',
 })
 
 const DIFF_CLASS = Object.freeze({
@@ -131,7 +172,40 @@ function emptyDayRecord(date, overrides = {}) {
     retrievedAt: null,
     certified: false,
     attemptHistory: [],
+    // Phase 19 parity channel (website never upgrades OCDS day SUCCESS)
+    websiteStatus: DAY_STATUS.PENDING,
+    websiteDiscoverableCount: null,
+    websiteLastCheckedAt: null,
+    websiteHttpStatus: null,
+    websiteError: null,
+    ocdsCount: 0,
+    mirrorCount: 0,
+    websiteOnlyCount: 0,
+    ocdsOnlyCount: 0,
+    fieldDifferenceCount: 0,
+    unresolvedCount: 0,
+    parityStatus: null,
+    recoveryAttemptCount: 0,
+    lastRecoveryAt: null,
     ...overrides,
+  }
+}
+
+function emptyRecoveryAttempt(partial = {}) {
+  return {
+    date: partial.date || null,
+    source: partial.source || SOURCE_TYPE.OCDS_RELEASE_API,
+    endpoint: partial.endpoint || null,
+    sourceType: partial.sourceType || partial.source || null,
+    attemptedAt: partial.attemptedAt || new Date().toISOString(),
+    httpStatus: partial.httpStatus ?? null,
+    recordCount: Number(partial.recordCount) || 0,
+    result: partial.result || ATTEMPT_RESULT.RETRY_PENDING,
+    errorClass: partial.errorClass || null,
+    retryCount: Number(partial.retryCount) || 0,
+    windowFrom: partial.windowFrom || null,
+    windowTo: partial.windowTo || null,
+    notes: partial.notes || null,
   }
 }
 
@@ -241,6 +315,11 @@ function isCertifiedSuccess(dayRecord) {
 module.exports = {
   DAY_STATUS,
   SOURCE_TYPE,
+  ATTEMPT_RESULT,
+  SOURCE_CONFIDENCE,
+  EXCEPTION_CATEGORY,
+  BRIEFING_CLASSIFICATION,
+  SME_CONNECT_STATUS,
   DIFF_CLASS,
   SOURCE_FIDELITY_FIELDS,
   ENRICHMENT_FIELDS,
@@ -250,6 +329,7 @@ module.exports = {
   nextRetryDelayMs,
   nextRetryAtIso,
   emptyDayRecord,
+  emptyRecoveryAttempt,
   classifyHttpFailure,
   classifyFieldDiffs,
   countMissingLocal,
