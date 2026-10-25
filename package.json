@@ -70,7 +70,7 @@
     "googleapis": "^160.0.0",
     "jose": "^6.2.3",
     "lucide-react": "^0.294.0",
-    "next": "15.5.24",
+    "next": "15.5.28",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
     "postcss": "^8",
