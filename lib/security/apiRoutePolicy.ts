@@ -59,6 +59,9 @@ export function isPublicApiRoute(pathname: string, method: string): boolean {
   // Phase 16 field check-in / evidence — scoped field token or assigned YA Bearer.
   if (pathname === '/api/assignments/field' && (m === 'GET' || m === 'POST')) return true
 
+  // Phase 20 SME Connect CTA — signed token; handler verifies HMAC.
+  if (pathname === '/api/sme-connect/cta' && (m === 'GET' || m === 'POST')) return true
+
   return false
 }
 
