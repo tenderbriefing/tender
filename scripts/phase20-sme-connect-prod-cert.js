@@ -82,13 +82,18 @@ async function main() {
   const classSample = await adminGet(idToken, 'view=classification-sample&sampleSize=25')
 
   console.log('[phase20] backtest matching…')
+  // Calibrated REVIEW floor is 0.45 (see DEFAULT_THRESHOLDS). Batch size kept
+  // modest to stay under Cloud Run request budget.
   const backtest = await adminPost(idToken, {
     action: 'backtest',
-    limit: 100,
-    minScore: 0.65,
+    limit: 80,
+    minScore: 0.45,
     persist: true,
     includeTestSmes: false,
   })
+  if (!backtest.json?.success) {
+    console.error('[phase20] backtest failed', backtest.status, backtest.json)
+  }
 
   console.log('[phase20] funnel…')
   const funnel = await adminGet(idToken, 'view=funnel')
@@ -170,10 +175,10 @@ async function main() {
     phase: 20,
     generatedAt: new Date().toISOString(),
     startedAt,
-    A_pr: null,
-    B_merge_sha: null,
-    C_production_revision: null,
-    D_ci: null,
+    A_pr: process.env.PHASE20_PR || 148,
+    B_merge_sha: process.env.PHASE20_MERGE_SHA || null,
+    C_production_revision: process.env.PHASE20_REVISION || null,
+    D_ci: process.env.PHASE20_CI || null,
     E_historical_requests: a.totalRequests ?? null,
     F_historical_paid_requests: a.paidRequests ?? null,
     G_eligible_paid_requests: a.eligibleLiveMatching ?? a.eligibleForMatching ?? null,

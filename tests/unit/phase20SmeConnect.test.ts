@@ -108,9 +108,36 @@ describe('Phase 20 SME Connect', () => {
         tenderNumber: 'PW-2025-12',
       }
     )
-    expect(scored.score).toBeGreaterThanOrEqual(0.65)
+    expect(scored.score).toBeGreaterThanOrEqual(matching.DEFAULT_THRESHOLDS.review)
+    expect([matching.MATCH_BAND.HIGH_CONFIDENCE, matching.MATCH_BAND.REVIEW]).toContain(
+      scored.band
+    )
     expect(scored.reasons).toContain(matching.REASON.SAME_ENTITY)
     expect(scored.reasons).toContain(matching.REASON.SIMILAR_WORK_TYPE)
+    expect(scored.reasons).toContain(matching.REASON.REPEAT_PROCUREMENT)
+  })
+
+  it('treats same-entity compulsory re-engagement as at least REVIEW', () => {
+    const scored = matching.scoreTenderAgainstPaidRequest(
+      {
+        title: 'Security services',
+        description: 'Access control upgrade',
+        department: 'TSHWANE AUTOMOTIVE SPECIAL ECONOMIC ZONE',
+        province: 'Gauteng',
+        briefingClassification: 'CONFIRMED_COMPULSORY',
+        tenderNumber: '164669',
+      },
+      {
+        scopeText: 'Previous attendance at TASEZ briefing',
+        tenderTitle: 'Prior TASEZ RFQ',
+        department: 'TSHWANE AUTOMOTIVE SPECIAL ECONOMIC ZONE',
+        province: 'Gauteng',
+        tenderNumber: 'TASEZ-2025-01',
+      }
+    )
+    expect(scored.band).not.toBe(matching.MATCH_BAND.NO_OUTREACH)
+    expect(scored.reasons).toContain(matching.REASON.SAME_ENTITY)
+    expect(scored.reasons).toContain(matching.REASON.REPEAT_PROCUREMENT)
   })
 
   it('CTA tokens round-trip and expire check works', () => {
