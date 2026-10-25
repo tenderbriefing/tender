@@ -432,6 +432,22 @@ async function processVerifiedResendWebhook(payload, { providerEventId, getFires
     )
   }
 
+  // Phase 20: SME Connect outreach delivery tracking (webhook-driven only).
+  let smeConnectDelivery = null
+  try {
+    const outreach = require('./smeConnectOutreachService')
+    smeConnectDelivery = await outreach.applyProviderDeliveryByMessageId(providerMessageId, {
+      status,
+      at: occurredAt,
+      reason: eventType,
+    })
+  } catch (err) {
+    console.warn(
+      `${LOG_PREFIX} sme connect delivery update skipped:`,
+      err instanceof Error ? err.message.slice(0, 120) : 'unknown'
+    )
+  }
+
   const ledger = await findLedgerByProviderMessageId(db, providerMessageId)
   if (!ledger) {
     await storePendingWebhook(db, providerMessageId, {
@@ -442,10 +458,15 @@ async function processVerifiedResendWebhook(payload, { providerEventId, getFires
     })
     await claim.ref.set(
       sanitizeFirestoreData({
-        status: clientDelivery?.applied ? 'applied_client_delivery' : 'pending_correlation',
+        status:
+          clientDelivery?.applied || smeConnectDelivery?.applied
+            ? 'applied_side_channel'
+            : 'pending_correlation',
         deliveryStatus: status,
         clientDeliveryApplied: Boolean(clientDelivery?.applied),
         clientDeliveryId: clientDelivery?.deliveryId || null,
+        smeConnectApplied: Boolean(smeConnectDelivery?.applied),
+        smeConnectCandidateId: smeConnectDelivery?.candidateId || null,
         processedAt: nowIso(),
         expireAt: expireAtDate(),
       }),
@@ -453,12 +474,13 @@ async function processVerifiedResendWebhook(payload, { providerEventId, getFires
     )
     return {
       ok: true,
-      pending: !clientDelivery?.applied,
-      applied: Boolean(clientDelivery?.applied),
+      pending: !(clientDelivery?.applied || smeConnectDelivery?.applied),
+      applied: Boolean(clientDelivery?.applied || smeConnectDelivery?.applied),
       eventType,
       providerMessageId,
       deliveryStatus: status,
       clientDelivery,
+      smeConnectDelivery,
     }
   }
 
@@ -467,10 +489,16 @@ async function processVerifiedResendWebhook(payload, { providerEventId, getFires
   if (channel && !FOUNDER_OPS_CHANNELS.includes(channel) && !ledger.data.founderOpsDelivery) {
     await claim.ref.set(
       sanitizeFirestoreData({
-        status: clientDelivery?.applied ? 'applied_client_delivery' : 'ignored',
-        reason: clientDelivery?.applied ? null : 'not_founder_ops',
+        status:
+          clientDelivery?.applied || smeConnectDelivery?.applied
+            ? 'applied_side_channel'
+            : 'ignored',
+        reason:
+          clientDelivery?.applied || smeConnectDelivery?.applied ? null : 'not_founder_ops',
         clientDeliveryApplied: Boolean(clientDelivery?.applied),
         clientDeliveryId: clientDelivery?.deliveryId || null,
+        smeConnectApplied: Boolean(smeConnectDelivery?.applied),
+        smeConnectCandidateId: smeConnectDelivery?.candidateId || null,
         processedAt: nowIso(),
         expireAt: expireAtDate(),
       }),
@@ -478,11 +506,15 @@ async function processVerifiedResendWebhook(payload, { providerEventId, getFires
     )
     return {
       ok: true,
-      ignored: !clientDelivery?.applied,
-      applied: Boolean(clientDelivery?.applied),
+      ignored: !(clientDelivery?.applied || smeConnectDelivery?.applied),
+      applied: Boolean(clientDelivery?.applied || smeConnectDelivery?.applied),
       eventType,
-      reason: clientDelivery?.applied ? undefined : 'not_founder_ops',
+      reason:
+        clientDelivery?.applied || smeConnectDelivery?.applied
+          ? undefined
+          : 'not_founder_ops',
       clientDelivery,
+      smeConnectDelivery,
     }
   }
 
@@ -494,11 +526,16 @@ async function processVerifiedResendWebhook(payload, { providerEventId, getFires
 
   await claim.ref.set(
     sanitizeFirestoreData({
-      status: applied.applied || clientDelivery?.applied ? 'applied' : 'duplicate_state',
+      status:
+        applied.applied || clientDelivery?.applied || smeConnectDelivery?.applied
+          ? 'applied'
+          : 'duplicate_state',
       deliveryStatus: applied.deliveryStatus,
       ledgerDocId: ledger.id,
       clientDeliveryApplied: Boolean(clientDelivery?.applied),
       clientDeliveryId: clientDelivery?.deliveryId || null,
+      smeConnectApplied: Boolean(smeConnectDelivery?.applied),
+      smeConnectCandidateId: smeConnectDelivery?.candidateId || null,
       processedAt: nowIso(),
       expireAt: expireAtDate(),
     }),
@@ -507,12 +544,15 @@ async function processVerifiedResendWebhook(payload, { providerEventId, getFires
 
   return {
     ok: true,
-    applied: Boolean(applied.applied || clientDelivery?.applied),
+    applied: Boolean(
+      applied.applied || clientDelivery?.applied || smeConnectDelivery?.applied
+    ),
     eventType,
     providerMessageId,
     deliveryStatus: applied.deliveryStatus,
     ledgerDocId: ledger.id,
     clientDelivery,
+    smeConnectDelivery,
   }
 }
 

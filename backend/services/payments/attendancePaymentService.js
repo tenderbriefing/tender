@@ -334,6 +334,17 @@ async function markRequestPaid(requestId, { checkoutId, pfPaymentId, source = 'w
     )
   }
 
+  // Phase 20: SME Connect funnel paid marker — fail-soft; never blocks settlement
+  try {
+    const smeConnect = require('../smeConnectConversionService')
+    await smeConnect.markCandidatePaidForRequest(updated)
+  } catch (err) {
+    console.error(
+      '[attendancePayment] sme connect paid marker failed:',
+      err instanceof Error ? err.message.slice(0, 160) : 'unknown'
+    )
+  }
+
   // SME payment confirmation email — authoritative ITN/reconcile path only; fail-soft
   try {
     const txEmail = require('../transactionalEmailService')

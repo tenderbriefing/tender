@@ -26,7 +26,8 @@ async function upsertRecommendation(rec) {
   const row = {
     ...rec,
     id,
-    customerNotified: false,
+    // Preserve explicit notify flag after controlled outreach send
+    customerNotified: rec.customerNotified === true,
     updatedAt: new Date().toISOString(),
     createdAt: rec.createdAt || new Date().toISOString(),
   }
