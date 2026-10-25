@@ -128,7 +128,7 @@ export default function AdminSmeConnectPage() {
             type="button"
             disabled={busy}
             className="rounded-lg bg-brand-700 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
-            onClick={() => runAction('backtest', { limit: 100, minScore: 0.65, persist: true })}
+            onClick={() => runAction('backtest', { limit: 100, minScore: 0.45, persist: true })}
           >
             Backtest matching
           </button>

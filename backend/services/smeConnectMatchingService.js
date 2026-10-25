@@ -40,6 +40,10 @@ const WORK_TYPES = [
   'catering',
   'ict',
   'software',
+  'laptop',
+  'laptops',
+  'computer',
+  'computers',
   'financial',
   'finance',
   'accounting',
@@ -47,11 +51,25 @@ const WORK_TYPES = [
   'construction',
   'engineering',
   'transport',
+  'fleet',
+  'telematic',
   'medical',
   'pharmaceutical',
   'legal',
   'consulting',
+  'meter',
+  'meters',
 ]
+
+/**
+ * Phase 20 production calibration (paid×compulsory distribution):
+ * raw max ≈ 0.42 under prior weights; same-entity compulsory repeats are
+ * commercially strongest. Bands set from observed distribution, not defaults.
+ */
+const DEFAULT_THRESHOLDS = Object.freeze({
+  high: 0.7,
+  review: 0.45,
+})
 
 function jaccard(aTokens, bTokens) {
   const a = new Set(aTokens)
@@ -63,8 +81,8 @@ function jaccard(aTokens, bTokens) {
 }
 
 function classifyBand(score, thresholds = {}) {
-  const high = Number(thresholds.high ?? 0.8)
-  const review = Number(thresholds.review ?? 0.65)
+  const high = Number(thresholds.high ?? DEFAULT_THRESHOLDS.high)
+  const review = Number(thresholds.review ?? DEFAULT_THRESHOLDS.review)
   if (score >= high) return MATCH_BAND.HIGH_CONFIDENCE
   if (score >= review) return MATCH_BAND.REVIEW
   return MATCH_BAND.NO_OUTREACH
@@ -85,10 +103,17 @@ function scoreTenderAgainstPaidRequest(tender, request) {
   }
   const reasons = []
 
-  const deptT = String(tender.department || tender.buyer || '').toLowerCase()
-  const deptR = String(request.department || '').toLowerCase()
-  if (deptT && deptR && (deptT === deptR || deptT.includes(deptR) || deptR.includes(deptT))) {
-    components.entity = 0.28
+  const deptT = String(tender.department || tender.buyer || '').toLowerCase().trim()
+  const deptR = String(request.department || '').toLowerCase().trim()
+  const entityExact = Boolean(deptT && deptR && deptT === deptR)
+  const entityPartial =
+    !entityExact &&
+    Boolean(deptT && deptR && (deptT.includes(deptR) || deptR.includes(deptT) || softEntityFamily(deptT, deptR)))
+  if (entityExact) {
+    components.entity = 0.38
+    reasons.push(REASON.SAME_ENTITY)
+  } else if (entityPartial) {
+    components.entity = 0.22
     reasons.push(REASON.SAME_ENTITY)
   }
 
@@ -107,32 +132,39 @@ function scoreTenderAgainstPaidRequest(tender, request) {
   )
   const overlap = jaccard(newTokens, priorTokens)
   if (overlap >= 0.08) {
-    components.scope = Math.min(0.42, overlap * 1.05)
+    components.scope = Math.min(0.35, overlap * 1.1)
     reasons.push(REASON.SCOPE_OVERLAP)
     if (overlap >= 0.15) reasons.push(REASON.KEYWORD_OVERLAP)
   }
 
   const sharedWork = WORK_TYPES.filter((kw) => newTokens.includes(kw) && priorTokens.includes(kw))
   if (sharedWork.length) {
-    components.workType = Math.min(0.24, 0.1 + sharedWork.length * 0.06)
+    components.workType = Math.min(0.22, 0.1 + sharedWork.length * 0.06)
     reasons.push(REASON.SIMILAR_WORK_TYPE)
     reasons.push(REASON.SAME_CATEGORY)
   }
 
   const tnNew = String(tender.tenderNumber || '').trim().toLowerCase()
   const tnOld = String(request.tenderNumber || '').trim().toLowerCase()
+  const isCompulsory =
+    tender.briefingClassification === BRIEFING_CLASSIFICATION.CONFIRMED_COMPULSORY ||
+    tender.briefingClassification === BRIEFING_CLASSIFICATION.LIKELY_COMPULSORY
   if (tnNew && tnOld && tnNew !== tnOld) {
-    // Same buyer + similar numbering pattern → weak repeat signal
     const prefixNew = tnNew.replace(/[^a-z]/g, '').slice(0, 4)
     const prefixOld = tnOld.replace(/[^a-z]/g, '').slice(0, 4)
     if (prefixNew && prefixNew === prefixOld && components.entity > 0) {
-      components.repeatProcurement = 0.08
+      components.repeatProcurement = 0.1
       reasons.push(REASON.REPEAT_PROCUREMENT)
     }
   }
+  // Same buyer + new compulsory briefing is the core commercial re-engagement signal
+  if (entityExact && isCompulsory && tnNew && tnOld && tnNew !== tnOld) {
+    components.repeatProcurement = Math.max(components.repeatProcurement, 0.18)
+    if (!reasons.includes(REASON.REPEAT_PROCUREMENT)) reasons.push(REASON.REPEAT_PROCUREMENT)
+  }
 
   if (tender.briefingClassification === BRIEFING_CLASSIFICATION.CONFIRMED_COMPULSORY) {
-    components.classificationBoost = 0.04
+    components.classificationBoost = 0.05
   } else if (tender.briefingClassification === BRIEFING_CLASSIFICATION.LIKELY_COMPULSORY) {
     components.classificationBoost = 0.02
   }
@@ -166,6 +198,12 @@ function scoreTenderAgainstPaidRequest(tender, request) {
   }
 }
 
+/** Soft family match e.g. "Tshwane South TVET College" ↔ "South Cape TVET College" */
+function softEntityFamily(a, b) {
+  const families = ['tvet', 'municipality', 'department of health', 'public works']
+  return families.some((f) => a.includes(f) && b.includes(f))
+}
+
 function candidateId(smeKey, tenderId) {
   return `sme-rec-${String(smeKey).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40)}-${String(tenderId || 't').slice(0, 40)}`
 }
@@ -183,7 +221,7 @@ async function hasExistingOutreach(smeKey, tenderId) {
 async function matchTenderToPaidSmes(tender, opts = {}) {
   const storage = getStorage()
   const includeTestSmes = opts.includeTestSmes === true
-  const minScore = Number(opts.minScore ?? 0.65)
+  const minScore = Number(opts.minScore ?? DEFAULT_THRESHOLDS.review)
   const maxCandidates = Number(opts.maxCandidates || 20)
   const thresholds = opts.thresholds || {}
 
@@ -298,7 +336,7 @@ async function runMatchingForClassified(opts = {}) {
   for (const tender of eligible.slice(0, opts.limit || 200)) {
     const out = await matchTenderToPaidSmes(tender, {
       ...opts,
-      minScore: opts.minScore ?? 0.65,
+      minScore: opts.minScore ?? DEFAULT_THRESHOLDS.review,
     })
     results.push(out)
     duplicatesPrevented += out.duplicatesPrevented || 0
@@ -386,10 +424,12 @@ module.exports = {
   MATCH_BAND,
   REASON,
   WORK_TYPES,
+  DEFAULT_THRESHOLDS,
   tokenize: tokenizeMeaningful,
   jaccard,
   classifyBand,
   scoreTenderAgainstPaidRequest,
+  softEntityFamily,
   matchTenderToPaidSmes,
   runMatchingForClassified,
   auditHistoricalPaid,

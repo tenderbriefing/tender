@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     if (action === 'run_matching' || action === 'backtest') {
       const result = await matching.runMatchingForClassified({
         limit: Number(body.limit) || 100,
-        minScore: Number(body.minScore) || 0.65,
+        minScore: Number(body.minScore) || 0.45,
         includeTestSmes: body.includeTestSmes === true,
         includeLikely: body.includeLikely === true,
         persist: body.persist !== false,
