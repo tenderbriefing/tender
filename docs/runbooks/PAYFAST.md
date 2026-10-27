@@ -2,7 +2,7 @@
 
 ## Authoritative flow
 
-1. SME creates attendance request (`paymentStatus=pending`, fee R349 server-side).
+1. SME creates attendance request (`paymentStatus=pending`, fee R750 server-side).
 2. `POST /api/payments/payfast/create-checkout` builds signed fields (amount from server).
 3. Browser POSTs to PayFast.
 4. Return/cancel URLs are UX only.
@@ -43,10 +43,10 @@ PayFast blocks merchants from paying into their own merchant account. This surfa
 
 ### Controlled live settle (Founder-approved only)
 
-Production runs `PAYFAST_MODE=live`. There is no separate sandbox merchant in Cloud Run. A real R349 settle is the only way to exercise COMPLETE ITN → emails → YA dispatch end-to-end.
+Production runs `PAYFAST_MODE=live`. There is no separate sandbox merchant in Cloud Run. A real R750 settle is the only way to exercise COMPLETE ITN → emails → YA dispatch end-to-end.
 
 1. Sign in as `ops-smoke-sme@…` (never the PayFast merchant mailbox).
-2. Open a compulsory-briefing tender → **Request an Agent — R349** → complete checkout summary → PayFast.
+2. Open a compulsory-briefing tender → **Request an Agent — R750** → complete checkout summary → PayFast.
 3. Pay with a **non-merchant** PayFast identity / card.
 4. Confirm: payment-success polls to paid; SME confirmation email; Founder ops email to `info@…`; request shows notified agents / assignment pending.
 5. Do **not** mark paid in Firestore by hand. If ITN is missing after COMPLETE, use admin reconcile with PayFast `pf_payment_id` evidence only.
@@ -58,7 +58,7 @@ Production runs `PAYFAST_MODE=live`. There is no separate sandbox merchant in Cl
 | `PAYFAST_MODE` | `live` |
 | Secrets | `PAYFAST_MERCHANT_ID`, `PAYFAST_MERCHANT_KEY`, `PAYFAST_PASSPHRASE` from GSM |
 | Notify URL | `https://www.tenderbriefing.co.za/api/webhooks/payfast` |
-| Fee | Server `ATTENDANCE_FEE_CENTS` (default `34900` / R349.00) |
+| Fee | Server `ATTENDANCE_FEE_CENTS` (default `75000` / R750.00) |
 
 ## Never
 

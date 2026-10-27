@@ -7,6 +7,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { useTenderBriefingsPolling } from '@/hooks/useTenderBriefingsPolling'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { SyncHealthBadge } from '@/components/procurement/StatusBadges'
+import { isSyncStale } from '@/lib/procurement/formatLastSync'
 import type { AdminDashboardStats } from '@/lib/tenderBriefing/types'
 import OperationalIntelligencePanel from '@/components/procurement/OperationalIntelligencePanel'
 import { useOperationalIntelligence } from '@/hooks/useOperationalIntelligence'
@@ -212,13 +213,16 @@ export default function AdminDashboard() {
     (syncState as { lastFailedSync?: string })?.lastFailedSync
   const lastFailedError = (syncState as { lastFailedSyncError?: string })?.lastFailedSyncError
 
+  const syncStale = isSyncStale(syncState?.lastSuccessfulSync, 45)
   const syncTone: 'ok' | 'warn' | 'danger' | 'neutral' = isRunning
     ? 'warn'
     : syncFailed
       ? 'danger'
-      : apiHealth === 'healthy' || apiHealth === 'ok'
-        ? 'ok'
-        : 'neutral'
+      : syncStale
+        ? 'warn'
+        : apiHealth === 'healthy' || apiHealth === 'ok'
+          ? 'ok'
+          : 'neutral'
 
   const automationTone: 'ok' | 'warn' | 'danger' | 'neutral' =
     automationSummary == null
@@ -303,10 +307,11 @@ export default function AdminDashboard() {
                 Sync
               </p>
               <p className="mt-0.5 text-sm font-semibold capitalize text-brand-900">
-                {isRunning ? 'Running' : apiHealth}
+                {isRunning ? 'Running' : syncStale ? 'Delayed' : apiHealth}
               </p>
-              <p className="text-xs text-slate-500">
+              <p className={`text-xs ${syncStale ? 'font-medium text-amber-800' : 'text-slate-500'}`}>
                 Last OK {formatWhen(syncState?.lastSuccessfulSync)}
+                {syncStale ? ' · stale (>45m)' : ''}
               </p>
             </div>
           </li>

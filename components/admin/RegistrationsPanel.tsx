@@ -124,6 +124,7 @@ export default function RegistrationsPanel({
   })
   const [search, setSearch] = useState('')
   const [province, setProvince] = useState('')
+  const [actionId, setActionId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -150,6 +151,33 @@ export default function RegistrationsPanel({
       setLoading(false)
     }
   }, [])
+
+  const setAgentVerification = useCallback(
+    async (agentId: string, approved: boolean) => {
+      setActionId(agentId)
+      try {
+        const res = await authFetch('/api/admin/registrations', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            agentId,
+            approved,
+            action: approved ? 'approve' : 'suspend',
+          }),
+        })
+        const json = await res.json()
+        if (!res.ok || !json.success) {
+          throw new Error(json.error || 'Verification update failed')
+        }
+        await load()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Verification update failed')
+      } finally {
+        setActionId(null)
+      }
+    },
+    [load]
+  )
 
   useEffect(() => {
     load()
@@ -397,7 +425,7 @@ export default function RegistrationsPanel({
                 <th className="px-3 py-3">Province</th>
                 <th className="px-3 py-3">Verification</th>
                 <th className="px-3 py-3">Jobs</th>
-                <th className="px-5 py-3 text-right sm:px-7">Registered</th>
+                <th className="px-5 py-3 text-right sm:px-7">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -425,6 +453,8 @@ export default function RegistrationsPanel({
                             {a.reliabilityScore != null
                               ? ` · score ${a.reliabilityScore}`
                               : ''}
+                            {' · '}
+                            {formatDate(a.createdAt)}
                           </p>
                         </div>
                       </div>
@@ -452,8 +482,29 @@ export default function RegistrationsPanel({
                       <span className="text-slate-400"> / </span>
                       {a.acceptedBriefingCount ?? 0}
                     </td>
-                    <td className="px-5 py-3.5 text-right tabular-nums text-slate-600 sm:px-7">
-                      {formatDate(a.createdAt)}
+                    <td className="px-5 py-3.5 text-right sm:px-7">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {!(a.verified || a.verificationStatus === 'verified') && (
+                          <button
+                            type="button"
+                            disabled={actionId === a.id}
+                            onClick={() => setAgentVerification(a.id, true)}
+                            className="rounded-lg bg-emerald-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
+                          >
+                            {actionId === a.id ? '…' : 'Approve'}
+                          </button>
+                        )}
+                        {a.verificationStatus !== 'suspended' && (
+                          <button
+                            type="button"
+                            disabled={actionId === a.id}
+                            onClick={() => setAgentVerification(a.id, false)}
+                            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                          >
+                            Suspend
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

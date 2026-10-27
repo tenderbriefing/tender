@@ -8,4 +8,4 @@
 
 Payment status transitions only via server services processing verified PayFast ITN (or explicit admin tooling). Browser success/cancel pages never mark paid.
 
-Client SDK create of `attendanceRequests` is denied (`allow create: if false`). Canonical unpaid checkout is R349 / 34900 cents. Historical paid records (earlier commercial epochs) are not rewritten.
+Client SDK create of `attendanceRequests` is denied (`allow create: if false`). Canonical unpaid checkout is R750 / 75000 cents. Historical paid records (earlier commercial epochs) are not rewritten.

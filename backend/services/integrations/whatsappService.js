@@ -1,4 +1,4 @@
-const { env, hasEnv, checkRequired, integrationResult, statusFromConfig } = require('./integrationConfig')
+const { env, hasEnv, checkRequired, integrationResult } = require('./integrationConfig')
 
 const REQUIRED_ENV = [
   'WHATSAPP_ACCESS_TOKEN',
@@ -15,14 +15,19 @@ function getConfig() {
 
 function getStatus() {
   const config = getConfig()
+  // Production outbound WhatsApp is Twilio (`backend/services/whatsappService.js`).
+  // Meta Graph remains an optional inbound/webhook path — never the primary health signal.
   return integrationResult({
-    id: 'whatsapp',
-    name: 'WhatsApp Business API',
-    status: statusFromConfig(config.configured),
+    id: 'whatsapp-meta',
+    name: 'WhatsApp Meta Graph (deferred)',
+    status: 'deferred',
     requiredEnv: REQUIRED_ENV,
     missing: config.missing,
     setupNotes:
-      'Create a Meta Business app, add WhatsApp product, and set webhook URL to /api/webhooks/whatsapp.',
+      'Deferred. Production notifications use Twilio WhatsApp. Meta webhook at /api/webhooks/whatsapp is optional; do not treat Meta env as the live outbound provider.',
+    message: config.configured
+      ? 'Meta env present — inbound webhook optional; Twilio remains the production send path.'
+      : 'Not required — configure Twilio TWILIO_* secrets for production WhatsApp.',
   })
 }
 

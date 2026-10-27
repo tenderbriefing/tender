@@ -172,8 +172,10 @@ class NotificationService {
             break
 
           case 'sms':
-            // TODO: Implement SMS service
-            console.log('SMS notification not implemented yet')
+            // SMS is intentionally deferred — never claim delivery.
+            console.warn(
+              '[notificationService] SMS channel requested but not implemented; skipping (not marked sent)'
+            )
             break
         }
       } catch (error) {

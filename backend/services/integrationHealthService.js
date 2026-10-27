@@ -46,6 +46,8 @@ async function getIntegrationsHealth() {
     configured: integrations.filter((i) => i.status === 'configured').length,
     missing: integrations.filter((i) => i.status === 'missing').length,
     error: integrations.filter((i) => i.status === 'error').length,
+    scaffold: integrations.filter((i) => i.status === 'scaffold').length,
+    deferred: integrations.filter((i) => i.status === 'deferred').length,
   }
 
   return {

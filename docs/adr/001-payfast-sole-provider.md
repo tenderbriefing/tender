@@ -5,7 +5,7 @@
 
 ## Context
 
-Attendance booking requires collecting R349. Legacy Yoco/Stripe paths created parallel architectures and confusion.
+Attendance booking requires collecting R750. Legacy Yoco/Stripe paths created parallel architectures and confusion.
 
 ## Decision
 
