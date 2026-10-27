@@ -22,7 +22,7 @@ Dashboards must cite these stage IDs. If a metric cannot be defended, label the 
 
 3. **Do not change** pricing, PayFast, ITN, exemptions, Firestore payment rules, or historical payment amounts for measurement.
 
-4. **Revenue amounts** use Founder Finance / Founder V2 precedence (see §2). Never `paidCount × current R349`. Never `commissionService` list-price fallback.
+4. **Revenue amounts** use Founder Finance / Founder V2 precedence (see §2). Never `paidCount × current R750`. Never `commissionService` list-price fallback.
 
 5. **Timezone for Founder commercial day boundaries:** `Africa/Johannesburg` (SAST, UTC+2, no DST).
 
@@ -77,7 +77,7 @@ For a paid row, trusted amount = first positive finite of:
 3. `quotedFee`
 
 If none → **PAID — AMOUNT UNRESOLVED** (count the booking; **add R0 to revenue**; surface data-quality exception).  
-Do **not** substitute current R349 / prior list prices.
+Do **not** substitute current R750 / prior list prices.
 
 ### 2.2.1 Revenue-field trust audit (measurement certification)
 
@@ -90,7 +90,7 @@ Do **not** substitute current R349 / prior list prices.
 **Safe reporting posture:**
 
 - **Current-epoch paid** (ITN/`markRequestPaid` after P0): all three fields are typically equal to charged cents → high confidence.
-- **Historical paid with any positive amount in the precedence chain:** use stored amount for revenue (do not rewrite). Residual risk remains if a pre-P0 paid row never received ITN restamp and retained a client-era forged fee — treat as **best-effort historical snapshot**, not invent R349.
+- **Historical paid with any positive amount in the precedence chain:** use stored amount for revenue (do not rewrite). Residual risk remains if a pre-P0 paid row never received ITN restamp and retained a client-era forged fee — treat as **best-effort historical snapshot**, not invent R750.
 - **Historical paid with no positive amount:** **PAID — AMOUNT UNRESOLVED** — count booking, revenue += 0.
 - Never use `commissionService` list-price fallback for Founder revenue.
 
@@ -104,7 +104,7 @@ Do **not** substitute current R349 / prior list prices.
 
 ### 2.4 Current list price
 
-Canonical **current** booking price: **R349 / 34900 cents** (`pricingVersion` `2026-08-v349`).  
+Canonical **current** booking price: **R750 / 75000 cents** (`pricingVersion` `2026-10-v750`). See `docs/CURRENT_PRICING.md`.  
 Used only for new quotes / display — **never** to rewrite or impute historical revenue.
 
 ### 2.5 Test scope

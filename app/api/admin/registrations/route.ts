@@ -169,3 +169,50 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+/**
+ * Approve or suspend a Youth Agent verification (Admin SDK via agentVerificationService).
+ * Body: { agentId: string, approved: boolean }
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const user = await verifyApiUser(request.headers.get('authorization'), ['admin'])
+    if (!user) return unauthorizedResponse('Admin sign-in required')
+
+    const body = await request.json().catch(() => ({}))
+    const agentId = String(body.agentId || '').trim()
+    if (!agentId) {
+      return NextResponse.json(
+        { success: false, error: 'agentId is required' },
+        { status: 400 }
+      )
+    }
+    const approved = body.approved !== false && body.action !== 'suspend'
+
+    const verification = require('../../../../backend/services/trust/agentVerificationService')
+    const result = await verification.adminApprove(agentId, user.uid, approved)
+
+    const db = getFirebaseAdmin().firestore()
+    await db
+      .collection('users')
+      .doc(agentId)
+      .set(
+        {
+          verificationStatus: result.status,
+          verified: approved === true,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      )
+
+    return NextResponse.json({ success: true, data: result })
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update verification',
+      },
+      { status: 500 }
+    )
+  }
+}

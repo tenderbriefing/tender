@@ -1,5 +1,5 @@
 
-export type IntegrationStatus = 'configured' | 'missing' | 'error'
+export type IntegrationStatus = 'configured' | 'missing' | 'error' | 'scaffold' | 'deferred'
 
 export interface IntegrationHealthItem {
   id: string

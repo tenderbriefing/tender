@@ -104,6 +104,26 @@ service cloud.firestore {
     }
 
     // Privileged trust fields on SME profile — Admin SDK / isAdmin() only.
+    function smePrivilegedKeysAbsent() {
+      return !request.resource.data.keys().hasAny([
+        'userType',
+        'role',
+        'founderAccess',
+        'verificationStatus',
+        'verified',
+        'suspended',
+        'trustScore',
+        'paymentStatus'
+      ]);
+    }
+
+    function smeOwnerCreateAllowed(smeId) {
+      return isAuthenticated()
+        && request.auth.uid == smeId
+        && isSme()
+        && smePrivilegedKeysAbsent();
+    }
+
     function smeOwnerUpdateAllowed(smeId) {
       return isAuthenticated()
         && request.auth.uid == smeId
@@ -526,7 +546,7 @@ service cloud.firestore {
 
     match /smes/{smeId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.auth.uid == smeId;
+      allow create: if smeOwnerCreateAllowed(smeId);
       allow update: if isAdmin() || smeOwnerUpdateAllowed(smeId);
       allow delete: if isAdmin();
     }

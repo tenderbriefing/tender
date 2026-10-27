@@ -1,14 +1,11 @@
 /**
  * Contact / support ticket outbound mail.
- * Uses the existing Gmail service when configured; never blocks ticket creation.
+ * Prefer Resend (production transactional path); fall back to Gmail when configured.
+ * Never blocks ticket creation.
  *
- * Production mail requirements:
- * - Gmail API enabled on the GCP project
- * - Service account with domain-wide delegation for gmail.send
- *   (or OAuth refresh token) so messages.users.send works as support@
- * - GOOGLE_CALENDAR_CLIENT_EMAIL / GOOGLE_CALENDAR_PRIVATE_KEY (same SA currently
- *   used by gmail.ts) with delegated subject support@tenderbriefing.co.za
- * - Optional: GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET if migrating to user OAuth
+ * Production mail requirements (either path):
+ * - Preferred: RESEND_API_KEY (+ optional RESEND_FROM_EMAIL)
+ * - Fallback: Gmail API via lib/services/gmail.ts (domain-wide delegation as support@)
  */
 import { SUPPORT_EMAIL } from '@/lib/contact'
 
@@ -25,6 +22,7 @@ export type SupportTicketEmailPayload = {
 export type SupportEmailResult = {
   supportEmailSent: boolean
   acknowledgementEmailSent: boolean
+  provider?: 'resend' | 'gmail' | 'none'
   error?: string
 }
 
@@ -87,75 +85,163 @@ function acknowledgementHtml(ticket: SupportTicketEmailPayload) {
   `.trim()
 }
 
+function textBodies(ticket: SupportTicketEmailPayload) {
+  const notify = [
+    `Ticket: ${ticket.id}`,
+    `From: ${ticket.requesterName || 'Guest'} <${ticket.requesterEmail}>`,
+    `Subject: ${ticket.subject}`,
+    `Category: ${ticket.category || 'general'}`,
+    `Source: ${ticket.source || 'contact'}`,
+    '',
+    ticket.body,
+  ].join('\n')
+
+  const ack = [
+    `Hi ${ticket.requesterName || 'there'},`,
+    '',
+    `Thank you for contacting TenderBriefing. We have received your enquiry "${ticket.subject}" (ref ${ticket.id}).`,
+    '',
+    'You will receive a response within 24 hours.',
+    '',
+    `Questions? Email ${SUPPORT_EMAIL}`,
+  ].join('\n')
+
+  return { notify, ack }
+}
+
+async function sendViaResendRaw(opts: {
+  to: string
+  subject: string
+  html: string
+  text: string
+  replyTo?: string
+}): Promise<boolean> {
+  const { Resend } = await import('resend')
+  const apiKey = (process.env.RESEND_API_KEY || '').trim()
+  if (!apiKey) return false
+  const from =
+    (process.env.RESEND_FROM_EMAIL || '').trim() ||
+    'TenderBriefing <hello@tenderbriefing.co.za>'
+  const client = new Resend(apiKey)
+  const { error } = await client.emails.send({
+    from,
+    to: [opts.to],
+    subject: opts.subject,
+    html: opts.html,
+    text: opts.text,
+    replyTo: opts.replyTo || SUPPORT_EMAIL,
+  })
+  if (error) {
+    throw new Error(
+      typeof error === 'object' && error && 'message' in error
+        ? String((error as { message: string }).message)
+        : 'Resend send failed'
+    )
+  }
+  return true
+}
+
+async function sendViaGmail(opts: {
+  to: string
+  subject: string
+  html: string
+  text: string
+  replyTo?: string
+}): Promise<boolean> {
+  const { gmailService } = await import('@/lib/services/gmail')
+  if (!gmailService.isConfigured()) {
+    await new Promise((r) => setTimeout(r, 50))
+  }
+  if (!gmailService.isConfigured()) return false
+  return gmailService.sendEmail({
+    to: opts.to,
+    subject: opts.subject,
+    html: opts.html,
+    text: opts.text,
+    replyTo: opts.replyTo,
+  })
+}
+
+async function sendOne(opts: {
+  to: string
+  subject: string
+  html: string
+  text: string
+  replyTo?: string
+}): Promise<{ sent: boolean; provider: 'resend' | 'gmail' | 'none'; error?: string }> {
+  try {
+    if (await sendViaResendRaw(opts)) {
+      return { sent: true, provider: 'resend' }
+    }
+  } catch (err) {
+    console.error('[supportEmail] Resend failed:', err)
+  }
+
+  try {
+    if (await sendViaGmail(opts)) {
+      return { sent: true, provider: 'gmail' }
+    }
+  } catch (err) {
+    console.error('[supportEmail] Gmail failed:', err)
+    return {
+      sent: false,
+      provider: 'none',
+      error: err instanceof Error ? err.message : 'Gmail send failed',
+    }
+  }
+
+  return {
+    sent: false,
+    provider: 'none',
+    error: 'No mail provider configured (set RESEND_API_KEY or Gmail SA)',
+  }
+}
+
 export async function sendSupportTicketEmails(
   ticket: SupportTicketEmailPayload
 ): Promise<SupportEmailResult> {
   const result: SupportEmailResult = {
     supportEmailSent: false,
     acknowledgementEmailSent: false,
+    provider: 'none',
   }
 
-  try {
-    const { gmailService } = await import('@/lib/services/gmail')
+  const { notify, ack } = textBodies(ticket)
 
-    // Allow async init a moment to settle
-    if (!gmailService.isConfigured()) {
-      await new Promise((r) => setTimeout(r, 50))
-    }
-    if (!gmailService.isConfigured()) {
-      result.error = 'Gmail service is not configured'
-      console.warn('[supportEmail]', result.error, '— ticket', ticket.id, 'stored without outbound mail')
-      return result
-    }
+  const support = await sendOne({
+    to: SUPPORT_EMAIL,
+    subject: `[Contact] ${ticket.subject}`.slice(0, 200),
+    html: supportNotifyHtml(ticket),
+    text: notify,
+    replyTo: ticket.requesterEmail,
+  })
+  result.supportEmailSent = support.sent
+  result.provider = support.provider
+  if (support.error) result.error = support.error
 
-    const textBody = [
-      `Ticket: ${ticket.id}`,
-      `From: ${ticket.requesterName || 'Guest'} <${ticket.requesterEmail}>`,
-      `Subject: ${ticket.subject}`,
-      `Category: ${ticket.category || 'general'}`,
-      `Source: ${ticket.source || 'contact'}`,
-      '',
-      ticket.body,
-    ].join('\n')
+  const acknowledgement = await sendOne({
+    to: ticket.requesterEmail,
+    subject: 'We received your enquiry — response within 24 hours',
+    html: acknowledgementHtml(ticket),
+    text: ack,
+    replyTo: SUPPORT_EMAIL,
+  })
+  result.acknowledgementEmailSent = acknowledgement.sent
+  if (acknowledgement.sent && result.provider === 'none') {
+    result.provider = acknowledgement.provider
+  }
+  if (acknowledgement.error && !result.error) {
+    result.error = acknowledgement.error
+  }
 
-    try {
-      result.supportEmailSent = await gmailService.sendEmail({
-        to: SUPPORT_EMAIL,
-        subject: `[Contact] ${ticket.subject}`.slice(0, 200),
-        html: supportNotifyHtml(ticket),
-        text: textBody,
-        replyTo: ticket.requesterEmail,
-      })
-    } catch (err) {
-      console.error('[supportEmail] Failed to notify support@:', err)
-      result.error = err instanceof Error ? err.message : 'Support notify failed'
-    }
-
-    try {
-      result.acknowledgementEmailSent = await gmailService.sendEmail({
-        to: ticket.requesterEmail,
-        subject: 'We received your enquiry — response within 24 hours',
-        html: acknowledgementHtml(ticket),
-        text: [
-          `Hi ${ticket.requesterName || 'there'},`,
-          '',
-          `Thank you for contacting TenderBriefing. We have received your enquiry "${ticket.subject}" (ref ${ticket.id}).`,
-          '',
-          'You will receive a response within 24 hours.',
-          '',
-          `Questions? Email ${SUPPORT_EMAIL}`,
-        ].join('\n'),
-        replyTo: SUPPORT_EMAIL,
-      })
-    } catch (err) {
-      console.error('[supportEmail] Failed to send acknowledgement:', err)
-      if (!result.error) {
-        result.error = err instanceof Error ? err.message : 'Ack email failed'
-      }
-    }
-  } catch (err) {
-    result.error = err instanceof Error ? err.message : 'Email module unavailable'
-    console.error('[supportEmail] Unexpected error:', err)
+  if (!result.supportEmailSent && !result.acknowledgementEmailSent) {
+    console.warn(
+      '[supportEmail]',
+      result.error || 'mail deferred',
+      '— ticket',
+      ticket.id,
+      'stored without outbound mail'
+    )
   }
 
   return result

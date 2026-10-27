@@ -70,3 +70,8 @@ Thumbs.db
 .qa-pi-acceptance-results.json
 .qa-pi-isolation-final.json
 .qa-pi-isolation-revoke.json
+
+# Local ops canaries / evidence (may contain PII — never commit)
+tmp-*.json
+tmp-phase*/
+backend/data/ops-evidence/

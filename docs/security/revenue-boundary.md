@@ -4,7 +4,7 @@
 **Certified production SHA:** `dc2771db7088bf7d48299b05157d78565a6dcea7`  
 **PR that closed P0:** [#105](https://github.com/tenderbriefing/tender/pull/105)  
 **Cloud Run revision at certification:** `tenderbriefing-00178-9h9`  
-**Canonical current briefing price:** **R349.00 / 34 900 cents** (`BRIEFING_PRICE_CENTS`)
+**Canonical current briefing price:** **R750.00 / 75 000 cents** (`BRIEFING_PRICE_CENTS`) — see `docs/CURRENT_PRICING.md`
 
 This document freezes the client/server trust boundary for booking and payment money paths. Do not change production behaviour in the protected areas below without revenue-boundary regression testing and Founder/security re-certification.
 
@@ -38,7 +38,7 @@ Dynamic guard: `tests/firestore/rules.payment-authority.test.ts` (+ IDOR matrix)
 
 | Constant / function | Module | Role |
 |---------------------|--------|------|
-| `BRIEFING_PRICE_CENTS` (= 34900) | `lib/domain/briefingPricing.ts` (+ `backend/constants/briefingPricing.js`) | Current commercial price |
+| `BRIEFING_PRICE_CENTS` (= 75000) | `lib/domain/briefingPricing.ts` (+ `backend/constants/briefingPricing.js`) | Current commercial price |
 | `resolveRequestChargeCents(request)` | same | Charge / ITN expected amount |
 | `briefingPriceSnapshotFields()` | same | Stamps on **new** server creates |
 
@@ -74,7 +74,7 @@ Do **not** migrate, rewrite, normalise, delete, or bulk-edit historical payment 
 - `paid` / `declined`  
 - older fee snapshots  
 
-Historical documents retain historical truth. **Current unpaid** transactions use current trusted canonical pricing (R349 / 34900).
+Historical documents retain historical truth. **Current unpaid** transactions use current trusted canonical pricing (R750 / 75000).
 
 ---
 
@@ -88,10 +88,10 @@ Minimum permanent guards (already wired into CI; preserve, do not weaken):
 | SME cannot forge `not_required` / fees / PayFast fields / unpaid→paid | `rules.payment-authority.test.ts` |
 | YA cannot manipulate payment state | `rules.payment-authority.test.ts` |
 | Unauthenticated create denied | `rules.payment-authority.test.ts` |
-| Legitimate server booking stamps pending + R349 | `paymentAuthority.test.ts` |
-| Checkout / corrupted unpaid snapshots → 34900 | `paymentAuthority.test.ts`, `briefingPricing.test.ts` |
+| Legitimate server booking stamps pending + R750 | `paymentAuthority.test.ts` |
+| Checkout / corrupted unpaid snapshots → 75000 | `paymentAuthority.test.ts`, `briefingPricing.test.ts` |
 | Forged SME exemption ignored | `paymentAuthority.test.ts` |
-| Unpaid price matrix (0, 1, 100, prior-epoch cents, 34899, 34900, 999999, missing, malformed, negative) → 34900 | `briefingPricing.test.ts` |
+| Unpaid price matrix (0, 1, 100, prior-epoch cents, 74900, 75000, 999999, missing, malformed, negative) → 75000 | `briefingPricing.test.ts` |
 | Paid historical snapshot retained | `briefingPricing.test.ts` / `paymentAuthority.test.ts` |
 
 ---
